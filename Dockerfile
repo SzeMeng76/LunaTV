@@ -12,6 +12,15 @@ COPY package.json pnpm-lock.yaml ./
 # 安装所有依赖（含 devDependencies，后续会裁剪）
 RUN pnpm install --frozen-lockfile
 
+# 使用 TARGETPLATFORM 构建参数来检测目标平台
+ARG TARGETPLATFORM
+RUN if [ "$TARGETPLATFORM" = "linux/arm/v7" ]; then \
+        echo "ARMv7 architecture detected (TARGETPLATFORM=$TARGETPLATFORM), installing next@canary..." && \
+        pnpm add next@canary; \
+    else \
+        echo "Non-ARMv7 architecture (TARGETPLATFORM=$TARGETPLATFORM), skipping next@canary installation"; \
+    fi
+
 # ---- 第 2 阶段：构建项目 ----
 FROM node:20-alpine AS builder
 RUN corepack enable && corepack prepare pnpm@latest --activate
@@ -56,4 +65,4 @@ USER nextjs
 EXPOSE 3000
 
 # 使用自定义启动脚本，先预加载配置再启动服务器
-CMD ["node", "start.js"] 
+CMD ["node", "start.js"]

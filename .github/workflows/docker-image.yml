@@ -31,6 +31,8 @@ jobs:
             os: ubuntu-latest
           - platform: linux/arm64
             os: ubuntu-24.04-arm
+          - platform: linux/arm/v7
+            os: ubuntu-24.04-arm
     runs-on: ${{ matrix.os }}
 
     steps:
