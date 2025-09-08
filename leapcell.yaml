@@ -1,0 +1,9 @@
+# 文件名: leapcell.yaml
+
+resources:
+  - name: my-nextjs-app # 您可以自定义名称
+    type: app
+    build:
+      command: pnpm build
+    run:
+      command: node .next/standalone/server.js
