@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "pnpm gen:manifest && next dev -H 0.0.0.0",
     "build": "pnpm gen:manifest && next build",
-    "start": "next start",
+    "start": "node .next/standalone/server.js",
     "lint": "next lint",
     "lint:fix": "eslint src --fix && pnpm format",
     "lint:strict": "eslint --max-warnings=0 src",
