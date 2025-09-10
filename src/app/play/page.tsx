@@ -557,15 +557,15 @@ function PlayPageClient() {
   ): Promise<SearchResult> => {
     if (sources.length === 1) return sources[0];
 
-    // 检测是否为iPad（所有浏览器都可能崩溃）
-    const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent : '';
-    const isIPad = /iPad/i.test(userAgent);
-    const isIOS = /iPad|iPhone|iPod/i.test(userAgent);
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent) || isIOS;
+    // 使用全局统一的设备检测结果
+    const isIPad = /iPad/i.test(userAgent) || (userAgent.includes('Macintosh') && navigator.maxTouchPoints >= 1);
+    const isIOS = isIOSGlobal;
+    const isIOS13 = isIOS13Global;
+    const isMobile = isMobileGlobal;
 
-    // 如果是iPad，使用极简策略避免崩溃
-    if (isIPad) {
-      console.log('检测到iPad，使用无测速优选策略避免崩溃');
+    // 如果是iPad或iOS13+（包括新iPad在桌面模式下），使用极简策略避免崩溃
+    if (isIOS13) {
+      console.log('检测到iPad/iOS13+设备，使用无测速优选策略避免崩溃');
       
       // 简单的源名称优先级排序，不进行实际测速
       const sourcePreference = [
@@ -592,7 +592,7 @@ function PlayPageClient() {
         return 0;
       });
       
-      console.log('iPad优选结果:', sortedSources.map(s => s.source_name));
+      console.log('iPad/iOS13+优选结果:', sortedSources.map(s => s.source_name));
       return sortedSources[0];
     }
 
@@ -894,10 +894,11 @@ function PlayPageClient() {
     }
   };
 
-  // 检测移动设备（在组件层级定义）
+  // 检测移动设备（在组件层级定义）- 参考ArtPlayer compatibility.js
   const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent : '';
   const isIOSGlobal = /iPad|iPhone|iPod/i.test(userAgent) && !(window as any).MSStream;
-  const isMobileGlobal = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent) || isIOSGlobal;
+  const isIOS13Global = isIOSGlobal || (userAgent.includes('Macintosh') && navigator.maxTouchPoints >= 1);
+  const isMobileGlobal = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent) || isIOS13Global;
 
   // 内存压力检测和清理（针对移动设备）
   const checkMemoryPressure = async () => {
@@ -1970,11 +1971,11 @@ function PlayPageClient() {
     }
     console.log(videoUrl);
 
-    // 检测移动设备和浏览器类型
-    const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+    // 检测移动设备和浏览器类型 - 使用统一的全局检测结果
     const isSafari = /^(?:(?!chrome|android).)*safari/i.test(userAgent);
-    const isIOS = /iPad|iPhone|iPod/i.test(userAgent) && !(window as any).MSStream;
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent) || isIOS;
+    const isIOS = isIOSGlobal;
+    const isIOS13 = isIOS13Global;
+    const isMobile = isMobileGlobal;
     const isWebKit = isSafari || isIOS;
     // Chrome浏览器检测 - 只有真正的Chrome才支持Chromecast
     // 排除各种厂商浏览器，即使它们的UA包含Chrome字样
@@ -2084,7 +2085,8 @@ function PlayPageClient() {
         poster: videoCover,
         volume: 0.7,
         isLive: false,
-        muted: false,
+        // iOS设备需要静音才能自动播放，参考ArtPlayer源码处理
+        muted: isIOS || isSafari,
         autoplay: true,
         pip: true,
         autoSize: false,
@@ -2125,25 +2127,69 @@ function PlayPageClient() {
             if (video.hls) {
               video.hls.destroy();
             }
+            
+            // 在函数内部重新检测iOS13+设备
+            const localIsIOS13 = isIOS13;
+            
+            // 🚀 根据 HLS.js 官方源码的最佳实践配置
             const hls = new Hls({
               debug: false,
               enableWorker: true,
-              lowLatencyMode: !isMobile, // 移动设备关闭低延迟模式以节省资源
-
-              /* 缓冲/内存相关 - 移动设备优化 */
-              maxBufferLength: isMobile ? (isIOS ? 8 : 12) : 30, // iOS更保守的缓冲
-              backBufferLength: isMobile ? (isIOS ? 5 : 8) : 30, // 减少已播放内容缓存
-              maxBufferSize: isMobile 
-                ? (isIOS ? 15 * 1000 * 1000 : 25 * 1000 * 1000) // iOS: 15MB, Android: 25MB
-                : 60 * 1000 * 1000, // 桌面: 60MB
-
-              /* 网络优化 */
-              maxLoadingDelay: isMobile ? 2 : 4, // 移动设备更快的加载超时
-              maxBufferHole: isMobile ? 0.3 : 0.5, // 减少缓冲洞
+              // 参考 HLS.js config.ts：移动设备关闭低延迟模式以节省资源
+              lowLatencyMode: !isMobile,
               
-              /* Fragment管理 */
-              liveDurationInfinity: false, // 避免无限缓冲
-              liveBackBufferLength: isMobile ? 3 : 10, // 减少直播回放缓冲
+              // 🎯 官方推荐的缓冲策略 - iOS13+ 特别优化
+              /* 缓冲长度配置 - 参考 hlsDefaultConfig */
+              maxBufferLength: isMobile 
+                ? (localIsIOS13 ? 8 : isIOS ? 10 : 15)  // iOS13+: 8s, iOS: 10s, Android: 15s
+                : 30, // 桌面默认30s
+              backBufferLength: isMobile 
+                ? (localIsIOS13 ? 5 : isIOS ? 8 : 10)   // iOS13+更保守
+                : Infinity, // 桌面使用无限回退缓冲
+
+              /* 缓冲大小配置 - 基于官方 maxBufferSize */
+              maxBufferSize: isMobile 
+                ? (localIsIOS13 ? 20 * 1000 * 1000 : isIOS ? 30 * 1000 * 1000 : 40 * 1000 * 1000) // iOS13+: 20MB, iOS: 30MB, Android: 40MB
+                : 60 * 1000 * 1000, // 桌面: 60MB (官方默认)
+
+              /* 网络加载优化 - 参考 defaultLoadPolicy */
+              maxLoadingDelay: isMobile ? (localIsIOS13 ? 2 : 3) : 4, // iOS13+设备更快超时
+              maxBufferHole: isMobile ? (localIsIOS13 ? 0.05 : 0.1) : 0.1, // 减少缓冲洞容忍度
+              
+              /* Fragment管理 - 参考官方配置 */
+              liveDurationInfinity: false, // 避免无限缓冲 (官方默认false)
+              liveBackBufferLength: isMobile ? (localIsIOS13 ? 3 : 5) : null, // 已废弃，保持兼容
+
+              /* 高级优化配置 - 参考 StreamControllerConfig */
+              maxMaxBufferLength: isMobile ? (localIsIOS13 ? 60 : 120) : 600, // 最大缓冲长度限制
+              maxFragLookUpTolerance: isMobile ? 0.1 : 0.25, // 片段查找容忍度
+              
+              /* ABR优化 - 参考 ABRControllerConfig */
+              abrEwmaFastLive: isMobile ? 2 : 3, // 移动端更快的码率切换
+              abrEwmaSlowLive: isMobile ? 6 : 9,
+              abrBandWidthFactor: isMobile ? 0.8 : 0.95, // 移动端更保守的带宽估计
+              
+              /* 启动优化 */
+              startFragPrefetch: !isMobile, // 移动端关闭预取以节省资源
+              testBandwidth: !localIsIOS13, // iOS13+关闭带宽测试以快速启动
+              
+              /* Loader配置 - 参考官方 fragLoadPolicy */
+              fragLoadPolicy: {
+                default: {
+                  maxTimeToFirstByteMs: isMobile ? 6000 : 10000,
+                  maxLoadTimeMs: isMobile ? 60000 : 120000,
+                  timeoutRetry: {
+                    maxNumRetry: isMobile ? 2 : 4,
+                    retryDelayMs: 0,
+                    maxRetryDelayMs: 0,
+                  },
+                  errorRetry: {
+                    maxNumRetry: isMobile ? 3 : 6,
+                    retryDelayMs: 1000,
+                    maxRetryDelayMs: isMobile ? 4000 : 8000,
+                  },
+                },
+              },
 
               /* 自定义loader */
               loader: blockAdEnabledRef.current
@@ -2540,6 +2586,26 @@ function PlayPageClient() {
       artPlayerRef.current.on('ready', async () => {
         setError(null);
 
+        // iOS设备自动播放优化：如果是静音启动的，在开始播放后恢复音量
+        if ((isIOS || isSafari) && artPlayerRef.current.muted) {
+          console.log('iOS设备静音自动播放，准备在播放开始后恢复音量');
+          
+          const handleFirstPlay = () => {
+            setTimeout(() => {
+              if (artPlayerRef.current && artPlayerRef.current.muted) {
+                artPlayerRef.current.muted = false;
+                artPlayerRef.current.volume = lastVolumeRef.current || 0.7;
+                console.log('iOS设备已恢复音量:', artPlayerRef.current.volume);
+              }
+            }, 500); // 延迟500ms确保播放稳定
+            
+            // 只执行一次
+            artPlayerRef.current.off('video:play', handleFirstPlay);
+          };
+          
+          artPlayerRef.current.on('video:play', handleFirstPlay);
+        }
+
         // 添加弹幕插件按钮选择性隐藏CSS
         const optimizeDanmukuControlsCSS = () => {
           if (document.getElementById('danmuku-controls-optimize')) return;
@@ -2858,6 +2924,94 @@ function PlayPageClient() {
           }
         }
         resumeTimeRef.current = null;
+
+        // iOS设备自动播放回退机制：如果自动播放失败，尝试用户交互触发播放
+        if ((isIOS || isSafari) && artPlayerRef.current.paused) {
+          console.log('iOS设备检测到视频未自动播放，准备交互触发机制');
+          
+          const tryAutoPlay = async () => {
+            try {
+              // 多重尝试策略
+              let playAttempts = 0;
+              const maxAttempts = 3;
+              
+              const attemptPlay = async (): Promise<boolean> => {
+                playAttempts++;
+                console.log(`iOS自动播放尝试 ${playAttempts}/${maxAttempts}`);
+                
+                try {
+                  await artPlayerRef.current.play();
+                  console.log('iOS设备自动播放成功');
+                  return true;
+                } catch (playError: any) {
+                  console.log(`播放尝试 ${playAttempts} 失败:`, playError.name);
+                  
+                  // 根据错误类型采用不同策略
+                  if (playError.name === 'NotAllowedError') {
+                    // 用户交互需求错误 - 最常见
+                    if (playAttempts < maxAttempts) {
+                      // 尝试降低音量再播放
+                      artPlayerRef.current.volume = 0.1;
+                      await new Promise(resolve => setTimeout(resolve, 200));
+                      return attemptPlay();
+                    }
+                    return false;
+                  } else if (playError.name === 'AbortError') {
+                    // 播放被中断 - 等待后重试
+                    if (playAttempts < maxAttempts) {
+                      await new Promise(resolve => setTimeout(resolve, 500));
+                      return attemptPlay();
+                    }
+                    return false;
+                  }
+                  return false;
+                }
+              };
+              
+              const success = await attemptPlay();
+              
+              if (!success) {
+                console.log('iOS设备需要用户交互才能播放，这是正常的浏览器行为');
+                // 显示友好的播放提示
+                if (artPlayerRef.current) {
+                  artPlayerRef.current.notice.show = '轻触播放按钮开始观看';
+                  
+                  // 添加一次性点击监听器用于首次播放
+                  let hasHandledFirstInteraction = false;
+                  const handleFirstUserInteraction = async () => {
+                    if (hasHandledFirstInteraction) return;
+                    hasHandledFirstInteraction = true;
+                    
+                    try {
+                      await artPlayerRef.current.play();
+                      // 首次成功播放后恢复正常音量
+                      setTimeout(() => {
+                        if (artPlayerRef.current && !artPlayerRef.current.muted) {
+                          artPlayerRef.current.volume = lastVolumeRef.current || 0.7;
+                        }
+                      }, 1000);
+                    } catch (error) {
+                      console.warn('用户交互播放失败:', error);
+                    }
+                    
+                    // 移除监听器
+                    artPlayerRef.current?.off('video:play', handleFirstUserInteraction);
+                    document.removeEventListener('click', handleFirstUserInteraction);
+                  };
+                  
+                  // 监听播放事件和点击事件
+                  artPlayerRef.current.on('video:play', handleFirstUserInteraction);
+                  document.addEventListener('click', handleFirstUserInteraction);
+                }
+              }
+            } catch (error) {
+              console.warn('自动播放回退机制执行失败:', error);
+            }
+          };
+          
+          // 延迟尝试，避免与进度恢复冲突
+          setTimeout(tryAutoPlay, 200);
+        }
 
         setTimeout(() => {
           if (

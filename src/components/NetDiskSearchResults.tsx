@@ -100,17 +100,50 @@ export default function NetDiskSearchResults({ results, loading, error, total }:
   }
 
   if (error) {
+    // 判断是否为功能未启用的错误
+    const isFunctionDisabled = error.includes('未启用') || error.includes('未配置') || error.includes('配置不完整');
+    
     return (
-      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-        <div className="flex items-center">
-          <div className="flex-shrink-0">
-            <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM8.707 7.293a1 1 0 0 0-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 1 0 1.414 1.414L10 11.414l1.293 1.293a1 1 0 0 0 1.414-1.414L11.414 10l1.293-1.293a1 1 0 0 0-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-            </svg>
+      <div className={`${isFunctionDisabled ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800' : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'} border rounded-lg p-4 animate-fade-in`}>
+        <div className="flex items-start">
+          <div className="flex-shrink-0 mt-0.5">
+            {isFunctionDisabled ? (
+              <svg className="h-5 w-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+              </svg>
+            ) : (
+              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM8.707 7.293a1 1 0 0 0-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 1 0 1.414 1.414L10 11.414l1.293 1.293a1 1 0 0 0 1.414-1.414L11.414 10l1.293-1.293a1 1 0 0 0-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            )}
           </div>
-          <div className="ml-3">
-            <h3 className="text-sm font-medium text-red-800 dark:text-red-200">网盘搜索失败</h3>
-            <div className="mt-2 text-sm text-red-700 dark:text-red-300">{error}</div>
+          <div className="ml-3 flex-1">
+            <h3 className={`text-sm font-medium ${isFunctionDisabled ? 'text-blue-800 dark:text-blue-200' : 'text-red-800 dark:text-red-200'}`}>
+              {isFunctionDisabled ? '网盘搜索功能未启用' : '网盘搜索失败'}
+            </h3>
+            <div className={`mt-2 text-sm ${isFunctionDisabled ? 'text-blue-700 dark:text-blue-300' : 'text-red-700 dark:text-red-300'}`}>
+              {error}
+            </div>
+            
+            {/* 用户友好的解决建议 */}
+            <div className={`mt-3 p-3 ${isFunctionDisabled ? 'bg-blue-100 dark:bg-blue-800/30' : 'bg-red-100 dark:bg-red-800/30'} rounded-md`}>
+              <div className={`text-xs ${isFunctionDisabled ? 'text-blue-600 dark:text-blue-400' : 'text-red-600 dark:text-red-400'}`}>
+                💡 <strong>解决方案：</strong>
+                {isFunctionDisabled ? (
+                  <div className="mt-1">
+                    • 联系管理员启用网盘搜索功能<br/>
+                    • 管理员可在后台设置中配置PanSou服务地址<br/>
+                    • 暂时可以使用影视搜索功能查找内容
+                  </div>
+                ) : (
+                  <div className="mt-1">
+                    • 检查网络连接是否正常<br/>
+                    • 稍后重试或使用不同关键词搜索<br/>
+                    • 如问题持续，请联系管理员检查服务状态
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>

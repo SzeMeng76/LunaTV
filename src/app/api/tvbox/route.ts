@@ -1,6 +1,44 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getConfig } from '@/lib/config';
+import { db } from '@/lib/db';
+
+// 生产环境使用Redis/Upstash/Kvrocks的频率限制
+async function checkRateLimit(ip: string, limit = 60, windowMs = 60000): Promise<boolean> {
+  const now = Date.now();
+  const windowStart = Math.floor(now / windowMs) * windowMs; // 对齐到时间窗口开始
+  const key = `tvbox-rate-limit:${ip}:${windowStart}`;
+  
+  try {
+    // 获取当前计数
+    const currentCount = await db.getCache(key) || 0;
+    
+    if (currentCount >= limit) {
+      return false;
+    }
+    
+    // 增加计数并设置过期时间
+    const newCount = currentCount + 1;
+    const expireSeconds = Math.ceil(windowMs / 1000); // 转换为秒
+    await db.setCache(key, newCount, expireSeconds);
+    
+    return true;
+  } catch (error) {
+    console.error('Rate limit check failed:', error);
+    // 如果数据库操作失败，允许请求通过（fail-open策略）
+    return true;
+  }
+}
+
+// 清理过期的频率限制缓存（内部使用）
+async function cleanExpiredRateLimitCache(): Promise<void> {
+  try {
+    await db.clearExpiredCache('tvbox-rate-limit');
+    console.log('Cleaned expired TVBox rate limit cache');
+  } catch (error) {
+    console.error('Failed to clean expired rate limit cache:', error);
+  }
+}
 
 // TVBox源格式接口
 interface TVBoxSource {
@@ -45,12 +83,82 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const format = searchParams.get('format') || 'json'; // 支持json和base64格式
+    const token = searchParams.get('token'); // 获取token参数
+    
+    // 读取当前配置
+    const config = await getConfig();
+    const securityConfig = config.TVBoxSecurityConfig;
+    
+    // Token验证（从数据库配置读取）
+    if (securityConfig?.enableAuth) {
+      const validToken = securityConfig.token;
+      if (!token || token !== validToken) {
+        return NextResponse.json({ 
+          error: 'Invalid token. Please add ?token=YOUR_TOKEN to the URL',
+          hint: '请在URL中添加 ?token=你的密钥 参数'
+        }, { status: 401 });
+      }
+    }
+    
+    // IP白名单检查（从数据库配置读取）
+    if (securityConfig?.enableIpWhitelist && securityConfig.allowedIPs.length > 0) {
+      const clientIP = request.headers.get('x-forwarded-for') || 
+                      request.headers.get('x-real-ip') || 
+                      request.headers.get('cf-connecting-ip') || 
+                      'unknown';
+      
+      const isAllowed = securityConfig.allowedIPs.some(allowedIP => {
+        const trimmedIP = allowedIP.trim();
+        if (trimmedIP === '*') return true;
+        
+        // 支持CIDR格式检查
+        if (trimmedIP.includes('/')) {
+          // 简单的CIDR匹配（实际生产环境建议使用专门的库）
+          const [network, mask] = trimmedIP.split('/');
+          const networkParts = network.split('.').map(Number);
+          const clientParts = clientIP.split('.').map(Number);
+          const maskBits = parseInt(mask, 10);
+          
+          // 简化的子网匹配逻辑
+          if (maskBits >= 24) {
+            const networkPrefix = networkParts.slice(0, 3).join('.');
+            const clientPrefix = clientParts.slice(0, 3).join('.');
+            return networkPrefix === clientPrefix;
+          }
+          
+          return clientIP.startsWith(network.split('.').slice(0, 2).join('.'));
+        }
+        
+        return clientIP === trimmedIP;
+      });
+      
+      if (!isAllowed) {
+        return NextResponse.json({ 
+          error: `Access denied for IP: ${clientIP}`,
+          hint: '该IP地址不在白名单中'
+        }, { status: 403 });
+      }
+    }
+    
+    // 访问频率限制（从数据库配置读取）
+    if (securityConfig?.enableRateLimit) {
+      const clientIP = request.headers.get('x-forwarded-for') || 
+                      request.headers.get('x-real-ip') || 
+                      'unknown';
+      
+      const rateLimit = securityConfig.rateLimit || 60;
+      
+      if (!(await checkRateLimit(clientIP, rateLimit))) {
+        return NextResponse.json({ 
+          error: 'Rate limit exceeded',
+          hint: `访问频率超限，每分钟最多${rateLimit}次请求`
+        }, { status: 429 });
+      }
+    }
+    
     const host = request.headers.get('host') || 'localhost:3000';
     const protocol = request.headers.get('x-forwarded-proto') || 'http';
     const baseUrl = `${protocol}://${host}`;
-
-    // 读取当前配置
-    const config = await getConfig();
 
     // 从配置中获取源站列表
     const sourceConfigs = config.SourceConfig || [];

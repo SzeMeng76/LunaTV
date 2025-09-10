@@ -11,6 +11,7 @@ import {
   FilmIcon,
   MagnifyingGlassIcon,
   FolderIcon,
+  VideoCameraIcon,
   ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
 
@@ -18,6 +19,7 @@ interface CacheStats {
   douban: { count: number; size: number; types: Record<string, number> };
   danmu: { count: number; size: number };
   netdisk: { count: number; size: number };
+  youtube: { count: number; size: number };
   search: { count: number; size: number };
   other: { count: number; size: number };
   total: { count: number; size: number };
@@ -26,6 +28,7 @@ interface CacheStats {
     douban: string;
     danmu: string;
     netdisk: string;
+    youtube: string;
     search: string;
     other: string;
     total: string;
@@ -61,6 +64,13 @@ const CACHE_TYPES: CacheType[] = [
     description: '网盘搜索结果缓存（百度、阿里、夸克等）',
     icon: FolderIcon,
     color: 'text-purple-600 bg-purple-100'
+  },
+  {
+    key: 'youtube',
+    name: 'YouTube搜索',
+    description: 'YouTube视频搜索结果缓存（API和演示模式）',
+    icon: VideoCameraIcon,
+    color: 'text-red-600 bg-red-100'
   }
 ];
 
@@ -139,7 +149,7 @@ export default function CacheManager() {
 
   // 清理所有缓存
   const clearAllCache = async () => {
-    if (!confirm('⚠️ 确定要清理所有缓存吗？这将清除豆瓣、弹幕、网盘搜索等所有缓存数据。')) {
+    if (!confirm('⚠️ 确定要清理所有缓存吗？这将清除豆瓣、弹幕、网盘搜索、YouTube搜索等所有缓存数据。')) {
       return;
     }
     await clearCache('all');

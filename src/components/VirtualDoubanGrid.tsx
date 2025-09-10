@@ -123,8 +123,9 @@ export const VirtualDoubanGrid: React.FC<VirtualDoubanGridProps> = ({
   // 网格行数计算
   const rowCount = Math.ceil(displayItemCount / columnCount);
 
-  // 渲染单个网格项
+  // 渲染单个网格项 - 支持react-window v2.1.0的ariaAttributes
   const CellComponent = useCallback(({ 
+    ariaAttributes,
     columnIndex, 
     rowIndex, 
     style,
@@ -149,7 +150,7 @@ export const VirtualDoubanGrid: React.FC<VirtualDoubanGridProps> = ({
     }
 
     return (
-      <div style={{ ...style, padding: '8px' }}>
+      <div style={{ ...style, padding: '8px' }} {...ariaAttributes}>
         <VideoCard
           from='douban'
           title={item.title}
@@ -208,17 +209,26 @@ export const VirtualDoubanGrid: React.FC<VirtualDoubanGridProps> = ({
           rowCount={rowCount}
           rowHeight={itemHeight + 16}
           overscanCount={1}
+          // 添加ARIA支持提升无障碍体验
+          role="grid"
+          aria-label={`豆瓣${type}列表，共${displayItemCount}个结果`}
+          aria-rowcount={rowCount}
+          aria-colcount={columnCount}
           style={{
             overflowX: 'hidden',
             overflowY: 'auto',
             // 确保不创建新的stacking context，让菜单能正确显示在最顶层
             isolation: 'auto',
           }}
-          onCellsRendered={({ rowStartIndex, rowStopIndex }) => {
-            const visibleStopIndex = rowStopIndex;
+          onCellsRendered={(visibleCells, allCells) => {
+            // 使用react-window v2.1.0的新API - 优化性能：
+            // 1. visibleCells: 真实可见的单元格范围
+            // 2. allCells: 包含overscan的所有渲染单元格范围
+            const { rowStopIndex: visibleRowStopIndex } = visibleCells;
+            const { rowStopIndex: allRowStopIndex } = allCells;
             
-            // 当接近底部时加载更多虚拟项目
-            if (visibleStopIndex >= rowCount - LOAD_MORE_THRESHOLD) {
+            // 性能优化：只基于真实可见区域判断加载，避免overscan区域误触发
+            if (visibleRowStopIndex >= rowCount - LOAD_MORE_THRESHOLD) {
               if (hasNextVirtualPage && !isVirtualLoadingMore) {
                 loadMoreVirtualItems();
               } else if (needsServerData) {

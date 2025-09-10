@@ -27,31 +27,22 @@ export async function POST(request: NextRequest) {
   const username = authInfo.username;
 
   try {
-    const netDiskConfig = await request.json();
+    const youtubeConfig = await request.json();
     
     // 验证配置数据
-    if (typeof netDiskConfig.enabled !== 'boolean') {
+    if (typeof youtubeConfig.enabled !== 'boolean') {
       return NextResponse.json({ error: 'Invalid enabled value' }, { status: 400 });
     }
 
-    if (!netDiskConfig.pansouUrl || typeof netDiskConfig.pansouUrl !== 'string') {
-      return NextResponse.json({ error: 'Invalid pansouUrl value' }, { status: 400 });
-    }
-
-    if (!Number.isInteger(netDiskConfig.timeout) || netDiskConfig.timeout < 10 || netDiskConfig.timeout > 120) {
-      return NextResponse.json({ error: 'Invalid timeout value' }, { status: 400 });
-    }
-
-    if (!Array.isArray(netDiskConfig.enabledCloudTypes)) {
-      return NextResponse.json({ error: 'Invalid enabledCloudTypes value' }, { status: 400 });
-    }
-
-    // 验证网盘类型
-    const validCloudTypes = ['baidu', 'aliyun', 'quark', 'tianyi', 'uc', 'mobile', '115', 'pikpak', 'xunlei', '123', 'magnet', 'ed2k'];
-    for (const type of netDiskConfig.enabledCloudTypes) {
-      if (!validCloudTypes.includes(type)) {
-        return NextResponse.json({ error: `Invalid cloud type: ${type}` }, { status: 400 });
+    // 如果启用YouTube，验证必需字段
+    if (youtubeConfig.enabled && !youtubeConfig.enableDemo) {
+      if (!youtubeConfig.apiKey || typeof youtubeConfig.apiKey !== 'string') {
+        return NextResponse.json({ error: 'API密钥不能为空' }, { status: 400 });
       }
+    }
+
+    if (youtubeConfig.maxResults && (!Number.isInteger(youtubeConfig.maxResults) || youtubeConfig.maxResults < 1 || youtubeConfig.maxResults > 50)) {
+      return NextResponse.json({ error: '最大结果数应在1-50之间' }, { status: 400 });
     }
 
     // 获取当前配置
@@ -68,12 +59,14 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    // 更新网盘配置
-    adminConfig.NetDiskConfig = {
-      enabled: netDiskConfig.enabled,
-      pansouUrl: netDiskConfig.pansouUrl.trim(),
-      timeout: netDiskConfig.timeout,
-      enabledCloudTypes: netDiskConfig.enabledCloudTypes
+    // 更新YouTube配置
+    adminConfig.YouTubeConfig = {
+      enabled: youtubeConfig.enabled ?? false,
+      apiKey: youtubeConfig.apiKey?.trim() || '',
+      enableDemo: youtubeConfig.enableDemo ?? true,
+      maxResults: youtubeConfig.maxResults ?? 25,
+      enabledRegions: youtubeConfig.enabledRegions ?? ['US', 'CN', 'JP', 'KR', 'GB', 'DE', 'FR'],
+      enabledCategories: youtubeConfig.enabledCategories ?? ['Film & Animation', 'Music', 'Gaming', 'News & Politics', 'Entertainment']
     };
 
     // 保存配置到数据库
@@ -89,7 +82,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Save netdisk config error:', error);
+    console.error('Save YouTube config error:', error);
     return NextResponse.json({ 
       error: error instanceof Error ? error.message : 'Internal server error' 
     }, { status: 500 });

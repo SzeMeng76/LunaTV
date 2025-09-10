@@ -2,7 +2,7 @@
 
 'use client';
 
-import { ChevronRight } from 'lucide-react';
+import { Brain, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { Suspense, useEffect, useState } from 'react';
 
@@ -20,6 +20,7 @@ import {
 import { getDoubanCategories } from '@/lib/douban.client';
 import { DoubanItem } from '@/lib/types';
 
+import AIRecommendModal from '@/components/AIRecommendModal';
 import CapsuleSwitch from '@/components/CapsuleSwitch';
 import ContinueWatching from '@/components/ContinueWatching';
 import PageLayout from '@/components/PageLayout';
@@ -39,6 +40,8 @@ function HomeClient() {
   const { announcement } = useSite();
 
   const [showAnnouncement, setShowAnnouncement] = useState(false);
+  const [showAIRecommendModal, setShowAIRecommendModal] = useState(false);
+  const [aiEnabled, setAiEnabled] = useState<boolean | null>(true); // 默认显示，检查后再决定
 
   // 检查公告弹窗状态
   useEffect(() => {
@@ -51,6 +54,30 @@ function HomeClient() {
       }
     }
   }, [announcement]);
+
+  // 检查AI功能是否启用
+  useEffect(() => {
+    const checkAIStatus = async () => {
+      try {
+        // 发送一个测试请求来检查AI功能状态
+        const response = await fetch('/api/ai-recommend', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            messages: [{ role: 'user', content: 'test' }]
+          })
+        });
+        
+        // 如果是403错误，说明功能未启用
+        setAiEnabled(response.status !== 403);
+      } catch (error) {
+        // 发生错误时默认显示按钮
+        setAiEnabled(true);
+      }
+    };
+
+    checkAIStatus();
+  }, []);
 
   // 收藏夹数据
   type FavoriteItem = {
@@ -171,7 +198,7 @@ function HomeClient() {
     <PageLayout>
       <div className='px-2 sm:px-10 py-4 sm:py-8 overflow-visible'>
         {/* 顶部 Tab 切换 */}
-        <div className='mb-8 flex justify-center'>
+        <div className='mb-8 flex flex-col sm:flex-row items-center justify-center gap-4'>
           <CapsuleSwitch
             options={[
               { label: '首页', value: 'home' },
@@ -180,6 +207,18 @@ function HomeClient() {
             active={activeTab}
             onChange={(value) => setActiveTab(value as 'home' | 'favorites')}
           />
+          
+          {/* AI推荐按钮 - 只在功能启用时显示 */}
+          {aiEnabled && (
+            <button
+              onClick={() => setShowAIRecommendModal(true)}
+              className='flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-full font-medium transition-all transform hover:scale-105 shadow-lg hover:shadow-xl'
+              title='AI影视推荐'
+            >
+              <Brain className='h-4 w-4' />
+              <span>AI推荐</span>
+            </button>
+          )}
         </div>
 
         <div className='max-w-[95%] mx-auto'>
@@ -510,6 +549,12 @@ function HomeClient() {
           </div>
         </div>
       )}
+
+      {/* AI推荐模态框 */}
+      <AIRecommendModal
+        isOpen={showAIRecommendModal}
+        onClose={() => setShowAIRecommendModal(false)}
+      />
     </PageLayout>
   );
 }

@@ -5,7 +5,7 @@
 import { Suspense, useEffect, useRef, useState } from 'react';
 
 import Hls from 'hls.js';
-import { Heart, Radio, Search, Tv, X } from 'lucide-react';
+import { Heart, Radio, RefreshCw, Search, Tv, X } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import {
@@ -97,6 +97,24 @@ function LivePageClient() {
 
   // 切换直播源状态
   const [isSwitchingSource, setIsSwitchingSource] = useState(false);
+  
+  // 刷新相关状态
+  const [isRefreshingSource, setIsRefreshingSource] = useState(false);
+  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('live-auto-refresh-enabled');
+      return saved ? JSON.parse(saved) : false;
+    }
+    return false;
+  });
+  const [autoRefreshInterval, setAutoRefreshInterval] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('live-auto-refresh-interval');
+      return saved ? parseInt(saved) : 30; // 默认30分钟
+    }
+    return 30;
+  });
+  const autoRefreshTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // 分组相关
   const [groupedChannels, setGroupedChannels] = useState<{ [key: string]: LiveChannel[] }>({});
@@ -238,6 +256,65 @@ function LivePageClient() {
   // -----------------------------------------------------------------------------
   // 工具函数（Utils）
   // -----------------------------------------------------------------------------
+
+  // 刷新直播源
+  const refreshLiveSources = async () => {
+    if (isRefreshingSource) return;
+    
+    setIsRefreshingSource(true);
+    try {
+      console.log('开始刷新直播源...');
+      
+      // 调用后端刷新API
+      const response = await fetch('/api/admin/live/refresh', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('刷新直播源失败');
+      }
+      
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error || '刷新直播源失败');
+      }
+      
+      console.log('直播源刷新成功');
+      
+      // 重新获取直播源列表
+      await fetchLiveSources();
+      
+    } catch (error) {
+      console.error('刷新直播源失败:', error);
+      // 这里可以显示错误提示，但不设置全局error状态
+    } finally {
+      setIsRefreshingSource(false);
+    }
+  };
+  
+  // 设置自动刷新
+  const setupAutoRefresh = () => {
+    // 清除现有定时器
+    if (autoRefreshTimerRef.current) {
+      clearInterval(autoRefreshTimerRef.current);
+      autoRefreshTimerRef.current = null;
+    }
+    
+    if (autoRefreshEnabled) {
+      const intervalMs = autoRefreshInterval * 60 * 1000; // 转换为毫秒
+      autoRefreshTimerRef.current = setInterval(() => {
+        console.log(`自动刷新直播源 (间隔: ${autoRefreshInterval}分钟)`);
+        refreshLiveSources();
+      }, intervalMs);
+      
+      console.log(`自动刷新已启用，间隔: ${autoRefreshInterval}分钟`);
+    } else {
+      console.log('自动刷新已禁用');
+    }
+  };
 
   // 获取直播源列表
   const fetchLiveSources = async () => {
@@ -772,6 +849,32 @@ function LivePageClient() {
 
     return unsubscribe;
   }, [currentSource, currentChannel]);
+
+  // 监听自动刷新设置变化
+  useEffect(() => {
+    setupAutoRefresh();
+    
+    // 清理函数
+    return () => {
+      if (autoRefreshTimerRef.current) {
+        clearInterval(autoRefreshTimerRef.current);
+        autoRefreshTimerRef.current = null;
+      }
+    };
+  }, [autoRefreshEnabled, autoRefreshInterval]);
+
+  // 保存自动刷新配置到localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('live-auto-refresh-enabled', JSON.stringify(autoRefreshEnabled));
+    }
+  }, [autoRefreshEnabled]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('live-auto-refresh-interval', autoRefreshInterval.toString());
+    }
+  }, [autoRefreshInterval]);
 
   // 当分组切换时，将激活的分组标签滚动到视口中间
   useEffect(() => {
@@ -1804,6 +1907,53 @@ function LivePageClient() {
                 {/* 直播源 Tab 内容 */}
                 {activeTab === 'sources' && (
                   <div className='flex flex-col h-full mt-4'>
+                    {/* 刷新控制区域 */}
+                    <div className='mb-4 -mx-6 px-6 flex-shrink-0 space-y-3'>
+                      {/* 手动刷新按钮 */}
+                      <div className='flex gap-2'>
+                        <button
+                          onClick={refreshLiveSources}
+                          disabled={isRefreshingSource}
+                          className='flex items-center gap-2 px-3 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white text-sm rounded-lg transition-colors flex-1'
+                        >
+                          <RefreshCw className={`w-4 h-4 ${isRefreshingSource ? 'animate-spin' : ''}`} />
+                          {isRefreshingSource ? '刷新中...' : '刷新源'}
+                        </button>
+                      </div>
+                      
+                      {/* 自动刷新控制 */}
+                      <div className='flex items-center gap-3'>
+                        <div className='flex items-center gap-2'>
+                          <input
+                            type='checkbox'
+                            id='autoRefresh'
+                            checked={autoRefreshEnabled}
+                            onChange={(e) => setAutoRefreshEnabled(e.target.checked)}
+                            className='rounded text-green-500 focus:ring-green-500'
+                          />
+                          <label htmlFor='autoRefresh' className='text-sm text-gray-700 dark:text-gray-300'>
+                            自动刷新
+                          </label>
+                        </div>
+                        
+                        {autoRefreshEnabled && (
+                          <div className='flex items-center gap-2'>
+                            <select
+                              value={autoRefreshInterval}
+                              onChange={(e) => setAutoRefreshInterval(Number(e.target.value))}
+                              className='text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
+                            >
+                              <option value={10}>10分钟</option>
+                              <option value={15}>15分钟</option>
+                              <option value={30}>30分钟</option>
+                              <option value={60}>1小时</option>
+                              <option value={120}>2小时</option>
+                            </select>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
                     <div className='flex-1 overflow-y-auto space-y-2 pb-20'>
                       {liveSources.length > 0 ? (
                         liveSources.map((source) => {

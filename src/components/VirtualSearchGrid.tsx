@@ -115,8 +115,9 @@ export const VirtualSearchGrid: React.FC<VirtualSearchGridProps> = ({
   // 网格行数计算
   const rowCount = Math.ceil(displayItemCount / columnCount);
 
-  // 渲染单个网格项 - react-window 2.0.0 新API格式
+  // 渲染单个网格项 - 支持react-window v2.1.0的ariaAttributes
   const CellComponent = useCallback(({ 
+    ariaAttributes,
     columnIndex, 
     rowIndex, 
     style,
@@ -157,7 +158,7 @@ export const VirtualSearchGrid: React.FC<VirtualSearchGridProps> = ({
       }
 
       return (
-        <div style={{ ...style, padding: '8px' }}>
+        <div style={{ ...style, padding: '8px' }} {...ariaAttributes}>
           <VideoCard
             ref={cellGetGroupRef(mapKey)}
             from='search'
@@ -176,7 +177,7 @@ export const VirtualSearchGrid: React.FC<VirtualSearchGridProps> = ({
     } else {
       const searchItem = item as SearchResult;
       return (
-        <div style={{ ...style, padding: '8px' }}>
+        <div style={{ ...style, padding: '8px' }} {...ariaAttributes}>
           <VideoCard
             id={searchItem.id}
             title={searchItem.title}
@@ -241,16 +242,26 @@ export const VirtualSearchGrid: React.FC<VirtualSearchGridProps> = ({
           rowCount={rowCount}
           rowHeight={itemHeight + 16}
           overscanCount={1}
+          // 添加ARIA支持提升无障碍体验
+          role="grid"
+          aria-label={`搜索结果列表 "${searchQuery}"，共${displayItemCount}个结果，当前视图：${viewMode === 'agg' ? '聚合视图' : '全部结果'}`}
+          aria-rowcount={rowCount}
+          aria-colcount={columnCount}
           style={{
             overflowX: 'hidden',
             overflowY: 'auto',
             // 确保不创建新的stacking context，让菜单能正确显示在最顶层
             isolation: 'auto',
           }}
-          onCellsRendered={({ rowStartIndex, rowStopIndex }) => {
-            const visibleStopIndex = rowStopIndex;
+          onCellsRendered={(visibleCells, allCells) => {
+            // 使用react-window v2.1.0的新API - 优化性能：
+            // 1. visibleCells: 真实可见的单元格范围  
+            // 2. allCells: 包含overscan的所有渲染单元格范围
+            const { rowStopIndex: visibleRowStopIndex } = visibleCells;
+            const { rowStopIndex: allRowStopIndex } = allCells;
             
-            if (visibleStopIndex >= rowCount - LOAD_MORE_THRESHOLD && hasNextPage && !isLoadingMore) {
+            // 性能优化：只基于真实可见区域判断加载，避免overscan区域误触发
+            if (visibleRowStopIndex >= rowCount - LOAD_MORE_THRESHOLD && hasNextPage && !isLoadingMore) {
               loadMoreItems();
             }
           }}

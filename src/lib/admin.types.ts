@@ -62,6 +62,30 @@ export interface AdminConfig {
     timeout: number;                     // 请求超时时间(秒)
     enabledCloudTypes: string[];         // 启用的网盘类型
   };
+  AIRecommendConfig?: {
+    enabled: boolean;                    // 是否启用AI推荐功能
+    apiUrl: string;                      // OpenAI兼容API地址
+    apiKey: string;                      // API密钥
+    model: string;                       // 模型名称
+    temperature: number;                 // 温度参数 0-2
+    maxTokens: number;                   // 最大token数
+  };
+  YouTubeConfig?: {
+    enabled: boolean;                    // 是否启用YouTube搜索功能
+    apiKey: string;                      // YouTube Data API v3密钥
+    enableDemo: boolean;                 // 是否启用演示模式
+    maxResults: number;                  // 每页最大搜索结果数
+    enabledRegions: string[];            // 启用的地区代码列表
+    enabledCategories: string[];         // 启用的视频分类列表
+  };
+  TVBoxSecurityConfig?: {
+    enableAuth: boolean;                 // 是否启用Token验证
+    token: string;                       // 访问Token
+    enableIpWhitelist: boolean;          // 是否启用IP白名单
+    allowedIPs: string[];               // 允许的IP地址列表
+    enableRateLimit: boolean;            // 是否启用频率限制
+    rateLimit: number;                   // 每分钟允许的请求次数
+  };
 }
 
 export interface AdminConfigResult {
