@@ -260,10 +260,23 @@ const Sidebar = ({ onToggle, activePath = '/' }: SidebarProps) => {
                   const decodedActive = decodeURIComponent(active);
                   const decodedItemHref = decodeURIComponent(item.href);
 
-                  const isActive =
-                    decodedActive === decodedItemHref ||
-                    (decodedActive.startsWith('/douban') &&
-                      decodedActive.includes(`type=${typeMatch}`));
+                  // 提取基础路由（去除查询参数）
+                  const getBaseRoute = (href: string) => href.split('?')[0];
+                  const baseRoute = getBaseRoute(item.href);
+                  const currentBaseRoute = getBaseRoute(decodedActive);
+
+                  // 特殊处理douban路径（使用type参数匹配）
+                  const isDoubanMatch = decodedActive.startsWith('/douban') &&
+                    typeMatch && decodedActive.includes(`type=${typeMatch}`);
+
+                  // 处理非douban页面的路径匹配（如shortdrama, tvbox, live等）
+                  const isNonDoubanMatch = baseRoute !== '/douban' && baseRoute !== '/' &&
+                    (decodedActive === decodedItemHref ||
+                     currentBaseRoute === baseRoute ||
+                     decodedActive.startsWith(baseRoute + '?') ||
+                     decodedActive.startsWith(baseRoute + '/'));
+
+                  const isActive = decodedActive === decodedItemHref || isDoubanMatch || isNonDoubanMatch;
                   const Icon = item.icon;
                   return (
                     <Link

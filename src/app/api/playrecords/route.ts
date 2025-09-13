@@ -98,6 +98,16 @@ export async function POST(request: NextRequest) {
 
     await db.savePlayRecord(authInfo.username, source, id, finalRecord);
 
+    // 更新播放统计（如果存储类型支持）
+    if (db.isStatsSupported()) {
+      await db.updatePlayStatistics(
+        authInfo.username,
+        source,
+        id,
+        finalRecord.play_time
+      );
+    }
+
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (err) {
     console.error('保存播放记录失败', err);
