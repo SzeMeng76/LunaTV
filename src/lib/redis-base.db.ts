@@ -3,7 +3,15 @@
 import { createClient, RedisClientType } from 'redis';
 
 import { AdminConfig } from './admin.types';
-import { Favorite, IStorage, PlayRecord, SkipConfig, PlayStatsResult, UserPlayStat, ContentStat } from './types';
+import {
+  ContentStat,
+  Favorite,
+  IStorage,
+  PlayRecord,
+  PlayStatsResult,
+  SkipConfig,
+  UserPlayStat,
+} from './types';
 
 // 搜索历史最大条数
 const SEARCH_HISTORY_LIMIT = 20;
@@ -660,7 +668,7 @@ export abstract class BaseRedisStorage implements IStorage {
   }
 
   // 获取内容热度统计
-  async getContentStats(limit: number = 10): Promise<ContentStat[]> {
+  async getContentStats(limit = 10): Promise<ContentStat[]> {
     try {
       // 获取所有用户
       const allUsers = await this.getAllUsers();
@@ -724,10 +732,10 @@ export abstract class BaseRedisStorage implements IStorage {
 
   // 更新播放统计（当用户播放时调用）
   async updatePlayStatistics(
-    userName: string,
-    source: string,
-    id: string,
-    watchTime: number
+    _userName: string,
+    _source: string,
+    _id: string,
+    _watchTime: number
   ): Promise<void> {
     try {
       // 清除全站统计缓存，下次查询时重新计算
@@ -735,6 +743,7 @@ export abstract class BaseRedisStorage implements IStorage {
 
       // 这里可以添加更多实时统计更新逻辑
       // 比如更新用户统计缓存、内容热度等
+      // 暂时只是清除缓存，实际统计在查询时重新计算
     } catch (error) {
       console.error('更新播放统计失败:', error);
     }

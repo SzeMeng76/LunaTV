@@ -3,7 +3,15 @@
 import { AdminConfig } from './admin.types';
 import { KvrocksStorage } from './kvrocks.db';
 import { RedisStorage } from './redis.db';
-import { Favorite, IStorage, PlayRecord, SkipConfig, PlayStatsResult, UserPlayStat, ContentStat } from './types';
+import {
+  ContentStat,
+  Favorite,
+  IStorage,
+  PlayRecord,
+  PlayStatsResult,
+  SkipConfig,
+  UserPlayStat,
+} from './types';
 import { UpstashRedisStorage } from './upstash.db';
 
 // storage type 常量: 'localstorage' | 'redis' | 'upstash'，默认 'localstorage'
@@ -302,7 +310,7 @@ export class DbManager {
     };
   }
 
-  async getContentStats(limit: number = 10): Promise<ContentStat[]> {
+  async getContentStats(limit = 10): Promise<ContentStat[]> {
     if (typeof (this.storage as any).getContentStats === 'function') {
       return (this.storage as any).getContentStats(limit);
     }
@@ -312,13 +320,13 @@ export class DbManager {
   }
 
   async updatePlayStatistics(
-    userName: string,
-    source: string,
-    id: string,
-    watchTime: number
+    _userName: string,
+    _source: string,
+    _id: string,
+    _watchTime: number
   ): Promise<void> {
     if (typeof (this.storage as any).updatePlayStatistics === 'function') {
-      await (this.storage as any).updatePlayStatistics(userName, source, id, watchTime);
+      await (this.storage as any).updatePlayStatistics(_userName, _source, _id, _watchTime);
     }
   }
 
