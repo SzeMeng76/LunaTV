@@ -3,7 +3,15 @@
 import { Redis } from '@upstash/redis';
 
 import { AdminConfig } from './admin.types';
-import { Favorite, IStorage, PlayRecord, SkipConfig } from './types';
+import {
+  ContentStat,
+  Favorite,
+  IStorage,
+  PlayRecord,
+  PlayStatsResult,
+  SkipConfig,
+  UserPlayStat,
+} from './types';
 
 // 搜索历史最大条数
 const SEARCH_HISTORY_LIMIT = 20;
@@ -413,10 +421,229 @@ export class UpstashRedisStorage implements IStorage {
     // 可以根据需要实现特定前缀的缓存清理
     const pattern = prefix ? `cache:${prefix}*` : 'cache:*';
     const keys = await withRetry(() => this.client.keys(pattern));
-    
+
     if (keys.length > 0) {
       await withRetry(() => this.client.del(...keys));
       console.log(`Cleared ${keys.length} cache entries with pattern: ${pattern}`);
+    }
+  }
+
+  // ---------- 播放统计相关 ----------
+  async getPlayStats(): Promise<PlayStatsResult> {
+    try {
+      // 尝试从缓存获取
+      const cached = await this.getCache('play_stats_summary');
+      if (cached) {
+        return cached as PlayStatsResult;
+      }
+
+      // 获取所有用户
+      const allUsers = await this.getAllUsers();
+      const userStats: UserPlayStat[] = [];
+      let totalWatchTime = 0;
+      let totalPlays = 0;
+      const sourceCount: Record<string, number> = {};
+      const dailyData: Record<string, { watchTime: number; plays: number }> = {};
+
+      // 计算近7天的日期范围
+      const now = new Date();
+      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+      for (const username of allUsers) {
+        const userStat = await this.getUserPlayStat(username);
+        userStats.push(userStat);
+        totalWatchTime += userStat.totalWatchTime;
+        totalPlays += userStat.totalPlays;
+
+        // 获取用户的播放记录来统计源和每日数据
+        const records = await this.getAllPlayRecords(username);
+        Object.values(records).forEach((record) => {
+          const sourceName = record.source_name || '未知来源';
+          sourceCount[sourceName] = (sourceCount[sourceName] || 0) + 1;
+
+          const recordDate = new Date(record.save_time);
+          if (recordDate >= sevenDaysAgo) {
+            const dateKey = recordDate.toISOString().split('T')[0];
+            if (!dailyData[dateKey]) {
+              dailyData[dateKey] = { watchTime: 0, plays: 0 };
+            }
+            dailyData[dateKey].watchTime += record.play_time || 0;
+            dailyData[dateKey].plays += 1;
+          }
+        });
+      }
+
+      // 按观看时间降序排序
+      userStats.sort((a, b) => b.totalWatchTime - a.totalWatchTime);
+
+      // 整理热门来源数据
+      const topSources = Object.entries(sourceCount)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 5)
+        .map(([source, count]) => ({ source, count }));
+
+      // 整理近7天数据
+      const dailyStats: Array<{ date: string; watchTime: number; plays: number }> = [];
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+        const dateKey = date.toISOString().split('T')[0];
+        const data = dailyData[dateKey] || { watchTime: 0, plays: 0 };
+        dailyStats.push({
+          date: dateKey,
+          watchTime: data.watchTime,
+          plays: data.plays,
+        });
+      }
+
+      const result: PlayStatsResult = {
+        totalUsers: allUsers.length,
+        totalWatchTime,
+        totalPlays,
+        avgWatchTimePerUser: allUsers.length > 0 ? totalWatchTime / allUsers.length : 0,
+        avgPlaysPerUser: allUsers.length > 0 ? totalPlays / allUsers.length : 0,
+        userStats,
+        topSources,
+        dailyStats,
+      };
+
+      // 缓存结果30分钟
+      await this.setCache('play_stats_summary', result, 1800);
+      return result;
+    } catch (error) {
+      console.error('获取播放统计失败:', error);
+      throw error;
+    }
+  }
+
+  async getUserPlayStat(userName: string): Promise<UserPlayStat> {
+    try {
+      // 获取用户的所有播放记录
+      const records = await this.getAllPlayRecords(userName);
+      const playRecords = Object.values(records);
+
+      if (playRecords.length === 0) {
+        return {
+          username: userName,
+          totalWatchTime: 0,
+          totalPlays: 0,
+          lastPlayTime: 0,
+          recentRecords: [],
+          avgWatchTime: 0,
+          mostWatchedSource: '',
+        };
+      }
+
+      // 计算统计
+      let totalWatchTime = 0;
+      let lastPlayTime = 0;
+      const sourceCount: Record<string, number> = {};
+
+      playRecords.forEach((record) => {
+        totalWatchTime += record.play_time || 0;
+        if (record.save_time > lastPlayTime) {
+          lastPlayTime = record.save_time;
+        }
+        const sourceName = record.source_name || '未知来源';
+        sourceCount[sourceName] = (sourceCount[sourceName] || 0) + 1;
+      });
+
+      // 获取最近播放记录
+      const recentRecords = playRecords
+        .sort((a, b) => (b.save_time || 0) - (a.save_time || 0))
+        .slice(0, 10);
+
+      // 找出最常观看的来源
+      let mostWatchedSource = '';
+      let maxCount = 0;
+      for (const [source, count] of Object.entries(sourceCount)) {
+        if (count > maxCount) {
+          maxCount = count;
+          mostWatchedSource = source;
+        }
+      }
+
+      return {
+        username: userName,
+        totalWatchTime,
+        totalPlays: playRecords.length,
+        lastPlayTime,
+        recentRecords,
+        avgWatchTime: playRecords.length > 0 ? totalWatchTime / playRecords.length : 0,
+        mostWatchedSource,
+      };
+    } catch (error) {
+      console.error(`获取用户 ${userName} 统计失败:`, error);
+      return {
+        username: userName,
+        totalWatchTime: 0,
+        totalPlays: 0,
+        lastPlayTime: 0,
+        recentRecords: [],
+        avgWatchTime: 0,
+        mostWatchedSource: '',
+      };
+    }
+  }
+
+  async getContentStats(limit = 10): Promise<ContentStat[]> {
+    try {
+      // 获取所有用户的播放记录
+      const allUsers = await this.getAllUsers();
+      const contentStats: Record<string, ContentStat> = {};
+
+      for (const username of allUsers) {
+        const records = await this.getAllPlayRecords(username);
+        Object.entries(records).forEach(([key, record]) => {
+          if (!contentStats[key]) {
+            contentStats[key] = {
+              contentKey: key,
+              title: record.title || '未知标题',
+              cover: record.cover || '',
+              sourceName: record.source_name || '未知来源',
+              totalPlays: 0,
+              totalWatchTime: 0,
+              uniqueUsers: new Set(),
+              lastPlayTime: 0,
+            };
+          }
+
+          const stat = contentStats[key];
+          stat.totalPlays += 1;
+          stat.totalWatchTime += record.play_time || 0;
+          stat.uniqueUsers.add(username);
+          if (record.save_time > stat.lastPlayTime) {
+            stat.lastPlayTime = record.save_time;
+          }
+        });
+      }
+
+      // 转换 Set 为数量并排序
+      const result = Object.values(contentStats)
+        .map((stat) => ({
+          ...stat,
+          uniqueUsers: stat.uniqueUsers.size,
+        }))
+        .sort((a, b) => b.totalPlays - a.totalPlays)
+        .slice(0, limit);
+
+      return result as ContentStat[];
+    } catch (error) {
+      console.error('获取内容统计失败:', error);
+      return [];
+    }
+  }
+
+  async updatePlayStatistics(
+    _userName: string,
+    _source: string,
+    _id: string,
+    _watchTime: number
+  ): Promise<void> {
+    try {
+      // 清除全站统计缓存，下次查询时重新计算
+      await this.deleteCache('play_stats_summary');
+    } catch (error) {
+      console.error('更新播放统计失败:', error);
     }
   }
 }
