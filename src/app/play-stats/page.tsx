@@ -202,37 +202,25 @@ const PlayStatsPage: React.FC = () => {
       setShowBackToTop(scrollTop > 300);
     };
 
-    // 监听滚动事件
-    document.addEventListener('scroll', handleScroll, { passive: true });
-    window.addEventListener('scroll', handleScroll, { passive: true });
+    // 监听 body 元素的滚动事件（参考搜索页面的实现方式）
+    document.body.addEventListener('scroll', handleScroll, { passive: true });
 
     return () => {
-      document.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('scroll', handleScroll);
+      document.body.removeEventListener('scroll', handleScroll);
     };
   }, []);
 
   // 返回顶部功能
   const scrollToTop = () => {
     try {
-      // 使用多种方法确保滚动到顶部
+      // 根据搜索页面的调试结果，真正的滚动容器是 document.body
       document.body.scrollTo({
         top: 0,
         behavior: 'smooth',
       });
-      document.documentElement.scrollTo({
-        top: 0,
-        behavior: 'smooth',
-      });
-      window.scrollTo({
-        top: 0,
-        behavior: 'smooth',
-      });
     } catch (error) {
-      // 如果平滑滚动失败，使用立即滚动
+      // 如果平滑滚动完全失败，使用立即滚动
       document.body.scrollTop = 0;
-      document.documentElement.scrollTop = 0;
-      window.scrollTo(0, 0);
     }
   };
 
@@ -706,6 +694,18 @@ const PlayStatsPage: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* 返回顶部悬浮按钮 */}
+        <button
+          onClick={scrollToTop}
+          className={`fixed bottom-20 md:bottom-6 right-6 z-[500] w-12 h-12 bg-green-500/90 hover:bg-green-500 text-white rounded-full shadow-lg backdrop-blur-sm transition-all duration-300 ease-in-out flex items-center justify-center group ${showBackToTop
+            ? 'opacity-100 translate-y-0 pointer-events-auto'
+            : 'opacity-0 translate-y-4 pointer-events-none'
+            }`}
+          aria-label='返回顶部'
+        >
+          <ChevronUp className='w-6 h-6 transition-transform group-hover:scale-110' />
+        </button>
       </PageLayout>
     );
   }
@@ -914,6 +914,18 @@ const PlayStatsPage: React.FC = () => {
             )}
           </div>
         </div>
+
+        {/* 返回顶部悬浮按钮 */}
+        <button
+          onClick={scrollToTop}
+          className={`fixed bottom-20 md:bottom-6 right-6 z-[500] w-12 h-12 bg-green-500/90 hover:bg-green-500 text-white rounded-full shadow-lg backdrop-blur-sm transition-all duration-300 ease-in-out flex items-center justify-center group ${showBackToTop
+            ? 'opacity-100 translate-y-0 pointer-events-auto'
+            : 'opacity-0 translate-y-4 pointer-events-none'
+            }`}
+          aria-label='返回顶部'
+        >
+          <ChevronUp className='w-6 h-6 transition-transform group-hover:scale-110' />
+        </button>
       </PageLayout>
     );
   }

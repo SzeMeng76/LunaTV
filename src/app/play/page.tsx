@@ -2914,9 +2914,10 @@ function PlayPageClient() {
             setTimeout(() => {
               const danmakuContainer = document.querySelector('.artplayer-plugin-danmuku') as HTMLElement;
               if (danmakuContainer) {
-                // 防止意外的鼠标事件在移动端触发
+                // 防止意外的鼠标悬停事件在移动端触发（但保留点击事件）
                 const preventHoverEvents = (e: Event) => {
-                  if (e.type.includes('mouse') && !e.type.includes('click')) {
+                  // 只阻止hover相关事件，保留click事件的正常功能
+                  if (e.type === 'mouseover' || e.type === 'mouseenter' || e.type === 'mousemove') {
                     e.preventDefault();
                     e.stopPropagation();
                   }
@@ -2945,29 +2946,118 @@ function PlayPageClient() {
                   }
                 }, { passive: true });
 
-                // 高级移动端交互控制 - alpha的延迟hover策略优化
+                // alpha版本的移动端面板状态管理
                 const configButton = danmakuContainer.querySelector('.apd-config') as HTMLElement;
                 const styleButton = danmakuContainer.querySelector('.apd-style') as HTMLElement;
 
-                [configButton, styleButton].filter(Boolean).forEach(button => {
-                  if (!button) return;
+                if (configButton) {
+                  const configPanel = danmakuContainer.querySelector('.apd-config-panel') as HTMLElement;
+                  let isConfigVisible = false;
+                  let showTimer: NodeJS.Timeout | null = null;
+                  let hideTimer: NodeJS.Timeout | null = null;
 
-                  // 移除默认的hover行为，改为延迟click切换
-                  let clickTimer: NodeJS.Timeout | null = null;
+                  // 面板显示函数
+                  const showConfigPanel = () => {
+                    if (hideTimer) {
+                      clearTimeout(hideTimer);
+                      hideTimer = null;
+                    }
 
-                  button.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
+                    if (!isConfigVisible && configPanel) {
+                      isConfigVisible = true;
+                      configPanel.style.setProperty('display', 'block', 'important');
+                      configPanel.style.setProperty('opacity', '1', 'important');
+                      configPanel.style.setProperty('visibility', 'visible', 'important');
+                      configPanel.style.setProperty('pointer-events', 'auto', 'important');
+                      console.log('移动端弹幕配置面板：点击展开');
+                    }
+                  };
 
-                    // 防止快速连续点击
-                    if (clickTimer) return;
-                    clickTimer = setTimeout(() => {
-                      clickTimer = null;
-                    }, 300);
+                  // 面板隐藏函数
+                  const hideConfigPanel = () => {
+                    if (showTimer) {
+                      clearTimeout(showTimer);
+                      showTimer = null;
+                    }
 
-                    console.log('移动端弹幕按钮点击 - alpha优化交互');
+                    if (isConfigVisible && configPanel) {
+                      isConfigVisible = false;
+                      configPanel.style.setProperty('display', 'none', 'important');
+                      configPanel.style.setProperty('opacity', '0', 'important');
+                      configPanel.style.setProperty('visibility', 'hidden', 'important');
+                      configPanel.style.setProperty('pointer-events', 'none', 'important');
+                      console.log('移动端弹幕配置面板：点击关闭');
+                    }
+                  };
+
+                  // 移动端点击切换逻辑 - 参考alpha版本
+                  configButton.addEventListener('click', (e) => {
+                    // 不阻止默认行为，让原生点击功能正常工作
+                    e.stopPropagation(); // 只阻止冒泡
+
+                    // 切换面板显示状态
+                    if (isConfigVisible) {
+                      hideConfigPanel();
+                    } else {
+                      showConfigPanel();
+                    }
                   });
-                });
+                }
+
+                if (styleButton) {
+                  const stylePanel = danmakuContainer.querySelector('.apd-style-panel') as HTMLElement;
+                  let isStyleVisible = false;
+                  let showTimer: NodeJS.Timeout | null = null;
+                  let hideTimer: NodeJS.Timeout | null = null;
+
+                  // 面板显示函数
+                  const showStylePanel = () => {
+                    if (hideTimer) {
+                      clearTimeout(hideTimer);
+                      hideTimer = null;
+                    }
+
+                    if (!isStyleVisible && stylePanel) {
+                      isStyleVisible = true;
+                      stylePanel.style.setProperty('display', 'block', 'important');
+                      stylePanel.style.setProperty('opacity', '1', 'important');
+                      stylePanel.style.setProperty('visibility', 'visible', 'important');
+                      stylePanel.style.setProperty('pointer-events', 'auto', 'important');
+                      console.log('移动端弹幕样式面板：点击展开');
+                    }
+                  };
+
+                  // 面板隐藏函数
+                  const hideStylePanel = () => {
+                    if (showTimer) {
+                      clearTimeout(showTimer);
+                      showTimer = null;
+                    }
+
+                    if (isStyleVisible && stylePanel) {
+                      isStyleVisible = false;
+                      stylePanel.style.setProperty('display', 'none', 'important');
+                      stylePanel.style.setProperty('opacity', '0', 'important');
+                      stylePanel.style.setProperty('visibility', 'hidden', 'important');
+                      stylePanel.style.setProperty('pointer-events', 'none', 'important');
+                      console.log('移动端弹幕样式面板：点击关闭');
+                    }
+                  };
+
+                  // 移动端点击切换逻辑
+                  styleButton.addEventListener('click', (e) => {
+                    e.stopPropagation(); // 只阻止冒泡，保留默认行为
+
+                    // 切换面板显示状态
+                    if (isStyleVisible) {
+                      hideStylePanel();
+                    } else {
+                      showStylePanel();
+                    }
+                  });
+                }
+
+                console.log('🔧 移动端弹幕交互优化完成 - alpha版本的面板管理策略');
               }
             }, 1000);
 
