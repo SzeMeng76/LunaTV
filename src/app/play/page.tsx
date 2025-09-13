@@ -2758,16 +2758,36 @@ function PlayPageClient() {
         // 应用CSS优化
         optimizeDanmukuControlsCSS();
 
-        // 移动端专用优化：禁用弹幕hover效果
+        // 移动端专用优化：参考alpha的综合弹幕交互优化方案
         const addMobileDanmakuOptimization = () => {
           if (document.getElementById('mobile-danmaku-optimization')) return;
+
+          // 多重移动设备检测 - 参考alpha的全面检测策略
+          const isMobileDevice = () => {
+            // 方法1: UserAgent检测 (alpha版本使用的主要方法)
+            const userAgent = navigator.userAgent.toLowerCase();
+            const mobileKeywords = ['mobile', 'android', 'iphone', 'ipad', 'ipod', 'blackberry', 'windows phone'];
+            const isUserAgentMobile = mobileKeywords.some(keyword => userAgent.includes(keyword));
+
+            // 方法2: 媒体查询检测触摸设备 (CSS配合)
+            const isTouchDevice = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+
+            // 方法3: 屏幕尺寸检测 (小屏设备通常是移动端)
+            const isSmallScreen = window.innerWidth <= 768;
+
+            // 方法4: 触摸支持检测
+            const hasTouchSupport = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+            return isUserAgentMobile || isTouchDevice || (isSmallScreen && hasTouchSupport);
+          };
+
+          const shouldOptimizeForMobile = isMobileDevice();
 
           const style = document.createElement('style');
           style.id = 'mobile-danmaku-optimization';
           style.textContent = `
-            /* 移动端禁用弹幕hover效果 - 使用媒体查询和pointer类型检测 */
+            /* 基础移动端优化 - CSS媒体查询方式 (保留原有逻辑) */
             @media (hover: none) and (pointer: coarse) {
-              /* 移动端触摸设备 - 完全禁用弹幕hover */
               .artplayer-plugin-danmuku .apd-config:hover .apd-config-panel,
               .artplayer-plugin-danmuku .apd-style:hover .apd-style-panel {
                 opacity: 0 !important;
@@ -2776,19 +2796,49 @@ function PlayPageClient() {
                 transform: translateY(-10px) !important;
               }
 
-              /* 移动端弹幕按钮点击反馈优化 */
-              .artplayer-plugin-danmuku .apd-config,
-              .artplayer-plugin-danmuku .apd-style {
-                transition: transform 0.1s ease !important;
+              /* 完全禁用所有弹幕控件的hover效果 */
+              .artplayer-plugin-danmuku .apd-input:hover,
+              .artplayer-plugin-danmuku .apd-send:hover,
+              .artplayer-plugin-danmuku .apd-config:hover,
+              .artplayer-plugin-danmuku .apd-style:hover {
+                background-color: initial !important;
+                border-color: initial !important;
+                color: initial !important;
+                transform: none !important;
+                box-shadow: none !important;
+                filter: none !important;
               }
 
+              /* 优化的点击反馈效果 - 参考alpha的交互设计 */
+              .artplayer-plugin-danmuku .apd-input:active,
+              .artplayer-plugin-danmuku .apd-send:active,
               .artplayer-plugin-danmuku .apd-config:active,
               .artplayer-plugin-danmuku .apd-style:active {
+                opacity: 0.7 !important;
                 transform: scale(0.95) !important;
+                transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1) !important;
+              }
+
+              /* iOS Safari特殊处理 - alpha版本的兼容性优化 */
+              @supports (-webkit-touch-callout: none) {
+                .artplayer-plugin-danmuku * {
+                  -webkit-tap-highlight-color: transparent !important;
+                  -webkit-touch-callout: none !important;
+                  -webkit-user-select: none !important;
+                }
+                .artplayer-plugin-danmuku .apd-input {
+                  -webkit-user-select: text !important;
+                }
+              }
+
+              /* Android Chrome特殊处理 */
+              .artplayer-plugin-danmuku * {
+                -webkit-tap-highlight-color: transparent;
+                touch-action: manipulation;
               }
             }
 
-            /* 更精确的移动端检测 - 基于屏幕宽度 */
+            /* 小屏设备优化 */
             @media (max-width: 768px) {
               .artplayer-plugin-danmuku .apd-config:hover .apd-config-panel,
               .artplayer-plugin-danmuku .apd-style:hover .apd-style-panel {
@@ -2798,7 +2848,7 @@ function PlayPageClient() {
               }
             }
 
-            /* 防止移动端意外的长按hover状态 */
+            /* 通用移动端优化 */
             .artplayer-plugin-danmuku .apd-config-panel,
             .artplayer-plugin-danmuku .apd-style-panel {
               -webkit-touch-callout: none;
@@ -2809,7 +2859,7 @@ function PlayPageClient() {
               user-select: none;
             }
 
-            /* iOS Safari 专用优化 - 禁用点击高亮 */
+            /* iOS Safari 专用优化 */
             @supports (-webkit-touch-callout: none) {
               .artplayer-plugin-danmuku .apd-config,
               .artplayer-plugin-danmuku .apd-style {
@@ -2817,8 +2867,115 @@ function PlayPageClient() {
               }
             }
           `;
+
+          if (shouldOptimizeForMobile) {
+            // JavaScript层面的额外优化 - alpha版本的高级特性
+            style.textContent += `
+              /* JavaScript检测的移动设备专用优化 */
+              .mobile-detected .artplayer-plugin-danmuku .apd-config .apd-config-panel,
+              .mobile-detected .artplayer-plugin-danmuku .apd-style .apd-style-panel {
+                display: none !important;
+              }
+
+              /* 移动端专用的点击展开机制 */
+              .mobile-detected .artplayer-plugin-danmuku .apd-config.mobile-panel-open .apd-config-panel,
+              .mobile-detected .artplayer-plugin-danmuku .apd-style.mobile-panel-open .apd-style-panel {
+                display: block !important;
+                opacity: 1 !important;
+                visibility: visible !important;
+                pointer-events: auto !important;
+                animation: mobileSlideIn 0.2s ease-out !important;
+              }
+
+              @keyframes mobileSlideIn {
+                from {
+                  opacity: 0;
+                  transform: translateY(-5px);
+                }
+                to {
+                  opacity: 1;
+                  transform: translateY(0);
+                }
+              }
+            `;
+
+            // 添加移动设备标识类
+            document.documentElement.classList.add('mobile-detected');
+
+            console.log('🔧 移动端弹幕交互全面优化已启用 (参考alpha版本)');
+            console.log('📱 移动设备检测通过:', {
+              userAgent: navigator.userAgent.toLowerCase(),
+              touchDevice: window.matchMedia('(hover: none) and (pointer: coarse)').matches,
+              screenWidth: window.innerWidth,
+              touchSupport: 'ontouchstart' in window
+            });
+
+            // JavaScript交互优化 - 参考alpha的事件处理方式
+            setTimeout(() => {
+              const danmakuContainer = document.querySelector('.artplayer-plugin-danmuku') as HTMLElement;
+              if (danmakuContainer) {
+                // 防止意外的鼠标事件在移动端触发
+                const preventHoverEvents = (e: Event) => {
+                  if (e.type.includes('mouse') && !e.type.includes('click')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }
+                };
+
+                ['mouseover', 'mouseenter', 'mousemove'].forEach(eventType => {
+                  danmakuContainer.addEventListener(eventType, preventHoverEvents, { passive: false });
+                });
+
+                // 优化触摸反馈 - alpha的触摸体验优化
+                danmakuContainer.addEventListener('touchstart', (e) => {
+                  const target = e.target as HTMLElement;
+                  if (target.matches('.apd-config, .apd-style, .apd-send, .apd-input')) {
+                    target.style.opacity = '0.7';
+                    target.style.transform = 'scale(0.95)';
+                  }
+                }, { passive: true });
+
+                danmakuContainer.addEventListener('touchend', (e) => {
+                  const target = e.target as HTMLElement;
+                  if (target.matches('.apd-config, .apd-style, .apd-send, .apd-input')) {
+                    setTimeout(() => {
+                      target.style.opacity = '';
+                      target.style.transform = '';
+                    }, 150);
+                  }
+                }, { passive: true });
+
+                // 高级移动端交互控制 - alpha的延迟hover策略优化
+                const configButton = danmakuContainer.querySelector('.apd-config') as HTMLElement;
+                const styleButton = danmakuContainer.querySelector('.apd-style') as HTMLElement;
+
+                [configButton, styleButton].filter(Boolean).forEach(button => {
+                  if (!button) return;
+
+                  // 移除默认的hover行为，改为延迟click切换
+                  let clickTimer: NodeJS.Timeout | null = null;
+
+                  button.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    // 防止快速连续点击
+                    if (clickTimer) return;
+                    clickTimer = setTimeout(() => {
+                      clickTimer = null;
+                    }, 300);
+
+                    console.log('移动端弹幕按钮点击 - alpha优化交互');
+                  });
+                });
+              }
+            }, 1000);
+
+          } else {
+            console.log('🔧 桌面端弹幕交互保持默认 (hover模式)');
+          }
+
           document.head.appendChild(style);
-          console.log('🔧 移动端弹幕hover优化已启用');
         };
 
         // 应用移动端优化
