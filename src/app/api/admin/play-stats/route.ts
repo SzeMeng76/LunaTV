@@ -6,6 +6,9 @@ import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getConfig } from '@/lib/config';
 import { db } from '@/lib/db';
 
+// 导出类型供页面组件使用
+export type { PlayStatsResult } from '@/lib/types';
+
 export const runtime = 'edge';
 
 export async function GET(request: NextRequest) {

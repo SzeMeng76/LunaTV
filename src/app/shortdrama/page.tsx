@@ -115,7 +115,7 @@ export default function ShortDramaPage() {
   );
 
   return (
-    <PageLayout>
+    <PageLayout activePath="/shortdrama">
       <div className="min-h-screen bg-white dark:bg-black">
         <div className="px-4 py-6 sm:px-6 lg:px-8">
           {/* 页面标题 */}

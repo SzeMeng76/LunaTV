@@ -63,7 +63,7 @@ export default function TVBoxConfigPage() {
   };
 
   return (
-    <PageLayout>
+    <PageLayout activePath="/tvbox">
       <div className="max-w-4xl mx-auto p-4 md:p-6">
         {/* 页面标题 */}
         <div className="mb-8">
