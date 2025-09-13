@@ -2910,24 +2910,221 @@ function PlayPageClient() {
               touchSupport: 'ontouchstart' in window
             });
 
-            // JavaScript交互优化 - 参考alpha的事件处理方式
+            // JavaScript交互优化 - 完全参考alpha版本的实现
             setTimeout(() => {
               const danmakuContainer = document.querySelector('.artplayer-plugin-danmuku') as HTMLElement;
               if (danmakuContainer) {
-                // 防止意外的鼠标悬停事件在移动端触发（但保留点击事件）
-                const preventHoverEvents = (e: Event) => {
-                  // 只阻止hover相关事件，保留click事件的正常功能
-                  if (e.type === 'mouseover' || e.type === 'mouseenter' || e.type === 'mousemove') {
-                    e.preventDefault();
-                    e.stopPropagation();
+                // 阻止unwanted hover事件，但保留完整的交互逻辑
+                const preventUnwantedHover = (e: Event) => {
+                  // 只在真正的mouseover/mouseenter时才处理，不影响点击
+                  if (e.type === 'mouseover' || e.type === 'mouseenter') {
+                    // 不阻止事件，让原生逻辑处理，但添加我们的优化
                   }
                 };
 
-                ['mouseover', 'mouseenter', 'mousemove'].forEach(eventType => {
-                  danmakuContainer.addEventListener(eventType, preventHoverEvents, { passive: false });
-                });
+                // alpha版本的移动端配置按钮优化
+                const configButton = danmakuContainer.querySelector('.apd-config') as HTMLElement;
+                const styleButton = danmakuContainer.querySelector('.apd-style') as HTMLElement;
 
-                // 优化触摸反馈 - alpha的触摸体验优化
+                if (configButton) {
+                  const configPanel = danmakuContainer.querySelector('.apd-config-panel') as HTMLElement;
+                  let isConfigVisible = false;
+                  let showTimer: NodeJS.Timeout | null = null;
+                  let hideTimer: NodeJS.Timeout | null = null;
+
+                  // 面板位置调整函数 - 参考alpha
+                  const adjustPanelPosition = () => {
+                    try {
+                      const player = document.querySelector('.artplayer');
+                      const isFullscreen = player && (player.classList.contains('art-fullscreen') || player.classList.contains('art-fullscreen-web'));
+                      const panelElement = configPanel as HTMLElement;
+
+                      // 重置定位，让CSS处理
+                      panelElement.style.left = '';
+                      panelElement.style.right = '';
+                      panelElement.style.top = '';
+                      panelElement.style.bottom = '';
+                      panelElement.style.transform = '';
+                      panelElement.style.position = '';
+
+                      console.log('弹幕面板：使用CSS默认定位，自动适配', isFullscreen ? '全屏模式' : '普通模式');
+                    } catch (error) {
+                      console.warn('弹幕面板位置调整失败:', error);
+                    }
+                  };
+
+                  // 显示面板 - 完全照搬alpha逻辑
+                  const showPanel = () => {
+                    if (hideTimer) {
+                      clearTimeout(hideTimer);
+                      hideTimer = null;
+                    }
+
+                    if (!isConfigVisible && configPanel) {
+                      isConfigVisible = true;
+                      configPanel.style.setProperty('display', 'block', 'important');
+                      // 添加show类来触发动画 - alpha版本的关键
+                      setTimeout(() => {
+                        configPanel.classList.add('show');
+                        adjustPanelPosition(); // alpha版本的关键函数
+                      }, 10);
+                      console.log('移动端弹幕配置面板：显示');
+                    }
+                  };
+
+                  // 隐藏面板 - 完全照搬alpha逻辑
+                  const hidePanel = () => {
+                    if (showTimer) {
+                      clearTimeout(showTimer);
+                      showTimer = null;
+                    }
+
+                    if (isConfigVisible && configPanel) {
+                      isConfigVisible = false;
+                      configPanel.classList.remove('show');
+                      // 等待动画完成后隐藏
+                      setTimeout(() => {
+                        configPanel.style.setProperty('display', 'none', 'important');
+                      }, 200);
+                      console.log('移动端弹幕配置面板：隐藏');
+                    }
+                  };
+
+                  // alpha版本的hover处理
+                  const handleMouseEnter = () => {
+                    if (hideTimer) {
+                      clearTimeout(hideTimer);
+                      hideTimer = null;
+                    }
+                    showTimer = setTimeout(showPanel, 300); // 300ms延迟显示
+                  };
+
+                  const handleMouseLeave = () => {
+                    if (showTimer) {
+                      clearTimeout(showTimer);
+                      showTimer = null;
+                    }
+                    hideTimer = setTimeout(hidePanel, 500); // 500ms延迟隐藏
+                  };
+
+                  // 同时注册hover和click事件 - alpha版本的关键！
+                  configButton.addEventListener('mouseenter', handleMouseEnter);
+                  configButton.addEventListener('mouseleave', handleMouseLeave);
+                  configPanel.addEventListener('mouseenter', handleMouseEnter);
+                  configPanel.addEventListener('mouseleave', handleMouseLeave);
+
+                  // 点击切换功能 - alpha版本逻辑
+                  configButton.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    if (isConfigVisible) {
+                      hidePanel();
+                      console.log('移动端弹幕配置面板：点击关闭');
+                    } else {
+                      showPanel();
+                      console.log('移动端弹幕配置面板：点击展开');
+                    }
+                  });
+                }
+
+                // 同样处理style按钮
+                if (styleButton) {
+                  const stylePanel = danmakuContainer.querySelector('.apd-style-panel') as HTMLElement;
+                  let isStyleVisible = false;
+                  let showTimer: NodeJS.Timeout | null = null;
+                  let hideTimer: NodeJS.Timeout | null = null;
+
+                  const adjustPanelPosition = () => {
+                    try {
+                      const player = document.querySelector('.artplayer');
+                      const isFullscreen = player && (player.classList.contains('art-fullscreen') || player.classList.contains('art-fullscreen-web'));
+                      const panelElement = stylePanel as HTMLElement;
+
+                      panelElement.style.left = '';
+                      panelElement.style.right = '';
+                      panelElement.style.top = '';
+                      panelElement.style.bottom = '';
+                      panelElement.style.transform = '';
+                      panelElement.style.position = '';
+
+                      console.log('弹幕样式面板：使用CSS默认定位，自动适配', isFullscreen ? '全屏模式' : '普通模式');
+                    } catch (error) {
+                      console.warn('弹幕样式面板位置调整失败:', error);
+                    }
+                  };
+
+                  const showPanel = () => {
+                    if (hideTimer) {
+                      clearTimeout(hideTimer);
+                      hideTimer = null;
+                    }
+
+                    if (!isStyleVisible && stylePanel) {
+                      isStyleVisible = true;
+                      stylePanel.style.setProperty('display', 'block', 'important');
+                      setTimeout(() => {
+                        stylePanel.classList.add('show');
+                        adjustPanelPosition();
+                      }, 10);
+                      console.log('移动端弹幕样式面板：显示');
+                    }
+                  };
+
+                  const hidePanel = () => {
+                    if (showTimer) {
+                      clearTimeout(showTimer);
+                      showTimer = null;
+                    }
+
+                    if (isStyleVisible && stylePanel) {
+                      isStyleVisible = false;
+                      stylePanel.classList.remove('show');
+                      setTimeout(() => {
+                        stylePanel.style.setProperty('display', 'none', 'important');
+                      }, 200);
+                      console.log('移动端弹幕样式面板：隐藏');
+                    }
+                  };
+
+                  const handleMouseEnter = () => {
+                    if (hideTimer) {
+                      clearTimeout(hideTimer);
+                      hideTimer = null;
+                    }
+                    showTimer = setTimeout(showPanel, 300);
+                  };
+
+                  const handleMouseLeave = () => {
+                    if (showTimer) {
+                      clearTimeout(showTimer);
+                      showTimer = null;
+                    }
+                    hideTimer = setTimeout(hidePanel, 500);
+                  };
+
+                  // 同时注册hover和click事件
+                  styleButton.addEventListener('mouseenter', handleMouseEnter);
+                  styleButton.addEventListener('mouseleave', handleMouseLeave);
+                  stylePanel.addEventListener('mouseenter', handleMouseEnter);
+                  stylePanel.addEventListener('mouseleave', handleMouseLeave);
+
+                  // 点击切换功能
+                  styleButton.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    if (isStyleVisible) {
+                      hidePanel();
+                      console.log('移动端弹幕样式面板：点击关闭');
+                    } else {
+                      showPanel();
+                      console.log('移动端弹幕样式面板：点击展开');
+                    }
+                  });
+                }
+
+                // 优化触摸反馈
                 danmakuContainer.addEventListener('touchstart', (e) => {
                   const target = e.target as HTMLElement;
                   if (target.matches('.apd-config, .apd-style, .apd-send, .apd-input')) {
@@ -2946,118 +3143,7 @@ function PlayPageClient() {
                   }
                 }, { passive: true });
 
-                // alpha版本的移动端面板状态管理
-                const configButton = danmakuContainer.querySelector('.apd-config') as HTMLElement;
-                const styleButton = danmakuContainer.querySelector('.apd-style') as HTMLElement;
-
-                if (configButton) {
-                  const configPanel = danmakuContainer.querySelector('.apd-config-panel') as HTMLElement;
-                  let isConfigVisible = false;
-                  let showTimer: NodeJS.Timeout | null = null;
-                  let hideTimer: NodeJS.Timeout | null = null;
-
-                  // 面板显示函数
-                  const showConfigPanel = () => {
-                    if (hideTimer) {
-                      clearTimeout(hideTimer);
-                      hideTimer = null;
-                    }
-
-                    if (!isConfigVisible && configPanel) {
-                      isConfigVisible = true;
-                      configPanel.style.setProperty('display', 'block', 'important');
-                      configPanel.style.setProperty('opacity', '1', 'important');
-                      configPanel.style.setProperty('visibility', 'visible', 'important');
-                      configPanel.style.setProperty('pointer-events', 'auto', 'important');
-                      console.log('移动端弹幕配置面板：点击展开');
-                    }
-                  };
-
-                  // 面板隐藏函数
-                  const hideConfigPanel = () => {
-                    if (showTimer) {
-                      clearTimeout(showTimer);
-                      showTimer = null;
-                    }
-
-                    if (isConfigVisible && configPanel) {
-                      isConfigVisible = false;
-                      configPanel.style.setProperty('display', 'none', 'important');
-                      configPanel.style.setProperty('opacity', '0', 'important');
-                      configPanel.style.setProperty('visibility', 'hidden', 'important');
-                      configPanel.style.setProperty('pointer-events', 'none', 'important');
-                      console.log('移动端弹幕配置面板：点击关闭');
-                    }
-                  };
-
-                  // 移动端点击切换逻辑 - 参考alpha版本
-                  configButton.addEventListener('click', (e) => {
-                    // 不阻止默认行为，让原生点击功能正常工作
-                    e.stopPropagation(); // 只阻止冒泡
-
-                    // 切换面板显示状态
-                    if (isConfigVisible) {
-                      hideConfigPanel();
-                    } else {
-                      showConfigPanel();
-                    }
-                  });
-                }
-
-                if (styleButton) {
-                  const stylePanel = danmakuContainer.querySelector('.apd-style-panel') as HTMLElement;
-                  let isStyleVisible = false;
-                  let showTimer: NodeJS.Timeout | null = null;
-                  let hideTimer: NodeJS.Timeout | null = null;
-
-                  // 面板显示函数
-                  const showStylePanel = () => {
-                    if (hideTimer) {
-                      clearTimeout(hideTimer);
-                      hideTimer = null;
-                    }
-
-                    if (!isStyleVisible && stylePanel) {
-                      isStyleVisible = true;
-                      stylePanel.style.setProperty('display', 'block', 'important');
-                      stylePanel.style.setProperty('opacity', '1', 'important');
-                      stylePanel.style.setProperty('visibility', 'visible', 'important');
-                      stylePanel.style.setProperty('pointer-events', 'auto', 'important');
-                      console.log('移动端弹幕样式面板：点击展开');
-                    }
-                  };
-
-                  // 面板隐藏函数
-                  const hideStylePanel = () => {
-                    if (showTimer) {
-                      clearTimeout(showTimer);
-                      showTimer = null;
-                    }
-
-                    if (isStyleVisible && stylePanel) {
-                      isStyleVisible = false;
-                      stylePanel.style.setProperty('display', 'none', 'important');
-                      stylePanel.style.setProperty('opacity', '0', 'important');
-                      stylePanel.style.setProperty('visibility', 'hidden', 'important');
-                      stylePanel.style.setProperty('pointer-events', 'none', 'important');
-                      console.log('移动端弹幕样式面板：点击关闭');
-                    }
-                  };
-
-                  // 移动端点击切换逻辑
-                  styleButton.addEventListener('click', (e) => {
-                    e.stopPropagation(); // 只阻止冒泡，保留默认行为
-
-                    // 切换面板显示状态
-                    if (isStyleVisible) {
-                      hideStylePanel();
-                    } else {
-                      showStylePanel();
-                    }
-                  });
-                }
-
-                console.log('🔧 移动端弹幕交互优化完成 - alpha版本的面板管理策略');
+                console.log('🔧 移动端弹幕交互优化完成 - 完全参考alpha版本实现');
               }
             }, 1000);
 
