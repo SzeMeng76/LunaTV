@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { ChevronDown, ChevronRight, Clock, PlayCircle, User } from 'lucide-react';
 import { UserPlayStat, PlayRecord } from '@/lib/types';
 import { ImagePlaceholder } from './ImagePlaceholder';
@@ -150,13 +151,17 @@ export default function UserStatsDetail({ userStats, className = '' }: UserStats
                             className="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-750 rounded-lg"
                           >
                             <div className="flex-shrink-0 w-16 h-12 bg-gray-200 dark:bg-gray-600 rounded overflow-hidden">
-                              <ImagePlaceholder
-                                src={record.cover}
-                                alt={record.title}
-                                width={64}
-                                height={48}
-                                className="w-full h-full object-cover"
-                              />
+                              {record.cover ? (
+                                <Image
+                                  src={record.cover}
+                                  alt={record.title}
+                                  width={64}
+                                  height={48}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <ImagePlaceholder aspectRatio="aspect-[4/3]" />
+                              )}
                             </div>
 
                             <div className="flex-1 min-w-0">
