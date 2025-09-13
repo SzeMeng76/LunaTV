@@ -589,30 +589,45 @@ export class UpstashRedisStorage implements IStorage {
     try {
       // 获取所有用户的播放记录
       const allUsers = await this.getAllUsers();
-      const contentStats: Record<string, ContentStat> = {};
+      const contentStats: Record<string, {
+        source: string;
+        id: string;
+        title: string;
+        source_name: string;
+        cover: string;
+        year: string;
+        playCount: number;
+        totalWatchTime: number;
+        uniqueUsers: Set<string>;
+        lastPlayed: number;
+      }> = {};
 
       for (const username of allUsers) {
         const records = await this.getAllPlayRecords(username);
         Object.entries(records).forEach(([key, record]) => {
           if (!contentStats[key]) {
+            // 从key中解析source和id
+            const [source, id] = key.split('+', 2);
             contentStats[key] = {
-              contentKey: key,
+              source: source || '',
+              id: id || '',
               title: record.title || '未知标题',
+              source_name: record.source_name || '未知来源',
               cover: record.cover || '',
-              sourceName: record.source_name || '未知来源',
-              totalPlays: 0,
+              year: record.year || '',
+              playCount: 0,
               totalWatchTime: 0,
               uniqueUsers: new Set(),
-              lastPlayTime: 0,
+              lastPlayed: 0,
             };
           }
 
           const stat = contentStats[key];
-          stat.totalPlays += 1;
+          stat.playCount += 1;
           stat.totalWatchTime += record.play_time || 0;
           stat.uniqueUsers.add(username);
-          if (record.save_time > stat.lastPlayTime) {
-            stat.lastPlayTime = record.save_time;
+          if (record.save_time > stat.lastPlayed) {
+            stat.lastPlayed = record.save_time;
           }
         });
       }
@@ -620,13 +635,22 @@ export class UpstashRedisStorage implements IStorage {
       // 转换 Set 为数量并排序
       const result = Object.values(contentStats)
         .map((stat) => ({
-          ...stat,
+          source: stat.source,
+          id: stat.id,
+          title: stat.title,
+          source_name: stat.source_name,
+          cover: stat.cover,
+          year: stat.year,
+          playCount: stat.playCount,
+          totalWatchTime: stat.totalWatchTime,
+          averageWatchTime: stat.playCount > 0 ? stat.totalWatchTime / stat.playCount : 0,
+          lastPlayed: stat.lastPlayed,
           uniqueUsers: stat.uniqueUsers.size,
         }))
-        .sort((a, b) => b.totalPlays - a.totalPlays)
+        .sort((a, b) => b.playCount - a.playCount)
         .slice(0, limit);
 
-      return result as ContentStat[];
+      return result;
     } catch (error) {
       console.error('获取内容统计失败:', error);
       return [];
