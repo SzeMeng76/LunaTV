@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import React, { useCallback, useEffect, useState } from 'react';
+import { ChevronUp } from 'lucide-react';
 
 import { getAuthInfoFromBrowserCookie } from '@/lib/auth';
 import { PlayRecord } from '@/lib/types';
@@ -20,6 +21,7 @@ const PlayStatsPage: React.FC = () => {
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
   const [authInfo, setAuthInfo] = useState<{ username?: string; role?: string } | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [showBackToTop, setShowBackToTop] = useState(false);
 
   // 检查用户权限
   useEffect(() => {
@@ -186,6 +188,53 @@ const PlayStatsPage: React.FC = () => {
       fetchStats();
     }
   }, [authInfo, fetchStats]);
+
+  // 监听滚动位置，显示/隐藏回到顶部按钮
+  useEffect(() => {
+    // 获取滚动位置的函数
+    const getScrollTop = () => {
+      return document.body.scrollTop || document.documentElement.scrollTop || 0;
+    };
+
+    // 滚动事件处理
+    const handleScroll = () => {
+      const scrollTop = getScrollTop();
+      setShowBackToTop(scrollTop > 300);
+    };
+
+    // 监听滚动事件
+    document.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('scroll', handleScroll, { passive: true });
+
+    return () => {
+      document.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+
+  // 返回顶部功能
+  const scrollToTop = () => {
+    try {
+      // 使用多种方法确保滚动到顶部
+      document.body.scrollTo({
+        top: 0,
+        behavior: 'smooth',
+      });
+      document.documentElement.scrollTo({
+        top: 0,
+        behavior: 'smooth',
+      });
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth',
+      });
+    } catch (error) {
+      // 如果平滑滚动失败，使用立即滚动
+      document.body.scrollTop = 0;
+      document.documentElement.scrollTop = 0;
+      window.scrollTo(0, 0);
+    }
+  };
 
   // 未授权时显示加载
   if (!authInfo) {
@@ -883,6 +932,18 @@ const PlayStatsPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* 返回顶部悬浮按钮 */}
+      <button
+        onClick={scrollToTop}
+        className={`fixed bottom-20 md:bottom-6 right-6 z-[500] w-12 h-12 bg-green-500/90 hover:bg-green-500 text-white rounded-full shadow-lg backdrop-blur-sm transition-all duration-300 ease-in-out flex items-center justify-center group ${showBackToTop
+          ? 'opacity-100 translate-y-0 pointer-events-auto'
+          : 'opacity-0 translate-y-4 pointer-events-none'
+          }`}
+        aria-label='返回顶部'
+      >
+        <ChevronUp className='w-6 h-6 transition-transform group-hover:scale-110' />
+      </button>
     </PageLayout>
   );
 };

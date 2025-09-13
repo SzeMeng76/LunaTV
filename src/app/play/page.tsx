@@ -2754,9 +2754,75 @@ function PlayPageClient() {
           `;
           document.head.appendChild(style);
         };
-        
+
         // 应用CSS优化
         optimizeDanmukuControlsCSS();
+
+        // 移动端专用优化：禁用弹幕hover效果
+        const addMobileDanmakuOptimization = () => {
+          if (document.getElementById('mobile-danmaku-optimization')) return;
+
+          const style = document.createElement('style');
+          style.id = 'mobile-danmaku-optimization';
+          style.textContent = `
+            /* 移动端禁用弹幕hover效果 - 使用媒体查询和pointer类型检测 */
+            @media (hover: none) and (pointer: coarse) {
+              /* 移动端触摸设备 - 完全禁用弹幕hover */
+              .artplayer-plugin-danmuku .apd-config:hover .apd-config-panel,
+              .artplayer-plugin-danmuku .apd-style:hover .apd-style-panel {
+                opacity: 0 !important;
+                visibility: hidden !important;
+                pointer-events: none !important;
+                transform: translateY(-10px) !important;
+              }
+
+              /* 移动端弹幕按钮点击反馈优化 */
+              .artplayer-plugin-danmuku .apd-config,
+              .artplayer-plugin-danmuku .apd-style {
+                transition: transform 0.1s ease !important;
+              }
+
+              .artplayer-plugin-danmuku .apd-config:active,
+              .artplayer-plugin-danmuku .apd-style:active {
+                transform: scale(0.95) !important;
+              }
+            }
+
+            /* 更精确的移动端检测 - 基于屏幕宽度 */
+            @media (max-width: 768px) {
+              .artplayer-plugin-danmuku .apd-config:hover .apd-config-panel,
+              .artplayer-plugin-danmuku .apd-style:hover .apd-style-panel {
+                opacity: 0 !important;
+                visibility: hidden !important;
+                pointer-events: none !important;
+              }
+            }
+
+            /* 防止移动端意外的长按hover状态 */
+            .artplayer-plugin-danmuku .apd-config-panel,
+            .artplayer-plugin-danmuku .apd-style-panel {
+              -webkit-touch-callout: none;
+              -webkit-user-select: none;
+              -khtml-user-select: none;
+              -moz-user-select: none;
+              -ms-user-select: none;
+              user-select: none;
+            }
+
+            /* iOS Safari 专用优化 - 禁用点击高亮 */
+            @supports (-webkit-touch-callout: none) {
+              .artplayer-plugin-danmuku .apd-config,
+              .artplayer-plugin-danmuku .apd-style {
+                -webkit-tap-highlight-color: transparent !important;
+              }
+            }
+          `;
+          document.head.appendChild(style);
+          console.log('🔧 移动端弹幕hover优化已启用');
+        };
+
+        // 应用移动端优化
+        addMobileDanmakuOptimization();
 
         // 精确解决弹幕菜单与进度条拖拽冲突 - 基于ArtPlayer原生拖拽逻辑
         const fixDanmakuProgressConflict = () => {
