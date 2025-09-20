@@ -449,7 +449,7 @@ const PlayStatsPage: React.FC = () => {
           )}
 
           {/* 全站统计概览 */}
-          <div className='grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 mb-8'>
+          <div className='grid grid-cols-1 md:grid-cols-2 xl:grid-cols-7 gap-4 mb-8'>
             <div className='p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800'>
               <div className='text-2xl font-bold text-blue-800 dark:text-blue-300'>
                 {statsData.totalUsers}
@@ -490,11 +490,27 @@ const PlayStatsPage: React.FC = () => {
                 人均播放次数
               </div>
             </div>
+            <div className='p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800'>
+              <div className='text-2xl font-bold text-red-800 dark:text-red-300'>
+                {statsData.registrationStats.todayNewUsers}
+              </div>
+              <div className='text-sm text-red-600 dark:text-red-400'>
+                今日新增用户
+              </div>
+            </div>
+            <div className='p-4 bg-cyan-50 dark:bg-cyan-900/20 rounded-lg border border-cyan-200 dark:border-cyan-800'>
+              <div className='text-2xl font-bold text-cyan-800 dark:text-cyan-300'>
+                {statsData.activeUsers.daily}
+              </div>
+              <div className='text-sm text-cyan-600 dark:text-cyan-400'>
+                日活跃用户
+              </div>
+            </div>
           </div>
 
           {/* 图表区域 */}
-          <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8'>
-            {/* 近7天趋势 */}
+          <div className='grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mb-8'>
+            {/* 近7天播放趋势 */}
             <div className='p-6 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700'>
               <h3 className='text-lg font-semibold text-gray-900 dark:text-white mb-4'>
                 近7天播放趋势
@@ -518,7 +534,65 @@ const PlayStatsPage: React.FC = () => {
               </div>
             </div>
 
-            {/* 热门来源 */}
+            {/* 近7天注册趋势 */}
+            <div className='p-6 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700'>
+              <h3 className='text-lg font-semibold text-gray-900 dark:text-white mb-4'>
+                近7天注册趋势
+              </h3>
+              <div className='space-y-3'>
+                {statsData.registrationStats.registrationTrend.map((stat) => (
+                  <div key={stat.date} className='flex items-center justify-between'>
+                    <span className='text-sm text-gray-600 dark:text-gray-400'>
+                      {formatDate(stat.date)}
+                    </span>
+                    <div className='flex items-center space-x-2'>
+                      <span className='text-sm text-blue-600 dark:text-blue-400'>
+                        {stat.newUsers} 人
+                      </span>
+                      {stat.newUsers > 0 && (
+                        <div className='w-2 h-2 bg-blue-500 rounded-full'></div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 用户活跃度统计 */}
+            <div className='p-6 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700'>
+              <h3 className='text-lg font-semibold text-gray-900 dark:text-white mb-4'>
+                用户活跃度统计
+              </h3>
+              <div className='space-y-4'>
+                <div className='flex items-center justify-between'>
+                  <span className='text-sm text-gray-600 dark:text-gray-400'>日活跃用户</span>
+                  <span className='text-lg font-semibold text-green-600 dark:text-green-400'>
+                    {statsData.activeUsers.daily}
+                  </span>
+                </div>
+                <div className='flex items-center justify-between'>
+                  <span className='text-sm text-gray-600 dark:text-gray-400'>周活跃用户</span>
+                  <span className='text-lg font-semibold text-blue-600 dark:text-blue-400'>
+                    {statsData.activeUsers.weekly}
+                  </span>
+                </div>
+                <div className='flex items-center justify-between'>
+                  <span className='text-sm text-gray-600 dark:text-gray-400'>月活跃用户</span>
+                  <span className='text-lg font-semibold text-purple-600 dark:text-purple-400'>
+                    {statsData.activeUsers.monthly}
+                  </span>
+                </div>
+                <div className='mt-4 pt-4 border-t border-gray-200 dark:border-gray-600'>
+                  <div className='text-xs text-gray-500 dark:text-gray-400'>
+                    活跃度 = 最近有播放记录的用户
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 热门来源统计 */}
+          <div className='grid grid-cols-1 lg:grid-cols-1 gap-6 mb-8'>
             <div className='p-6 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700'>
               <h3 className='text-lg font-semibold text-gray-900 dark:text-white mb-4'>
                 热门视频来源
@@ -577,6 +651,15 @@ const PlayStatsPage: React.FC = () => {
                             {userStat.lastPlayTime
                               ? formatDateTime(userStat.lastPlayTime)
                               : '从未播放'}
+                          </p>
+                          <p className='text-xs text-gray-500 dark:text-gray-400'>
+                            注册天数: {userStat.registrationDays} 天
+                          </p>
+                          <p className='text-xs text-gray-500 dark:text-gray-400'>
+                            最后活跃:{' '}
+                            {userStat.lastLoginTime !== userStat.createdAt
+                              ? formatDateTime(userStat.lastLoginTime)
+                              : '注册时'}
                           </p>
                           {userStat.mostWatchedSource && (
                             <p className='text-xs text-gray-500 dark:text-gray-400'>

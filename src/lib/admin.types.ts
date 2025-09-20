@@ -25,6 +25,7 @@ export interface AdminConfig {
       banned?: boolean;
       enabledApis?: string[]; // 优先级高于tags限制
       tags?: string[]; // 多 tags 取并集限制
+      createdAt?: number; // 用户注册时间戳
     }[];
     Tags?: {
       name: string;
