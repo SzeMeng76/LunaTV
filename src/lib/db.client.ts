@@ -1916,7 +1916,13 @@ async function calculateStatsFromLocalData(): Promise<UserStats> {
 
     if (records.length === 0) {
       return {
+        username: getAuthInfoFromBrowserCookie()?.username || 'unknown',
         totalWatchTime: 0,
+        totalPlays: 0,
+        lastPlayTime: 0,
+        recentRecords: [],
+        avgWatchTime: 0,
+        mostWatchedSource: '',
         totalMovies: 0,
         firstWatchDate: Date.now(),
         lastUpdateTime: Date.now()
@@ -1926,9 +1932,30 @@ async function calculateStatsFromLocalData(): Promise<UserStats> {
     const totalWatchTime = records.reduce((sum, record) => sum + record.play_time, 0);
     const totalMovies = new Set(records.map(r => `${r.title}_${r.source_name}_${r.year}`)).size;
     const firstWatchDate = Math.min(...records.map(r => r.save_time));
+    const lastPlayTime = Math.max(...records.map(r => r.save_time));
+    const totalPlays = records.length;
+
+    // 计算最常观看的来源
+    const sourceCounts = records.reduce((acc, record) => {
+      acc[record.source_name] = (acc[record.source_name] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    const mostWatchedSource = Object.entries(sourceCounts)
+      .sort(([,a], [,b]) => b - a)[0]?.[0] || '';
+
+    // 获取最近的播放记录（最多10条）
+    const recentRecords = records
+      .sort((a, b) => b.save_time - a.save_time)
+      .slice(0, 10);
 
     const stats: UserStats = {
+      username: getAuthInfoFromBrowserCookie()?.username || 'unknown',
       totalWatchTime,
+      totalPlays,
+      lastPlayTime,
+      recentRecords,
+      avgWatchTime: totalPlays > 0 ? totalWatchTime / totalPlays : 0,
+      mostWatchedSource,
       totalMovies,
       firstWatchDate,
       lastUpdateTime: Date.now()
@@ -1943,7 +1970,13 @@ async function calculateStatsFromLocalData(): Promise<UserStats> {
   } catch (error) {
     console.error('计算本地统计数据失败:', error);
     return {
+      username: getAuthInfoFromBrowserCookie()?.username || 'unknown',
       totalWatchTime: 0,
+      totalPlays: 0,
+      lastPlayTime: 0,
+      recentRecords: [],
+      avgWatchTime: 0,
+      mostWatchedSource: '',
       totalMovies: 0,
       firstWatchDate: Date.now(),
       lastUpdateTime: Date.now()
@@ -2138,7 +2171,13 @@ export async function clearUserStats(): Promise<void> {
     // 触发统计数据清除事件
     window.dispatchEvent(new CustomEvent('userStatsUpdated', {
       detail: {
+        username: getAuthInfoFromBrowserCookie()?.username || 'unknown',
         totalWatchTime: 0,
+        totalPlays: 0,
+        lastPlayTime: 0,
+        recentRecords: [],
+        avgWatchTime: 0,
+        mostWatchedSource: '',
         totalMovies: 0,
         firstWatchDate: Date.now(),
         lastUpdateTime: Date.now()
