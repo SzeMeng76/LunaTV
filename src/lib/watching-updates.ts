@@ -242,7 +242,7 @@ function notifyListeners(hasUpdates: boolean): void {
  * 设置定期检查
  * @param intervalMinutes 检查间隔（分钟）
  */
-export function setupPeriodicUpdateCheck(intervalMinutes: number = 30): () => void {
+export function setupPeriodicUpdateCheck(intervalMinutes = 30): () => void {
   console.log(`设置定期更新检查，间隔: ${intervalMinutes} 分钟`);
 
   // 立即执行一次检查
@@ -264,7 +264,9 @@ export function setupPeriodicUpdateCheck(intervalMinutes: number = 30): () => vo
  */
 export function setupVisibilityChangeCheck(): () => void {
   if (typeof window === 'undefined') {
-    return () => {};
+    return () => {
+      // Empty function for server-side rendering
+    };
   }
 
   const handleVisibilityChange = () => {
