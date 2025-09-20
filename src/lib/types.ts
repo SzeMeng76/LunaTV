@@ -206,6 +206,16 @@ export interface UserPlayStat {
   recentRecords: PlayRecord[]; // 最近播放记录（最多10条）
   avgWatchTime: number; // 平均每次观看时长
   mostWatchedSource: string; // 最常观看的来源
+
+  // 新增LunaTV-alpha的高级统计字段
+  totalMovies?: number; // 观看影片总数（去重）
+  firstWatchDate?: number; // 首次观看时间戳
+  lastUpdateTime?: number; // 最后更新时间戳
+  createdAt?: number; // 注册时间戳
+  loginDays?: number; // 累计登录天数
+  lastLoginDate?: number; // 最后登录时间
+  activeStreak?: number; // 连续活跃天数
+  continuousLoginDays?: number; // 连续登录天数
 }
 
 // 全站播放统计数据结构

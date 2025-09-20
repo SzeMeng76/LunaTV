@@ -6,12 +6,12 @@ on:
       tag:
         description: 'Docker 标签'
         required: false
-        default: 'latest'
+        default: 'dev'
         type: string
   push:
-    branches: [ main, master ]
+    branches: [ dev ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ dev ]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -61,7 +61,7 @@ jobs:
         with:
           images: ghcr.io/${{ steps.lowercase.outputs.owner }}/lunatv
           tags: |
-            type=raw,value=${{ github.event.inputs.tag || 'latest' }},enable={{is_default_branch}}
+            type=raw,value=${{ github.event.inputs.tag || 'dev' }},enable={{is_default_branch}}
 
       - name: Build and push by digest
         id: build
@@ -71,10 +71,8 @@ jobs:
           file: ./Dockerfile
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
-          tags: ghcr.io/${{ steps.lowercase.outputs.owner }}/lunatv:${{ github.event.inputs.tag || 'latest' }}
+          tags: ghcr.io/${{ steps.lowercase.outputs.owner }}/lunatv:${{ github.event.inputs.tag || 'dev' }}
           outputs: type=image,name=ghcr.io/${{ steps.lowercase.outputs.owner }}/lunatv,name-canonical=true,push=true
-          no-cache: true
-          pull: true
 
       - name: Export digest
         run: |
@@ -119,7 +117,7 @@ jobs:
       - name: Create manifest list and push
         working-directory: /tmp/digests
         run: |
-          docker buildx imagetools create -t ghcr.io/${{ steps.lowercase.outputs.owner }}/lunatv:${{ github.event.inputs.tag || 'latest' }} \
+          docker buildx imagetools create -t ghcr.io/${{ steps.lowercase.outputs.owner }}/lunatv:${{ github.event.inputs.tag || 'dev' }} \
             $(printf 'ghcr.io/${{ steps.lowercase.outputs.owner }}/lunatv@sha256:%s ' *)
 
   cleanup-refresh:
