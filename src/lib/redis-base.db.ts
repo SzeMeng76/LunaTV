@@ -648,7 +648,11 @@ export abstract class BaseRedisStorage implements IStorage {
           lastPlayTime: 0,
           recentRecords: [],
           avgWatchTime: 0,
-          mostWatchedSource: ''
+          mostWatchedSource: '',
+          // 新增字段
+          totalMovies: 0,
+          firstWatchDate: Date.now(),
+          lastUpdateTime: Date.now()
         };
       }
 
@@ -656,6 +660,12 @@ export abstract class BaseRedisStorage implements IStorage {
       const totalWatchTime = records.reduce((sum, record) => sum + (record.play_time || 0), 0);
       const totalPlays = records.length;
       const lastPlayTime = Math.max(...records.map(r => r.save_time || 0));
+
+      // 计算观看影片总数（去重）
+      const totalMovies = new Set(records.map(r => `${r.title}_${r.source_name}_${r.year}`)).size;
+
+      // 计算首次观看时间
+      const firstWatchDate = Math.min(...records.map(r => r.save_time || Date.now()));
 
       // 最近10条记录，按时间排序
       const recentRecords = records
@@ -684,7 +694,11 @@ export abstract class BaseRedisStorage implements IStorage {
         lastPlayTime,
         recentRecords,
         avgWatchTime,
-        mostWatchedSource
+        mostWatchedSource,
+        // 新增字段
+        totalMovies,
+        firstWatchDate,
+        lastUpdateTime: Date.now()
       };
     } catch (error) {
       console.error(`获取用户 ${userName} 统计失败:`, error);
@@ -695,7 +709,11 @@ export abstract class BaseRedisStorage implements IStorage {
         lastPlayTime: 0,
         recentRecords: [],
         avgWatchTime: 0,
-        mostWatchedSource: ''
+        mostWatchedSource: '',
+        // 新增字段
+        totalMovies: 0,
+        firstWatchDate: Date.now(),
+        lastUpdateTime: Date.now()
       };
     }
   }

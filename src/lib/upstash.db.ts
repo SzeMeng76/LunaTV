@@ -530,6 +530,10 @@ export class UpstashRedisStorage implements IStorage {
           recentRecords: [],
           avgWatchTime: 0,
           mostWatchedSource: '',
+          // 新增字段
+          totalMovies: 0,
+          firstWatchDate: Date.now(),
+          lastUpdateTime: Date.now()
         };
       }
 
@@ -546,6 +550,12 @@ export class UpstashRedisStorage implements IStorage {
         const sourceName = record.source_name || '未知来源';
         sourceCount[sourceName] = (sourceCount[sourceName] || 0) + 1;
       });
+
+      // 计算观看影片总数（去重）
+      const totalMovies = new Set(playRecords.map(r => `${r.title}_${r.source_name}_${r.year}`)).size;
+
+      // 计算首次观看时间
+      const firstWatchDate = Math.min(...playRecords.map(r => r.save_time || Date.now()));
 
       // 获取最近播放记录
       const recentRecords = playRecords
@@ -570,6 +580,10 @@ export class UpstashRedisStorage implements IStorage {
         recentRecords,
         avgWatchTime: playRecords.length > 0 ? totalWatchTime / playRecords.length : 0,
         mostWatchedSource,
+        // 新增字段
+        totalMovies,
+        firstWatchDate,
+        lastUpdateTime: Date.now()
       };
     } catch (error) {
       console.error(`获取用户 ${userName} 统计失败:`, error);
@@ -581,6 +595,10 @@ export class UpstashRedisStorage implements IStorage {
         recentRecords: [],
         avgWatchTime: 0,
         mostWatchedSource: '',
+        // 新增字段
+        totalMovies: 0,
+        firstWatchDate: Date.now(),
+        lastUpdateTime: Date.now()
       };
     }
   }
