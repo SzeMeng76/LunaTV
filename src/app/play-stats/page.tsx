@@ -779,7 +779,7 @@ const PlayStatsPage: React.FC = () => {
           )}
 
           {/* 个人统计概览 */}
-          <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8'>
+          <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8'>
             <div className='p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800'>
               <div className='text-2xl font-bold text-blue-800 dark:text-blue-300'>
                 {formatTime(userStats.totalWatchTime)}
@@ -790,17 +790,33 @@ const PlayStatsPage: React.FC = () => {
             </div>
             <div className='p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800'>
               <div className='text-2xl font-bold text-green-800 dark:text-green-300'>
-                {userStats.totalPlays}
+                {userStats.registrationDays || 0}
               </div>
               <div className='text-sm text-green-600 dark:text-green-400'>
-                总播放次数
+                注册天数
               </div>
             </div>
             <div className='p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800'>
               <div className='text-2xl font-bold text-purple-800 dark:text-purple-300'>
-                {formatTime(userStats.avgWatchTime)}
+                {userStats.totalMovies || userStats.totalPlays || 0}
               </div>
               <div className='text-sm text-purple-600 dark:text-purple-400'>
+                观看影片
+              </div>
+            </div>
+            <div className='p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-200 dark:border-indigo-800'>
+              <div className='text-2xl font-bold text-indigo-800 dark:text-indigo-300'>
+                {userStats.totalPlays}
+              </div>
+              <div className='text-sm text-indigo-600 dark:text-indigo-400'>
+                总播放次数
+              </div>
+            </div>
+            <div className='p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800'>
+              <div className='text-2xl font-bold text-yellow-800 dark:text-yellow-300'>
+                {formatTime(userStats.avgWatchTime)}
+              </div>
+              <div className='text-sm text-yellow-600 dark:text-yellow-400'>
                 平均观看时长
               </div>
             </div>
