@@ -439,19 +439,67 @@ export class UpstashRedisStorage implements IStorage {
 
       // 重新计算统计数据
       const allUsers = await this.getAllUsers();
-      const userStats: UserPlayStat[] = [];
+      const userStats: Array<{
+        username: string;
+        totalWatchTime: number;
+        totalPlays: number;
+        lastPlayTime: number;
+        recentRecords: PlayRecord[];
+        avgWatchTime: number;
+        mostWatchedSource: string;
+        registrationDays: number;
+        lastLoginTime: number;
+        createdAt: number;
+      }> = [];
       let totalWatchTime = 0;
       let totalPlays = 0;
       const sourceCount: Record<string, number> = {};
       const dailyData: Record<string, { watchTime: number; plays: number }> = {};
 
+      // 用户注册统计
+      const now = Date.now();
+      const todayStart = new Date(now).setHours(0, 0, 0, 0);
+      let todayNewUsers = 0;
+      const registrationData: Record<string, number> = {};
+
       // 计算近7天的日期范围
-      const now = new Date();
-      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
 
       for (const username of allUsers) {
         const userStat = await this.getUserPlayStat(username);
-        userStats.push(userStat);
+
+        // 模拟用户创建时间（Upstash模式下通常没有这个信息，使用首次播放时间或当前时间）
+        const userCreatedAt = userStat.firstWatchDate || now;
+        const registrationDays = Math.floor((now - userCreatedAt) / (1000 * 60 * 60 * 24)) + 1;
+
+        // 统计今日新增用户
+        if (userCreatedAt >= todayStart) {
+          todayNewUsers++;
+        }
+
+        // 统计注册时间分布（近7天）
+        if (userCreatedAt >= sevenDaysAgo) {
+          const regDate = new Date(userCreatedAt).toISOString().split('T')[0];
+          registrationData[regDate] = (registrationData[regDate] || 0) + 1;
+        }
+
+        // 推断最后登录时间（基于最后播放时间）
+        const lastLoginTime = userStat.lastPlayTime || userCreatedAt;
+
+        const enhancedUserStat = {
+          username: userStat.username,
+          totalWatchTime: userStat.totalWatchTime,
+          totalPlays: userStat.totalPlays,
+          lastPlayTime: userStat.lastPlayTime,
+          recentRecords: userStat.recentRecords,
+          avgWatchTime: userStat.avgWatchTime,
+          mostWatchedSource: userStat.mostWatchedSource,
+          registrationDays,
+          lastLoginTime,
+          createdAt: userCreatedAt,
+        };
+
+        userStats.push(enhancedUserStat);
         totalWatchTime += userStat.totalWatchTime;
         totalPlays += userStat.totalPlays;
 
@@ -462,7 +510,7 @@ export class UpstashRedisStorage implements IStorage {
           sourceCount[sourceName] = (sourceCount[sourceName] || 0) + 1;
 
           const recordDate = new Date(record.save_time);
-          if (recordDate >= sevenDaysAgo) {
+          if (recordDate.getTime() >= sevenDaysAgo) {
             const dateKey = recordDate.toISOString().split('T')[0];
             if (!dailyData[dateKey]) {
               dailyData[dateKey] = { watchTime: 0, plays: 0 };
@@ -485,7 +533,7 @@ export class UpstashRedisStorage implements IStorage {
       // 整理近7天数据
       const dailyStats: Array<{ date: string; watchTime: number; plays: number }> = [];
       for (let i = 6; i >= 0; i--) {
-        const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+        const date = new Date(now - i * 24 * 60 * 60 * 1000);
         const dateKey = date.toISOString().split('T')[0];
         const data = dailyData[dateKey] || { watchTime: 0, plays: 0 };
         dailyStats.push({
@@ -494,6 +542,27 @@ export class UpstashRedisStorage implements IStorage {
           plays: data.plays,
         });
       }
+
+      // 计算注册趋势
+      const registrationStats = [];
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date(now - i * 24 * 60 * 60 * 1000);
+        const dateKey = date.toISOString().split('T')[0];
+        registrationStats.push({
+          date: dateKey,
+          newUsers: registrationData[dateKey] || 0,
+        });
+      }
+
+      // 计算活跃用户统计
+      const oneDayAgo = now - 24 * 60 * 60 * 1000;
+      const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
+
+      const activeUsers = {
+        daily: userStats.filter(user => user.lastLoginTime >= oneDayAgo).length,
+        weekly: userStats.filter(user => user.lastLoginTime >= sevenDaysAgo).length,
+        monthly: userStats.filter(user => user.lastLoginTime >= thirtyDaysAgo).length,
+      };
 
       const result: PlayStatsResult = {
         totalUsers: allUsers.length,
@@ -504,6 +573,14 @@ export class UpstashRedisStorage implements IStorage {
         userStats,
         topSources,
         dailyStats,
+        // 新增：用户注册统计
+        registrationStats: {
+          todayNewUsers,
+          totalRegisteredUsers: allUsers.length,
+          registrationTrend: registrationStats,
+        },
+        // 新增：用户活跃度统计
+        activeUsers,
       };
 
       // 缓存结果30分钟
@@ -511,7 +588,28 @@ export class UpstashRedisStorage implements IStorage {
       return result;
     } catch (error) {
       console.error('获取播放统计失败:', error);
-      throw error;
+      return {
+        totalUsers: 0,
+        totalWatchTime: 0,
+        totalPlays: 0,
+        avgWatchTimePerUser: 0,
+        avgPlaysPerUser: 0,
+        userStats: [],
+        topSources: [],
+        dailyStats: [],
+        // 新增：用户注册统计
+        registrationStats: {
+          todayNewUsers: 0,
+          totalRegisteredUsers: 0,
+          registrationTrend: [],
+        },
+        // 新增：用户活跃度统计
+        activeUsers: {
+          daily: 0,
+          weekly: 0,
+          monthly: 0,
+        },
+      };
     }
   }
 

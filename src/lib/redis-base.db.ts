@@ -565,14 +565,64 @@ export abstract class BaseRedisStorage implements IStorage {
       // 重新计算统计数据
       const allUsers = await this.getAllUsers();
 
-      const userStats: UserPlayStat[] = [];
+      const userStats: Array<{
+        username: string;
+        totalWatchTime: number;
+        totalPlays: number;
+        lastPlayTime: number;
+        recentRecords: PlayRecord[];
+        avgWatchTime: number;
+        mostWatchedSource: string;
+        registrationDays: number;
+        lastLoginTime: number;
+        createdAt: number;
+      }> = [];
       let totalWatchTime = 0;
       let totalPlays = 0;
+
+      // 用户注册统计
+      const now = Date.now();
+      const todayStart = new Date(now).setHours(0, 0, 0, 0);
+      let todayNewUsers = 0;
+      const registrationData: Record<string, number> = {};
+      const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
 
       // 收集所有用户统计
       for (const username of allUsers) {
         const userStat = await this.getUserPlayStat(username);
-        userStats.push(userStat);
+
+        // 模拟用户创建时间（Redis模式下通常没有这个信息，使用首次播放时间或当前时间）
+        const userCreatedAt = userStat.firstWatchDate || now;
+        const registrationDays = Math.floor((now - userCreatedAt) / (1000 * 60 * 60 * 24)) + 1;
+
+        // 统计今日新增用户
+        if (userCreatedAt >= todayStart) {
+          todayNewUsers++;
+        }
+
+        // 统计注册时间分布（近7天）
+        if (userCreatedAt >= sevenDaysAgo) {
+          const regDate = new Date(userCreatedAt).toISOString().split('T')[0];
+          registrationData[regDate] = (registrationData[regDate] || 0) + 1;
+        }
+
+        // 推断最后登录时间（基于最后播放时间）
+        const lastLoginTime = userStat.lastPlayTime || userCreatedAt;
+
+        const enhancedUserStat = {
+          username: userStat.username,
+          totalWatchTime: userStat.totalWatchTime,
+          totalPlays: userStat.totalPlays,
+          lastPlayTime: userStat.lastPlayTime,
+          recentRecords: userStat.recentRecords,
+          avgWatchTime: userStat.avgWatchTime,
+          mostWatchedSource: userStat.mostWatchedSource,
+          registrationDays,
+          lastLoginTime,
+          createdAt: userCreatedAt,
+        };
+
+        userStats.push(enhancedUserStat);
         totalWatchTime += userStat.totalWatchTime;
         totalPlays += userStat.totalPlays;
       }
@@ -593,7 +643,6 @@ export abstract class BaseRedisStorage implements IStorage {
 
       // 生成近7天统计（简化版本）
       const dailyStats = [];
-      const now = Date.now();
       for (let i = 6; i >= 0; i--) {
         const date = new Date(now - i * 24 * 60 * 60 * 1000);
         dailyStats.push({
@@ -603,6 +652,27 @@ export abstract class BaseRedisStorage implements IStorage {
         });
       }
 
+      // 计算注册趋势
+      const registrationStats = [];
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date(now - i * 24 * 60 * 60 * 1000);
+        const dateKey = date.toISOString().split('T')[0];
+        registrationStats.push({
+          date: dateKey,
+          newUsers: registrationData[dateKey] || 0,
+        });
+      }
+
+      // 计算活跃用户统计
+      const oneDayAgo = now - 24 * 60 * 60 * 1000;
+      const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
+
+      const activeUsers = {
+        daily: userStats.filter(user => user.lastLoginTime >= oneDayAgo).length,
+        weekly: userStats.filter(user => user.lastLoginTime >= sevenDaysAgo).length,
+        monthly: userStats.filter(user => user.lastLoginTime >= thirtyDaysAgo).length,
+      };
+
       const result: PlayStatsResult = {
         totalUsers: allUsers.length,
         totalWatchTime,
@@ -611,7 +681,15 @@ export abstract class BaseRedisStorage implements IStorage {
         avgPlaysPerUser: allUsers.length > 0 ? totalPlays / allUsers.length : 0,
         userStats: userStats.sort((a, b) => b.totalWatchTime - a.totalWatchTime),
         topSources,
-        dailyStats
+        dailyStats,
+        // 新增：用户注册统计
+        registrationStats: {
+          todayNewUsers,
+          totalRegisteredUsers: allUsers.length,
+          registrationTrend: registrationStats,
+        },
+        // 新增：用户活跃度统计
+        activeUsers,
       };
 
       // 缓存结果30分钟
@@ -628,7 +706,19 @@ export abstract class BaseRedisStorage implements IStorage {
         avgPlaysPerUser: 0,
         userStats: [],
         topSources: [],
-        dailyStats: []
+        dailyStats: [],
+        // 新增：用户注册统计
+        registrationStats: {
+          todayNewUsers: 0,
+          totalRegisteredUsers: 0,
+          registrationTrend: [],
+        },
+        // 新增：用户活跃度统计
+        activeUsers: {
+          daily: 0,
+          weekly: 0,
+          monthly: 0,
+        },
       };
     }
   }
