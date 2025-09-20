@@ -1421,6 +1421,7 @@ export function getCacheStatus(): {
   hasFavorites: boolean;
   hasSearchHistory: boolean;
   hasSkipConfigs: boolean;
+  hasUserStats: boolean;
   username: string | null;
 } {
   if (STORAGE_TYPE === 'localstorage') {
@@ -1429,6 +1430,7 @@ export function getCacheStatus(): {
       hasFavorites: false,
       hasSearchHistory: false,
       hasSkipConfigs: false,
+      hasUserStats: false,
       username: null,
     };
   }
