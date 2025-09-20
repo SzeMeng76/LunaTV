@@ -15,7 +15,11 @@
  */
 
 import { getAuthInfoFromBrowserCookie } from './auth';
-import { PlayRecord, SkipConfig, UserPlayStat } from './types';
+import { SkipConfig, UserPlayStat } from './types';
+import type { PlayRecord } from './types';
+
+// 重新导出类型以保持API兼容性
+export type { PlayRecord } from './types';
 
 // 全局错误触发函数
 function triggerGlobalError(message: string) {
