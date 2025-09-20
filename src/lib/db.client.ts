@@ -15,7 +15,7 @@
  */
 
 import { getAuthInfoFromBrowserCookie } from './auth';
-import { SkipConfig, UserPlayStat } from './types';
+import { PlayRecord, SkipConfig, UserPlayStat } from './types';
 
 // 全局错误触发函数
 function triggerGlobalError(message: string) {
@@ -26,20 +26,6 @@ function triggerGlobalError(message: string) {
       })
     );
   }
-}
-
-// ---- 类型 ----
-export interface PlayRecord {
-  title: string;
-  source_name: string;
-  year: string;
-  cover: string;
-  index: number; // 第几集
-  total_episodes: number; // 总集数
-  play_time: number; // 播放进度（秒）
-  total_time: number; // 总进度（秒）
-  save_time: number; // 记录保存时间（时间戳）
-  search_title?: string; // 搜索时使用的标题
 }
 
 // 为了向后兼容，保留UserStats类型别名
@@ -1943,10 +1929,14 @@ async function calculateStatsFromLocalData(): Promise<UserStats> {
     const mostWatchedSource = Object.entries(sourceCounts)
       .sort(([,a], [,b]) => b - a)[0]?.[0] || '';
 
-    // 获取最近的播放记录（最多10条）
+    // 获取最近的播放记录（最多10条），确保search_title字段存在
     const recentRecords = records
       .sort((a, b) => b.save_time - a.save_time)
-      .slice(0, 10);
+      .slice(0, 10)
+      .map(record => ({
+        ...record,
+        search_title: record.search_title || record.title // 确保search_title有值
+      }));
 
     const stats: UserStats = {
       username: getAuthInfoFromBrowserCookie()?.username || 'unknown',
