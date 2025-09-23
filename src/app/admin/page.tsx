@@ -929,9 +929,13 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                   type="number"
                   min="1"
                   max="365"
-                  value={config.UserConfig.InactiveUserDays || 7}
-                  onChange={async (e) => {
+                  defaultValue={config.UserConfig.InactiveUserDays || 7}
+                  onBlur={async (e) => {
                     const days = parseInt(e.target.value) || 7;
+                    if (days === (config.UserConfig.InactiveUserDays || 7)) {
+                      return; // 没有变化，不需要保存
+                    }
+
                     await withLoading('updateInactiveDays', async () => {
                       try {
                         const response = await fetch('/api/admin/config', {
@@ -948,6 +952,12 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
 
                         if (response.ok) {
                           await refreshConfig();
+                          showAlert({
+                            type: 'success',
+                            title: '设置已更新',
+                            message: `保留天数已设置为${days}天`,
+                            timer: 2000
+                          });
                         } else {
                           throw new Error('更新失败');
                         }

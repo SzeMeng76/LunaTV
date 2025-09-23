@@ -38,10 +38,41 @@ export async function GET(request: NextRequest) {
 }
 
 async function cronJob() {
-  await refreshConfig();
-  await refreshAllLiveChannels();
-  await refreshRecordAndFavorites();
-  await cleanupInactiveUsers();
+  console.log('🚀 开始执行定时任务...');
+
+  try {
+    console.log('📝 刷新配置...');
+    await refreshConfig();
+    console.log('✅ 配置刷新完成');
+  } catch (err) {
+    console.error('❌ 配置刷新失败:', err);
+  }
+
+  try {
+    console.log('📺 刷新直播频道...');
+    await refreshAllLiveChannels();
+    console.log('✅ 直播频道刷新完成');
+  } catch (err) {
+    console.error('❌ 直播频道刷新失败:', err);
+  }
+
+  try {
+    console.log('📊 刷新播放记录和收藏...');
+    await refreshRecordAndFavorites();
+    console.log('✅ 播放记录和收藏刷新完成');
+  } catch (err) {
+    console.error('❌ 播放记录和收藏刷新失败:', err);
+  }
+
+  try {
+    console.log('🧹 执行用户清理任务...');
+    await cleanupInactiveUsers();
+    console.log('✅ 用户清理任务完成');
+  } catch (err) {
+    console.error('❌ 用户清理任务失败:', err);
+  }
+
+  console.log('🎉 定时任务执行完成');
 }
 
 async function refreshAllLiveChannels() {
