@@ -16,6 +16,10 @@ export interface AdminConfig {
     DoubanImageProxy: string;
     DisableYellowFilter: boolean;
     FluidSearch: boolean;
+    // TMDB配置
+    TMDBApiKey?: string;
+    TMDBLanguage?: string;
+    EnableTMDBActorSearch?: boolean;
   };
   UserConfig: {
     AllowRegister?: boolean; // 是否允许用户注册，默认 true

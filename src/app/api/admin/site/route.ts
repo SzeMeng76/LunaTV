@@ -39,6 +39,9 @@ export async function POST(request: NextRequest) {
       DoubanImageProxy,
       DisableYellowFilter,
       FluidSearch,
+      TMDBApiKey,
+      TMDBLanguage,
+      EnableTMDBActorSearch,
     } = body as {
       SiteName: string;
       Announcement: string;
@@ -50,6 +53,9 @@ export async function POST(request: NextRequest) {
       DoubanImageProxy: string;
       DisableYellowFilter: boolean;
       FluidSearch: boolean;
+      TMDBApiKey?: string;
+      TMDBLanguage?: string;
+      EnableTMDBActorSearch?: boolean;
     };
 
     // 参数校验
@@ -93,6 +99,9 @@ export async function POST(request: NextRequest) {
       DoubanImageProxy,
       DisableYellowFilter,
       FluidSearch,
+      TMDBApiKey: TMDBApiKey || '',
+      TMDBLanguage: TMDBLanguage || 'zh-CN',
+      EnableTMDBActorSearch: EnableTMDBActorSearch || false,
     };
 
     // 写入数据库
