@@ -10,12 +10,26 @@ import { SearchResult } from '@/lib/types';
 
 export const runtime = 'nodejs';
 
+// 添加全局锁避免并发执行
+let isRunning = false;
+
 export async function GET(request: NextRequest) {
   console.log(request.url);
+
+  if (isRunning) {
+    console.log('⚠️ Cron job 已在运行中，跳过此次请求');
+    return NextResponse.json({
+      success: false,
+      message: 'Cron job already running',
+      timestamp: new Date().toISOString(),
+    });
+  }
+
   try {
+    isRunning = true;
     console.log('Cron job triggered:', new Date().toISOString());
 
-    cronJob();
+    await cronJob();
 
     return NextResponse.json({
       success: true,
@@ -34,11 +48,22 @@ export async function GET(request: NextRequest) {
       },
       { status: 500 }
     );
+  } finally {
+    isRunning = false;
   }
 }
 
 async function cronJob() {
   console.log('🚀 开始执行定时任务...');
+
+  // 优先执行用户清理任务，避免被其他任务阻塞
+  try {
+    console.log('🧹 执行用户清理任务...');
+    await cleanupInactiveUsers();
+    console.log('✅ 用户清理任务完成');
+  } catch (err) {
+    console.error('❌ 用户清理任务失败:', err);
+  }
 
   try {
     console.log('📝 刷新配置...');
@@ -62,14 +87,6 @@ async function cronJob() {
     console.log('✅ 播放记录和收藏刷新完成');
   } catch (err) {
     console.error('❌ 播放记录和收藏刷新失败:', err);
-  }
-
-  try {
-    console.log('🧹 执行用户清理任务...');
-    await cleanupInactiveUsers();
-    console.log('✅ 用户清理任务完成');
-  } catch (err) {
-    console.error('❌ 用户清理任务失败:', err);
   }
 
   console.log('🎉 定时任务执行完成');
@@ -102,7 +119,20 @@ async function refreshConfig() {
   let config = await getConfig();
   if (config && config.ConfigSubscribtion && config.ConfigSubscribtion.URL && config.ConfigSubscribtion.AutoUpdate) {
     try {
-      const response = await fetch(config.ConfigSubscribtion.URL);
+      console.log('🌐 开始获取配置订阅:', config.ConfigSubscribtion.URL);
+
+      // 设置30秒超时
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+      const response = await fetch(config.ConfigSubscribtion.URL, {
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'LunaTV-ConfigFetcher/1.0'
+        }
+      });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error(`请求失败: ${response.status} ${response.statusText}`);
@@ -298,10 +328,25 @@ async function refreshRecordAndFavorites() {
 
 async function cleanupInactiveUsers() {
   try {
+    console.log('🔧 正在获取配置...');
     const config = await getConfig();
+    console.log('✅ 配置获取成功');
+
+    // 预热 Redis 连接，避免冷启动
+    console.log('🔥 预热数据库连接...');
+    try {
+      await db.getAllUsers();
+      console.log('✅ 数据库连接预热成功');
+    } catch (warmupErr) {
+      console.warn('⚠️ 数据库连接预热失败:', warmupErr);
+    }
 
     // 检查是否启用自动清理功能
     const autoCleanupEnabled = config.UserConfig?.AutoCleanupInactiveUsers ?? false;
+    const inactiveUserDays = config.UserConfig?.InactiveUserDays ?? 7;
+
+    console.log(`📋 清理配置: 启用=${autoCleanupEnabled}, 保留天数=${inactiveUserDays}`);
+
     if (!autoCleanupEnabled) {
       console.log('⏭️ 自动清理非活跃用户功能已禁用，跳过清理任务');
       return;
@@ -310,39 +355,83 @@ async function cleanupInactiveUsers() {
     console.log('🧹 开始清理非活跃用户...');
 
     const allUsers = config.UserConfig.Users;
+    console.log('✅ 获取用户列表成功，共', allUsers.length, '个用户');
+
     const envUsername = process.env.USERNAME;
-    const inactiveUserDays = config.UserConfig?.InactiveUserDays ?? 7; // 默认7天
+    console.log('✅ 环境变量用户名:', envUsername);
 
     const cutoffTime = Date.now() - (inactiveUserDays * 24 * 60 * 60 * 1000);
+    console.log('✅ 计算截止时间成功:', new Date(cutoffTime).toISOString());
+
     let deletedCount = 0;
+
+    console.log('📊 即将开始用户循环...');
 
     for (const user of allUsers) {
       try {
+        console.log(`👤 正在检查用户: ${user.username} (角色: ${user.role})`);
+
         // 跳过管理员和owner用户
         if (user.role === 'admin' || user.role === 'owner') {
+          console.log(`  ⏭️ 跳过管理员用户: ${user.username}`);
           continue;
         }
 
         // 跳过环境变量中的用户
         if (user.username === envUsername) {
+          console.log(`  ⏭️ 跳过环境变量用户: ${user.username}`);
           continue;
         }
 
-        // 检查用户是否存在于数据库中
-        const userExists = await db.checkUserExist(user.username);
-        if (!userExists) {
-          console.log(`⚠️ 用户 ${user.username} 在配置中存在但数据库中不存在，跳过处理`);
-          continue;
-        }
-
-        // 获取用户统计信息
-        const userStats = await db.getUserPlayStat(user.username);
         const userCreatedAt = user.createdAt || Date.now(); // 如果没有创建时间，使用当前时间（不会被删除）
 
-        // 检查是否满足删除条件：
-        // 1. 注册时间超过配置的天数
-        // 2. 从未播放过内容（lastPlayTime为0或非常小的值）
+        // 先基于时间进行预筛选，避免不必要的数据库调用
         const isOldEnough = userCreatedAt < cutoffTime;
+        console.log(`  ⏰ 时间检查: 注册于 ${new Date(userCreatedAt).toISOString()}, 是否超过${inactiveUserDays}天: ${isOldEnough}`);
+
+        if (!isOldEnough) {
+          console.log(`  ✅ 保留用户 ${user.username}: 注册时间不足${inactiveUserDays}天`);
+          continue;
+        }
+
+        // 只对时间符合的用户进行数据库检查
+        console.log(`  🔍 检查用户是否存在于数据库: ${user.username}`);
+        let userExists = true;
+        try {
+          userExists = await Promise.race([
+            db.checkUserExist(user.username),
+            new Promise((_, reject) =>
+              setTimeout(() => reject(new Error('checkUserExist超时')), 5000)
+            )
+          ]) as boolean;
+          console.log(`  📝 用户存在状态: ${userExists}`);
+        } catch (err) {
+          console.error(`  ❌ 检查用户存在状态失败: ${err}, 跳过该用户`);
+          continue;
+        }
+
+        if (!userExists) {
+          console.log(`  ⚠️ 用户 ${user.username} 在配置中存在但数据库中不存在，跳过处理`);
+          continue;
+        }
+
+        // 获取用户统计信息（5秒超时）
+        console.log(`  📊 获取用户统计信息: ${user.username}`);
+        let userStats;
+        try {
+          userStats = await Promise.race([
+            db.getUserPlayStat(user.username),
+            new Promise((_, reject) =>
+              setTimeout(() => reject(new Error('getUserPlayStat超时')), 5000)
+            )
+          ]) as { lastPlayTime: number; totalPlays: number; [key: string]: any };
+          console.log(`  📈 用户统计结果:`, userStats);
+        } catch (err) {
+          console.error(`  ❌ 获取用户统计失败: ${err}, 跳过该用户`);
+          continue;
+        }
+
+        // 检查是否满足删除条件：从未播放过内容
         const hasNeverPlayed = userStats.lastPlayTime === 0 || userStats.totalPlays === 0;
 
         if (isOldEnough && hasNeverPlayed) {
