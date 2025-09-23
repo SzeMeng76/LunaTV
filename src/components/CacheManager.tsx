@@ -19,6 +19,7 @@ import {
 interface CacheStats {
   douban: { count: number; size: number; types: Record<string, number> };
   shortdrama: { count: number; size: number; types: Record<string, number> };
+  tmdb: { count: number; size: number; types: Record<string, number> };
   danmu: { count: number; size: number };
   netdisk: { count: number; size: number };
   youtube: { count: number; size: number };
@@ -29,6 +30,7 @@ interface CacheStats {
   formattedSizes: {
     douban: string;
     shortdrama: string;
+    tmdb: string;
     danmu: string;
     netdisk: string;
     youtube: string;
@@ -60,6 +62,13 @@ const CACHE_TYPES: CacheType[] = [
     description: '短剧分类、推荐、列表、集数等数据缓存',
     icon: PlayIcon,
     color: 'text-orange-600 bg-orange-100'
+  },
+  {
+    key: 'tmdb',
+    name: 'TMDB数据',
+    description: 'TMDB演员搜索、作品信息等数据缓存',
+    icon: FilmIcon,
+    color: 'text-purple-600 bg-purple-100'
   },
   {
     key: 'danmu',
@@ -159,7 +168,7 @@ export default function CacheManager() {
 
   // 清理所有缓存
   const clearAllCache = async () => {
-    if (!confirm('⚠️ 确定要清理所有缓存吗？这将清除豆瓣、短剧、弹幕、网盘搜索、YouTube搜索等所有缓存数据。')) {
+    if (!confirm('⚠️ 确定要清理所有缓存吗？这将清除豆瓣、短剧、TMDB、弹幕、网盘搜索、YouTube搜索等所有缓存数据。')) {
       return;
     }
     await clearCache('all');
@@ -286,6 +295,19 @@ export default function CacheManager() {
 
                 {/* 短剧缓存子类型统计 */}
                 {cacheType.key === 'shortdrama' && typeStats?.types && (
+                  <div className="mb-4 space-y-1">
+                    <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">类型分布：</div>
+                    {Object.entries(typeStats.types).map(([type, count]) => (
+                      <div key={type} className="flex justify-between text-xs">
+                        <span className="text-gray-600 dark:text-gray-400">{type}:</span>
+                        <span className="font-mono text-gray-900 dark:text-gray-100">{count as number}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* TMDB缓存子类型统计 */}
+                {cacheType.key === 'tmdb' && typeStats?.types && (
                   <div className="mb-4 space-y-1">
                     <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">类型分布：</div>
                     {Object.entries(typeStats.types).map(([type, count]) => (

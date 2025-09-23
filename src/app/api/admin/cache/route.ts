@@ -101,7 +101,12 @@ export async function DELETE(request: NextRequest) {
         clearedCount = await clearShortdramaCache();
         message = `已清理 ${clearedCount} 个短剧缓存项`;
         break;
-      
+
+      case 'tmdb':
+        clearedCount = await clearTmdbCache();
+        message = `已清理 ${clearedCount} 个TMDB缓存项`;
+        break;
+
       case 'danmu':
         clearedCount = await clearDanmuCache();
         message = `已清理 ${clearedCount} 个弹幕缓存项`;
@@ -168,6 +173,7 @@ async function getCacheStats() {
     return {
       douban: { count: 0, size: 0, types: {} },
       shortdrama: { count: 0, size: 0, types: {} },
+      tmdb: { count: 0, size: 0, types: {} },
       danmu: { count: 0, size: 0 },
       netdisk: { count: 0, size: 0 },
       youtube: { count: 0, size: 0 },
@@ -180,6 +186,7 @@ async function getCacheStats() {
       formattedSizes: {
         douban: '0 B',
         shortdrama: '0 B',
+        tmdb: '0 B',
         danmu: '0 B',
         netdisk: '0 B',
         youtube: '0 B',
@@ -235,6 +242,29 @@ async function clearShortdramaCache(): Promise<number> {
       clearedCount++;
     });
     console.log(`🗑️ localStorage中清理了 ${keys.length} 个短剧缓存项`);
+  }
+
+  return clearedCount;
+}
+
+// 清理TMDB缓存
+async function clearTmdbCache(): Promise<number> {
+  let clearedCount = 0;
+
+  // 清理数据库中的TMDB缓存
+  const dbCleared = await DatabaseCacheManager.clearCacheByType('tmdb');
+  clearedCount += dbCleared;
+
+  // 清理localStorage中的TMDB缓存（兜底）
+  if (typeof localStorage !== 'undefined') {
+    const keys = Object.keys(localStorage).filter(key =>
+      key.startsWith('tmdb-')
+    );
+    keys.forEach(key => {
+      localStorage.removeItem(key);
+      clearedCount++;
+    });
+    console.log(`🗑️ localStorage中清理了 ${keys.length} 个TMDB缓存项`);
   }
 
   return clearedCount;
@@ -386,12 +416,13 @@ async function clearExpiredCache(): Promise<number> {
 async function clearAllCache(): Promise<number> {
   const doubanCount = await clearDoubanCache();
   const shortdramaCount = await clearShortdramaCache();
+  const tmdbCount = await clearTmdbCache();
   const danmuCount = await clearDanmuCache();
   const netdiskCount = await clearNetdiskCache();
   const youtubeCount = await clearYouTubeCache();
   const searchCount = await clearSearchCache();
 
-  return doubanCount + shortdramaCount + danmuCount + netdiskCount + youtubeCount + searchCount;
+  return doubanCount + shortdramaCount + tmdbCount + danmuCount + netdiskCount + youtubeCount + searchCount;
 }
 
 // 格式化字节大小
