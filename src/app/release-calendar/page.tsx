@@ -661,17 +661,19 @@ export default function ReleaseCalendarPage() {
                     </button>
                   </div>
 
-                  {/* 星期标题 */}
-                  <div className="grid grid-cols-7 gap-2 mb-2">
-                    {['日', '一', '二', '三', '四', '五', '六'].map((day) => (
-                      <div key={day} className="text-center text-sm font-medium text-gray-500 dark:text-gray-400 py-2">
-                        {day}
-                      </div>
-                    ))}
-                  </div>
+                  {/* 桌面端日历视图 */}
+                  <div className="hidden md:block">
+                    {/* 星期标题 */}
+                    <div className="grid grid-cols-7 gap-2 mb-2">
+                      {['日', '一', '二', '三', '四', '五', '六'].map((day) => (
+                        <div key={day} className="text-center text-sm font-medium text-gray-500 dark:text-gray-400 py-2">
+                          {day}
+                        </div>
+                      ))}
+                    </div>
 
-                  {/* 日历网格 */}
-                  <div className="grid grid-cols-7 gap-2">
+                    {/* 日历网格 */}
+                    <div className="grid grid-cols-7 gap-2">
                     {(() => {
                       const today = new Date();
                       const currentMonth = currentCalendarDate.getMonth();
@@ -755,6 +757,102 @@ export default function ReleaseCalendarPage() {
                       }
 
                       return days;
+                    })()}
+                    </div>
+                  </div>
+
+                  {/* 移动端列表视图 */}
+                  <div className="md:hidden space-y-3">
+                    {(() => {
+                      const today = new Date();
+                      const currentMonth = currentCalendarDate.getMonth();
+                      const currentYear = currentCalendarDate.getFullYear();
+                      const firstDay = new Date(currentYear, currentMonth, 1);
+                      const lastDay = new Date(currentYear, currentMonth + 1, 0);
+
+                      // 使用全部数据而不是分页数据
+                      const allItems = data?.items || [];
+
+                      // 获取当前月份的所有日期及其影片
+                      const daysWithMovies = [];
+                      const current = new Date(firstDay);
+
+                      while (current <= lastDay) {
+                        const dateStr = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}-${String(current.getDate()).padStart(2, '0')}`;
+                        const isToday = current.toDateString() === today.toDateString();
+                        const dayItems = allItems.filter(item => item.releaseDate === dateStr);
+                        // 去重：按title和director去重
+                        const uniqueDayItems = dayItems.filter((item, index, self) =>
+                          index === self.findIndex(t => t.title === item.title && t.director === item.director)
+                        );
+
+                        if (uniqueDayItems.length > 0) {
+                          daysWithMovies.push({
+                            date: new Date(current),
+                            dateStr,
+                            isToday,
+                            items: uniqueDayItems
+                          });
+                        }
+
+                        current.setDate(current.getDate() + 1);
+                      }
+
+                      return daysWithMovies.map(({ date, dateStr, isToday, items }) => (
+                        <div key={dateStr} className={`bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 ${
+                          isToday ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/20' : ''
+                        }`}>
+                          {/* 日期标题 */}
+                          <div className={`flex items-center justify-between mb-3 pb-2 border-b border-gray-200 dark:border-gray-700`}>
+                            <h4 className={`text-lg font-semibold ${
+                              isToday ? 'text-blue-600 dark:text-blue-400' : 'text-gray-900 dark:text-white'
+                            }`}>
+                              {date.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' })}
+                            </h4>
+                            <span className="text-sm text-gray-500 dark:text-gray-400">
+                              {items.length} 部影片
+                            </span>
+                          </div>
+
+                          {/* 影片列表 */}
+                          <div className="space-y-2">
+                            {items.map((item, index) => (
+                              <div
+                                key={`${item.id}-${index}`}
+                                className={`flex items-center justify-between p-3 rounded-lg transition-colors ${
+                                  item.type === 'movie'
+                                    ? 'bg-amber-50 border border-amber-200 hover:bg-amber-100 dark:bg-amber-900/20 dark:border-amber-800'
+                                    : 'bg-purple-50 border border-purple-200 hover:bg-purple-100 dark:bg-purple-900/20 dark:border-purple-800'
+                                }`}
+                              >
+                                <div className="flex-1 min-w-0">
+                                  <h5 className={`font-medium truncate ${
+                                    item.type === 'movie'
+                                      ? 'text-amber-900 dark:text-amber-100'
+                                      : 'text-purple-900 dark:text-purple-100'
+                                  }`}>
+                                    {item.title}
+                                  </h5>
+                                  <p className={`text-sm truncate ${
+                                    item.type === 'movie'
+                                      ? 'text-amber-700 dark:text-amber-300'
+                                      : 'text-purple-700 dark:text-purple-300'
+                                  }`}>
+                                    {item.director} • {item.region}
+                                  </p>
+                                </div>
+                                <div className={`text-xs px-2 py-1 rounded-full ${
+                                  item.type === 'movie'
+                                    ? 'bg-amber-200 text-amber-800 dark:bg-amber-800 dark:text-amber-200'
+                                    : 'bg-purple-200 text-purple-800 dark:bg-purple-800 dark:text-purple-200'
+                                }`}>
+                                  {item.type === 'movie' ? '电影' : '电视剧'}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ));
                     })()}
                   </div>
                 </div>

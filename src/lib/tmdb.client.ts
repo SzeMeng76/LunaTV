@@ -230,9 +230,13 @@ export async function searchTMDBActorWorks(
   type: 'movie' | 'tv' = 'movie',
   filterOptions: TMDBFilterOptions = {}
 ): Promise<TMDBResult> {
+  console.log(`🚀 [TMDB] searchTMDBActorWorks 开始执行: ${actorName}, type=${type}`);
+
   try {
+    console.log(`🔍 [TMDB] 检查是否启用...`);
     // 检查是否启用
     if (!(await isTMDBEnabled())) {
+      console.log(`❌ [TMDB] TMDB功能未启用`);
       return {
         code: 500,
         message: 'TMDB演员搜索功能未启用或API Key未配置',
@@ -241,13 +245,17 @@ export async function searchTMDBActorWorks(
       } as TMDBResult;
     }
 
+    console.log(`✅ [TMDB] TMDB功能已启用`);
     // 检查缓存 - 为整个搜索结果缓存
     const cacheKey = getCacheKey('actor_works', { actorName, type, ...filterOptions });
+    console.log(`🔑 [TMDB] 缓存Key: ${cacheKey}`);
+
     const cached = await getCache(cacheKey);
     if (cached) {
-      console.log(`TMDB演员作品搜索缓存命中: ${actorName}/${type}`);
+      console.log(`✅ [TMDB] 缓存命中: ${actorName}/${type}`);
       return cached;
     }
+    console.log(`❌ [TMDB] 缓存未命中，开始搜索...`);
 
     console.log(`[TMDB演员搜索] 搜索演员: ${actorName}, 类型: ${type}`);
 

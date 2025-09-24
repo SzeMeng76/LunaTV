@@ -765,6 +765,8 @@ function SearchPageClient() {
   const handleTmdbActorSearch = async (query: string, type = tmdbActorType, filterState = tmdbFilterState) => {
     if (!query.trim()) return;
 
+    console.log(`🚀 [前端TMDB] 开始搜索: ${query}, type=${type}`);
+
     setTmdbActorLoading(true);
     setTmdbActorError(null);
     setTmdbActorResults(null);

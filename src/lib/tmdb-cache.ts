@@ -55,8 +55,11 @@ async function getCache(key: string): Promise<any | null> {
 // 统一缓存设置方法
 async function setCache(key: string, data: any, expireSeconds: number): Promise<void> {
   try {
+    console.log(`🔄 TMDB缓存设置: ${key}`);
+
     // 主要存储：统一存储
     await ClientCache.set(key, data, expireSeconds);
+    console.log(`✅ TMDB缓存已存储到数据库: ${key}`);
 
     // 兜底存储：localStorage（兼容性，短期缓存）
     if (typeof localStorage !== 'undefined') {
@@ -67,12 +70,14 @@ async function setCache(key: string, data: any, expireSeconds: number): Promise<
           created: Date.now()
         };
         localStorage.setItem(key, JSON.stringify(cacheData));
+        console.log(`✅ TMDB缓存已存储到localStorage: ${key}`);
       } catch (e) {
+        console.warn(`⚠️ TMDB缓存localStorage存储失败: ${key}`, e);
         // localStorage可能满了，忽略错误
       }
     }
   } catch (e) {
-    console.warn('设置TMDB缓存失败:', e);
+    console.warn('设置TMDB缓存失败:', key, e);
   }
 }
 
