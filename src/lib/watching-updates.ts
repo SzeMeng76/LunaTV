@@ -112,9 +112,8 @@ export async function checkWatchingUpdates(): Promise<void> {
         const [sourceName, videoId] = record.id.split('+');
         const updateInfo = await checkSingleRecordUpdate(record, videoId);
 
-        // 保留Alpha版本的保护机制：如果API返回的集数少于播放记录中的集数，保持播放记录中的集数
-        // 这样可以防止API临时出问题时集数回退
-        const protectedTotalEpisodes = updateInfo.latestEpisodes > record.total_episodes ? updateInfo.latestEpisodes : record.total_episodes;
+        // 使用从 checkSingleRecordUpdate 返回的 protectedTotalEpisodes（已经包含了保护机制）
+        const protectedTotalEpisodes = updateInfo.latestEpisodes;
 
         const seriesInfo = {
           title: record.title,
@@ -263,13 +262,17 @@ async function checkSingleRecordUpdate(record: PlayRecord, videoId: string): Pro
     });
 
     // 检查两种情况：
-    // 1. 新集数更新：API返回的集数比观看时的原始集数多
-    const hasUpdate = latestEpisodes > originalTotalEpisodes;
-    const newEpisodes = hasUpdate ? latestEpisodes - originalTotalEpisodes : 0;
+    // 1. 新集数更新：API返回的集数比观看时的原始集数多，且必须大于当前播放记录中的集数
+    // 这样可以防止因为播放记录集数被更新而导致的误报
+    const hasUpdate = latestEpisodes > originalTotalEpisodes && latestEpisodes > record.total_episodes;
+    const newEpisodes = hasUpdate ? latestEpisodes - Math.max(originalTotalEpisodes, record.total_episodes) : 0;
 
-    // 2. 继续观看提醒：用户还没看完现有集数（基于API返回的集数）
-    const hasContinueWatching = record.index < latestEpisodes;
-    const remainingEpisodes = hasContinueWatching ? latestEpisodes - record.index : 0;
+    // 计算保护后的集数（防止API缓存问题导致集数回退）
+    const protectedTotalEpisodes = Math.max(latestEpisodes, originalTotalEpisodes, record.total_episodes);
+
+    // 2. 继续观看提醒：用户还没看完现有集数（使用保护后的集数）
+    const hasContinueWatching = record.index < protectedTotalEpisodes;
+    const remainingEpisodes = hasContinueWatching ? protectedTotalEpisodes - record.index : 0;
 
     // 如果API返回的集数少于原始记录的集数，说明可能是API缓存问题
     if (latestEpisodes < originalTotalEpisodes) {
@@ -281,15 +284,28 @@ async function checkSingleRecordUpdate(record: PlayRecord, videoId: string): Pro
     }
 
     if (hasContinueWatching) {
-      console.log(`${record.title} 继续观看提醒: 当前第${record.index}集，共${latestEpisodes}集，还有${remainingEpisodes}集未看`);
+      console.log(`${record.title} 继续观看提醒: 当前第${record.index}集，共${protectedTotalEpisodes}集，还有${remainingEpisodes}集未看`);
     }
+
+    // 输出详细的检测结果
+    console.log(`${record.title} 最终检测结果:`, {
+      hasUpdate,
+      hasContinueWatching,
+      newEpisodes,
+      remainingEpisodes,
+      '原始集数': originalTotalEpisodes,
+      '当前播放记录集数': record.total_episodes,
+      'API返回集数': latestEpisodes,
+      '保护后集数': protectedTotalEpisodes,
+      '当前观看到': record.index
+    });
 
     return {
       hasUpdate,
       hasContinueWatching,
       newEpisodes,
       remainingEpisodes,
-      latestEpisodes
+      latestEpisodes: protectedTotalEpisodes
     };
   } catch (error) {
     console.error(`检查${record.title}更新失败:`, error);
@@ -313,15 +329,13 @@ function saveOriginalEpisodes(recordKey: string, totalEpisodes: number): void {
 }
 
 /**
- * 获取观看时的原始总集数，如果没有记录则保存当前集数
+ * 获取观看时的原始总集数，如果没有记录则使用当前播放记录中的集数
  */
 function getOriginalEpisodes(recordKey: string, currentTotalEpisodes: number): number {
   try {
     const cached = localStorage.getItem(ORIGINAL_EPISODES_CACHE_KEY);
     if (!cached) {
-      // 第一次访问，保存当前集数作为原始集数
-      console.log(`📥 首次记录原始集数: ${recordKey}`);
-      saveOriginalEpisodes(recordKey, currentTotalEpisodes);
+      console.log(`⚠️ 未找到原始集数缓存，使用当前播放记录集数: ${recordKey} = ${currentTotalEpisodes}集`);
       return currentTotalEpisodes;
     }
 
@@ -331,9 +345,7 @@ function getOriginalEpisodes(recordKey: string, currentTotalEpisodes: number): n
       console.log(`📚 读取已保存的原始集数: ${recordKey} = ${originalEpisodes}集 (当前播放记录: ${currentTotalEpisodes}集)`);
       return originalEpisodes;
     } else {
-      // 这个剧集第一次检查，保存当前集数
-      console.log(`📥 新剧集首次记录: ${recordKey}`);
-      saveOriginalEpisodes(recordKey, currentTotalEpisodes);
+      console.log(`⚠️ 该剧集未找到原始集数记录，使用当前播放记录集数: ${recordKey} = ${currentTotalEpisodes}集`);
       return currentTotalEpisodes;
     }
   } catch (error) {

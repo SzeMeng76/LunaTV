@@ -175,36 +175,38 @@ div[data-media-provider] video {
   }
 }
 
-/* 修复音量控制hover区域 - 精确优化版本 */
-.art-control-volume {
-  position: relative !important;
-}
+/* 修复音量控制hover区域 - 精确控制触发范围 */
+@media (hover: hover) {
+  .art-control-volume {
+    position: relative !important;
+    padding: 3px; /* 和弹幕按钮一样的hover区域 */
+  }
 
-/* 精确控制音量按钮的hover检测区域 */
-.art-control-volume::before {
-  content: '';
-  position: absolute;
-  top: -40px; /* 减少向上扩展，只扩展40px到音量滑条区域 */
-  left: -8px;  /* 减少左右扩展 */
-  right: -8px;
-  bottom: -2px; /* 减少向下扩展 */
-  z-index: -1;
-  pointer-events: auto;
-}
+  /* 缩小hover检测区域，只稍微扩展到面板方向 */
+  .art-control-volume::before {
+    content: '';
+    position: absolute;
+    top: -20px; /* 只扩展20px，避免过早触发 */
+    left: -5px;
+    right: -5px;
+    bottom: -3px;
+    z-index: -1;
+    pointer-events: auto;
+  }
 
-/* 当面板本身被hover时也要保持显示 */
-.art-volume-panel:hover {
-  opacity: 1 !important;
-  transform: translateY(0) !important;
-  pointer-events: auto !important;
-}
+  /* 按钮或面板hover时都显示音量面板 */
+  .art-control-volume:hover .art-volume-panel,
+  .art-volume-panel:hover {
+    opacity: 1 !important;
+    transform: translateY(0) !important;
+    pointer-events: auto !important;
+    transition: opacity 0.15s ease 0.1s, transform 0.15s ease 0.1s !important; /* 0.1s显示延迟 */
+  }
 
-/* 强化原有的hover规则 */
-.art-control-volume:hover .art-volume-panel {
-  opacity: 1 !important;
-  transform: translateY(0) !important;
-  pointer-events: auto !important;
-  transition: all 0.1s ease !important; /* 更快的响应 */
+  /* 音量面板默认隐藏状态，和弹幕一样的延迟 */
+  .art-volume-panel {
+    transition: opacity 0.15s ease 0.3s, transform 0.15s ease 0.3s !important; /* 0.3s隐藏延迟 */
+  }
 }
 
 /* 修复移动端弹幕面板定位问题 - 根据不同挂载位置处理 */
@@ -249,4 +251,50 @@ div[data-media-provider] video {
 /* 状态过渡动画 */
 .smooth-transition {
   transition: all 0.3s ease-in-out;
+}
+
+/* 移动端隐藏弹幕配置按钮 */
+@media (max-width: 1080px), (hover: none) {
+  .artplayer-plugin-danmuku .apd-config {
+    display: none !important;
+  }
+}
+
+/* 修复桌面端弹幕配置弹窗hover不稳定问题 */
+@media (min-width: 1081px) and (hover: hover) {
+  /* 扩大按钮的实际hover区域，但不影响视觉 */
+  .artplayer-plugin-danmuku .apd-config {
+    position: relative;
+    padding: 3px; /* 增加一点内边距扩大hover区域 */
+  }
+
+  /* 按钮或面板hover时都显示面板 */
+  .artplayer-plugin-danmuku .apd-config:hover .apd-config-panel,
+  .artplayer-plugin-danmuku .apd-config .apd-config-panel:hover {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    visibility: visible !important;
+    transition: opacity 0.15s ease 0.1s !important; /* 添加0.1s显示延迟 */
+  }
+
+  /* 确保面板默认状态是隐藏的，隐藏时有延迟 */
+  .artplayer-plugin-danmuku .apd-config-panel {
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
+    transition: opacity 0.15s ease 0.3s, visibility 0s ease 0.45s; /* 0.3s隐藏延迟 */
+  }
+
+  /* 面板内部元素在显示时可交互 */
+  .artplayer-plugin-danmuku .apd-config-panel * {
+    pointer-events: auto;
+  }
+
+  /* 防止进度条拖拽时弹窗干扰 */
+  .artplayer[data-dragging="true"] .artplayer-plugin-danmuku .apd-config-panel {
+    opacity: 0 !important;
+    pointer-events: none !important;
+    visibility: hidden !important;
+    transition: none !important;
+  }
 }

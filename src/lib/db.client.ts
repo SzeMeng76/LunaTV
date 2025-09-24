@@ -662,6 +662,24 @@ export async function savePlayRecord(
 ): Promise<void> {
   const key = generateStorageKey(source, id);
 
+  // 保存原始集数（仅在首次记录时保存）
+  if (typeof window !== 'undefined') {
+    try {
+      const ORIGINAL_EPISODES_CACHE_KEY = 'moontv_original_episodes';
+      const cached = localStorage.getItem(ORIGINAL_EPISODES_CACHE_KEY);
+      const data = cached ? JSON.parse(cached) : {};
+
+      // 只在没有记录的情况下保存原始集数
+      if (data[key] === undefined && record.total_episodes > 1) {
+        data[key] = record.total_episodes;
+        localStorage.setItem(ORIGINAL_EPISODES_CACHE_KEY, JSON.stringify(data));
+        console.log(`✓ 首次保存原始集数: ${key} = ${record.total_episodes}集`);
+      }
+    } catch (error) {
+      console.warn('保存原始集数失败:', error);
+    }
+  }
+
   // 数据库存储模式：乐观更新策略（包括 redis 和 upstash）
   if (STORAGE_TYPE !== 'localstorage') {
     // 立即更新缓存
