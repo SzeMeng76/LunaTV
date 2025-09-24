@@ -585,6 +585,33 @@ export function generateStorageKey(source: string, id: string): string {
   return `${source}+${id}`;
 }
 
+/**
+ * 检查是否应该更新原始集数
+ * 更新条件：
+ * 1. 用户观看了超过原始集数的集数（说明看了新更新的内容）
+ * 2. 当前总集数比原始集数多（确实有新集数）
+ */
+function checkShouldUpdateOriginalEpisodes(existingRecord: PlayRecord, newRecord: PlayRecord): boolean {
+  const originalEpisodes = existingRecord.original_episodes || existingRecord.total_episodes;
+
+  // 条件1：用户观看进度超过了原始集数（说明用户已经看了新更新的集数）
+  const hasWatchedBeyondOriginal = newRecord.index > originalEpisodes;
+
+  // 条件2：当前总集数确实比原始集数多（确认有新更新）
+  const hasMoreEpisodes = newRecord.total_episodes > originalEpisodes;
+
+  // 条件3：用户观看进度有实质性进展（不是刚点进去就退出）
+  const hasSignificantProgress = newRecord.play_time > 60; // 观看超过1分钟
+
+  const shouldUpdate = hasWatchedBeyondOriginal && hasMoreEpisodes && hasSignificantProgress;
+
+  if (shouldUpdate) {
+    console.log(`检测到应更新原始集数: ${existingRecord.title} - 观看到第${newRecord.index}集，超过原始${originalEpisodes}集，当前总${newRecord.total_episodes}集`);
+  }
+
+  return shouldUpdate;
+}
+
 // ---- API ----
 /**
  * 读取全部播放记录。
@@ -662,21 +689,27 @@ export async function savePlayRecord(
 ): Promise<void> {
   const key = generateStorageKey(source, id);
 
-  // 保存原始集数（仅在首次记录时保存）
-  if (typeof window !== 'undefined') {
-    try {
-      const ORIGINAL_EPISODES_CACHE_KEY = 'moontv_original_episodes';
-      const cached = localStorage.getItem(ORIGINAL_EPISODES_CACHE_KEY);
-      const data = cached ? JSON.parse(cached) : {};
+  // 获取现有播放记录，检查是否需要设置原始集数
+  const existingRecords = await getAllPlayRecords();
+  const existingRecord = existingRecords[key];
 
-      // 只在没有记录的情况下保存原始集数
-      if (data[key] === undefined && record.total_episodes > 1) {
-        data[key] = record.total_episodes;
-        localStorage.setItem(ORIGINAL_EPISODES_CACHE_KEY, JSON.stringify(data));
-        console.log(`✓ 首次保存原始集数: ${key} = ${record.total_episodes}集`);
-      }
-    } catch (error) {
-      console.warn('保存原始集数失败:', error);
+  // 如果是首次保存该记录，且总集数大于1，则保存原始集数
+  if (!existingRecord && record.total_episodes > 1) {
+    record.original_episodes = record.total_episodes;
+    console.log(`✓ 首次保存原始集数: ${key} = ${record.total_episodes}集`);
+  } else if (existingRecord && !existingRecord.original_episodes && record.total_episodes > 1) {
+    // 如果现有记录没有原始集数，补充保存
+    record.original_episodes = record.total_episodes;
+    console.log(`✓ 补充保存原始集数: ${key} = ${record.total_episodes}集`);
+  } else if (existingRecord?.original_episodes) {
+    // 检查是否需要更新原始集数
+    const shouldUpdateOriginal = checkShouldUpdateOriginalEpisodes(existingRecord, record);
+    if (shouldUpdateOriginal) {
+      record.original_episodes = record.total_episodes;
+      console.log(`✓ 更新原始集数: ${key} = ${existingRecord.original_episodes}集 -> ${record.total_episodes}集`);
+    } else {
+      // 保持现有的原始集数不变
+      record.original_episodes = existingRecord.original_episodes;
     }
   }
 

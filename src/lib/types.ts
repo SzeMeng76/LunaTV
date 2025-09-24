@@ -8,6 +8,7 @@ export interface PlayRecord {
   year: string;
   index: number; // 第几集
   total_episodes: number; // 总集数
+  original_episodes?: number; // 首次观看时的原始集数
   play_time: number; // 播放进度（秒）
   total_time: number; // 总进度（秒）
   save_time: number; // 记录保存时间（时间戳）
