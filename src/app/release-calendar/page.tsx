@@ -537,7 +537,13 @@ export default function ReleaseCalendarPage() {
             {/* 网格视图 */}
             {viewMode === 'grid' && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-                {currentItems.map((item) => {
+                {(() => {
+                  // 去重：按title和director去重
+                  const uniqueCurrentItems = currentItems.filter((item, index, self) =>
+                    index === self.findIndex(t => t.title === item.title && t.director === item.director)
+                  );
+                  return uniqueCurrentItems;
+                })().map((item) => {
                   const isToday = item.releaseDate === new Date().toISOString().split('T')[0];
                   const isUpcoming = new Date(item.releaseDate) > new Date();
                   const isPast = new Date(item.releaseDate) < new Date();
