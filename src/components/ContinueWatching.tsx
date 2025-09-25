@@ -8,7 +8,14 @@ import {
   clearAllPlayRecords,
   getAllPlayRecords,
   subscribeToDataUpdates,
+  forceRefreshPlayRecordsCache,
 } from '@/lib/db.client';
+import {
+  getDetailedWatchingUpdates,
+  subscribeToWatchingUpdatesEvent,
+  checkWatchingUpdates,
+  type WatchingUpdate,
+} from '@/lib/watching-updates';
 
 import ScrollableRow from '@/components/ScrollableRow';
 import VideoCard from '@/components/VideoCard';
@@ -22,6 +29,7 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
     (PlayRecord & { key: string })[]
   >([]);
   const [loading, setLoading] = useState(true);
+  const [watchingUpdates, setWatchingUpdates] = useState<WatchingUpdate | null>(null);
 
   // 处理播放记录数据更新的函数
   const updatePlayRecords = (allRecords: Record<string, PlayRecord>) => {
@@ -68,6 +76,65 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
     return unsubscribe;
   }, []);
 
+  // 获取watching updates数据（仅当有播放记录时）
+  useEffect(() => {
+    // 只有在有播放记录时才检查更新
+    if (loading || playRecords.length === 0) {
+      return;
+    }
+
+    const updateWatchingUpdates = async () => {
+      console.log('ContinueWatching: 开始获取更新数据...');
+
+      // 先尝试从缓存加载（快速显示）
+      let updates = getDetailedWatchingUpdates();
+      console.log('ContinueWatching: 缓存数据:', updates);
+
+      if (updates) {
+        setWatchingUpdates(updates);
+        console.log('ContinueWatching: 使用缓存数据');
+      }
+
+      // 如果缓存为空，主动检查一次
+      if (!updates) {
+        console.log('ContinueWatching: 缓存为空，主动检查更新...');
+        try {
+          await checkWatchingUpdates();
+          updates = getDetailedWatchingUpdates();
+          setWatchingUpdates(updates);
+          console.log('ContinueWatching: 主动检查完成，获得数据:', updates);
+        } catch (error) {
+          console.error('ContinueWatching: 主动检查更新失败:', error);
+        }
+      }
+    };
+
+    // 初始加载
+    updateWatchingUpdates();
+
+    // 订阅更新事件
+    const unsubscribe = subscribeToWatchingUpdatesEvent(() => {
+      console.log('ContinueWatching: 收到更新事件');
+
+      // 当检测到新集数更新时，强制刷新播放记录缓存确保数据同步
+      const updates = getDetailedWatchingUpdates();
+      if (updates && updates.hasUpdates && updates.updatedCount > 0) {
+        console.log('ContinueWatching: 检测到新集数更新，强制刷新播放记录缓存');
+        forceRefreshPlayRecordsCache();
+
+        // 短暂延迟后重新获取播放记录，确保缓存已刷新
+        setTimeout(async () => {
+          const freshRecords = await getAllPlayRecords();
+          updatePlayRecords(freshRecords);
+        }, 100);
+      }
+
+      setWatchingUpdates(updates);
+    });
+
+    return unsubscribe;
+  }, [loading, playRecords.length]); // 依赖播放记录加载状态
+
   // 如果没有播放记录，则不渲染组件
   if (!loading && playRecords.length === 0) {
     return null;
@@ -83,6 +150,22 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
   const parseKey = (key: string) => {
     const [source, id] = key.split('+');
     return { source, id };
+  };
+
+  // 检查播放记录是否有新集数更新
+  const getNewEpisodesCount = (record: PlayRecord & { key: string }): number => {
+    if (!watchingUpdates || !watchingUpdates.updatedSeries) return 0;
+
+    const { source, id } = parseKey(record.key);
+
+    // 在watchingUpdates中查找匹配的剧集
+    const matchedSeries = watchingUpdates.updatedSeries.find(series =>
+      series.sourceKey === source &&
+      series.videoId === id &&
+      series.hasNewEpisode
+    );
+
+    return matchedSeries ? (matchedSeries.newEpisodes || 0) : 0;
   };
 
   return (
@@ -121,10 +204,11 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
           : // 显示真实数据
             playRecords.map((record) => {
               const { source, id } = parseKey(record.key);
+              const newEpisodesCount = getNewEpisodesCount(record);
               return (
                 <div
                   key={record.key}
-                  className='min-w-[96px] w-24 sm:min-w-[180px] sm:w-44'
+                  className='min-w-[96px] w-24 sm:min-w-[180px] sm:w-44 relative'
                 >
                   <VideoCard
                     id={id}
@@ -145,6 +229,12 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
                     }
                     type={record.total_episodes > 1 ? 'tv' : ''}
                   />
+                  {/* 新集数徽章 */}
+                  {newEpisodesCount > 0 && (
+                    <div className='absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full shadow-lg z-50'>
+                      +{newEpisodesCount}集
+                    </div>
+                  )}
                 </div>
               );
             })}

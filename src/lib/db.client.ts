@@ -73,6 +73,7 @@ const USER_STATS_KEY = 'moontv_user_stats'; // 添加用户统计数据存储键
 const CACHE_PREFIX = 'moontv_cache_';
 const CACHE_VERSION = '1.0.0';
 const CACHE_EXPIRE_TIME = 60 * 60 * 1000; // 一小时缓存过期
+const PLAY_RECORDS_CACHE_EXPIRE_TIME = 5 * 60 * 1000; // 播放记录5分钟缓存过期，与新集数更新检查保持一致
 
 // 注意：豆瓣缓存配置已迁移到 douban.client.ts
 
@@ -205,11 +206,12 @@ class HybridCacheManager {
   /**
    * 检查缓存是否有效
    */
-  private isCacheValid<T>(cache: CacheData<T>): boolean {
+  private isCacheValid<T>(cache: CacheData<T>, cacheType?: 'playRecords'): boolean {
     const now = Date.now();
+    const expireTime = cacheType === 'playRecords' ? PLAY_RECORDS_CACHE_EXPIRE_TIME : CACHE_EXPIRE_TIME;
     return (
       cache.version === CACHE_VERSION &&
-      now - cache.timestamp < CACHE_EXPIRE_TIME
+      now - cache.timestamp < expireTime
     );
   }
 
@@ -234,7 +236,7 @@ class HybridCacheManager {
     const userCache = this.getUserCache(username);
     const cached = userCache.playRecords;
 
-    if (cached && this.isCacheValid(cached)) {
+    if (cached && this.isCacheValid(cached, 'playRecords')) {
       return cached.data;
     }
 
@@ -381,6 +383,22 @@ class HybridCacheManager {
       localStorage.removeItem(cacheKey);
     } catch (error) {
       console.warn('清除用户缓存失败:', error);
+    }
+  }
+
+  /**
+   * 强制刷新播放记录缓存
+   * 用于新集数检测时确保数据同步
+   */
+  forceRefreshPlayRecordsCache(): void {
+    const username = this.getCurrentUsername();
+    if (!username) return;
+
+    const userCache = this.getUserCache(username);
+    if (userCache.playRecords) {
+      // 将播放记录缓存时间戳设置为过期
+      userCache.playRecords.timestamp = 0;
+      this.saveUserCache(username, userCache);
     }
   }
 
@@ -587,9 +605,12 @@ export function generateStorageKey(source: string, id: string): string {
 
 /**
  * 检查是否应该更新原始集数
- * 更新条件：
+ * 更新条件（所有条件都必须满足）：
  * 1. 用户观看了超过原始集数的集数（说明看了新更新的内容）
  * 2. 当前总集数比原始集数多（确实有新集数）
+ * 3. 用户观看进度有实质性进展（防止误触）
+ * 4. 新集数增加量合理（防止API错误数据）
+ * 5. 用户观看的新集数超过原始集数至少1集（确保真的看了新内容）
  */
 function checkShouldUpdateOriginalEpisodes(existingRecord: PlayRecord, newRecord: PlayRecord): boolean {
   const originalEpisodes = existingRecord.original_episodes || existingRecord.total_episodes;
@@ -601,12 +622,29 @@ function checkShouldUpdateOriginalEpisodes(existingRecord: PlayRecord, newRecord
   const hasMoreEpisodes = newRecord.total_episodes > originalEpisodes;
 
   // 条件3：用户观看进度有实质性进展（不是刚点进去就退出）
-  const hasSignificantProgress = newRecord.play_time > 60; // 观看超过1分钟
+  const hasSignificantProgress = newRecord.play_time > 300; // 观看超过5分钟，更严格
 
-  const shouldUpdate = hasWatchedBeyondOriginal && hasMoreEpisodes && hasSignificantProgress;
+  // 条件4：新集数增加量合理（防止API返回异常大的数字）
+  const episodeIncrement = newRecord.total_episodes - originalEpisodes;
+  const reasonableIncrement = episodeIncrement > 0 && episodeIncrement <= 50; // 最多增加50集
+
+  // 条件5：用户确实观看了新集数超过原始集数至少1集
+  const watchedNewEpisodes = newRecord.index >= originalEpisodes + 1;
+
+  // 条件6：观看进度与集数匹配（防止数据不一致）
+  const progressMatches = newRecord.index <= newRecord.total_episodes;
+
+  const shouldUpdate = hasWatchedBeyondOriginal &&
+                      hasMoreEpisodes &&
+                      hasSignificantProgress &&
+                      reasonableIncrement &&
+                      watchedNewEpisodes &&
+                      progressMatches;
 
   if (shouldUpdate) {
-    console.log(`检测到应更新原始集数: ${existingRecord.title} - 观看到第${newRecord.index}集，超过原始${originalEpisodes}集，当前总${newRecord.total_episodes}集`);
+    console.log(`✓ 检测到应更新原始集数: ${existingRecord.title} - 观看到第${newRecord.index}集，超过原始${originalEpisodes}集，当前总${newRecord.total_episodes}集，增加${episodeIncrement}集`);
+  } else {
+    console.log(`✗ 不更新原始集数: ${existingRecord.title} - 观看第${newRecord.index}集，原始${originalEpisodes}集，当前总${newRecord.total_episodes}集 [超过原始:${hasWatchedBeyondOriginal}, 有新集:${hasMoreEpisodes}, 观看时长足够:${hasSignificantProgress}, 增量合理:${reasonableIncrement}, 看了新集:${watchedNewEpisodes}, 进度匹配:${progressMatches}]`);
   }
 
   return shouldUpdate;
@@ -1393,6 +1431,14 @@ export function clearUserCache(): void {
   if (STORAGE_TYPE !== 'localstorage') {
     cacheManager.clearUserCache();
   }
+}
+
+/**
+ * 强制刷新播放记录缓存
+ * 用于新集数检测时确保数据同步
+ */
+export function forceRefreshPlayRecordsCache(): void {
+  cacheManager.forceRefreshPlayRecordsCache();
 }
 
 /**
