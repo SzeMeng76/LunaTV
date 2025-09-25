@@ -260,7 +260,7 @@ export default function NetDiskSearchResults({ results, loading, error, total }:
                 <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.293l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414z" clipRule="evenodd" />
                 </svg>
-                <span>🎯 <strong>快速跳转模式</strong> - 点击任意标签快速滚动到对应网盘类型</span>
+                <span>🎯 <strong>快速跳转模式</strong> - 点击任意标签快速滚动到对应网盘类型 ▶️ <strong>跳转播放</strong> - 播放失败请使用下方推荐其他播放器跳转播放(夸克转码，天翼无损)</span>
               </div>
             ) : (
               <div className="text-sm text-gray-600 dark:text-gray-400">
@@ -477,7 +477,7 @@ export default function NetDiskSearchResults({ results, loading, error, total }:
                       </div>
 
                       {/* 操作按钮 */}
-                      <div className="sm:ml-4 flex-shrink-0">
+                      <div className="sm:ml-4 flex-shrink-0 flex flex-col space-y-2">
                         <a
                           href={link.url}
                           target="_blank"
@@ -486,6 +486,15 @@ export default function NetDiskSearchResults({ results, loading, error, total }:
                         >
                           访问链接
                         </a>
+                             <a
+                            href={`http://us.199301.xyz:7023/drive-play?url=${encodeURIComponent(link.url)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center justify-center px-3 py-2 sm:py-1 border border-blue-300 dark:border-blue-600 rounded-md text-xs font-medium text-white bg-blue-500 dark:bg-blue-600 hover:bg-blue-600 dark:hover:bg-blue-700 transition-colors w-full sm:w-auto justify-center"
+                            title="跳转到在线播放页面"
+                          >
+                            跳转播放
+                          </a>
                       </div>
                     </div>
                   </div>
