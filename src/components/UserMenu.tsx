@@ -30,6 +30,7 @@ import {
   getCachedWatchingUpdates,
   getDetailedWatchingUpdates,
   subscribeToWatchingUpdatesEvent,
+  checkWatchingUpdates,
   type WatchingUpdate,
 } from '@/lib/watching-updates';
 import {
@@ -269,8 +270,41 @@ export const UserMenu: React.FC = () => {
         }
       };
 
-      // 初始加载
-      updateWatchingUpdates();
+      // 页面初始化时强制检查一次更新（绕过缓存限制）
+      const forceInitialCheck = async () => {
+        console.log('页面初始化，强制检查更新...');
+        try {
+          // 暂时清除缓存时间，强制检查一次
+          const lastCheckTime = localStorage.getItem('moontv_last_update_check');
+          localStorage.removeItem('moontv_last_update_check');
+
+          // 执行检查
+          await checkWatchingUpdates();
+
+          // 恢复缓存时间（如果之前有的话）
+          if (lastCheckTime) {
+            localStorage.setItem('moontv_last_update_check', lastCheckTime);
+          }
+
+          // 更新UI
+          updateWatchingUpdates();
+          console.log('页面初始化更新检查完成');
+        } catch (error) {
+          console.error('页面初始化检查更新失败:', error);
+          // 失败时仍然尝试从缓存加载
+          updateWatchingUpdates();
+        }
+      };
+
+      // 先尝试从缓存加载，然后强制检查
+      const cachedUpdates = getCachedWatchingUpdates();
+      if (cachedUpdates) {
+        console.log('发现缓存数据，先加载缓存');
+        updateWatchingUpdates();
+      }
+
+      // 无论是否有缓存，都强制检查一次以确保数据最新
+      forceInitialCheck();
 
       // 订阅更新事件
       const unsubscribe = subscribeToWatchingUpdatesEvent(() => {
@@ -400,8 +434,45 @@ export const UserMenu: React.FC = () => {
     }
   }, [isDoubanImageProxyDropdownOpen]);
 
-  const handleMenuClick = () => {
-    setIsOpen(!isOpen);
+  const handleMenuClick = async () => {
+    const willOpen = !isOpen;
+    setIsOpen(willOpen);
+
+    // 如果是打开菜单，立即检查更新（不受缓存限制）
+    if (willOpen && authInfo?.username && storageType !== 'localstorage') {
+      console.log('打开菜单时强制检查更新...');
+      try {
+        // 暂时清除缓存时间，强制检查一次
+        const lastCheckTime = localStorage.getItem('moontv_last_update_check');
+        localStorage.removeItem('moontv_last_update_check');
+
+        // 执行检查
+        await checkWatchingUpdates();
+
+        // 恢复缓存时间（如果之前有的话）
+        if (lastCheckTime) {
+          localStorage.setItem('moontv_last_update_check', lastCheckTime);
+        }
+
+        // 更新UI状态
+        const updates = getDetailedWatchingUpdates();
+        setWatchingUpdates(updates);
+
+        // 重新计算未读状态
+        if (updates && (updates.updatedCount || 0) > 0) {
+          const lastViewed = parseInt(localStorage.getItem('watchingUpdatesLastViewed') || '0');
+          const currentTime = Date.now();
+          const hasNewUpdates = lastViewed === 0 || (currentTime - lastViewed > 60000);
+          setHasUnreadUpdates(hasNewUpdates);
+        } else {
+          setHasUnreadUpdates(false);
+        }
+
+        console.log('菜单打开时的更新检查完成');
+      } catch (error) {
+        console.error('菜单打开时检查更新失败:', error);
+      }
+    }
   };
 
   const handleCloseMenu = () => {
