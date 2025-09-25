@@ -309,7 +309,21 @@ export const UserMenu: React.FC = () => {
           console.error('加载播放记录失败:', error);
         }
       };
+
       loadPlayRecords();
+
+      // 监听播放记录更新事件（修复删除记录后页面不立即更新的问题）
+      const handlePlayRecordsUpdate = () => {
+        console.log('UserMenu: 播放记录更新，重新加载继续观看列表');
+        loadPlayRecords();
+      };
+
+      // 监听播放记录更新事件
+      window.addEventListener('playRecordsUpdated', handlePlayRecordsUpdate);
+
+      return () => {
+        window.removeEventListener('playRecordsUpdated', handlePlayRecordsUpdate);
+      };
     }
   }, [authInfo, storageType]);
 
@@ -333,7 +347,21 @@ export const UserMenu: React.FC = () => {
           console.error('加载收藏失败:', error);
         }
       };
+
       loadFavorites();
+
+      // 监听收藏更新事件（修复删除收藏后页面不立即更新的问题）
+      const handleFavoritesUpdate = () => {
+        console.log('UserMenu: 收藏更新，重新加载收藏列表');
+        loadFavorites();
+      };
+
+      // 监听收藏更新事件
+      window.addEventListener('favoritesUpdated', handleFavoritesUpdate);
+
+      return () => {
+        window.removeEventListener('favoritesUpdated', handleFavoritesUpdate);
+      };
     }
   }, [authInfo, storageType]);
 

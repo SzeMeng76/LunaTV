@@ -11,6 +11,25 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "5.5.1",
+    date: "2025-09-25",
+    added: [
+      // 无新增内容
+    ],
+    changed: [
+      // 无变更内容
+    ],
+    fixed: [
+    "🔧 Bangumi推荐接口错误处理增强：修复bangumi API返回null数据时导致首页崩溃的问题，使用Promise.allSettled防止单个API失败影响整个首页",
+    "🛡️ Bangumi数据结构类型安全修复：更新BangumiCalendarData接口定义，将所有可能缺失的字段标记为可选属性，确保类型安全",
+    "🖼️ Bangumi图片数据空值安全检查：添加可选链操作符处理anime.images可能为null的情况，提供默认占位图片作为fallback",
+    "🎯 首页推荐数据健壮性提升：为所有推荐API（电影、剧集、综艺、短剧、bangumi）添加错误处理和默认值，确保页面在部分API失败时仍能正常显示",
+    "🔄 继续观看功能更新提醒优化：从用户菜单更新提醒中移除继续观看功能，避免功能重复和用户困惑",
+    "📱 跨设备原始集数追踪机制：添加跨设备原始集数追踪功能，防止API缓存问题导致的错误更新提醒",
+    "🎪 观看更新检测逻辑完善：修复观看更新检测逻辑，确保更新通知的准确性和可靠性"
+    ]
+  },
+  {
     version: "5.5.0",
     date: "2025-09-24",
     added: [
