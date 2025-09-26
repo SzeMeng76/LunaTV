@@ -136,7 +136,6 @@ export async function POST(request: NextRequest) {
           username: targetUsername!,
           role: 'user',
           createdAt: Date.now(), // 设置创建时间戳
-          lastLoginTime: null, // 初始化最后登录时间为null（表示从未登录）
         };
 
         // 如果指定了用户组，添加到tags中

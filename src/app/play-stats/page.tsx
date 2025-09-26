@@ -914,9 +914,9 @@ const PlayStatsPage: React.FC = () => {
                               </p>
                               <p className='text-xs text-gray-500 dark:text-gray-400'>
                                 最后活跃:{' '}
-                                {userStat.lastLoginTime !== null && userStat.lastLoginTime !== undefined
+                                {userStat.lastLoginTime !== userStat.createdAt
                                   ? formatDateTime(userStat.lastLoginTime)
-                                  : '从未登录'}
+                                  : '注册时'}
                               </p>
                               {userStat.mostWatchedSource && (
                                 <p className='text-xs text-gray-500 dark:text-gray-400'>

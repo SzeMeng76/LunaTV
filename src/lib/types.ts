@@ -235,7 +235,7 @@ export interface PlayStatsResult {
     avgWatchTime: number;
     mostWatchedSource: string;
     registrationDays: number; // 注册天数
-    lastLoginTime: number | null; // 最后登录时间，null表示从未登录
+    lastLoginTime: number; // 最后登录时间
     createdAt: number; // 用户创建时间
   }>; // 每个用户的统计
   topSources: Array<{

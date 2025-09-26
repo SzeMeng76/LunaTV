@@ -25,7 +25,6 @@ export interface AdminConfig {
     AllowRegister?: boolean; // 是否允许用户注册，默认 true
     AutoCleanupInactiveUsers?: boolean; // 是否自动清理非活跃用户，默认 false
     InactiveUserDays?: number; // 非活跃用户保留天数，默认 7
-    InactiveUserCleanupMode?: 'playRecords' | 'loginTime' | 'both'; // 清理模式：播放记录、登录时间、或两者都满足，默认 'loginTime'
     Users: {
       username: string;
       role: 'user' | 'admin' | 'owner';
@@ -33,7 +32,6 @@ export interface AdminConfig {
       enabledApis?: string[]; // 优先级高于tags限制
       tags?: string[]; // 多 tags 取并集限制
       createdAt?: number; // 用户注册时间戳
-      lastLoginTime?: number | null; // 最后登录时间戳，null表示从未登录
     }[];
     Tags?: {
       name: string;

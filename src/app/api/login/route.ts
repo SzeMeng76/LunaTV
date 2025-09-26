@@ -138,31 +138,6 @@ export async function POST(req: NextRequest) {
       username === process.env.USERNAME &&
       password === process.env.PASSWORD
     ) {
-      // 记录站长最后登录时间
-      try {
-        const config = await getConfig();
-        let ownerUser = config.UserConfig.Users.find(u => u.username === username && u.role === 'owner');
-
-        if (!ownerUser) {
-          // 如果配置中没有站长用户记录，创建一个
-          ownerUser = {
-            username: username,
-            role: 'owner',
-            createdAt: Date.now(),
-            lastLoginTime: Date.now()
-          };
-          config.UserConfig.Users.push(ownerUser);
-        } else {
-          // 更新最后登录时间
-          ownerUser.lastLoginTime = Date.now();
-        }
-
-        await db.saveAdminConfig(config);
-      } catch (err) {
-        console.error('更新站长登录时间失败:', err);
-        // 不影响登录流程，继续执行
-      }
-
       // 验证成功，设置认证cookie
       const response = NextResponse.json({ ok: true });
       const cookieValue = await generateAuthCookie(
@@ -205,20 +180,6 @@ export async function POST(req: NextRequest) {
 
       // 验证成功，设置认证cookie
       const response = NextResponse.json({ ok: true });
-
-      // 更新用户最后登录时间
-      try {
-        const config = await getConfig();
-        const userInConfig = config.UserConfig.Users.find(u => u.username === username);
-        if (userInConfig) {
-          userInConfig.lastLoginTime = Date.now();
-          await db.saveAdminConfig(config);
-        }
-      } catch (err) {
-        console.error('更新用户登录时间失败:', err);
-        // 不影响登录流程，继续执行
-      }
-
       const cookieValue = await generateAuthCookie(
         username,
         password,

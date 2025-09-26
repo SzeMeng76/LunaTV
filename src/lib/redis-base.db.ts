@@ -574,7 +574,7 @@ export abstract class BaseRedisStorage implements IStorage {
         avgWatchTime: number;
         mostWatchedSource: string;
         registrationDays: number;
-        lastLoginTime: number | null;
+        lastLoginTime: number;
         createdAt: number;
       }> = [];
       let totalWatchTime = 0;
@@ -608,10 +608,8 @@ export abstract class BaseRedisStorage implements IStorage {
           registrationData[regDate] = (registrationData[regDate] || 0) + 1;
         }
 
-        // 获取真实的最后登录时间（从用户配置中读取）
-        const config = await this.getAdminConfig();
-        const userConfig = config?.UserConfig?.Users?.find(u => u.username === userStat.username);
-        const lastLoginTime = userConfig?.lastLoginTime ?? null; // 将undefined转换为null
+        // 推断最后登录时间（基于最后播放时间）
+        const lastLoginTime = userStat.lastPlayTime || userCreatedAt;
 
         const enhancedUserStat = {
           username: userStat.username,
@@ -672,9 +670,9 @@ export abstract class BaseRedisStorage implements IStorage {
       const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
 
       const activeUsers = {
-        daily: userStats.filter(user => user.lastLoginTime !== null && user.lastLoginTime !== undefined && user.lastLoginTime >= oneDayAgo).length,
-        weekly: userStats.filter(user => user.lastLoginTime !== null && user.lastLoginTime !== undefined && user.lastLoginTime >= sevenDaysAgo).length,
-        monthly: userStats.filter(user => user.lastLoginTime !== null && user.lastLoginTime !== undefined && user.lastLoginTime >= thirtyDaysAgo).length,
+        daily: userStats.filter(user => user.lastLoginTime >= oneDayAgo).length,
+        weekly: userStats.filter(user => user.lastLoginTime >= sevenDaysAgo).length,
+        monthly: userStats.filter(user => user.lastLoginTime >= thirtyDaysAgo).length,
       };
 
       const result: PlayStatsResult = {
