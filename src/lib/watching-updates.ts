@@ -291,12 +291,14 @@ async function checkSingleRecordUpdate(record: PlayRecord, videoId: string, stor
         try {
           const updatedRecord: PlayRecord = {
             ...record,
-            total_episodes: latestEpisodes
+            total_episodes: latestEpisodes,
+            // 🔒 重要：watching-updates 自动更新时，必须保持原始集数不变
+            original_episodes: record.original_episodes || originalTotalEpisodes
           };
 
           // 保存更新后的播放记录，使用解析出的sourceName确保key一致
           await savePlayRecord(storageSourceName || record.source_name, videoId, updatedRecord);
-          console.log(`✅ 播放记录集数更新成功: ${record.title}`);
+          console.log(`✅ 播放记录集数更新成功: ${record.title}，原始集数保持为 ${updatedRecord.original_episodes}`);
         } catch (error) {
           console.error(`❌ 更新播放记录集数失败: ${record.title}`, error);
         }
