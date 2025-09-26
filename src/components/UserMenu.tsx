@@ -96,6 +96,9 @@ export const UserMenu: React.FC = () => {
   const [doubanDataSource, setDoubanDataSource] = useState('direct');
   const [doubanImageProxyType, setDoubanImageProxyType] = useState('direct');
   const [doubanImageProxyUrl, setDoubanImageProxyUrl] = useState('');
+  const [continueWatchingMinProgress, setContinueWatchingMinProgress] = useState(5);
+  const [continueWatchingMaxProgress, setContinueWatchingMaxProgress] = useState(100);
+  const [enableContinueWatchingFilter, setEnableContinueWatchingFilter] = useState(false);
   const [isDoubanDropdownOpen, setIsDoubanDropdownOpen] = useState(false);
   const [isDoubanImageProxyDropdownOpen, setIsDoubanImageProxyDropdownOpen] =
     useState(false);
@@ -221,6 +224,21 @@ export const UserMenu: React.FC = () => {
       if (savedLiveDirectConnect !== null) {
         setLiveDirectConnect(JSON.parse(savedLiveDirectConnect));
       }
+
+      const savedContinueWatchingMinProgress = localStorage.getItem('continueWatchingMinProgress');
+      if (savedContinueWatchingMinProgress !== null) {
+        setContinueWatchingMinProgress(parseInt(savedContinueWatchingMinProgress));
+      }
+
+      const savedContinueWatchingMaxProgress = localStorage.getItem('continueWatchingMaxProgress');
+      if (savedContinueWatchingMaxProgress !== null) {
+        setContinueWatchingMaxProgress(parseInt(savedContinueWatchingMaxProgress));
+      }
+
+      const savedEnableContinueWatchingFilter = localStorage.getItem('enableContinueWatchingFilter');
+      if (savedEnableContinueWatchingFilter !== null) {
+        setEnableContinueWatchingFilter(JSON.parse(savedEnableContinueWatchingFilter));
+      }
     }
   }, []);
 
@@ -332,8 +350,15 @@ export const UserMenu: React.FC = () => {
           // 筛选真正需要继续观看的记录
           const validPlayRecords = recordsArray.filter(record => {
             const progress = getProgress(record);
-            // 进度在5%-95%之间，且播放时间超过2分钟才算有效记录
-            return progress >= 5 && progress <= 95 && record.play_time >= 120;
+
+            // 播放时间必须超过2分钟
+            if (record.play_time < 120) return false;
+
+            // 如果禁用了进度筛选，则显示所有播放时间超过2分钟的记录
+            if (!enableContinueWatchingFilter) return true;
+
+            // 根据用户自定义的进度范围筛选
+            return progress >= continueWatchingMinProgress && progress <= continueWatchingMaxProgress;
           });
 
           // 按最后播放时间降序排列
@@ -657,6 +682,27 @@ export const UserMenu: React.FC = () => {
     }
   };
 
+  const handleContinueWatchingMinProgressChange = (value: number) => {
+    setContinueWatchingMinProgress(value);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('continueWatchingMinProgress', value.toString());
+    }
+  };
+
+  const handleContinueWatchingMaxProgressChange = (value: number) => {
+    setContinueWatchingMaxProgress(value);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('continueWatchingMaxProgress', value.toString());
+    }
+  };
+
+  const handleEnableContinueWatchingFilterToggle = (value: boolean) => {
+    setEnableContinueWatchingFilter(value);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('enableContinueWatchingFilter', JSON.stringify(value));
+    }
+  };
+
   const handleDoubanDataSourceChange = (value: string) => {
     setDoubanDataSource(value);
     if (typeof window !== 'undefined') {
@@ -717,6 +763,9 @@ export const UserMenu: React.FC = () => {
     setDoubanDataSource(defaultDoubanProxyType);
     setDoubanImageProxyType(defaultDoubanImageProxyType);
     setDoubanImageProxyUrl(defaultDoubanImageProxyUrl);
+    setContinueWatchingMinProgress(5);
+    setContinueWatchingMaxProgress(100);
+    setEnableContinueWatchingFilter(false);
 
     if (typeof window !== 'undefined') {
       localStorage.setItem('defaultAggregateSearch', JSON.stringify(true));
@@ -727,6 +776,9 @@ export const UserMenu: React.FC = () => {
       localStorage.setItem('doubanDataSource', defaultDoubanProxyType);
       localStorage.setItem('doubanImageProxyType', defaultDoubanImageProxyType);
       localStorage.setItem('doubanImageProxyUrl', defaultDoubanImageProxyUrl);
+      localStorage.setItem('continueWatchingMinProgress', '5');
+      localStorage.setItem('continueWatchingMaxProgress', '100');
+      localStorage.setItem('enableContinueWatchingFilter', JSON.stringify(false));
     }
   };
 
@@ -1333,6 +1385,96 @@ export const UserMenu: React.FC = () => {
                 </div>
               </label>
             </div>
+
+            {/* 分割线 */}
+            <div className='border-t border-gray-200 dark:border-gray-700'></div>
+
+            {/* 继续观看筛选设置 */}
+            <div className='space-y-4'>
+              <div className='flex items-center justify-between'>
+                <div>
+                  <h4 className='text-sm font-medium text-gray-700 dark:text-gray-300'>
+                    继续观看进度筛选
+                  </h4>
+                  <p className='text-xs text-gray-500 dark:text-gray-400 mt-1'>
+                    是否启用"继续观看"的播放进度筛选功能
+                  </p>
+                </div>
+                <label className='flex items-center cursor-pointer'>
+                  <div className='relative'>
+                    <input
+                      type='checkbox'
+                      className='sr-only peer'
+                      checked={enableContinueWatchingFilter}
+                      onChange={(e) => handleEnableContinueWatchingFilterToggle(e.target.checked)}
+                    />
+                    <div className='w-11 h-6 bg-gray-300 rounded-full peer-checked:bg-green-500 transition-colors dark:bg-gray-600'></div>
+                    <div className='absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform peer-checked:translate-x-5'></div>
+                  </div>
+                </label>
+              </div>
+
+              {/* 进度范围设置 - 仅在启用筛选时显示 */}
+              {enableContinueWatchingFilter && (
+                <>
+                  <div>
+                    <h5 className='text-sm font-medium text-gray-600 dark:text-gray-400 mb-3'>
+                      进度范围设置
+                    </h5>
+                  </div>
+
+                  <div className='grid grid-cols-2 gap-4'>
+                    {/* 最小进度设置 */}
+                    <div>
+                      <label className='block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2'>
+                        最小进度 (%)
+                      </label>
+                      <input
+                        type='number'
+                        min='0'
+                        max='100'
+                        className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
+                        value={continueWatchingMinProgress}
+                        onChange={(e) => {
+                          const value = Math.max(0, Math.min(100, parseInt(e.target.value) || 0));
+                          handleContinueWatchingMinProgressChange(value);
+                        }}
+                      />
+                    </div>
+
+                    {/* 最大进度设置 */}
+                    <div>
+                      <label className='block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2'>
+                        最大进度 (%)
+                      </label>
+                      <input
+                        type='number'
+                        min='0'
+                        max='100'
+                        className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
+                        value={continueWatchingMaxProgress}
+                        onChange={(e) => {
+                          const value = Math.max(0, Math.min(100, parseInt(e.target.value) || 100));
+                          handleContinueWatchingMaxProgressChange(value);
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* 当前范围提示 */}
+                  <div className='text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 p-3 rounded-lg'>
+                    当前设置：显示播放进度在 {continueWatchingMinProgress}% - {continueWatchingMaxProgress}% 之间的内容
+                  </div>
+                </>
+              )}
+
+              {/* 关闭筛选时的提示 */}
+              {!enableContinueWatchingFilter && (
+                <div className='text-xs text-gray-500 dark:text-gray-400 bg-orange-50 dark:bg-orange-900/20 p-3 rounded-lg border border-orange-200 dark:border-orange-800'>
+                  筛选已关闭：将显示所有播放时间超过2分钟的内容
+                </div>
+              )}
+            </div>
           </div>
 
           {/* 底部说明 */}
@@ -1673,7 +1815,10 @@ export const UserMenu: React.FC = () => {
               <PlayCircle className='w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4' />
               <p className='text-gray-500 dark:text-gray-400 mb-2'>暂无需要继续观看的内容</p>
               <p className='text-xs text-gray-400 dark:text-gray-500'>
-                观看进度在5%-95%之间的内容会显示在这里
+                {enableContinueWatchingFilter
+                  ? `观看进度在${continueWatchingMinProgress}%-${continueWatchingMaxProgress}%之间且播放时间超过2分钟的内容会显示在这里`
+                  : '播放时间超过2分钟的所有内容都会显示在这里'
+                }
               </p>
             </div>
           )}
