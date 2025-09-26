@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
       avgWatchTime: number;
       mostWatchedSource: string;
       registrationDays: number;
-      lastLoginTime: number;
+      lastLoginTime: number | null; // 允许为null表示从未登录
       createdAt: number;
     }> = [];
     let totalWatchTime = 0;
