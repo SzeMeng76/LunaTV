@@ -83,13 +83,18 @@ export async function GET(request: NextRequest) {
       ? calculateRegistrationDays(userStats.firstWatchDate)
       : 0;
 
+    // 获取最后登录时间
+    const lastLoginTime = user?.lastLoginTime || null;
+
     console.log('注册天数计算:', {
       userCreatedAt,
       userCreatedAtDate: new Date(userCreatedAt),
       registrationDays,
       firstWatchDate: userStats.firstWatchDate,
       firstWatchDateDate: userStats.firstWatchDate ? new Date(userStats.firstWatchDate) : null,
-      loginDays
+      loginDays,
+      lastLoginTime,
+      lastLoginTimeDate: lastLoginTime ? new Date(lastLoginTime) : null
     });
 
     const enhancedStats = {
@@ -101,7 +106,9 @@ export async function GET(request: NextRequest) {
       // 注册天数计算（基于真实的用户创建时间）
       registrationDays,
       // 登录天数计算（基于首次观看时间，类似Alpha逻辑）
-      loginDays
+      loginDays,
+      // 新增：最后登录时间
+      lastLoginTime: lastLoginTime
     };
 
     return NextResponse.json(enhancedStats, { status: 200 });
