@@ -574,7 +574,7 @@ export abstract class BaseRedisStorage implements IStorage {
         avgWatchTime: number;
         mostWatchedSource: string;
         registrationDays: number;
-        lastLoginTime: number;
+        lastLoginTime: number | null;
         createdAt: number;
       }> = [];
       let totalWatchTime = 0;
@@ -611,7 +611,7 @@ export abstract class BaseRedisStorage implements IStorage {
         // 获取真实的最后登录时间（从用户配置中读取）
         const config = await this.getAdminConfig();
         const userConfig = config?.UserConfig?.Users?.find(u => u.username === userStat.username);
-        const lastLoginTime = userConfig?.lastLoginTime || null; // 真正的登录时间
+        const lastLoginTime = userConfig?.lastLoginTime ?? null; // 将undefined转换为null
 
         const enhancedUserStat = {
           username: userStat.username,

@@ -103,8 +103,8 @@ export async function GET(request: NextRequest) {
           registrationData[regDate] = (registrationData[regDate] || 0) + 1;
         }
 
-        // 获取用户真实的最后登录时间
-        const lastLoginTime = user.lastLoginTime; // 不使用注册时间作为后备，null就是null
+        // 获取用户真实的最后登录时间，将undefined转换为null
+        const lastLoginTime = user.lastLoginTime ?? null;
 
         // 获取用户的所有播放记录
         const userPlayRecords = await storage.getAllPlayRecords(user.username);
@@ -197,7 +197,7 @@ export async function GET(request: NextRequest) {
         // 设置项目开始时间，2025年9月14日
         const PROJECT_START_DATE = new Date('2025-09-14').getTime();
         const userCreatedAt = user.createdAt || PROJECT_START_DATE;
-        const userLastLoginTime = user.lastLoginTime; // 不使用注册时间作为后备，null就是null
+        const userLastLoginTime = user.lastLoginTime ?? null; // 将undefined转换为null
 
         // 使用自然日计算，与个人统计保持一致
         const firstDate = new Date(userCreatedAt);
