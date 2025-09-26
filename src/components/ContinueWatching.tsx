@@ -8,6 +8,7 @@ import {
   clearAllPlayRecords,
   getAllPlayRecords,
   subscribeToDataUpdates,
+  forceRefreshPlayRecordsCache,
 } from '@/lib/db.client';
 import {
   getDetailedWatchingUpdates,
@@ -114,7 +115,20 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
     // 订阅更新事件
     const unsubscribe = subscribeToWatchingUpdatesEvent(() => {
       console.log('ContinueWatching: 收到更新事件');
+
+      // 当检测到新集数更新时，强制刷新播放记录缓存确保数据同步
       const updates = getDetailedWatchingUpdates();
+      if (updates && updates.hasUpdates && updates.updatedCount > 0) {
+        console.log('ContinueWatching: 检测到新集数更新，强制刷新播放记录缓存');
+        forceRefreshPlayRecordsCache();
+
+        // 短暂延迟后重新获取播放记录，确保缓存已刷新
+        setTimeout(async () => {
+          const freshRecords = await getAllPlayRecords();
+          updatePlayRecords(freshRecords);
+        }, 100);
+      }
+
       setWatchingUpdates(updates);
     });
 
