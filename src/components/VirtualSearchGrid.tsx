@@ -246,10 +246,10 @@ export const VirtualSearchGrid: React.FC<VirtualSearchGridProps> = ({
           style={{
             // react-window 2.1.2优化：明确设置尺寸以避免ResizeObserver
             // react-window 2.1.2优化：明确设置尺寸以避免ResizeObserver
-            height: typeof window !== 'undefined' ? Math.min(window.innerHeight - 200, 800) : 600,
+            height: typeof window !== 'undefined' ? window.innerHeight - 120 : 600,
             width: containerWidth,
-            // 覆盖默认overflow，避免Grid内部滚动
-            overflow: 'visible',
+            // 确保最后一行完整显示
+            paddingBottom: '20px',
             // 确保不创建新的stacking context，让菜单能正确显示在最顶层
             isolation: 'auto',
             // 平滑滚动优化
