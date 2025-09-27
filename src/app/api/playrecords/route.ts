@@ -91,9 +91,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 获取现有播放记录以保持原始集数
+    const existingRecord = await db.getPlayRecord(authInfo.username, source, id);
+
     const finalRecord = {
       ...record,
       save_time: record.save_time ?? Date.now(),
+      // 关键修复：设置原始集数，首次观看时使用当前集数，后续保持不变
+      original_episodes: existingRecord?.original_episodes || record.total_episodes,
     } as PlayRecord;
 
     await db.savePlayRecord(authInfo.username, source, id, finalRecord);
