@@ -38,7 +38,7 @@ interface VirtualDoubanGridProps {
 // 渐进式加载配置
 const INITIAL_BATCH_SIZE = 25;
 const LOAD_MORE_BATCH_SIZE = 25;
-const LOAD_MORE_THRESHOLD = 3; // 距离底部还有3行时开始加载
+const LOAD_MORE_THRESHOLD = 3; // 恢复原来的阈值，避免过度触发
 
 export const VirtualDoubanGrid: React.FC<VirtualDoubanGridProps> = ({
   doubanData,
@@ -141,15 +141,15 @@ export const VirtualDoubanGrid: React.FC<VirtualDoubanGridProps> = ({
   }: any) => {
     const index = rowIndex * cellColumnCount + columnIndex;
     
-    // 如果超出显示范围，返回空
+    // 如果超出显示范围，返回隐藏的占位符
     if (index >= cellDisplayItemCount) {
-      return <div style={style} />;
+      return <div style={{ ...style, visibility: 'hidden' }} />;
     }
 
     const item = cellDisplayData[index];
-    
+
     if (!item) {
-      return <div style={style} />;
+      return <div style={{ ...style, visibility: 'hidden' }} />;
     }
 
     return (
@@ -168,11 +168,6 @@ export const VirtualDoubanGrid: React.FC<VirtualDoubanGridProps> = ({
     );
   }, []);
 
-  // 计算网格高度
-  const gridHeight = Math.min(
-    typeof window !== 'undefined' ? window.innerHeight - 200 : 600,
-    800
-  );
 
   // 生成骨架屏数据
   const skeletonData = Array.from({ length: 25 }, (_, index) => index);
@@ -207,21 +202,19 @@ export const VirtualDoubanGrid: React.FC<VirtualDoubanGridProps> = ({
           }}
           columnCount={columnCount}
           columnWidth={itemWidth + 16}
-          defaultHeight={gridHeight}
-          defaultWidth={containerWidth}
           rowCount={rowCount}
           rowHeight={itemHeight + 16}
-          overscanCount={1}
+          overscanCount={3}
           // 添加ARIA支持提升无障碍体验
           role="grid"
           aria-label={`豆瓣${type}列表，共${displayItemCount}个结果`}
           aria-rowcount={rowCount}
           aria-colcount={columnCount}
           style={{
-            overflowX: 'hidden',
-            overflowY: 'auto',
             // 确保不创建新的stacking context，让菜单能正确显示在最顶层
             isolation: 'auto',
+            // 平滑滚动优化
+            scrollBehavior: 'smooth',
             // 单行网格优化：防止高度异常
             ...(isSingleRow && {
               minHeight: itemHeight + 16,
@@ -229,20 +222,19 @@ export const VirtualDoubanGrid: React.FC<VirtualDoubanGridProps> = ({
             }),
           }}
           onCellsRendered={(visibleCells, allCells) => {
-            // 使用react-window v2.1.0的新API - 优化性能：
+            // 使用react-window v2.1.2的API：
             // 1. visibleCells: 真实可见的单元格范围
             // 2. allCells: 包含overscan的所有渲染单元格范围
             const { rowStopIndex: visibleRowStopIndex } = visibleCells;
-            const { rowStopIndex: allRowStopIndex } = allCells;
-            
-            // 性能优化：只基于真实可见区域判断加载，避免overscan区域误触发
+
+            // 简化逻辑：基于可见行检测
             if (visibleRowStopIndex >= rowCount - LOAD_MORE_THRESHOLD) {
               if (hasNextVirtualPage && !isVirtualLoadingMore) {
                 loadMoreVirtualItems();
               } else if (needsServerData) {
-                // 防止重复调用onLoadMore - 使用时间戳限制
+                // 防止重复调用onLoadMore
                 const now = Date.now();
-                if (now - lastLoadMoreCallRef.current > 1000) { // 1秒内只调用一次
+                if (now - lastLoadMoreCallRef.current > 1000) {
                   lastLoadMoreCallRef.current = now;
                   onLoadMore();
                 }

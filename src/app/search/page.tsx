@@ -1390,8 +1390,10 @@ function SearchPageClient() {
                 {/* 开关控件行 */}
                 <div className='flex items-center justify-end gap-6'>
                   {/* 虚拟化开关 */}
-                  <label className='flex items-center gap-2 cursor-pointer select-none shrink-0'>
-                    <span className='text-xs sm:text-sm text-gray-700 dark:text-gray-300'>虚拟滑动</span>
+                  <label className='flex items-center gap-3 cursor-pointer select-none shrink-0 group'>
+                    <span className='text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors'>
+                      ⚡ 虚拟滑动
+                    </span>
                     <div className='relative'>
                       <input
                         type='checkbox'
@@ -1399,14 +1401,22 @@ function SearchPageClient() {
                         checked={useVirtualization}
                         onChange={toggleVirtualization}
                       />
-                      <div className='w-9 h-5 bg-gray-300 rounded-full peer-checked:bg-blue-500 transition-colors dark:bg-gray-600'></div>
-                      <div className='absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-4'></div>
+                      <div className='w-11 h-6 bg-gradient-to-r from-gray-200 to-gray-300 rounded-full peer-checked:from-blue-400 peer-checked:to-purple-500 transition-all duration-300 dark:from-gray-600 dark:to-gray-700 dark:peer-checked:from-blue-500 dark:peer-checked:to-purple-600 shadow-inner'></div>
+                      <div className='absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-all duration-300 peer-checked:translate-x-5 shadow-lg peer-checked:shadow-blue-300 dark:peer-checked:shadow-blue-500/50 peer-checked:scale-105'></div>
+                      {/* 开关内图标 */}
+                      <div className='absolute top-1.5 left-1.5 w-3 h-3 flex items-center justify-center pointer-events-none transition-all duration-300 peer-checked:translate-x-5'>
+                        <span className='text-[10px] peer-checked:text-white text-gray-500'>
+                          {useVirtualization ? '✨' : '○'}
+                        </span>
+                      </div>
                     </div>
                   </label>
-                  
+
                   {/* 聚合开关 */}
-                  <label className='flex items-center gap-2 cursor-pointer select-none shrink-0'>
-                    <span className='text-xs sm:text-sm text-gray-700 dark:text-gray-300'>聚合</span>
+                  <label className='flex items-center gap-3 cursor-pointer select-none shrink-0 group'>
+                    <span className='text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors'>
+                      🔄 聚合
+                    </span>
                     <div className='relative'>
                       <input
                         type='checkbox'
@@ -1414,8 +1424,14 @@ function SearchPageClient() {
                         checked={viewMode === 'agg'}
                         onChange={() => setViewMode(viewMode === 'agg' ? 'all' : 'agg')}
                       />
-                      <div className='w-9 h-5 bg-gray-300 rounded-full peer-checked:bg-green-500 transition-colors dark:bg-gray-600'></div>
-                      <div className='absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-4'></div>
+                      <div className='w-11 h-6 bg-gradient-to-r from-gray-200 to-gray-300 rounded-full peer-checked:from-emerald-400 peer-checked:to-green-500 transition-all duration-300 dark:from-gray-600 dark:to-gray-700 dark:peer-checked:from-emerald-500 dark:peer-checked:to-green-600 shadow-inner'></div>
+                      <div className='absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-all duration-300 peer-checked:translate-x-5 shadow-lg peer-checked:shadow-emerald-300 dark:peer-checked:shadow-emerald-500/50 peer-checked:scale-105'></div>
+                      {/* 开关内图标 */}
+                      <div className='absolute top-1.5 left-1.5 w-3 h-3 flex items-center justify-center pointer-events-none transition-all duration-300 peer-checked:translate-x-5'>
+                        <span className='text-[10px] peer-checked:text-white text-gray-500'>
+                          {viewMode === 'agg' ? '🔗' : '○'}
+                        </span>
+                      </div>
                     </div>
                   </label>
                 </div>

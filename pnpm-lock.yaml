@@ -84,11 +84,11 @@ importers:
         specifier: ^5.4.0
         version: 5.5.0(react@18.3.1)
       react-window:
-        specifier: ^2.1.1
-        version: 2.1.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        specifier: ^2.1.2
+        version: 2.1.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       react-window-infinite-loader:
         specifier: ^1.0.10
-        version: 1.0.10(react-window@2.1.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)
+        version: 1.0.10(react-window@2.1.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)
       redis:
         specifier: ^4.6.7
         version: 4.7.1
@@ -4358,12 +4358,12 @@ packages:
     resolution: {integrity: sha512-wS+hAgJShR0KhEvPJArfuPVN1+Hz1t0Y6n5jLrGQbkb4urgPE/0Rve+1kMB1v/oWgHgm4WIcV+i7F2pTVj+2iQ==}
     engines: {node: '>=0.10.0'}
 
-  react-window@2.1.1:
-    resolution: {integrity: sha512-Wx5yHri8G1nFxImnJRkEEKtRTnG3cWaqknUJyYvgisQtl1mw/d8LQmLXfuKxpn2dY8IwDn5mCIuxm2NVyIvgVQ==}
+  react-window@2.1.2:
+    resolution: {integrity: sha512-3PnhB1bXauRVTR1vVwEmFjbaNDCIubOoNLTvvHrOI9cGOkPGb5XAzlprNN/FuUlnKsaaws31t3IJYbJJvhJcBQ==}
     engines: {node: '>=10'}
     peerDependencies:
-      react: ^15.0.0 || ^16.0.0 || ^17.0.0 || ^18.0.0
-      react-dom: ^15.0.0 || ^16.0.0 || ^17.0.0 || ^18.0.0
+      react: ^18.0.0 || ^19.0.0
+      react-dom: ^18.0.0 || ^19.0.0
 
   react-window-infinite-loader@1.0.10:
     resolution: {integrity: sha512-NO/csdHlxjWqA2RJZfzQgagAjGHspbO2ik9GtWZb0BY1Nnapq0auG8ErI+OhGCzpjYJsCYerqUlK6hkq9dfAAA==}
@@ -10262,17 +10262,15 @@ snapshots:
     dependencies:
       loose-envify: 1.4.0
 
-  react-window@2.1.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
+  react-window@2.1.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
     dependencies:
-      '@babel/runtime': 7.27.6
-      memoize-one: 5.2.1
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
 
-  react-window-infinite-loader@1.0.10(react-window@2.1.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1):
+  react-window-infinite-loader@1.0.10(react-window@2.1.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1):
     dependencies:
       react: 18.3.1
-      react-window: 2.1.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      react-window: 2.1.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
 
   read-cache@1.0.0:
     dependencies:

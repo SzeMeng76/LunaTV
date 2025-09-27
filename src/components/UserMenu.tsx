@@ -35,6 +35,7 @@ import {
 } from '@/lib/watching-updates';
 import {
   getAllPlayRecords,
+  forceRefreshPlayRecordsCache,
   type PlayRecord,
 } from '@/lib/db.client';
 import type { Favorite } from '@/lib/types';
@@ -380,11 +381,41 @@ export const UserMenu: React.FC = () => {
       // 监听播放记录更新事件
       window.addEventListener('playRecordsUpdated', handlePlayRecordsUpdate);
 
+      // 🔥 新增：监听watching-updates事件，与ContinueWatching组件保持一致
+      const unsubscribeWatchingUpdates = subscribeToWatchingUpdatesEvent(() => {
+        console.log('UserMenu: 收到watching-updates事件');
+
+        // 当检测到新集数更新时，强制刷新播放记录缓存确保数据同步
+        const updates = getDetailedWatchingUpdates();
+        if (updates && updates.hasUpdates && updates.updatedCount > 0) {
+          console.log('UserMenu: 检测到新集数更新，强制刷新播放记录缓存');
+          forceRefreshPlayRecordsCache();
+
+          // 短暂延迟后重新获取播放记录，确保缓存已刷新
+          setTimeout(async () => {
+            const freshRecords = await getAllPlayRecords();
+            const recordsArray = Object.entries(freshRecords).map(([key, record]) => ({
+              ...record,
+              key,
+            }));
+            const validPlayRecords = recordsArray.filter(record => {
+              const progress = getProgress(record);
+              if (record.play_time < 120) return false;
+              if (!enableContinueWatchingFilter) return true;
+              return progress >= continueWatchingMinProgress && progress <= continueWatchingMaxProgress;
+            });
+            const sortedRecords = validPlayRecords.sort((a, b) => b.save_time - a.save_time);
+            setPlayRecords(sortedRecords.slice(0, 12));
+          }, 100);
+        }
+      });
+
       return () => {
         window.removeEventListener('playRecordsUpdated', handlePlayRecordsUpdate);
+        unsubscribeWatchingUpdates(); // 🔥 清理watching-updates订阅
       };
     }
-  }, [authInfo, storageType]);
+  }, [authInfo, storageType, enableContinueWatchingFilter, continueWatchingMinProgress, continueWatchingMaxProgress]);
 
   // 加载收藏数据
   useEffect(() => {
@@ -576,6 +607,22 @@ export const UserMenu: React.FC = () => {
   const getProgress = (record: PlayRecord) => {
     if (record.total_time === 0) return 0;
     return (record.play_time / record.total_time) * 100;
+  };
+
+  // 检查播放记录是否有新集数更新
+  const getNewEpisodesCount = (record: PlayRecord & { key: string }): number => {
+    if (!watchingUpdates || !watchingUpdates.updatedSeries) return 0;
+
+    const { source, id } = parseKey(record.key);
+
+    // 在watchingUpdates中查找匹配的剧集
+    const matchedSeries = watchingUpdates.updatedSeries.find(series =>
+      series.sourceKey === source &&
+      series.videoId === id &&
+      series.hasNewEpisode
+    );
+
+    return matchedSeries ? (matchedSeries.newEpisodes || 0) : 0;
   };
 
   const handleChangePassword = () => {
@@ -1772,6 +1819,7 @@ export const UserMenu: React.FC = () => {
           <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4'>
             {playRecords.map((record) => {
               const { source, id } = parseKey(record.key);
+              const newEpisodesCount = getNewEpisodesCount(record);
               return (
                 <div key={record.key} className='relative'>
                   <VideoCard
@@ -1788,6 +1836,12 @@ export const UserMenu: React.FC = () => {
                     from='playrecord'
                     type={record.total_episodes > 1 ? 'tv' : ''}
                   />
+                  {/* 新集数徽章 */}
+                  {newEpisodesCount > 0 && (
+                    <div className='absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full shadow-lg z-50'>
+                      +{newEpisodesCount}集
+                    </div>
+                  )}
                   {/* 进度指示器 */}
                   {getProgress(record) > 0 && (
                     <div className='absolute bottom-2 left-2 right-2 bg-black/50 rounded px-2 py-1'>
