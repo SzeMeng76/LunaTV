@@ -575,6 +575,7 @@ export abstract class BaseRedisStorage implements IStorage {
         mostWatchedSource: string;
         registrationDays: number;
         lastLoginTime: number;
+        loginCount: number;
         createdAt: number;
       }> = [];
       let totalWatchTime = 0;
@@ -621,6 +622,7 @@ export abstract class BaseRedisStorage implements IStorage {
           mostWatchedSource: userStat.mostWatchedSource,
           registrationDays,
           lastLoginTime,
+          loginCount: userStat.loginCount || 0, // 添加登入次数字段
           createdAt: userCreatedAt,
         };
 
@@ -733,6 +735,30 @@ export abstract class BaseRedisStorage implements IStorage {
       const records = Object.values(playRecords);
 
       if (records.length === 0) {
+        // 即使没有播放记录，也要获取登入统计
+        let loginStats = {
+          loginCount: 0,
+          firstLoginTime: 0,
+          lastLoginTime: 0,
+          lastLoginDate: 0
+        };
+
+        try {
+          const loginStatsKey = `user_login_stats:${userName}`;
+          const storedLoginStats = await this.client.get(loginStatsKey);
+          if (storedLoginStats) {
+            const parsed = JSON.parse(storedLoginStats);
+            loginStats = {
+              loginCount: parsed.loginCount || 0,
+              firstLoginTime: parsed.firstLoginTime || 0,
+              lastLoginTime: parsed.lastLoginTime || 0,
+              lastLoginDate: parsed.lastLoginDate || parsed.lastLoginTime || 0
+            };
+          }
+        } catch (error) {
+          console.error(`获取用户 ${userName} 登入统计失败:`, error);
+        }
+
         return {
           username: userName,
           totalWatchTime: 0,
@@ -744,7 +770,12 @@ export abstract class BaseRedisStorage implements IStorage {
           // 新增字段
           totalMovies: 0,
           firstWatchDate: Date.now(),
-          lastUpdateTime: Date.now()
+          lastUpdateTime: Date.now(),
+          // 登入统计字段
+          loginCount: loginStats.loginCount,
+          firstLoginTime: loginStats.firstLoginTime,
+          lastLoginTime: loginStats.lastLoginTime,
+          lastLoginDate: loginStats.lastLoginDate
         };
       }
 
@@ -779,6 +810,30 @@ export abstract class BaseRedisStorage implements IStorage {
         ? Array.from(sourceMap.entries()).reduce((a, b) => a[1] > b[1] ? a : b)[0]
         : '';
 
+      // 获取登入统计数据
+      let loginStats = {
+        loginCount: 0,
+        firstLoginTime: 0,
+        lastLoginTime: 0,
+        lastLoginDate: 0
+      };
+
+      try {
+        const loginStatsKey = `user_login_stats:${userName}`;
+        const storedLoginStats = await this.client.get(loginStatsKey);
+        if (storedLoginStats) {
+          const parsed = JSON.parse(storedLoginStats);
+          loginStats = {
+            loginCount: parsed.loginCount || 0,
+            firstLoginTime: parsed.firstLoginTime || 0,
+            lastLoginTime: parsed.lastLoginTime || 0,
+            lastLoginDate: parsed.lastLoginDate || parsed.lastLoginTime || 0
+          };
+        }
+      } catch (error) {
+        console.error(`获取用户 ${userName} 登入统计失败:`, error);
+      }
+
       return {
         username: userName,
         totalWatchTime,
@@ -790,7 +845,12 @@ export abstract class BaseRedisStorage implements IStorage {
         // 新增字段
         totalMovies,
         firstWatchDate,
-        lastUpdateTime: Date.now()
+        lastUpdateTime: Date.now(),
+        // 登入统计字段
+        loginCount: loginStats.loginCount,
+        firstLoginTime: loginStats.firstLoginTime,
+        lastLoginTime: loginStats.lastLoginTime,
+        lastLoginDate: loginStats.lastLoginDate
       };
     } catch (error) {
       console.error(`获取用户 ${userName} 统计失败:`, error);
@@ -805,7 +865,12 @@ export abstract class BaseRedisStorage implements IStorage {
         // 新增字段
         totalMovies: 0,
         firstWatchDate: Date.now(),
-        lastUpdateTime: Date.now()
+        lastUpdateTime: Date.now(),
+        // 登入统计字段
+        loginCount: 0,
+        firstLoginTime: 0,
+        lastLoginTime: 0,
+        lastLoginDate: 0
       };
     }
   }
@@ -889,6 +954,44 @@ export abstract class BaseRedisStorage implements IStorage {
       // 暂时只是清除缓存，实际统计在查询时重新计算
     } catch (error) {
       console.error('更新播放统计失败:', error);
+    }
+  }
+
+  // 更新用户登入统计
+  async updateUserLoginStats(
+    userName: string,
+    loginTime: number,
+    isFirstLogin?: boolean
+  ): Promise<void> {
+    try {
+      const loginStatsKey = `user_login_stats:${userName}`;
+
+      // 获取当前登入统计数据
+      const currentStats = await this.client.get(loginStatsKey);
+      const loginStats = currentStats ? JSON.parse(currentStats) : {
+        loginCount: 0,
+        firstLoginTime: null,
+        lastLoginTime: null,
+        lastLoginDate: null
+      };
+
+      // 更新统计数据
+      loginStats.loginCount = (loginStats.loginCount || 0) + 1;
+      loginStats.lastLoginTime = loginTime;
+      loginStats.lastLoginDate = loginTime; // 保持兼容性
+
+      // 如果是首次登入，记录首次登入时间
+      if (isFirstLogin || !loginStats.firstLoginTime) {
+        loginStats.firstLoginTime = loginTime;
+      }
+
+      // 保存更新后的统计数据
+      await this.client.set(loginStatsKey, JSON.stringify(loginStats));
+
+      console.log(`用户 ${userName} 登入统计已更新:`, loginStats);
+    } catch (error) {
+      console.error(`更新用户 ${userName} 登入统计失败:`, error);
+      throw error;
     }
   }
 }

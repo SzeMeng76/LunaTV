@@ -59,6 +59,7 @@ export async function GET(request: NextRequest) {
       mostWatchedSource: string;
       registrationDays: number;
       lastLoginTime: number;
+      loginCount: number;
       createdAt: number;
     }> = [];
     let totalWatchTime = 0;
@@ -103,8 +104,19 @@ export async function GET(request: NextRequest) {
           registrationData[regDate] = (registrationData[regDate] || 0) + 1;
         }
 
-        // 获取用户最后登录时间（从播放记录推断）
-        let lastLoginTime = 0; // 初始化为0，确保任何播放记录都会更新这个值
+        // 获取用户最后登录时间和登入次数（从用户统计中获取真实登入时间）
+        let lastLoginTime = 0;
+        let loginCount = 0;
+        try {
+          const userPlayStat = await storage.getUserPlayStat(user.username);
+          // 优先使用用户统计中的登入时间，这是真实的登录时间
+          lastLoginTime = userPlayStat.lastLoginTime || userPlayStat.lastLoginDate || userPlayStat.firstLoginTime || 0;
+          loginCount = userPlayStat.loginCount || 0;
+        } catch (err) {
+          // 获取失败时默认为0
+          lastLoginTime = 0;
+          loginCount = 0;
+        }
 
         // 获取用户的所有播放记录
         const userPlayRecords = await storage.getAllPlayRecords(user.username);
@@ -122,6 +134,7 @@ export async function GET(request: NextRequest) {
             mostWatchedSource: '',
             registrationDays,
             lastLoginTime,
+            loginCount,
             createdAt: userCreatedAt,
           });
           continue;
@@ -141,10 +154,8 @@ export async function GET(request: NextRequest) {
             userLastPlayTime = record.save_time;
           }
 
-          // 更新最后登录时间（基于播放活动推断）
-          if (record.save_time > lastLoginTime) {
-            lastLoginTime = record.save_time;
-          }
+          // 不再从播放记录推断登录时间，而是使用真实的登入时间
+          // 这里只更新播放相关的统计
 
           // 统计来源
           const sourceName = record.source_name || '未知来源';
@@ -187,7 +198,8 @@ export async function GET(request: NextRequest) {
           avgWatchTime: records.length > 0 ? userWatchTime / records.length : 0,
           mostWatchedSource,
           registrationDays,
-          lastLoginTime: lastLoginTime || userCreatedAt, // 如果没有播放记录，使用注册时间
+          lastLoginTime: lastLoginTime || userCreatedAt, // 如果没有登入记录，使用注册时间
+          loginCount,
           createdAt: userCreatedAt,
         };
 
@@ -219,7 +231,8 @@ export async function GET(request: NextRequest) {
           avgWatchTime: 0,
           mostWatchedSource: '',
           registrationDays,
-          lastLoginTime: userCreatedAt, // 没有播放记录时使用注册时间
+          lastLoginTime: userCreatedAt, // 没有登入记录时使用注册时间
+          loginCount: 0,
           createdAt: userCreatedAt,
         });
       }

@@ -864,7 +864,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                     自动清理非活跃用户
                   </div>
                   <div className='text-sm text-gray-600 dark:text-gray-400'>
-                    自动删除注册后从未播放过内容的用户账号
+                    自动删除指定天数内未登录的非活跃用户账号
                   </div>
                 </div>
                 <div className='flex items-center'>
@@ -977,7 +977,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                   className='w-20 px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
                 />
                 <span className='text-sm text-gray-600 dark:text-gray-400'>
-                  天（注册后超过此天数且从未播放的用户将被自动删除）
+                  天（注册后超过此天数且从未登入的用户将被自动删除）
                 </span>
               </div>
             </div>

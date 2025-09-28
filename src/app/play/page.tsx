@@ -2374,13 +2374,23 @@ function PlayPageClient() {
     }
 
     try {
+      // 获取现有播放记录以保持原始集数
+      const existingRecord = await getAllPlayRecords().then(records => {
+        const key = generateStorageKey(currentSourceRef.current, currentIdRef.current);
+        return records[key];
+      }).catch(() => null);
+
+      const currentTotalEpisodes = detailRef.current?.episodes.length || 1;
+
       await savePlayRecord(currentSourceRef.current, currentIdRef.current, {
         title: videoTitleRef.current,
         source_name: detailRef.current?.source_name || '',
         year: detailRef.current?.year,
         cover: detailRef.current?.poster || '',
         index: currentEpisodeIndexRef.current + 1, // 转换为1基索引
-        total_episodes: detailRef.current?.episodes.length || 1,
+        total_episodes: currentTotalEpisodes,
+        // 关键修复：设置原始集数，首次观看时使用当前集数，后续保持不变
+        original_episodes: existingRecord?.original_episodes || currentTotalEpisodes,
         play_time: Math.floor(currentTime),
         total_time: Math.floor(duration),
         save_time: Date.now(),
