@@ -79,17 +79,20 @@ export async function GET(request: NextRequest) {
 
     // 增强统计数据：添加注册天数和登录天数计算
     const registrationDays = calculateRegistrationDays(userCreatedAt);
-    const loginDays = userStats.firstWatchDate && userStats.firstWatchDate > 0
-      ? calculateRegistrationDays(userStats.firstWatchDate)
+    // 登入天数从登入时间计算，而不是观看时间
+    const firstLoginTime = userStats.firstLoginTime || userStats.lastLoginTime || userStats.lastLoginDate || 0;
+    const loginDays = firstLoginTime > 0
+      ? calculateRegistrationDays(firstLoginTime)
       : 0;
 
     console.log('注册天数计算:', {
       userCreatedAt,
       userCreatedAtDate: new Date(userCreatedAt),
       registrationDays,
-      firstWatchDate: userStats.firstWatchDate,
-      firstWatchDateDate: userStats.firstWatchDate ? new Date(userStats.firstWatchDate) : null,
-      loginDays
+      firstLoginTime: firstLoginTime,
+      firstLoginTimeDate: firstLoginTime ? new Date(firstLoginTime) : null,
+      loginDays,
+      calculationSource: firstLoginTime > 0 ? '基于登入时间' : '无登入记录'
     });
 
     const enhancedStats = {
@@ -100,8 +103,14 @@ export async function GET(request: NextRequest) {
       lastUpdateTime: userStats.lastUpdateTime ?? Date.now(),
       // 注册天数计算（基于真实的用户创建时间）
       registrationDays,
-      // 登录天数计算（基于首次观看时间，类似Alpha逻辑）
-      loginDays
+      // 登录天数计算（基于登入时间）
+      loginDays,
+      // 确保包含登入次数
+      loginCount: userStats.loginCount ?? 0,
+      // 确保包含登入时间（兼容已有字段）
+      firstLoginTime: userStats.firstLoginTime ?? 0,
+      lastLoginTime: userStats.lastLoginTime ?? userStats.lastLoginDate ?? 0,
+      lastLoginDate: userStats.lastLoginDate ?? userStats.lastLoginTime ?? 0
     };
 
     return NextResponse.json(enhancedStats, { status: 200 });
@@ -191,6 +200,100 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         error: '更新用户统计数据失败',
+        details: process.env.NODE_ENV === 'development' ? (error as Error)?.message : undefined
+      },
+      { status: 500 }
+    );
+  }
+}
+
+// PUT 方法：记录用户登入时间
+export async function PUT(request: NextRequest) {
+  try {
+    console.log('PUT /api/user/my-stats - 记录用户登入时间');
+
+    // 从 cookie 获取用户信息
+    const authInfo = getAuthInfoFromCookie(request);
+    if (!authInfo || !authInfo.username) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // 检查存储类型是否支持统计功能
+    if (!db.isStatsSupported()) {
+      return NextResponse.json(
+        {
+          error: '当前存储类型不支持播放统计功能，请使用 Redis、Upstash 或 Kvrocks',
+          supportedTypes: ['redis', 'upstash', 'kvrocks']
+        },
+        { status: 400 }
+      );
+    }
+
+    const config = await getConfig();
+    const username = process.env.USERNAME;
+
+    // 检查用户权限
+    if (authInfo.username !== username) {
+      const user = config.UserConfig.Users.find(
+        (u) => u.username === authInfo.username
+      );
+      if (!user) {
+        return NextResponse.json({ error: '用户不存在' }, { status: 401 });
+      }
+      if (user.banned) {
+        return NextResponse.json({ error: '用户已被封禁' }, { status: 401 });
+      }
+    }
+
+    const body = await request.json();
+    const { loginTime } = body;
+
+    if (!loginTime || typeof loginTime !== 'number') {
+      return NextResponse.json(
+        { error: '参数错误：需要 loginTime' },
+        { status: 400 }
+      );
+    }
+
+    // 获取当前用户统计数据
+    const currentStats = await db.getUserPlayStat(authInfo.username);
+
+    // 更新登入时间相关统计
+    const updatedStats = {
+      ...currentStats,
+      lastLoginTime: loginTime, // 最后登入时间
+      lastLoginDate: loginTime, // 保持兼容性
+      // 如果是首次登入，记录首次登入时间
+      firstLoginTime: currentStats.firstLoginTime || currentStats.lastLoginDate || loginTime,
+      // 更新登入次数
+      loginCount: (currentStats.loginCount || 0) + 1,
+      lastUpdateTime: loginTime
+    };
+
+    // 保存登入统计到数据库
+    try {
+      await db.updateUserLoginStats(authInfo.username, loginTime, updatedStats.loginCount === 1);
+      console.log('用户登入统计已保存到数据库:', {
+        username: authInfo.username,
+        loginTime,
+        isFirstLogin: updatedStats.loginCount === 1
+      });
+    } catch (saveError) {
+      console.error('保存登入统计失败:', saveError);
+      // 即使保存失败也返回成功，因为登录本身是成功的
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: '登入时间记录成功',
+      loginTime,
+      loginCount: updatedStats.loginCount
+    });
+  } catch (error) {
+    console.error('PUT /api/user/my-stats - 记录登入时间失败:', error);
+    return NextResponse.json(
+      {
+        error: '记录登入时间失败',
         details: process.env.NODE_ENV === 'development' ? (error as Error)?.message : undefined
       },
       { status: 500 }

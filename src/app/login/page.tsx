@@ -101,6 +101,18 @@ function LoginPageClient() {
       });
 
       if (res.ok) {
+        // 记录登入时间
+        try {
+          await fetch('/api/user/my-stats', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ loginTime: Date.now() })
+          });
+        } catch (error) {
+          console.log('记录登入时间失败:', error);
+          // 登入时间记录失败不影响正常登录流程
+        }
+
         const redirect = searchParams.get('redirect') || '/';
         router.replace(redirect);
       } else if (res.status === 401) {

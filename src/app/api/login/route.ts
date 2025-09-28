@@ -62,6 +62,7 @@ async function generateAuthCookie(
     const signature = await generateSignature(username, process.env.PASSWORD);
     authData.signature = signature;
     authData.timestamp = Date.now(); // 添加时间戳防重放攻击
+    authData.loginTime = Date.now(); // 添加登入时间记录
   }
 
   return encodeURIComponent(JSON.stringify(authData));

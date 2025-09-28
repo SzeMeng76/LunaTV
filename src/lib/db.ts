@@ -342,6 +342,16 @@ export class DbManager {
     }
   }
 
+  async updateUserLoginStats(
+    userName: string,
+    loginTime: number,
+    isFirstLogin?: boolean
+  ): Promise<void> {
+    if (typeof (this.storage as any).updateUserLoginStats === 'function') {
+      await (this.storage as any).updateUserLoginStats(userName, loginTime, isFirstLogin);
+    }
+  }
+
   // 检查存储类型是否支持统计功能
   isStatsSupported(): boolean {
     const storageType = process.env.NEXT_PUBLIC_STORAGE_TYPE || 'localstorage';
