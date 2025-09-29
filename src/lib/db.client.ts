@@ -731,12 +731,8 @@ export async function savePlayRecord(
   const existingRecords = await getAllPlayRecords();
   const existingRecord = existingRecords[key];
 
-  // 🔒 重要：如果记录已经有 original_episodes，优先保持不变（防止 watching-updates 重复修复）
-  if (record.original_episodes !== undefined) {
-    // 记录已明确设置了 original_episodes，保持不变
-    console.log(`🔒 保持传入的原始集数: ${key} = ${record.original_episodes}集`);
-  } else if (!existingRecord && record.total_episodes > 1) {
-    // 如果是首次保存该记录，且总集数大于1，则保存原始集数
+  // 如果是首次保存该记录，且总集数大于1，则保存原始集数
+  if (!existingRecord && record.total_episodes > 1) {
     record.original_episodes = record.total_episodes;
     console.log(`✓ 首次保存原始集数: ${key} = ${record.total_episodes}集`);
   } else if (existingRecord && !existingRecord.original_episodes && record.total_episodes > 1) {
