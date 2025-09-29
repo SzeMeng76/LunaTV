@@ -296,9 +296,35 @@ async function checkSingleRecordUpdate(record: PlayRecord, videoId: string, stor
             original_episodes: record.original_episodes || originalTotalEpisodes
           };
 
-          // 保存更新后的播放记录，使用解析出的sourceName确保key一致
-          await savePlayRecord(storageSourceName || record.source_name, videoId, updatedRecord);
-          console.log(`✅ 播放记录集数更新成功: ${record.title}，原始集数保持为 ${updatedRecord.original_episodes}`);
+          // 🔧 直接更新现有记录，避免重新生成键导致的重复记录问题
+          // 获取当前所有播放记录
+          forceRefreshPlayRecordsCache(); // 强制刷新缓存
+          const currentRecords = await getAllPlayRecords();
+
+          // 直接用原始键更新记录
+          currentRecords[record.id] = updatedRecord;
+
+          // 直接保存到存储（跳过 savePlayRecord 的键重新生成逻辑）
+          if (typeof window !== 'undefined') {
+            const STORAGE_TYPE = (window as any).RUNTIME_CONFIG?.STORAGE_TYPE || process.env.STORAGE_TYPE || 'localstorage';
+
+            if (STORAGE_TYPE !== 'localstorage') {
+              // 数据库模式：直接调用API更新
+              await fetch('/api/playrecords', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ key: record.id, record: updatedRecord }),
+              });
+            } else {
+              // localStorage模式：直接更新
+              localStorage.setItem('moontv_play_records', JSON.stringify(currentRecords));
+            }
+
+            // 触发更新事件
+            window.dispatchEvent(new CustomEvent('playRecordsUpdated', { detail: currentRecords }));
+          }
+
+          console.log(`✅ 播放记录集数直接更新成功: ${record.title}，使用原始键: ${record.id}`);
         } catch (error) {
           console.error(`❌ 更新播放记录集数失败: ${record.title}`, error);
         }
