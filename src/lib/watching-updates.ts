@@ -353,6 +353,35 @@ function getOriginalEpisodes(record: PlayRecord, videoId: string): number {
     return record.original_episodes;
   }
 
+  // 如果original_episodes是undefined/null，但这是历史记录，自动修复
+  if ((record.original_episodes === undefined || record.original_episodes === null) && record.total_episodes > 0) {
+    console.log(`🔧 检测到历史记录缺少原始集数，自动修复: ${record.title} = ${record.total_episodes}集`);
+
+    // 异步更新记录，补充original_episodes（不阻塞当前流程）
+    setTimeout(async () => {
+      try {
+        const key = generateStorageKey(record.source_name, videoId);
+        await fetch('/api/playrecords', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            key,
+            record: {
+              ...record,
+              original_episodes: record.total_episodes,
+              save_time: Date.now()
+            }
+          })
+        });
+        console.log(`✅ 已自动修复 ${record.title} 的原始集数`);
+      } catch (error) {
+        console.warn(`修复 ${record.title} 原始集数失败:`, error);
+      }
+    }, 100);
+
+    return record.total_episodes;
+  }
+
   // 如果没有原始集数记录，尝试从localStorage读取（向后兼容）
   try {
     const recordKey = generateStorageKey(record.source_name, videoId);
