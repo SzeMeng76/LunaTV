@@ -296,7 +296,6 @@ async function checkSingleRecordUpdate(record: PlayRecord, videoId: string, stor
             original_episodes: record.original_episodes || originalTotalEpisodes
           };
 
-          // 保存更新后的播放记录，使用解析出的sourceName确保key一致
           await savePlayRecord(storageSourceName || record.source_name, videoId, updatedRecord);
           console.log(`✅ 播放记录集数更新成功: ${record.title}，原始集数保持为 ${updatedRecord.original_episodes}`);
         } catch (error) {
@@ -616,7 +615,7 @@ export async function checkVideoUpdate(sourceName: string, videoId: string): Pro
       return;
     }
 
-    const updateInfo = await checkSingleRecordUpdate(targetRecord, videoId);
+    const updateInfo = await checkSingleRecordUpdate(targetRecord, videoId, sourceName);
 
     if (updateInfo.hasUpdate) {
       // 如果发现这个视频有更新，重新检查所有更新状态

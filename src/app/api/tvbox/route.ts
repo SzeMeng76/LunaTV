@@ -103,10 +103,19 @@ export async function GET(request: NextRequest) {
     
     // IP白名单检查（从数据库配置读取）
     if (securityConfig?.enableIpWhitelist && securityConfig.allowedIPs.length > 0) {
-      const clientIP = request.headers.get('x-forwarded-for') || 
-                      request.headers.get('x-real-ip') || 
-                      request.headers.get('cf-connecting-ip') || 
-                      'unknown';
+      // 获取客户端真实IP - 正确处理x-forwarded-for中的多个IP
+      const getClientIP = () => {
+        const forwardedFor = request.headers.get('x-forwarded-for');
+        if (forwardedFor) {
+          // x-forwarded-for可能包含多个IP，第一个通常是客户端真实IP
+          return forwardedFor.split(',')[0].trim();
+        }
+        return request.headers.get('x-real-ip') ||
+               request.headers.get('cf-connecting-ip') ||
+               'unknown';
+      };
+
+      const clientIP = getClientIP();
       
       const isAllowed = securityConfig.allowedIPs.some(allowedIP => {
         const trimmedIP = allowedIP.trim();
@@ -143,9 +152,18 @@ export async function GET(request: NextRequest) {
     
     // 访问频率限制（从数据库配置读取）
     if (securityConfig?.enableRateLimit) {
-      const clientIP = request.headers.get('x-forwarded-for') || 
-                      request.headers.get('x-real-ip') || 
-                      'unknown';
+      // 获取客户端真实IP - 正确处理x-forwarded-for中的多个IP
+      const getClientIP = () => {
+        const forwardedFor = request.headers.get('x-forwarded-for');
+        if (forwardedFor) {
+          return forwardedFor.split(',')[0].trim();
+        }
+        return request.headers.get('x-real-ip') ||
+               request.headers.get('cf-connecting-ip') ||
+               'unknown';
+      };
+
+      const clientIP = getClientIP();
       
       const rateLimit = securityConfig.rateLimit || 60;
       
