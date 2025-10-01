@@ -605,12 +605,23 @@ export function generateStorageKey(source: string, id: string): string {
 
 /**
  * 检查是否应该更新原始集数
+ *
+ * 设计思路：original_episodes 记录的是"用户上次知道的总集数"
+ * 当用户观看了超出原始集数的新集数后，说明用户已经"消费"了这次更新提醒
+ * 此时应该更新 original_episodes，这样下次更新才能准确计算新增集数
+ *
  * 更新条件（所有条件都必须满足）：
  * 1. 用户观看了超过原始集数的集数（说明看了新更新的内容）
  * 2. 当前总集数比原始集数多（确实有新集数）
  * 3. 用户观看进度有实质性进展（防止误触）
  * 4. 新集数增加量合理（防止API错误数据）
  * 5. 用户观看的新集数超过原始集数至少1集（确保真的看了新内容）
+ *
+ * 例子：
+ * - 第一次看10集 → original_episodes = 10
+ * - 更新到15集 → 提醒"5集新增"
+ * - 用户看第11集 → original_episodes 更新为 15（用户已消费这次更新）
+ * - 下次更新到24集 → 提醒"9集新增"（24-15），而不是"14集新增"（24-10）
  */
 function checkShouldUpdateOriginalEpisodes(existingRecord: PlayRecord, newRecord: PlayRecord): boolean {
   const originalEpisodes = existingRecord.original_episodes || existingRecord.total_episodes;
@@ -622,11 +633,11 @@ function checkShouldUpdateOriginalEpisodes(existingRecord: PlayRecord, newRecord
   const hasMoreEpisodes = newRecord.total_episodes > originalEpisodes;
 
   // 条件3：用户观看进度有实质性进展（不是刚点进去就退出）
-  const hasSignificantProgress = newRecord.play_time > 300; // 观看超过5分钟，更严格
+  const hasSignificantProgress = newRecord.play_time > 60; // 观看超过1分钟
 
   // 条件4：新集数增加量合理（防止API返回异常大的数字）
   const episodeIncrement = newRecord.total_episodes - originalEpisodes;
-  const reasonableIncrement = episodeIncrement > 0 && episodeIncrement <= 50; // 最多增加50集
+  const reasonableIncrement = episodeIncrement > 0 && episodeIncrement <= 100; // 最多增加100集
 
   // 条件5：用户确实观看了新集数超过原始集数至少1集
   const watchedNewEpisodes = newRecord.index >= originalEpisodes + 1;
@@ -642,9 +653,9 @@ function checkShouldUpdateOriginalEpisodes(existingRecord: PlayRecord, newRecord
                       progressMatches;
 
   if (shouldUpdate) {
-    console.log(`✓ 检测到应更新原始集数: ${existingRecord.title} - 观看到第${newRecord.index}集，超过原始${originalEpisodes}集，当前总${newRecord.total_episodes}集，增加${episodeIncrement}集`);
+    console.log(`✓ 应更新原始集数: ${existingRecord.title} - 用户看了第${newRecord.index}集（超过原始${originalEpisodes}集），当前总${newRecord.total_episodes}集 → 更新原始集数为${newRecord.total_episodes}集`);
   } else {
-    console.log(`✗ 不更新原始集数: ${existingRecord.title} - 观看第${newRecord.index}集，原始${originalEpisodes}集，当前总${newRecord.total_episodes}集 [超过原始:${hasWatchedBeyondOriginal}, 有新集:${hasMoreEpisodes}, 观看时长足够:${hasSignificantProgress}, 增量合理:${reasonableIncrement}, 看了新集:${watchedNewEpisodes}, 进度匹配:${progressMatches}]`);
+    console.log(`✗ 不更新原始集数: ${existingRecord.title} - 观看第${newRecord.index}集，原始${originalEpisodes}集，当前总${newRecord.total_episodes}集`);
   }
 
   return shouldUpdate;
@@ -740,11 +751,12 @@ export async function savePlayRecord(
     record.original_episodes = record.total_episodes;
     console.log(`✓ 补充保存原始集数: ${key} = ${record.total_episodes}集`);
   } else if (existingRecord?.original_episodes) {
-    // 检查是否需要更新原始集数
+    // 检查用户是否观看了超过原始集数的新集数
+    // 如果是，说明用户已经"消费"了这次更新提醒，应该更新 original_episodes
     const shouldUpdateOriginal = checkShouldUpdateOriginalEpisodes(existingRecord, record);
     if (shouldUpdateOriginal) {
       record.original_episodes = record.total_episodes;
-      console.log(`✓ 更新原始集数: ${key} = ${existingRecord.original_episodes}集 -> ${record.total_episodes}集`);
+      console.log(`✓ 更新原始集数: ${key} = ${existingRecord.original_episodes}集 -> ${record.total_episodes}集（用户已观看新集数）`);
     } else {
       // 保持现有的原始集数不变
       record.original_episodes = existingRecord.original_episodes;
