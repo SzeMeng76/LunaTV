@@ -297,7 +297,8 @@ async function checkSingleRecordUpdate(record: PlayRecord, videoId: string, stor
             ...record,
             total_episodes: latestEpisodes,
             // 🔒 重要：watching-updates 自动更新时，必须保持原始集数不变
-            original_episodes: record.original_episodes || originalTotalEpisodes
+            // 如果 original_episodes 是 null，使用更新前的 total_episodes
+            original_episodes: record.original_episodes || record.total_episodes
           };
 
           await savePlayRecord(storageSourceName || record.source_name, videoId, updatedRecord);
@@ -356,31 +357,34 @@ function getOriginalEpisodes(record: PlayRecord, videoId: string, recordKey: str
     return record.original_episodes;
   }
 
-  // 如果original_episodes是undefined/null，但这是历史记录，自动修复
+  // 🔧 自动修复旧数据的 original_episodes
+  // 对于旧数据（original_episodes = null），需要用当时的 total_episodes 来修复
+  // 重要：这里的 record 还没有被更新，所以 record.total_episodes 是旧值（正确的）
   if ((record.original_episodes === undefined || record.original_episodes === null) && record.total_episodes > 0) {
-    console.log(`🔧 检测到历史记录缺少原始集数，自动修复: ${record.title} = ${record.total_episodes}集`);
+    console.log(`🔧 检测到历史记录缺少原始集数，准备修复: ${record.title} = ${record.total_episodes}集`);
 
     // 🔒 防重复修复：检查是否已经在修复中
     if (!fixingRecords.has(recordKey)) {
       fixingRecords.add(recordKey);
 
       // 异步更新记录，补充original_episodes（不阻塞当前流程）
-      // 🔑 关键修复：使用传入的recordKey作为key
+      // 🔑 关键：使用当前的 record.total_episodes（还未被API结果更新）
+      const originalEpisodesToFix = record.total_episodes;
       setTimeout(async () => {
         try {
           await fetch('/api/playrecords', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              key: recordKey, // 🔑 使用正确的key
+              key: recordKey,
               record: {
                 ...record,
-                original_episodes: record.total_episodes,
-                save_time: record.save_time // 🔑 保持原有的save_time，避免产生新记录
+                original_episodes: originalEpisodesToFix, // 使用修复时捕获的值
+                save_time: record.save_time // 保持原有的save_time，避免产生新记录
               }
             })
           });
-          console.log(`✅ 已自动修复 ${record.title} 的原始集数`);
+          console.log(`✅ 已自动修复 ${record.title} 的原始集数: ${originalEpisodesToFix}集`);
         } catch (error) {
           console.warn(`修复 ${record.title} 原始集数失败:`, error);
         } finally {
@@ -392,6 +396,7 @@ function getOriginalEpisodes(record: PlayRecord, videoId: string, recordKey: str
       console.log(`⏳ ${record.title} 原始集数修复正在进行中，跳过重复修复`);
     }
 
+    // 返回当前记录的集数作为原始集数（这个值是正确的旧值）
     return record.total_episodes;
   }
 
