@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     // 随机选择壁纸来源：70% Bing, 30% Lorem Picsum

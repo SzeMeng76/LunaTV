@@ -293,13 +293,13 @@ async function checkSingleRecordUpdate(record: PlayRecord, videoId: string, stor
       if (latestEpisodes > record.total_episodes) {
         console.log(`🔄 更新播放记录集数: ${record.title} ${record.total_episodes} -> ${latestEpisodes}`);
         try {
+          // 🔒 关键修复：更新前必须确保 original_episodes 已正确设置
+          // 使用我们已经获取到的 originalTotalEpisodes（来自 getOriginalEpisodes）
           const updatedRecord: PlayRecord = {
             ...record,
             total_episodes: latestEpisodes,
-            // 🔒 关键修复：watching-updates 自动更新时，绝对不能覆盖 original_episodes
-            // 必须保持原值（即使是 null），让 getOriginalEpisodes 函数去处理初始化
-            // 这样才能确保 original_episodes 永远记录的是用户首次观看时的集数
-            original_episodes: record.original_episodes
+            // ✅ 使用已经通过 getOriginalEpisodes 获取/修复的原始集数
+            original_episodes: originalTotalEpisodes
           };
 
           await savePlayRecord(storageSourceName || record.source_name, videoId, updatedRecord);
@@ -360,29 +360,44 @@ async function getOriginalEpisodes(record: PlayRecord, videoId: string, recordKe
   }
 
   // 🔧 关键修复：对于旧数据（original_episodes = null），立即同步修复
-  // 问题根源：record.total_episodes 可能已经被之前的 watching-updates 更新过
-  // 解决方案：立即保存 record.total_episodes 到 original_episodes，避免后续被覆盖
+  // 🚨 重要：record.total_episodes 可能已经被 checkSingleRecordUpdate 的第 294-310 行更新过
+  // 解决方案：不使用内存中的 record.total_episodes，而是从数据库重新读取原始值
   if ((record.original_episodes === undefined || record.original_episodes === null) && record.total_episodes > 0) {
-    console.log(`🔧 检测到历史记录缺少原始集数，立即修复: ${record.title} = ${record.total_episodes}集`);
+    console.log(`🔧 检测到历史记录缺少原始集数，需要从数据库读取原始值: ${record.title}`);
 
     // 🔒 防重复修复：检查是否已经在修复中
     if (!fixingRecords.has(recordKey)) {
       fixingRecords.add(recordKey);
 
-      // 🔑 关键：立即同步修复，使用当前的 record.total_episodes
-      const originalEpisodesToFix = record.total_episodes;
-
       try {
-        // 立即保存，不使用 setTimeout
+        // 🔑 关键：从数据库重新读取播放记录，获取未被更新的 total_episodes
+        const freshRecordsResponse = await fetch('/api/playrecords');
+        if (!freshRecordsResponse.ok) {
+          throw new Error('无法从数据库读取播放记录');
+        }
+        const freshRecords = await freshRecordsResponse.json();
+        const freshRecord = freshRecords[recordKey];
+
+        if (!freshRecord) {
+          console.warn(`⚠️ 数据库中未找到记录: ${record.title}，使用当前值`);
+          fixingRecords.delete(recordKey);
+          return record.total_episodes;
+        }
+
+        // 使用数据库中的 total_episodes 作为原始集数
+        const originalEpisodesToFix = freshRecord.total_episodes;
+        console.log(`📚 从数据库读取到原始集数: ${record.title} = ${originalEpisodesToFix}集 (内存中已更新为 ${record.total_episodes}集)`);
+
+        // 立即保存原始集数到数据库
         await fetch('/api/playrecords', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             key: recordKey,
             record: {
-              ...record,
-              original_episodes: originalEpisodesToFix,
-              save_time: record.save_time // 保持原有的save_time
+              ...freshRecord,  // 使用数据库中的完整记录
+              original_episodes: originalEpisodesToFix,  // 设置原始集数
+              save_time: freshRecord.save_time // 保持原有的save_time
             }
           })
         });
