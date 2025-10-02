@@ -139,7 +139,24 @@ export class CalendarCacheManager {
         return null;
       }
 
-      const data = JSON.parse(dataStr);
+      // 🔧 修复：Upstash 可能返回对象而不是字符串
+      let data;
+      if (storageType === 'upstash') {
+        // Upstash 特殊处理：可能返回对象或字符串
+        if (typeof dataStr === 'string') {
+          data = JSON.parse(dataStr);
+        } else if (typeof dataStr === 'object' && dataStr !== null) {
+          // Upstash 已经返回了对象，直接使用
+          data = dataStr;
+        } else {
+          console.warn('⚠️ Upstash 返回的数据格式不正确:', typeof dataStr);
+          return null;
+        }
+      } else {
+        // KVRocks/Redis 正常处理：总是返回字符串
+        data = JSON.parse(dataStr);
+      }
+
       console.log(`✅ 从数据库读取日历缓存，缓存年龄: ${Math.round(age / 1000 / 60)} 分钟`);
       return data;
     } catch (error) {
