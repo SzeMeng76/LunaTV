@@ -20,13 +20,13 @@ export default function TVBoxConfigPage() {
   const [securityConfig, setSecurityConfig] = useState<SecurityConfig | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // 获取安全配置
+  // 获取安全配置（使用普通用户可访问的接口）
   const fetchSecurityConfig = useCallback(async () => {
     try {
-      const response = await fetch('/api/admin/config');
+      const response = await fetch('/api/tvbox-config');
       if (response.ok) {
         const data = await response.json();
-        setSecurityConfig(data.Config.TVBoxSecurityConfig || null);
+        setSecurityConfig(data.securityConfig || null);
       }
     } catch (error) {
       console.error('获取安全配置失败:', error);

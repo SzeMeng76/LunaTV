@@ -747,9 +747,10 @@ export async function savePlayRecord(
     record.original_episodes = record.total_episodes;
     console.log(`✓ 首次保存原始集数: ${key} = ${record.total_episodes}集`);
   } else if (existingRecord && !existingRecord.original_episodes && record.total_episodes > 1) {
-    // 如果现有记录没有原始集数，补充保存
-    record.original_episodes = record.total_episodes;
-    console.log(`✓ 补充保存原始集数: ${key} = ${record.total_episodes}集`);
+    // 🔒 关键修复：如果现有记录没有原始集数，使用现有记录的 total_episodes（未被更新的值）
+    // 而不是传入的 record.total_episodes（可能已经被 watching-updates 更新过）
+    record.original_episodes = existingRecord.total_episodes;
+    console.log(`✓ 补充保存原始集数: ${key} = ${existingRecord.total_episodes}集 (使用数据库中的值)`);
   } else if (existingRecord?.original_episodes) {
     // 检查用户是否观看了超过原始集数的新集数
     // 如果是，说明用户已经"消费"了这次更新提醒，应该更新 original_episodes
