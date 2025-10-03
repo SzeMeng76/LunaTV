@@ -1,3 +1,26 @@
+## [5.5.4] - 2025-10-03
+
+### Added
+
+- 🔐 TVBox普通用户访问支持：新增/api/tvbox-config端点，允许所有登录用户访问TVBox配置
+- 🎨 登录注册界面现代化：升级登录/注册页面，添加动态随机壁纸和现代化UI设计
+- 💾 日历缓存数据库迁移：将日历缓存从localStorage迁移至数据库，支持跨设备同步
+
+### Changed
+
+- 🎯 登录注册链接卡片化：将登录/注册链接升级为渐变按钮卡片样式
+- 📊 前端数据库缓存优化：实现前端数据库缓存优化，提供即时加载体验
+- 📦 react-window升级至v2.2.0：升级虚拟滚动组件至最新版本
+
+### Fixed
+
+- 🔄 原始集数更新逻辑修复：修复新剧集追踪的original_episodes更新逻辑
+- 🔁 重复播放记录问题：解决重复播放记录和错误original_episodes值的问题
+- 🗄️ Upstash对象反序列化支持：修复日历缓存的Upstash对象反序列化问题
+- 📝 自动更新检测original_episodes保留：防止auto-update检测时覆盖original_episodes字段
+- 🔐 用户注册后Upstash主从同步等待：修复Upstash主从同步延迟问题
+- 🚫 Next.js动态路由警告消除：为动态API路由添加force-dynamic声明，清理控制台警告
+
 ## [5.5.3] - 2025-09-30
 
 ### Added
