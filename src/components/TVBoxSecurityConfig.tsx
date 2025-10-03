@@ -15,7 +15,7 @@ interface TVBoxSecurityConfigProps {
 const TVBoxSecurityConfig = ({ config, refreshConfig }: TVBoxSecurityConfigProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  
+
   const [securitySettings, setSecuritySettings] = useState({
     enableAuth: false,
     token: '',
@@ -27,6 +27,8 @@ const TVBoxSecurityConfig = ({ config, refreshConfig }: TVBoxSecurityConfigProps
 
   const [newIP, setNewIP] = useState('');
   const [showToken, setShowToken] = useState(false);
+  const [isDiagnosing, setIsDiagnosing] = useState(false);
+  const [diagnoseResult, setDiagnoseResult] = useState<any>(null);
 
   // 从config加载设置
   useEffect(() => {
@@ -157,12 +159,44 @@ const TVBoxSecurityConfig = ({ config, refreshConfig }: TVBoxSecurityConfigProps
   const generateExampleURL = () => {
     const baseUrl = window.location.origin;
     let url = `${baseUrl}/api/tvbox`;
-    
+
     if (securitySettings.enableAuth) {
       url += `?token=${securitySettings.token}`;
     }
-    
+
     return url;
+  };
+
+  // 诊断配置
+  const handleDiagnose = async () => {
+    setIsDiagnosing(true);
+    setDiagnoseResult(null);
+
+    try {
+      // 如果有 token，就传递（无论是否启用验证）
+      let diagnoseUrl = '/api/tvbox/diagnose';
+      if (securitySettings.token) {
+        diagnoseUrl += `?token=${encodeURIComponent(securitySettings.token)}`;
+      }
+
+      console.log('[Diagnose] Frontend - Token:', securitySettings.token);
+      console.log('[Diagnose] Frontend - Calling URL:', diagnoseUrl);
+
+      const response = await fetch(diagnoseUrl);
+      const result = await response.json();
+
+      setDiagnoseResult(result);
+
+      if (result.pass) {
+        showMessage('success', '配置诊断通过！所有检查项正常');
+      } else {
+        showMessage('error', `发现 ${result.issues?.length || 0} 个问题`);
+      }
+    } catch (error) {
+      showMessage('error', '诊断失败：' + (error instanceof Error ? error.message : '未知错误'));
+    } finally {
+      setIsDiagnosing(false);
+    }
   };
 
   return (
@@ -404,6 +438,16 @@ const TVBoxSecurityConfig = ({ config, refreshConfig }: TVBoxSecurityConfigProps
                 <ExternalLink className='h-4 w-4' />
                 测试访问
               </a>
+              <button
+                onClick={handleDiagnose}
+                disabled={isDiagnosing}
+                className='flex-1 sm:flex-none px-4 py-2 text-sm bg-purple-100 dark:bg-purple-800 hover:bg-purple-200 dark:hover:bg-purple-700 disabled:opacity-50 text-purple-700 dark:text-purple-300 rounded-lg flex items-center justify-center gap-2 transition-colors'
+              >
+                <svg className='h-4 w-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                  <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' />
+                </svg>
+                {isDiagnosing ? '诊断中...' : '诊断配置'}
+              </button>
             </div>
           </div>
           
@@ -411,6 +455,136 @@ const TVBoxSecurityConfig = ({ config, refreshConfig }: TVBoxSecurityConfigProps
             💡 在TVBox中导入此URL即可使用。Base64格式请在URL后添加 &format=base64
           </p>
         </div>
+
+        {/* 诊断结果 */}
+        {diagnoseResult && (
+          <div className={`border rounded-lg p-4 ${
+            diagnoseResult.pass
+              ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+              : 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
+          }`}>
+            <div className='flex items-center gap-2 mb-3'>
+              {diagnoseResult.pass ? (
+                <CheckCircle className='h-5 w-5 text-green-600 dark:text-green-400' />
+              ) : (
+                <AlertCircle className='h-5 w-5 text-yellow-600 dark:text-yellow-400' />
+              )}
+              <h3 className={`text-sm font-semibold ${
+                diagnoseResult.pass
+                  ? 'text-green-900 dark:text-green-300'
+                  : 'text-yellow-900 dark:text-yellow-300'
+              }`}>
+                诊断结果 {diagnoseResult.pass ? '✓ 通过' : '⚠ 发现问题'}
+              </h3>
+            </div>
+
+            <div className='space-y-2 text-sm'>
+              {/* 基本信息 */}
+              <div className='grid grid-cols-2 gap-2'>
+                <div className='text-gray-600 dark:text-gray-400'>状态码:</div>
+                <div className='text-gray-900 dark:text-gray-100'>{diagnoseResult.status}</div>
+
+                <div className='text-gray-600 dark:text-gray-400'>Content-Type:</div>
+                <div className='text-gray-900 dark:text-gray-100 text-xs'>{diagnoseResult.contentType || 'N/A'}</div>
+
+                <div className='text-gray-600 dark:text-gray-400'>JSON解析:</div>
+                <div className='text-gray-900 dark:text-gray-100'>
+                  {diagnoseResult.hasJson ? (
+                    <span className='text-green-600 dark:text-green-400'>✓ 成功</span>
+                  ) : (
+                    <span className='text-red-600 dark:text-red-400'>✗ 失败</span>
+                  )}
+                </div>
+
+                <div className='text-gray-600 dark:text-gray-400'>接收到的Token:</div>
+                <div className='text-gray-900 dark:text-gray-100'>{diagnoseResult.receivedToken || 'none'}</div>
+
+                <div className='text-gray-600 dark:text-gray-400'>配置大小:</div>
+                <div className='text-gray-900 dark:text-gray-100'>{diagnoseResult.size} 字节</div>
+
+                <div className='text-gray-600 dark:text-gray-400'>影视源数量:</div>
+                <div className='text-gray-900 dark:text-gray-100'>{diagnoseResult.sitesCount}</div>
+
+                <div className='text-gray-600 dark:text-gray-400'>直播源数量:</div>
+                <div className='text-gray-900 dark:text-gray-100'>{diagnoseResult.livesCount}</div>
+
+                <div className='text-gray-600 dark:text-gray-400'>解析源数量:</div>
+                <div className='text-gray-900 dark:text-gray-100'>{diagnoseResult.parsesCount}</div>
+
+                {diagnoseResult.privateApis !== undefined && (
+                  <>
+                    <div className='text-gray-600 dark:text-gray-400'>私网API数量:</div>
+                    <div className='text-gray-900 dark:text-gray-100'>
+                      {diagnoseResult.privateApis > 0 ? (
+                        <span className='text-yellow-600 dark:text-yellow-400'>{diagnoseResult.privateApis}</span>
+                      ) : (
+                        <span className='text-green-600 dark:text-green-400'>0</span>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* 配置URL */}
+              {diagnoseResult.configUrl && (
+                <div className='mt-3 pt-3 border-t border-gray-200 dark:border-gray-700'>
+                  <div className='text-gray-600 dark:text-gray-400 mb-1'>配置URL:</div>
+                  <div className='text-xs text-gray-900 dark:text-gray-100 break-all bg-white dark:bg-gray-800 p-2 rounded font-mono'>
+                    {diagnoseResult.configUrl}
+                  </div>
+                </div>
+              )}
+
+              {/* Spider 信息 */}
+              {diagnoseResult.spider && (
+                <div className='mt-3 pt-3 border-t border-gray-200 dark:border-gray-700'>
+                  <div className='text-gray-600 dark:text-gray-400 mb-1'>Spider JAR:</div>
+                  <div className='text-xs text-gray-900 dark:text-gray-100 break-all bg-white dark:bg-gray-800 p-2 rounded'>
+                    {diagnoseResult.spider}
+                  </div>
+                  <div className='mt-2 space-y-1'>
+                    {diagnoseResult.spiderPrivate !== undefined && (
+                      <div className='text-xs'>
+                        {diagnoseResult.spiderPrivate ? (
+                          <span className='text-yellow-600 dark:text-yellow-400'>⚠ Spider 是私网地址</span>
+                        ) : (
+                          <span className='text-green-600 dark:text-green-400'>✓ Spider 是公网地址</span>
+                        )}
+                      </div>
+                    )}
+                    {diagnoseResult.spiderReachable !== undefined && (
+                      <div className='text-xs'>
+                        {diagnoseResult.spiderReachable ? (
+                          <span className='text-green-600 dark:text-green-400'>
+                            ✓ Spider 可访问
+                            {diagnoseResult.spiderStatus && ` (状态码: ${diagnoseResult.spiderStatus})`}
+                          </span>
+                        ) : (
+                          <span className='text-red-600 dark:text-red-400'>
+                            ✗ Spider 不可访问
+                            {diagnoseResult.spiderStatus && ` (状态码: ${diagnoseResult.spiderStatus})`}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* 问题列表 */}
+              {diagnoseResult.issues && diagnoseResult.issues.length > 0 && (
+                <div className='mt-3 pt-3 border-t border-yellow-200 dark:border-yellow-800'>
+                  <div className='text-yellow-900 dark:text-yellow-300 font-medium mb-2'>发现以下问题:</div>
+                  <ul className='list-disc list-inside space-y-1 text-yellow-800 dark:text-yellow-400'>
+                    {diagnoseResult.issues.map((issue: string, idx: number) => (
+                      <li key={idx}>{issue}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 保存按钮 */}

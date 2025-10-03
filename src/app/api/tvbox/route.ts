@@ -3,6 +3,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getConfig } from '@/lib/config';
 import { db } from '@/lib/db';
 
+// Helper function to get base URL with SITE_BASE env support
+function getBaseUrl(request: NextRequest): string {
+  // 优先使用环境变量 SITE_BASE（如果用户设置了）
+  const envBase = (process.env.SITE_BASE || '').trim().replace(/\/$/, '');
+  if (envBase) return envBase;
+
+  // Fallback：使用原有逻辑（完全保留）
+  const host = request.headers.get('host') || 'localhost:3000';
+  const protocol = request.headers.get('x-forwarded-proto') || 'http';
+  return `${protocol}://${host}`;
+}
+
 // 生产环境使用Redis/Upstash/Kvrocks的频率限制
 async function checkRateLimit(ip: string, limit = 60, windowMs = 60000): Promise<boolean> {
   const now = Date.now();
@@ -76,7 +88,14 @@ interface TVBoxConfig {
     header?: Record<string, string>;
   }>; // 解析源
   flags?: string[]; // 播放标识
-  ijk?: Record<string, unknown>; // IJK播放器配置
+  ijk?: Array<{
+    group: string;
+    options: Array<{
+      category: number;
+      name: string;
+      value: string;
+    }>;
+  }>; // IJK播放器配置
   ads?: string[]; // 广告过滤规则
 }
 
@@ -84,8 +103,9 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const format = searchParams.get('format') || 'json'; // 支持json和base64格式
+    const mode = (searchParams.get('mode') || '').toLowerCase(); // 支持safe|min模式
     const token = searchParams.get('token'); // 获取token参数
-    
+
     // 读取当前配置
     const config = await getConfig();
     const securityConfig = config.TVBoxSecurityConfig;
@@ -174,10 +194,8 @@ export async function GET(request: NextRequest) {
         }, { status: 429 });
       }
     }
-    
-    const host = request.headers.get('host') || 'localhost:3000';
-    const protocol = request.headers.get('x-forwarded-proto') || 'http';
-    const baseUrl = `${protocol}://${host}`;
+
+    const baseUrl = getBaseUrl(request);
 
     // 从配置中获取源站列表
     const sourceConfigs = config.SourceConfig || [];
@@ -189,10 +207,13 @@ export async function GET(request: NextRequest) {
     // 过滤掉被禁用的源站和没有API地址的源站
     const enabledSources = sourceConfigs.filter(source => !source.disabled && source.api && source.api.trim() !== '');
 
+    // 跟踪全局 spider jar（从 detail 字段中提取）
+    let globalSpiderJar = '';
+
     // 转换为TVBox格式
-    const tvboxConfig: TVBoxConfig = {
+    let tvboxConfig: TVBoxConfig = {
       // 基础配置
-      spider: '', // 可以根据需要添加爬虫jar包
+      spider: '', // 将在后面设置为 globalSpiderJar
       wallpaper: `${baseUrl}/logo.png`, // 使用项目Logo作为壁纸
 
       // 影视源配置
@@ -209,6 +230,39 @@ export async function GET(request: NextRequest) {
           if (apiLower.includes('at/xml') || apiLower.endsWith('.xml')) {
             type = 0; // XML类型
           }
+        }
+
+        // 解析 detail 字段：支持 JSON 扩展配置（CSP源、自定义jar等）
+        const detail = (source.detail || '').trim();
+        const siteExt = ''; // 🔑 强制为空，忽略配置中的 ext
+        let siteJar: string | undefined;
+
+        if (detail) {
+          try {
+            const obj = JSON.parse(detail);
+            if (obj) {
+              if (obj.type !== undefined) type = obj.type;
+              if (obj.api) source.api = obj.api;
+              // 🔑 关键修复：强制忽略 ext 字段
+              // 原因：很多源的 ext 是网站首页 URL（如 http://caiji.dyttzyapi.com）
+              // Box-main 会访问这个 URL 并把返回的 HTML 当作 extend 参数传给 API，导致无数据
+              // if (obj.ext !== undefined) {
+              //   siteExt = typeof obj.ext === 'string' ? obj.ext : JSON.stringify(obj.ext);
+              // }
+              if (obj.jar) {
+                siteJar = obj.jar;
+                if (!globalSpiderJar) globalSpiderJar = obj.jar;
+              }
+            }
+          } catch {
+            // 非 JSON 时也不作为 ext 字符串
+            // siteExt = detail;
+          }
+        }
+
+        // CSP 源检测：api 以 csp_ 开头强制为 type 3
+        if (typeof source.api === 'string' && source.api.toLowerCase().startsWith('csp_')) {
+          type = 3;
         }
 
         // 动态获取源站分类
@@ -248,7 +302,8 @@ export async function GET(request: NextRequest) {
           searchable: 1, // 可搜索
           quickSearch: 1, // 支持快速搜索
           filterable: 1, // 支持分类筛选
-          ext: '', // 扩展数据字段，用于配置规则或外部文件URL
+          ext: siteExt || '', // 确保始终是字符串（即使是空的）
+          ...(siteJar && { jar: siteJar }), // 站点级 jar 包
           playerUrl: '', // 站点解析URL
           hide: 0, // 是否隐藏源站 (1: 隐藏, 0: 显示)
           categories: categories // 使用动态获取的分类
@@ -284,6 +339,23 @@ export async function GET(request: NextRequest) {
         "优酷", "腾讯", "爱奇艺", "奇艺", "乐视", "搜狐", "土豆", "PPTV",
         "芒果", "华数", "哔哩", "1905"
       ],
+
+      // IJK播放器优化配置
+      ijk: [{
+        group: '软解码',
+        options: [
+          { category: 4, name: 'opensles', value: '0' },
+          { category: 4, name: 'overlay-format', value: '842225234' },
+          { category: 4, name: 'framedrop', value: '1' },
+          { category: 4, name: 'start-on-prepared', value: '1' },
+          { category: 1, name: 'http-detect-range-support', value: '0' },
+          { category: 1, name: 'fflags', value: 'fastseek' },
+          { category: 4, name: 'reconnect', value: '1' },
+          { category: 4, name: 'mediacodec', value: '0' },
+          { category: 4, name: 'mediacodec-auto-rotate', value: '0' },
+          { category: 4, name: 'mediacodec-handle-resolution-change', value: '0' }
+        ]
+      }],
 
       // 直播源（合并所有启用的直播源为一个，解决TVBox多源限制）
       lives: (() => {
@@ -372,6 +444,19 @@ export async function GET(request: NextRequest) {
       ]
     };
 
+    // 设置全局 spider jar（从 detail 中提取）
+    tvboxConfig.spider = globalSpiderJar || '';
+
+    // 安全/最小模式：仅返回必要字段，提高兼容性
+    if (mode === 'safe' || mode === 'min') {
+      tvboxConfig = {
+        spider: tvboxConfig.spider,
+        sites: tvboxConfig.sites,
+        lives: tvboxConfig.lives,
+        parses: [{ name: '默认解析', type: 0, url: `${baseUrl}/api/parse?url=` }],
+      } as TVBoxConfig;
+    }
+
     // 根据format参数返回不同格式
     if (format === 'base64' || format === 'txt') {
       // 返回base64编码的配置（TVBox常用格式）
@@ -388,9 +473,10 @@ export async function GET(request: NextRequest) {
         }
       });
     } else {
-      // 返回JSON格式
-      return NextResponse.json(tvboxConfig, {
+      // 返回JSON格式（使用 text/plain 提高 TVBox 分支兼容性）
+      return new NextResponse(JSON.stringify(tvboxConfig), {
         headers: {
+          'Content-Type': 'text/plain; charset=utf-8',
           'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Methods': 'GET',
           'Access-Control-Allow-Headers': 'Content-Type',

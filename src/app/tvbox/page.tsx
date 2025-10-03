@@ -17,6 +17,7 @@ interface SecurityConfig {
 export default function TVBoxConfigPage() {
   const [copied, setCopied] = useState(false);
   const [format, setFormat] = useState<'json' | 'base64'>('json');
+  const [configMode, setConfigMode] = useState<'standard' | 'safe'>('standard');
   const [securityConfig, setSecurityConfig] = useState<SecurityConfig | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -42,15 +43,22 @@ export default function TVBoxConfigPage() {
   const getConfigUrl = useCallback(() => {
     if (typeof window === 'undefined') return '';
     const baseUrl = window.location.origin;
-    let url = `${baseUrl}/api/tvbox?format=${format}`;
-    
+    const params = new URLSearchParams();
+
+    params.append('format', format);
+
     // 如果启用了Token验证，自动添加token参数
     if (securityConfig?.enableAuth && securityConfig.token) {
-      url += `&token=${securityConfig.token}`;
+      params.append('token', securityConfig.token);
     }
-    
-    return url;
-  }, [format, securityConfig]);
+
+    // 添加配置模式参数
+    if (configMode === 'safe') {
+      params.append('mode', 'safe');
+    }
+
+    return `${baseUrl}/api/tvbox?${params.toString()}`;
+  }, [format, configMode, securityConfig]);
 
   const handleCopy = async () => {
     try {
@@ -147,6 +155,47 @@ export default function TVBoxConfigPage() {
               {format === 'json'
                 ? '标准的 JSON 配置文件，便于调试和查看'
                 : '编码后的配置，适合某些特殊环境'}
+            </p>
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              配置模式
+            </label>
+            <div className="flex gap-4">
+              <label className="flex items-center cursor-pointer">
+                <input
+                  type="radio"
+                  name="configMode"
+                  value="standard"
+                  checked={configMode === 'standard'}
+                  onChange={(e) => setConfigMode(e.target.value as 'standard' | 'safe')}
+                  className="mr-2 w-4 h-4 text-blue-600 focus:ring-blue-500"
+                />
+                <div className="text-sm">
+                  <span className="font-medium text-gray-900 dark:text-white">标准模式</span>
+                  <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">(完整配置)</span>
+                </div>
+              </label>
+              <label className="flex items-center cursor-pointer">
+                <input
+                  type="radio"
+                  name="configMode"
+                  value="safe"
+                  checked={configMode === 'safe'}
+                  onChange={(e) => setConfigMode(e.target.value as 'standard' | 'safe')}
+                  className="mr-2 w-4 h-4 text-blue-600 focus:ring-blue-500"
+                />
+                <div className="text-sm">
+                  <span className="font-medium text-gray-900 dark:text-white">精简模式</span>
+                  <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">(提高兼容性)</span>
+                </div>
+              </label>
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+              {configMode === 'standard'
+                ? '包含完整配置（IJK优化、广告过滤等），推荐使用'
+                : '仅包含核心配置，遇到TVBox兼容性问题时使用'}
             </p>
           </div>
 

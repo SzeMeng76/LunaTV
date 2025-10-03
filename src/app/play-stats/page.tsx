@@ -272,32 +272,16 @@ const PlayStatsPage: React.FC = () => {
     });
   }, []);
 
-  // 获取即将上映的内容
+  // 获取即将上映的内容（不再使用localStorage缓存，完全依赖API数据库缓存）
   const fetchUpcomingReleases = useCallback(async () => {
     try {
       setUpcomingLoading(true);
 
-      // 清理过期缓存
+      // 清理过期的localStorage缓存（兼容性清理）
       cleanExpiredCache();
 
-      // 检查本地缓存（2小时缓存）
-      const cacheKey = 'upcoming_releases_cache';
-      const cacheTimeKey = 'upcoming_releases_cache_time';
-      const CACHE_DURATION = 2 * 60 * 60 * 1000; // 2小时
-
-      const cachedData = localStorage.getItem(cacheKey);
-      const cachedTime = localStorage.getItem(cacheTimeKey);
-
-      if (cachedData && cachedTime) {
-        const age = Date.now() - parseInt(cachedTime);
-        if (age < CACHE_DURATION) {
-          console.log('使用缓存的即将上映数据，缓存年龄:', Math.round(age / 1000 / 60), '分钟');
-          setUpcomingReleases(JSON.parse(cachedData));
-          setUpcomingLoading(false);
-          setUpcomingInitialized(true); // 标记已经初始化完成
-          return;
-        }
-      }
+      // 🌐 直接从API获取数据（API有数据库缓存，24小时有效）
+      console.log('🌐 正在从API获取即将上映数据...');
 
       // 获取未来2周的发布内容，包含更多电影
       const today = new Date();
@@ -313,11 +297,7 @@ const PlayStatsPage: React.FC = () => {
         const items = data.items || [];
         setUpcomingReleases(items);
 
-        // 缓存数据
-        localStorage.setItem(cacheKey, JSON.stringify(items));
-        localStorage.setItem(cacheTimeKey, Date.now().toString());
-
-        console.log('获取即将上映内容成功:', items.length, '(从服务器)');
+        console.log(`📊 获取到 ${items.length} 条即将上映数据`);
       } else {
         console.error('获取即将上映内容失败:', response.status);
         // API失败时设置空数组，确保UI仍然显示
@@ -343,11 +323,11 @@ const PlayStatsPage: React.FC = () => {
       localStorage.removeItem('moontv_watching_updates');
       localStorage.removeItem('moontv_last_update_check');
 
-      // 清除即将上映缓存
+      // 清除遗留的即将上映缓存（兼容性清理）
       localStorage.removeItem('upcoming_releases_cache');
       localStorage.removeItem('upcoming_releases_cache_time');
 
-      console.log('已清除所有缓存');
+      console.log('已清除所有localStorage缓存');
 
       // 重新检查追番更新
       await checkWatchingUpdates();
@@ -361,7 +341,7 @@ const PlayStatsPage: React.FC = () => {
       const details = getDetailedWatchingUpdates();
       setWatchingUpdates(details);
 
-      // 重新获取即将上映内容
+      // 重新获取即将上映内容（API会使用数据库缓存，速度很快）
       await fetchUpcomingReleases();
       console.log('已重新获取即将上映内容');
 

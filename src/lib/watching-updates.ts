@@ -353,9 +353,27 @@ async function getOriginalEpisodes(record: PlayRecord, videoId: string, recordKe
     '完整记录': record
   });
 
-  // 优先使用播放记录中保存的原始集数
+  // 🔑 关键修复：不信任内存中的 original_episodes（可能来自缓存）
+  // 始终从数据库重新读取最新的 original_episodes
+  try {
+    console.log(`🔍 从数据库读取最新的原始集数: ${record.title}`);
+    const freshRecordsResponse = await fetch('/api/playrecords');
+    if (freshRecordsResponse.ok) {
+      const freshRecords = await freshRecordsResponse.json();
+      const freshRecord = freshRecords[recordKey];
+
+      if (freshRecord?.original_episodes && freshRecord.original_episodes > 0) {
+        console.log(`📚 从数据库读取到最新原始集数: ${record.title} = ${freshRecord.original_episodes}集 (当前播放记录: ${record.total_episodes}集)`);
+        return freshRecord.original_episodes;
+      }
+    }
+  } catch (error) {
+    console.warn(`⚠️ 从数据库读取原始集数失败: ${record.title}，使用内存值`, error);
+  }
+
+  // 备用方案：如果数据库读取失败，使用内存中的值
   if (record.original_episodes && record.original_episodes > 0) {
-    console.log(`📚 从播放记录读取原始集数: ${record.title} = ${record.original_episodes}集 (当前播放记录: ${record.total_episodes}集)`);
+    console.log(`📚 使用内存中的原始集数: ${record.title} = ${record.original_episodes}集 (当前播放记录: ${record.total_episodes}集)`);
     return record.original_episodes;
   }
 
