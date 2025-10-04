@@ -58,7 +58,13 @@ export const UserMenu: React.FC = () => {
   const [isContinueWatchingOpen, setIsContinueWatchingOpen] = useState(false);
   const [isFavoritesOpen, setIsFavoritesOpen] = useState(false);
   const [authInfo, setAuthInfo] = useState<AuthInfo | null>(null);
-  const [storageType, setStorageType] = useState<string>('localstorage');
+  const [storageType, setStorageType] = useState<string>(() => {
+    // 🔧 优化：直接从 RUNTIME_CONFIG 读取初始值，避免默认值导致的多次渲染
+    if (typeof window !== 'undefined') {
+      return (window as any).RUNTIME_CONFIG?.STORAGE_TYPE || 'localstorage';
+    }
+    return 'localstorage';
+  });
   const [mounted, setMounted] = useState(false);
   const [watchingUpdates, setWatchingUpdates] = useState<WatchingUpdate | null>(null);
   const [playRecords, setPlayRecords] = useState<(PlayRecord & { key: string })[]>([]);
@@ -144,15 +150,11 @@ export const UserMenu: React.FC = () => {
     setMounted(true);
   }, []);
 
-  // 获取认证信息和存储类型
+  // 获取认证信息
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const auth = getAuthInfoFromBrowserCookie();
       setAuthInfo(auth);
-
-      const type =
-        (window as any).RUNTIME_CONFIG?.STORAGE_TYPE || 'localstorage';
-      setStorageType(type);
     }
   }, []);
 
@@ -322,8 +324,10 @@ export const UserMenu: React.FC = () => {
         updateWatchingUpdates();
       }
 
-      // 无论是否有缓存，都强制检查一次以确保数据最新
-      forceInitialCheck();
+      // 🔧 修复：延迟1秒后在后台执行更新检查，避免阻塞页面初始加载
+      setTimeout(() => {
+        forceInitialCheck();
+      }, 1000);
 
       // 订阅更新事件
       const unsubscribe = subscribeToWatchingUpdatesEvent(() => {

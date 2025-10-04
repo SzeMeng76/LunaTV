@@ -27,9 +27,10 @@ export async function GET(request: NextRequest) {
       rateLimit: 60
     };
 
-    // 只返回 TVBox 安全配置（不返回其他敏感信息）
+    // 只返回 TVBox 安全配置和站点名称（不返回其他敏感信息）
     return NextResponse.json({
-      securityConfig: securityConfig
+      securityConfig: securityConfig,
+      siteName: config.SiteConfig?.SiteName || 'MoonTV'
     });
   } catch (error) {
     console.error('获取 TVBox 配置失败:', error);

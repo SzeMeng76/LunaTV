@@ -94,11 +94,21 @@ export async function POST(request: NextRequest) {
     // 获取现有播放记录以保持原始集数
     const existingRecord = await db.getPlayRecord(authInfo.username, source, id);
 
+    // 🔑 关键修复：信任客户端传来的 original_episodes（已经过 checkShouldUpdateOriginalEpisodes 验证）
+    // 只有在客户端没有提供时，才使用数据库中的值作为 fallback
+    let originalEpisodes: number;
+    if (record.original_episodes !== undefined && record.original_episodes !== null) {
+      // 客户端已经设置了 original_episodes，信任它（可能是更新后的值）
+      originalEpisodes = record.original_episodes;
+    } else {
+      // 客户端没有提供，使用数据库中的值或当前 total_episodes
+      originalEpisodes = existingRecord?.original_episodes || existingRecord?.total_episodes || record.total_episodes;
+    }
+
     const finalRecord = {
       ...record,
       save_time: record.save_time ?? Date.now(),
-      // 关键修复：设置原始集数，首次观看时使用当前集数，后续保持不变
-      original_episodes: existingRecord?.original_episodes || record.total_episodes,
+      original_episodes: originalEpisodes,
     } as PlayRecord;
 
     await db.savePlayRecord(authInfo.username, source, id, finalRecord);
