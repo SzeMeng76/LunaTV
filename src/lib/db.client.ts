@@ -95,6 +95,9 @@ const STORAGE_TYPE = (() => {
 // 搜索历史最大保存条数
 const SEARCH_HISTORY_LIMIT = 20;
 
+// ---- 内存缓存（用于 Kvrocks/Upstash 模式）----
+const memoryCache: Map<string, UserCacheStore> = new Map();
+
 // ---- 缓存管理器 ----
 class HybridCacheManager {
   private static instance: HybridCacheManager;
@@ -127,6 +130,12 @@ class HybridCacheManager {
   private getUserCache(username: string): UserCacheStore {
     if (typeof window === 'undefined') return {};
 
+    // 🔧 优化：Kvrocks/Upstash 模式使用内存缓存
+    if (STORAGE_TYPE !== 'localstorage') {
+      const cacheKey = this.getUserCacheKey(username);
+      return memoryCache.get(cacheKey) || {};
+    }
+
     try {
       const cacheKey = this.getUserCacheKey(username);
       const cached = localStorage.getItem(cacheKey);
@@ -142,8 +151,13 @@ class HybridCacheManager {
    */
   private saveUserCache(username: string, cache: UserCacheStore): void {
     if (typeof window === 'undefined') return;
-    // 🔑 修复：使用 Kvrocks/Redis 时不应该往 localStorage 存数据
-    if (STORAGE_TYPE !== 'localstorage') return;
+
+    // 🔧 优化：Kvrocks/Upstash 模式使用内存缓存（不占用 localStorage，避免 QuotaExceededError）
+    if (STORAGE_TYPE !== 'localstorage') {
+      const cacheKey = this.getUserCacheKey(username);
+      memoryCache.set(cacheKey, cache);
+      return;
+    }
 
     try {
       // 检查缓存大小，超过15MB时清理旧数据

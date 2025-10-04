@@ -1143,7 +1143,7 @@ const PlayStatsPage: React.FC = () => {
             /* 个人统计内容 */
             <>
               {/* 个人统计概览 */}
-              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-8 gap-4 mb-8'>
+              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 mb-8'>
                 <div className='p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800'>
                   <div className='text-2xl font-bold text-blue-800 dark:text-blue-300'>
                     {formatTime(userStats.totalWatchTime)}
@@ -1224,6 +1224,63 @@ const PlayStatsPage: React.FC = () => {
                   <div className='text-sm text-orange-600 dark:text-orange-400'>
                     常用来源
                   </div>
+                </div>
+                {/* 新集数更新 */}
+                <div
+                  className={`p-4 rounded-lg border transition-all ${
+                    (watchingUpdates?.updatedCount || 0) > 0
+                      ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                      : 'bg-gray-50 dark:bg-gray-900/20 border-gray-200 dark:border-gray-800'
+                  }`}
+                >
+                  <div className={`text-2xl font-bold ${
+                    (watchingUpdates?.updatedCount || 0) > 0
+                      ? 'text-red-800 dark:text-red-300'
+                      : 'text-gray-800 dark:text-gray-300'
+                  }`}>
+                    {watchingUpdates?.updatedCount || 0}
+                  </div>
+                  <div className={`text-sm ${
+                    (watchingUpdates?.updatedCount || 0) > 0
+                      ? 'text-red-600 dark:text-red-400'
+                      : 'text-gray-600 dark:text-gray-400'
+                  }`}>
+                    新集数更新
+                  </div>
+                  {(watchingUpdates?.updatedCount || 0) > 0 && (
+                    <div className='text-xs text-red-500 dark:text-red-400 mt-1'>
+                      有新集数发布！
+                    </div>
+                  )}
+                </div>
+
+                {/* 继续观看提醒 */}
+                <div
+                  className={`p-4 rounded-lg border transition-all ${
+                    (watchingUpdates?.continueWatchingCount || 0) > 0
+                      ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
+                      : 'bg-gray-50 dark:bg-gray-900/20 border-gray-200 dark:border-gray-800'
+                  }`}
+                >
+                  <div className={`text-2xl font-bold ${
+                    (watchingUpdates?.continueWatchingCount || 0) > 0
+                      ? 'text-blue-800 dark:text-blue-300'
+                      : 'text-gray-800 dark:text-gray-300'
+                  }`}>
+                    {watchingUpdates?.continueWatchingCount || 0}
+                  </div>
+                  <div className={`text-sm ${
+                    (watchingUpdates?.continueWatchingCount || 0) > 0
+                      ? 'text-blue-600 dark:text-blue-400'
+                      : 'text-gray-600 dark:text-gray-400'
+                  }`}>
+                    继续观看
+                  </div>
+                  {(watchingUpdates?.continueWatchingCount || 0) > 0 && (
+                    <div className='text-xs text-blue-500 dark:text-blue-400 mt-1'>
+                      有剧集待续看！
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1682,7 +1739,7 @@ const PlayStatsPage: React.FC = () => {
           )}
 
           {/* 个人统计概览 */}
-          <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-8 gap-4 mb-8'>
+          <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 mb-8'>
             <div className='p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800'>
               <div className='text-2xl font-bold text-blue-800 dark:text-blue-300'>
                 {formatTime(userStats.totalWatchTime)}

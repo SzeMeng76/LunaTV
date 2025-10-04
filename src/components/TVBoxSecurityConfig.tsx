@@ -567,7 +567,56 @@ const TVBoxSecurityConfig = ({ config, refreshConfig }: TVBoxSecurityConfigProps
                         )}
                       </div>
                     )}
+                    {diagnoseResult.spiderSizeKB !== undefined && (
+                      <div className='text-xs'>
+                        <span className={diagnoseResult.spiderSizeKB < 50 ? 'text-yellow-600 dark:text-yellow-400' : 'text-green-600 dark:text-green-400'}>
+                          {diagnoseResult.spiderSizeKB < 50 ? '⚠' : '✓'} 文件大小: {diagnoseResult.spiderSizeKB}KB
+                        </span>
+                      </div>
+                    )}
+                    {diagnoseResult.spiderLastModified && (
+                      <div className='text-xs text-gray-600 dark:text-gray-400'>
+                        最后修改: {new Date(diagnoseResult.spiderLastModified).toLocaleString('zh-CN')}
+                      </div>
+                    )}
                   </div>
+
+                  {/* Spider Jar 状态（新增）*/}
+                  {((diagnoseResult as any).spider_url || (diagnoseResult as any).spider_md5) && (
+                    <div className='mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-xs'>
+                      <div className='font-medium text-blue-800 dark:text-blue-200 mb-1'>Spider Jar 状态:</div>
+                      <div className='space-y-0.5 text-blue-700 dark:text-blue-300'>
+                        {(diagnoseResult as any).spider_url && (
+                          <div>• 来源: {(diagnoseResult as any).spider_url}</div>
+                        )}
+                        {(diagnoseResult as any).spider_md5 && (
+                          <div>• MD5: {(diagnoseResult as any).spider_md5}</div>
+                        )}
+                        {(diagnoseResult as any).spider_cached !== undefined && (
+                          <div>• 缓存: {(diagnoseResult as any).spider_cached ? '✓ 是' : '✗ 否（实时下载）'}</div>
+                        )}
+                        {(diagnoseResult as any).spider_real_size !== undefined && (
+                          <div>• 真实大小: {Math.round((diagnoseResult as any).spider_real_size / 1024)}KB</div>
+                        )}
+                        {(diagnoseResult as any).spider_tried !== undefined && (
+                          <div>• 尝试次数: {(diagnoseResult as any).spider_tried}</div>
+                        )}
+                        {(diagnoseResult as any).spider_success !== undefined && (
+                          <div>• 状态: {(diagnoseResult as any).spider_success ? '✓ 成功' : '✗ 降级（使用fallback jar）'}</div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 备用代理地址（新增）*/}
+                  {(diagnoseResult as any).spider_backup && (
+                    <div className='mt-2 p-2 bg-gray-50 dark:bg-gray-800 rounded text-xs'>
+                      <div className='text-gray-600 dark:text-gray-400 mb-1'>备用代理地址:</div>
+                      <div className='text-gray-900 dark:text-gray-100 break-all font-mono'>
+                        {(diagnoseResult as any).spider_backup}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
