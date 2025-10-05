@@ -55,6 +55,8 @@ export default function TVBoxConfigPage() {
   const [loading, setLoading] = useState(true);
   const [diagnosing, setDiagnosing] = useState(false);
   const [diagnosisResult, setDiagnosisResult] = useState<DiagnosisResult | null>(null);
+  const [refreshingJar, setRefreshingJar] = useState(false);
+  const [jarRefreshMsg, setJarRefreshMsg] = useState<string | null>(null);
 
   // 获取安全配置（使用普通用户可访问的接口）
   const fetchSecurityConfig = useCallback(async () => {
@@ -121,6 +123,32 @@ export default function TVBoxConfigPage() {
       setDiagnosisResult({ error: '诊断失败，请稍后重试' });
     } finally {
       setDiagnosing(false);
+    }
+  };
+
+  const handleRefreshJar = async () => {
+    setRefreshingJar(true);
+    setJarRefreshMsg(null);
+    try {
+      const response = await fetch('/api/tvbox/spider-status', {
+        method: 'POST',
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        setJarRefreshMsg(`✓ JAR 缓存已刷新 (${data.jar_status.source.split('/').pop()})`);
+        // 如果当前有诊断结果，重新诊断
+        if (diagnosisResult) {
+          setTimeout(() => handleDiagnose(), 500);
+        }
+      } else {
+        setJarRefreshMsg(`✗ 刷新失败: ${data.error}`);
+      }
+    } catch (error) {
+      setJarRefreshMsg('✗ 刷新失败，请稍后重试');
+    } finally {
+      setRefreshingJar(false);
+      setTimeout(() => setJarRefreshMsg(null), 5000);
     }
   };
 
@@ -313,14 +341,30 @@ export default function TVBoxConfigPage() {
                 🔍 配置诊断
               </h2>
             </div>
-            <button
-              onClick={handleDiagnose}
-              disabled={diagnosing}
-              className="px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors"
-            >
-              {diagnosing ? '诊断中...' : '开始诊断'}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleRefreshJar}
+                disabled={refreshingJar}
+                className="px-4 py-2 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors"
+              >
+                {refreshingJar ? '刷新中...' : '🔄 刷新 JAR'}
+              </button>
+              <button
+                onClick={handleDiagnose}
+                disabled={diagnosing}
+                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors"
+              >
+                {diagnosing ? '诊断中...' : '开始诊断'}
+              </button>
+            </div>
           </div>
+
+          {/* JAR 刷新消息 */}
+          {jarRefreshMsg && (
+            <div className={`mb-4 p-3 rounded-lg ${jarRefreshMsg.startsWith('✓') ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300' : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300'}`}>
+              {jarRefreshMsg}
+            </div>
+          )}
 
           {diagnosisResult && (
             <div className="space-y-4">
@@ -398,16 +442,72 @@ export default function TVBoxConfigPage() {
                   </div>
 
                   {/* Spider Jar 状态 */}
-                  <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                    <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Spider Jar 详情:</h3>
-                    <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-1">
-                      <li className="break-all">• 来源: {diagnosisResult.spider_url || 'unknown'}</li>
-                      <li className="break-all">• MD5: {diagnosisResult.spider_md5 || 'unknown'}</li>
-                      <li>• 缓存: {diagnosisResult.spider_cached ? '✓ 是' : '✗ 否（实时下载）'}</li>
-                      <li>• 真实大小: {diagnosisResult.spider_real_size ? `${Math.round(diagnosisResult.spider_real_size / 1024)}KB` : 'unknown'}</li>
-                      <li>• 尝试次数: {diagnosisResult.spider_tried || 0}</li>
-                      <li>• 状态: {diagnosisResult.spider_success ? '✓ 成功' : '✗ 降级（使用fallback jar）'}</li>
-                    </ul>
+                  <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
+                    <h3 className="font-semibold text-blue-900 dark:text-blue-300 mb-3 flex items-center gap-2">
+                      <Shield className="w-4 h-4" />
+                      Spider JAR 状态
+                    </h3>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <div className="text-blue-600 dark:text-blue-400 text-xs mb-1">来源</div>
+                        <div className="text-gray-900 dark:text-gray-100 font-mono text-xs break-all">
+                          {diagnosisResult.spider_url || 'unknown'}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-blue-600 dark:text-blue-400 text-xs mb-1">MD5</div>
+                        <div className="text-gray-900 dark:text-gray-100 font-mono text-xs break-all">
+                          {diagnosisResult.spider_md5 || 'unknown'}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-blue-600 dark:text-blue-400 text-xs mb-1">缓存状态</div>
+                        <div className={`font-medium ${diagnosisResult.spider_cached ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400'}`}>
+                          {diagnosisResult.spider_cached ? '✓ 已缓存' : '⚡ 实时下载'}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-blue-600 dark:text-blue-400 text-xs mb-1">文件大小</div>
+                        <div className="text-gray-900 dark:text-gray-100 font-medium">
+                          {diagnosisResult.spider_real_size ? `${Math.round(diagnosisResult.spider_real_size / 1024)}KB` : 'unknown'}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-blue-600 dark:text-blue-400 text-xs mb-1">尝试次数</div>
+                        <div className={`font-medium ${diagnosisResult.spider_tried && diagnosisResult.spider_tried > 2 ? 'text-yellow-600 dark:text-yellow-400' : 'text-green-600 dark:text-green-400'}`}>
+                          {diagnosisResult.spider_tried || 0} 次
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-blue-600 dark:text-blue-400 text-xs mb-1">获取状态</div>
+                        <div className={`font-medium ${diagnosisResult.spider_success ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                          {diagnosisResult.spider_success ? '✓ 成功' : '✗ 降级 (fallback)'}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 智能建议 */}
+                    {diagnosisResult.spider_success === false && (
+                      <div className="mt-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg">
+                        <p className="text-sm text-yellow-800 dark:text-yellow-300 font-medium mb-1">⚠️ JAR 获取建议</p>
+                        <ul className="text-xs text-yellow-700 dark:text-yellow-400 space-y-1">
+                          <li>• 所有远程源均不可用，正在使用内置备用 JAR</li>
+                          <li>• 建议检查网络连接或点击"刷新 JAR"重试</li>
+                        </ul>
+                      </div>
+                    )}
+
+                    {diagnosisResult.spider_success && diagnosisResult.spider_tried && diagnosisResult.spider_tried > 2 && (
+                      <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg">
+                        <p className="text-sm text-blue-800 dark:text-blue-300 font-medium mb-1">💡 优化建议</p>
+                        <ul className="text-xs text-blue-700 dark:text-blue-400 space-y-1">
+                          <li>• 多个源失败后才成功，建议检查网络稳定性</li>
+                          {diagnosisResult.spider_url?.includes('github') && (
+                            <li>• GitHub 源访问可能受限，建议配置代理</li>
+                          )}
+                        </ul>
+                      </div>
+                    )}
                   </div>
 
                   {/* 配置统计 */}
@@ -517,10 +617,10 @@ export default function TVBoxConfigPage() {
                 智能 Spider 管理
               </h3>
               <ul className="text-gray-600 dark:text-gray-400 space-y-1 ml-6">
-                <li>• 自动探测多源（GitCode/Gitee/GitHub）</li>
-                <li>• SSL 错误自动降级</li>
-                <li>• 6 小时缓存 + 真实 MD5 验证</li>
-                <li>• 零服务器带宽消耗（直连 CDN）</li>
+                <li>• 自动探测多源（GitHub）</li>
+                <li>• 智能重试 + 失败源记录</li>
+                <li>• 动态缓存（成功 4h / 失败 10min）</li>
+                <li>• JAR 文件验证 + 真实 MD5</li>
               </ul>
             </div>
             <div className="space-y-2">
