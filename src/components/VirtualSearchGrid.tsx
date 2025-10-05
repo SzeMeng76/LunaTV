@@ -174,6 +174,7 @@ export const VirtualSearchGrid: React.FC<VirtualSearchGridProps> = ({
             douban_id={douban_id}
             query={cellSearchQuery.trim() !== title ? cellSearchQuery.trim() : ''}
             type={type}
+            remarks={group[0]?.remarks}
           />
         </div>
       );
@@ -193,6 +194,7 @@ export const VirtualSearchGrid: React.FC<VirtualSearchGridProps> = ({
             year={searchItem.year}
             from='search'
             type={searchItem.episodes.length > 1 ? 'tv' : 'movie'}
+            remarks={searchItem.remarks}
           />
         </div>
       );

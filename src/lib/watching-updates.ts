@@ -74,12 +74,14 @@ export async function checkWatchingUpdates(forceRefresh = false): Promise<void> 
   try {
     console.log('开始检查追番更新...', forceRefresh ? '(强制刷新)' : '');
 
+    // 🔧 修复：将 currentTime 提升到函数作用域
+    const currentTime = Date.now();
+
     // 检查缓存是否有效（除非强制刷新）
     if (!forceRefresh) {
       const lastCheckTime = STORAGE_TYPE !== 'localstorage'
         ? memoryLastCheckTime
         : parseInt(localStorage.getItem(LAST_CHECK_TIME_KEY) || '0');
-      const currentTime = Date.now();
 
       if (currentTime - lastCheckTime < CACHE_DURATION) {
         console.log('距离上次检查时间太短，使用缓存结果');

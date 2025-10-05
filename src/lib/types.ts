@@ -13,6 +13,7 @@ export interface PlayRecord {
   total_time: number; // 总进度（秒）
   save_time: number; // 记录保存时间（时间戳）
   search_title: string; // 搜索时使用的标题
+  remarks?: string; // 备注信息（如"已完结"、"更新至20集"等）
 }
 
 // 收藏数据结构
@@ -169,6 +170,7 @@ export interface SearchResult {
   desc?: string;
   type_name?: string;
   douban_id?: number;
+  remarks?: string; // 备注信息（如"已完结"、"更新至20集"等）
 }
 
 // 豆瓣数据结构

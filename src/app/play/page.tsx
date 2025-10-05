@@ -2395,6 +2395,7 @@ function PlayPageClient() {
         total_time: Math.floor(duration),
         save_time: Date.now(),
         search_title: searchTitle,
+        remarks: detailRef.current?.remarks, // 保存备注信息（如"已完结"等）
       });
 
       lastSaveTimeRef.current = Date.now();

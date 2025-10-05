@@ -227,6 +227,7 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
                       )
                     }
                     type={record.total_episodes > 1 ? 'tv' : ''}
+                    remarks={record.remarks}
                   />
                   {/* 新集数徽章 */}
                   {newEpisodesCount > 0 && (
