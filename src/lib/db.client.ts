@@ -17,6 +17,7 @@
 import { getAuthInfoFromBrowserCookie } from './auth';
 import { SkipConfig, UserPlayStat } from './types';
 import type { PlayRecord } from './types';
+import { forceClearWatchingUpdatesCache } from './watching-updates';
 
 // 重新导出类型以保持API兼容性
 export type { PlayRecord } from './types';
@@ -86,6 +87,7 @@ const STORAGE_TYPE = (() => {
       | 'localstorage'
       | 'redis'
       | 'upstash'
+      | 'kvrocks'
       | undefined) ||
     'localstorage';
   return raw;
@@ -405,15 +407,23 @@ class HybridCacheManager {
   /**
    * 强制刷新播放记录缓存
    * 用于新集数检测时确保数据同步
+   * @param immediate 是否立即清除缓存（而不是仅标记过期）
    */
-  forceRefreshPlayRecordsCache(): void {
+  forceRefreshPlayRecordsCache(immediate = false): void {
     const username = this.getCurrentUsername();
     if (!username) return;
 
     const userCache = this.getUserCache(username);
     if (userCache.playRecords) {
-      // 将播放记录缓存时间戳设置为过期
-      userCache.playRecords.timestamp = 0;
+      if (immediate) {
+        // 🔧 优化：立即清除缓存，而不是仅标记过期
+        delete userCache.playRecords;
+        console.log('✅ 立即清除播放记录缓存');
+      } else {
+        // 将播放记录缓存时间戳设置为过期
+        userCache.playRecords.timestamp = 0;
+        console.log('✅ 标记播放记录缓存为过期');
+      }
       this.saveUserCache(username, userCache);
     }
   }
@@ -703,8 +713,9 @@ async function checkShouldUpdateOriginalEpisodes(existingRecord: PlayRecord, new
  * 读取全部播放记录。
  * 非本地存储模式下使用混合缓存策略：优先返回缓存数据，后台异步同步最新数据。
  * 在服务端渲染阶段 (window === undefined) 时返回空对象，避免报错。
+ * @param forceRefresh 是否强制从服务器获取最新数据（跳过缓存）
  */
-export async function getAllPlayRecords(): Promise<Record<string, PlayRecord>> {
+export async function getAllPlayRecords(forceRefresh = false): Promise<Record<string, PlayRecord>> {
   // 服务器端渲染阶段直接返回空，交由客户端 useEffect 再行请求
   if (typeof window === 'undefined') {
     return {};
@@ -712,6 +723,30 @@ export async function getAllPlayRecords(): Promise<Record<string, PlayRecord>> {
 
   // 数据库存储模式：使用混合缓存策略（包括 redis 和 upstash）
   if (STORAGE_TYPE !== 'localstorage') {
+    // 🔧 优化：如果强制刷新，跳过缓存直接获取最新数据
+    if (forceRefresh) {
+      try {
+        console.log('🔄 强制刷新播放记录，跳过缓存直接从API获取');
+        const freshData = await fetchFromApi<Record<string, PlayRecord>>(
+          `/api/playrecords`
+        );
+        cacheManager.cachePlayRecords(freshData);
+        // 触发数据更新事件
+        window.dispatchEvent(
+          new CustomEvent('playRecordsUpdated', {
+            detail: freshData,
+          })
+        );
+        return freshData;
+      } catch (err) {
+        console.error('强制刷新播放记录失败:', err);
+        triggerGlobalError('获取播放记录失败');
+        // 失败时尝试返回缓存数据作为降级
+        const cachedData = cacheManager.getCachedPlayRecords();
+        return cachedData || {};
+      }
+    }
+
     // 优先从缓存获取数据
     const cachedData = cacheManager.getCachedPlayRecords();
 
@@ -806,7 +841,7 @@ export async function savePlayRecord(
     }
   }
 
-  // 数据库存储模式：乐观更新策略（包括 redis 和 upstash）
+  // 数据库存储模式：乐观更新策略（包括 redis、upstash 和 kvrocks）
   if (STORAGE_TYPE !== 'localstorage') {
     // 立即更新缓存
     const cachedRecords = cacheManager.getCachedPlayRecords() || {};
@@ -833,17 +868,43 @@ export async function savePlayRecord(
       // 🔑 关键修复：数据库更新成功后，如果更新了 original_episodes，清除相关缓存
       if ((record as any)._shouldClearCache) {
         try {
-          // 清除 watching-updates 缓存
-          localStorage.removeItem('moontv_watching_updates');
-          localStorage.removeItem('moontv_last_update_check');
+          // 🔧 优化：使用新函数清除 watching-updates 缓存
+          forceClearWatchingUpdatesCache();
 
-          // 🔑 关键：强制刷新播放记录缓存，确保下次检查使用最新数据
-          cacheManager.forceRefreshPlayRecordsCache();
+          // 🔑 关键：立即清除播放记录缓存，确保下次检查使用最新数据
+          cacheManager.forceRefreshPlayRecordsCache(true);
 
-          console.log('✅ 数据库更新成功，已清除 watching-updates 和播放记录缓存');
+          // 🔧 优化：立即获取最新数据并更新缓存，触发更新事件
+          const freshData = await fetchFromApi<Record<string, PlayRecord>>(`/api/playrecords`);
+          cacheManager.cachePlayRecords(freshData);
+          window.dispatchEvent(
+            new CustomEvent('playRecordsUpdated', {
+              detail: freshData,
+            })
+          );
+
+          console.log('✅ 数据库更新成功，已清除 watching-updates 和播放记录缓存，并刷新最新数据');
           delete (record as any)._shouldClearCache;
         } catch (cacheError) {
           console.warn('清除缓存失败:', cacheError);
+        }
+      } else {
+        // 🔧 优化：即使没有 _shouldClearCache 标志，也要从服务器同步最新数据以确保缓存一致性
+        // 特别是对于 kvrocks 等需要实时同步的场景
+        try {
+          const freshData = await fetchFromApi<Record<string, PlayRecord>>(`/api/playrecords`);
+          // 只有数据真正不同时才更新缓存
+          if (JSON.stringify(cachedRecords) !== JSON.stringify(freshData)) {
+            cacheManager.cachePlayRecords(freshData);
+            window.dispatchEvent(
+              new CustomEvent('playRecordsUpdated', {
+                detail: freshData,
+              })
+            );
+            console.log('✅ 播放记录已同步最新数据');
+          }
+        } catch (syncError) {
+          console.warn('同步最新播放记录失败:', syncError);
         }
       }
 
@@ -1508,9 +1569,21 @@ export function clearUserCache(): void {
 /**
  * 强制刷新播放记录缓存
  * 用于新集数检测时确保数据同步
+ * @param immediate 是否立即清除缓存（而不是仅标记过期）
  */
-export function forceRefreshPlayRecordsCache(): void {
-  cacheManager.forceRefreshPlayRecordsCache();
+export function forceRefreshPlayRecordsCache(immediate = false): void {
+  cacheManager.forceRefreshPlayRecordsCache(immediate);
+}
+
+/**
+ * 强制从服务器获取最新播放记录（同步方法）
+ * 用于需要立即获取最新数据的场景
+ */
+export async function forceGetFreshPlayRecords(): Promise<Record<string, PlayRecord>> {
+  // 立即清除缓存
+  forceRefreshPlayRecordsCache(true);
+  // 强制从服务器获取
+  return getAllPlayRecords(true);
 }
 
 /**
