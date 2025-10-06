@@ -112,27 +112,26 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
     // 初始加载
     updateWatchingUpdates();
 
-    // 订阅更新事件
-    const unsubscribe = subscribeToWatchingUpdatesEvent(() => {
-      console.log('ContinueWatching: 收到更新事件');
-
-      // 当检测到新集数更新时，强制刷新播放记录缓存确保数据同步
-      const updates = getDetailedWatchingUpdates();
-      if (updates && updates.hasUpdates && updates.updatedCount > 0) {
-        console.log('ContinueWatching: 检测到新集数更新，强制刷新播放记录缓存');
-        forceRefreshPlayRecordsCache();
-
-        // 短暂延迟后重新获取播放记录，确保缓存已刷新
-        setTimeout(async () => {
-          const freshRecords = await getAllPlayRecords();
-          updatePlayRecords(freshRecords);
-        }, 100);
+    // 🔧 优化：订阅播放记录更新事件，实时同步数据
+    const unsubscribePlayRecords = subscribeToDataUpdates(
+      'playRecordsUpdated',
+      (newRecords: Record<string, PlayRecord>) => {
+        console.log('ContinueWatching: 收到播放记录更新事件，立即同步数据');
+        updatePlayRecords(newRecords);
       }
+    );
 
+    // 订阅watching updates事件
+    const unsubscribeWatchingUpdates = subscribeToWatchingUpdatesEvent(() => {
+      console.log('ContinueWatching: 收到watching updates更新事件');
+      const updates = getDetailedWatchingUpdates();
       setWatchingUpdates(updates);
     });
 
-    return unsubscribe;
+    return () => {
+      unsubscribePlayRecords();
+      unsubscribeWatchingUpdates();
+    };
   }, [loading, playRecords.length]); // 依赖播放记录加载状态
 
   // 如果没有播放记录，则不渲染组件
@@ -228,6 +227,7 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
                       )
                     }
                     type={record.total_episodes > 1 ? 'tv' : ''}
+                    remarks={record.remarks}
                   />
                   {/* 新集数徽章 */}
                   {newEpisodesCount > 0 && (

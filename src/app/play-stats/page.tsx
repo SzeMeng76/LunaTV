@@ -12,6 +12,7 @@ import {
   getDetailedWatchingUpdates,
   checkWatchingUpdates,
   markUpdatesAsViewed,
+  forceClearWatchingUpdatesCache,
   type WatchingUpdate,
 } from '@/lib/watching-updates';
 
@@ -329,8 +330,8 @@ const PlayStatsPage: React.FC = () => {
 
       console.log('已清除所有localStorage缓存');
 
-      // 重新检查追番更新
-      await checkWatchingUpdates();
+      // 🔧 优化：强制刷新追番更新，跳过缓存时间检查
+      await checkWatchingUpdates(true);
       console.log('已重新检查追番更新');
 
       // 重新获取统计数据
@@ -426,11 +427,10 @@ const PlayStatsPage: React.FC = () => {
       // 监听播放记录更新事件（修复删除记录后页面不立即更新的问题）
       const handlePlayRecordsUpdate = () => {
         console.log('播放记录更新，重新检查 watchingUpdates');
-        // 强制清除缓存，确保立即更新
-        localStorage.removeItem('moontv_watching_updates');
-        localStorage.removeItem('moontv_last_update_check');
-        // 重新检查追番更新状态
-        checkWatchingUpdates().then(() => {
+        // 🔧 优化：使用新的强制清除缓存函数
+        forceClearWatchingUpdatesCache();
+        // 🔧 优化：强制刷新追番更新状态，跳过缓存时间检查
+        checkWatchingUpdates(true).then(() => {
           const details = getDetailedWatchingUpdates();
           setWatchingUpdates(details);
           console.log('watchingUpdates 已更新:', details);

@@ -389,3 +389,18 @@ export function cleanHtmlTags(text: string): string {
   // 使用 he 库解码 HTML 实体
   return he.decode(cleanedText);
 }
+
+/**
+ * 判断剧集是否已完结
+ * @param remarks 备注信息（如"已完结"、"更新至20集"、"HD"等）
+ * @returns 是否已完结
+ */
+export function isSeriesCompleted(remarks?: string): boolean {
+  if (!remarks) return false;
+
+  // 匹配规则：
+  // - "完结" 或 "已完结"
+  // - "全XX集"（如"全30集"）
+  // - 单独的"完"（但不包括"完整"）
+  return /完结|已完结|全\d+集|完(?!整)/.test(remarks);
+}
