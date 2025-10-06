@@ -173,6 +173,7 @@ This project is licensed under **CC BY-NC-SA 4.0**, with the following terms:
 - [Tech Stack](#-tech-stack)
 - [Deployment](#-deployment)
   - [Docker Deployment (Recommended)](#-recommended-kvrocks-storage)
+  - [Zeabur Deployment (Recommended)](#️-zeabur-deployment-recommended)
   - [Vercel Deployment (Serverless)](#-vercel-deployment-serverless)
 - [Configuration File](#️-configuration-file)
 - [Environment Variables](#-environment-variables)
@@ -310,6 +311,103 @@ services:
       - UPSTASH_URL=https://your-instance.upstash.io
       - UPSTASH_TOKEN=your_upstash_token
 ```
+
+### ☁️ Zeabur Deployment (Recommended)
+
+Zeabur is a one-stop cloud deployment platform that supports automatic Dockerfile detection and deployment, ideal for users seeking simple deployment workflows.
+
+#### Option 1: Automatic Dockerfile Deployment
+
+Zeabur automatically detects the Dockerfile in your project and completes the deployment.
+
+**Deployment Steps:**
+
+1. **Fork This Project**
+   - Fork this repository to your GitHub account
+
+2. **Connect to Zeabur**
+   - Visit [zeabur.com](https://zeabur.com/)
+   - Login and create a new project
+   - Click "Add Service" > "Git" to import your repository
+
+3. **Add KVRocks Database**
+   - In the same project, click "Add Service" > "Prebuilt Services"
+   - Search and add "KVRocks" (or manually add Docker image)
+   - Zeabur will automatically create the KVRocks service
+
+4. **Configure Environment Variables**
+
+   Add the following environment variables to your LunaTV service:
+
+   ```env
+   # Required: Admin Account
+   USERNAME=admin
+   PASSWORD=your_secure_password
+
+   # Required: Storage Configuration
+   NEXT_PUBLIC_STORAGE_TYPE=kvrocks
+   KVROCKS_URL=redis://${KVROCKS_HOST}:${KVROCKS_PORT}
+
+   # Optional: Site Configuration
+   SITE_BASE=https://your-domain.zeabur.app
+   NEXT_PUBLIC_SITE_NAME=LunaTV Enhanced
+   ANNOUNCEMENT=Welcome to LunaTV Enhanced Edition
+
+   # Optional: Douban Proxy (Recommended)
+   NEXT_PUBLIC_DOUBAN_PROXY_TYPE=cmliussss-cdn-tencent
+   NEXT_PUBLIC_DOUBAN_IMAGE_PROXY_TYPE=cmliussss-cdn-tencent
+   ```
+
+   **Note**: `${KVROCKS_HOST}` and `${KVROCKS_PORT}` will be automatically injected by Zeabur, or you can manually enter the internal connection address of the KVRocks service.
+
+5. **Deploy Project**
+   - After environment variable configuration, Zeabur will automatically start building and deploying
+   - Wait for build to complete (approximately 3-8 minutes)
+   - Access the domain provided by Zeabur
+
+6. **Bind Custom Domain (Optional)**
+   - Click "Domains" in service settings
+   - Add your custom domain
+   - Configure DNS CNAME record to point to the Zeabur-provided domain
+
+#### Option 2: Manual Docker Image Configuration
+
+If you need to use pre-built images, you can deploy directly using prebuilt images.
+
+**Deployment Steps:**
+
+1. **Add LunaTV Service**
+   - Click "Add Service" > "Docker Images"
+   - Enter image name: `ghcr.io/szemeng76/lunatv:latest`
+   - Configure port: `3000` (HTTP)
+
+2. **Add KVRocks Service**
+   - Click "Add Service" > "Docker Images"
+   - Enter image name: `apache/kvrocks`
+   - Configure port: `6666` (TCP)
+   - Add persistent volume: Mount path `/var/lib/kvrocks`
+
+3. **Configure Environment Variables** (Same as Option 1)
+
+4. **Deployment Complete**
+   - Zeabur will automatically pull images and start services
+   - Access the service once it's ready
+
+#### ✨ Zeabur Deployment Advantages
+
+- ✅ **Automatic HTTPS**: Free SSL certificate auto-configured
+- ✅ **Global CDN**: Built-in worldwide acceleration
+- ✅ **Zero-Config Deployment**: Automatic Dockerfile detection
+- ✅ **Service Discovery**: Automatic container interconnection
+- ✅ **Persistent Storage**: Volume mounting support
+- ✅ **CI/CD Integration**: Auto-deployment on Git push
+- ✅ **Real-time Logs**: Web interface for runtime logs
+
+#### ⚠️ Zeabur Considerations
+
+- **Pricing Model**: Pay-as-you-go based on actual resource usage, free tier sufficient for small projects
+- **Region Selection**: Recommend choosing the region closest to your users
+- **Environment Variable References**: Use `${VARIABLE_NAME}` syntax to reference other service variables
 
 ---
 

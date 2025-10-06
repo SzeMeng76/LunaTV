@@ -173,6 +173,7 @@
 - [技术栈](#-技术栈)
 - [部署](#-部署)
   - [Docker 部署（推荐）](#-推荐部署方案kvrocks-存储)
+  - [Zeabur 部署（推荐）](#️-zeabur-部署推荐)
   - [Vercel 部署（无服务器）](#-vercel-部署无服务器)
 - [配置文件](#-配置文件)
 - [环境变量](#-环境变量)
@@ -310,6 +311,103 @@ services:
       - UPSTASH_URL=https://your-instance.upstash.io
       - UPSTASH_TOKEN=your_upstash_token
 ```
+
+### ☁️ Zeabur 部署（推荐）
+
+Zeabur 是一站式云端部署平台，支持自动检测 Dockerfile 部署，适合需要简单部署流程的用户。
+
+#### 方案一：Dockerfile 自动部署
+
+Zeabur 会自动检测项目中的 Dockerfile 并完成部署。
+
+**部署步骤：**
+
+1. **Fork 本项目**
+   - Fork 本仓库到你的 GitHub 账号
+
+2. **连接到 Zeabur**
+   - 访问 [zeabur.com](https://zeabur.com/)
+   - 登录并创建新项目
+   - 点击 "Add Service" > "Git" 导入你的仓库
+
+3. **添加 KVRocks 数据库**
+   - 在同一项目中点击 "Add Service" > "Prebuilt Services"
+   - 搜索并添加 "KVRocks"（或手动添加 Docker 镜像）
+   - Zeabur 会自动创建 KVRocks 服务
+
+4. **配置环境变量**
+
+   在 LunaTV 服务的环境变量中添加：
+
+   ```env
+   # 必填：管理员账号
+   USERNAME=admin
+   PASSWORD=your_secure_password
+
+   # 必填：存储配置
+   NEXT_PUBLIC_STORAGE_TYPE=kvrocks
+   KVROCKS_URL=redis://${KVROCKS_HOST}:${KVROCKS_PORT}
+
+   # 可选：站点配置
+   SITE_BASE=https://your-domain.zeabur.app
+   NEXT_PUBLIC_SITE_NAME=LunaTV Enhanced
+   ANNOUNCEMENT=欢迎使用 LunaTV Enhanced Edition
+
+   # 可选：豆瓣代理配置（推荐）
+   NEXT_PUBLIC_DOUBAN_PROXY_TYPE=cmliussss-cdn-tencent
+   NEXT_PUBLIC_DOUBAN_IMAGE_PROXY_TYPE=cmliussss-cdn-tencent
+   ```
+
+   **注意**：`${KVROCKS_HOST}` 和 `${KVROCKS_PORT}` 会由 Zeabur 自动注入，也可以手动填写 KVRocks 服务的内部连接地址。
+
+5. **部署项目**
+   - 环境变量配置完成后，Zeabur 会自动开始构建和部署
+   - 等待构建完成（约 3-8 分钟）
+   - 访问 Zeabur 提供的域名
+
+6. **绑定自定义域名（可选）**
+   - 在服务设置中点击 "Domains"
+   - 添加你的自定义域名
+   - 配置 DNS CNAME 记录指向 Zeabur 提供的域名
+
+#### 方案二：手动配置 Docker 镜像
+
+如果需要使用已构建好的镜像，可以直接使用预构建镜像部署。
+
+**部署步骤：**
+
+1. **添加 LunaTV 服务**
+   - 点击 "Add Service" > "Docker Images"
+   - 输入镜像名称：`ghcr.io/szemeng76/lunatv:latest`
+   - 配置端口：`3000` (HTTP)
+
+2. **添加 KVRocks 服务**
+   - 点击 "Add Service" > "Docker Images"
+   - 输入镜像名称：`apache/kvrocks`
+   - 配置端口：`6666` (TCP)
+   - 添加持久化卷：挂载路径 `/var/lib/kvrocks`
+
+3. **配置环境变量**（同方案一）
+
+4. **部署完成**
+   - Zeabur 会自动拉取镜像并启动服务
+   - 等待服务就绪后即可访问
+
+#### ✨ Zeabur 部署优势
+
+- ✅ **自动 HTTPS**：免费 SSL 证书自动配置
+- ✅ **全球 CDN**：自带全球加速
+- ✅ **零配置部署**：自动检测 Dockerfile
+- ✅ **服务发现**：容器间自动互联
+- ✅ **持久化存储**：支持数据卷挂载
+- ✅ **CI/CD 集成**：Git 推送自动部署
+- ✅ **实时日志**：Web 界面查看运行日志
+
+#### ⚠️ Zeabur 注意事项
+
+- **计费模式**：按实际使用的资源计费，免费额度足够小型项目使用
+- **区域选择**：建议选择离用户最近的区域部署
+- **环境变量引用**：使用 `${VARIABLE_NAME}` 语法引用其他服务的环境变量
 
 ---
 

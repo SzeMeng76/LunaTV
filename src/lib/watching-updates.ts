@@ -45,6 +45,7 @@ export interface WatchingUpdate {
     newEpisodes?: number;
     remainingEpisodes?: number; // 新增：剩余集数
     latestEpisodes?: number;
+    remarks?: string; // 备注信息（如"已完结"）
   }[];
 }
 
@@ -157,7 +158,8 @@ export async function checkWatchingUpdates(forceRefresh = false): Promise<void> 
           hasContinueWatching: updateInfo.hasContinueWatching,
           newEpisodes: updateInfo.newEpisodes,
           remainingEpisodes: updateInfo.remainingEpisodes,
-          latestEpisodes: updateInfo.latestEpisodes
+          latestEpisodes: updateInfo.latestEpisodes,
+          remarks: record.remarks
         };
 
         updatedSeries.push(seriesInfo);
@@ -192,7 +194,8 @@ export async function checkWatchingUpdates(forceRefresh = false): Promise<void> 
           hasContinueWatching: false,
           newEpisodes: 0,
           remainingEpisodes: 0,
-          latestEpisodes: record.total_episodes
+          latestEpisodes: record.total_episodes,
+          remarks: record.remarks
         };
         updatedSeries.push(seriesInfo);
         return seriesInfo;

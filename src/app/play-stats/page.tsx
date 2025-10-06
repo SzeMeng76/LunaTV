@@ -1423,6 +1423,7 @@ const PlayStatsPage: React.FC = () => {
                                 source={series.sourceKey}
                                 id={series.videoId}
                                 onDelete={undefined}
+                                remarks={series.remarks}
                               />
                               {/* 新集数提示光环效果 */}
                               <div className="absolute inset-0 rounded-lg ring-2 ring-red-400 ring-opacity-50 animate-pulse pointer-events-none z-10"></div>
@@ -1455,6 +1456,7 @@ const PlayStatsPage: React.FC = () => {
                                 source={series.sourceKey}
                                 id={series.videoId}
                                 onDelete={undefined}
+                                remarks={series.remarks}
                               />
                               {/* 新集数提示光环效果 */}
                               <div className="absolute inset-0 rounded-lg ring-2 ring-red-400 ring-opacity-50 animate-pulse pointer-events-none z-10"></div>
@@ -1504,6 +1506,7 @@ const PlayStatsPage: React.FC = () => {
                                 source={series.sourceKey}
                                 id={series.videoId}
                                 onDelete={undefined}
+                                remarks={series.remarks}
                               />
                               {/* 继续观看提示光环效果 */}
                               <div className="absolute inset-0 rounded-lg ring-2 ring-blue-400 ring-opacity-50 animate-pulse pointer-events-none z-10"></div>
@@ -1536,6 +1539,7 @@ const PlayStatsPage: React.FC = () => {
                                 source={series.sourceKey}
                                 id={series.videoId}
                                 onDelete={undefined}
+                                remarks={series.remarks}
                               />
                               {/* 继续观看提示光环效果 */}
                               <div className="absolute inset-0 rounded-lg ring-2 ring-blue-400 ring-opacity-50 animate-pulse pointer-events-none z-10"></div>
@@ -2019,6 +2023,7 @@ const PlayStatsPage: React.FC = () => {
                             source={series.source_name}
                             id={`${series.title}_${series.year}`}
                             onDelete={undefined}
+                            remarks={series.remarks}
                           />
                           {/* 新集数提示光环效果 */}
                           <div className="absolute inset-0 rounded-lg ring-2 ring-red-400 ring-opacity-50 animate-pulse pointer-events-none z-10"></div>
@@ -2052,6 +2057,7 @@ const PlayStatsPage: React.FC = () => {
                             source={series.source_name}
                             id={`${series.title}_${series.year}`}
                             onDelete={undefined}
+                            remarks={series.remarks}
                           />
                           {/* 新集数提示光环效果 */}
                           <div className="absolute inset-0 rounded-lg ring-2 ring-red-400 ring-opacity-50 animate-pulse pointer-events-none z-10"></div>
@@ -2102,6 +2108,7 @@ const PlayStatsPage: React.FC = () => {
                             source={series.source_name}
                             id={`${series.title}_${series.year}`}
                             onDelete={undefined}
+                            remarks={series.remarks}
                           />
                           {/* 继续观看提示光环效果 */}
                           <div className="absolute inset-0 rounded-lg ring-2 ring-blue-400 ring-opacity-50 animate-pulse pointer-events-none z-10"></div>
@@ -2135,6 +2142,7 @@ const PlayStatsPage: React.FC = () => {
                             source={series.source_name}
                             id={`${series.title}_${series.year}`}
                             onDelete={undefined}
+                            remarks={series.remarks}
                           />
                           {/* 继续观看提示光环效果 */}
                           <div className="absolute inset-0 rounded-lg ring-2 ring-blue-400 ring-opacity-50 animate-pulse pointer-events-none z-10"></div>

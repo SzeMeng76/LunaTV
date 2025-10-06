@@ -1831,6 +1831,7 @@ export const UserMenu: React.FC = () => {
                     query={record.search_title}
                     from='playrecord'
                     type={record.total_episodes > 1 ? 'tv' : ''}
+                    remarks={record.remarks}
                   />
                   {/* 新集数徽章 */}
                   {newEpisodesCount > 0 && (
