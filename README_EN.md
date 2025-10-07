@@ -87,7 +87,10 @@ This project is a deeply customized version based on **MoonTV**, continuously de
 ### 📦 Project Status
 
 - **Notice**: After deployment, this is an **empty shell project** with **no built-in video sources or live streaming sources**. You need to collect and configure them yourself.
-- **Demo Site**: [https://lunatv.smone.us](https://lunatv.smone.us) for short-term testing. Database is cleaned regularly.
+- **Demo Sites**:
+  - Zeabur Deployment: [https://smonetv.zeabur.app](https://smonetv.zeabur.app)
+  - Vercel Deployment: [https://lunatv.smone.us](https://lunatv.smone.us)
+  - For short-term testing. Database is cleaned regularly.
 
 ### 🚫 Distribution Restrictions
 
@@ -318,12 +321,7 @@ Zeabur is a one-stop cloud deployment platform. Using pre-built Docker images al
 
 **Deployment Steps:**
 
-1. **Add LunaTV Service**
-   - Click "Add Service" > "Docker Images"
-   - Enter image name: `ghcr.io/szemeng76/lunatv:latest`
-   - Configure port: `3000` (HTTP)
-
-2. **Add KVRocks Service**
+1. **Add KVRocks Service** (Add database first)
    - Click "Add Service" > "Docker Images"
    - Enter image name: `apache/kvrocks`
    - Configure port: `6666` (TCP)
@@ -332,10 +330,15 @@ Zeabur is a one-stop cloud deployment platform. Using pre-built Docker images al
      * Find "Volumes" section in service settings
      * Click "Add Volume" to add new volume
      * Volume ID: `kvrocks-data` (customizable, only letters, numbers, and hyphens)
-     * Path: `/data`
+     * Path: `/var/lib/kvrocks/db`
      * Save configuration
 
-   > 💡 **Important**: Persistent volume path must be set to `/data`, so KVRocks will automatically create config files and database files in that directory.
+   > 💡 **Important**: Persistent volume path must be set to `/var/lib/kvrocks/db` (KVRocks data directory). This keeps config files in the container while persisting database files, preventing data loss on restart!
+
+2. **Add LunaTV Service**
+   - Click "Add Service" > "Docker Images"
+   - Enter image name: `ghcr.io/szemeng76/lunatv:latest`
+   - Configure port: `3000` (HTTP)
 
 3. **Configure Environment Variables**
 
@@ -376,34 +379,20 @@ Zeabur is a one-stop cloud deployment platform. Using pre-built Docker images al
 
 #### 🔄 Updating Docker Images
 
-When a new Docker image version is released, Zeabur won't automatically update. Manual trigger is required:
+When a new Docker image version is released, Zeabur won't automatically update. Manual trigger is required.
 
 **Update Steps:**
 
-1. **Enter Service Settings**
+1. **Enter Service Page**
    - Click on the service you want to update (LunaTV or KVRocks)
-   - Enter service detail page
-   - Switch to **"Settings"** tab
 
-2. **Update Image Tag**
-   - Find **"Service Image"** section
-   - You'll see two input fields: image name and tag
-   - Click on the tag input field (second field), modify or re-enter the tag
-   - For example: Change `latest` to `latest-new` then back to `latest` (force refresh)
-   - Save changes
-
-3. **Automatic Redeployment**
-   - Zeabur will automatically pull the latest image and redeploy
-   - If image pull fails, Zeabur will prompt you to modify again
-
-**Image Tag Strategy:**
-
-- `ghcr.io/szemeng76/lunatv:latest` - Always use latest version
-- `ghcr.io/szemeng76/lunatv:v1.2.3` - Fixed version (recommended for production)
+2. **Restart Service**
+   - Click the **"Restart"** button in the top right corner
+   - Zeabur will automatically pull the latest `latest` image and redeploy
 
 > 💡 **Tips**:
-> - When using `latest` tag, modifying the tag forces Zeabur to re-pull the image
-> - **Restart button won't pull new images**, it only restarts the existing container
+> - When using `latest` tag, Restart will automatically pull the latest image
+> - For production environments, it's recommended to use fixed version tags (e.g., `v5.5.5`) to avoid unexpected updates
 
 #### ✨ Zeabur Deployment Advantages
 
