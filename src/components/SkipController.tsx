@@ -83,6 +83,40 @@ export default function SkipController({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   }, []);
 
+  // 快速标记当前时间为片头结束
+  const markCurrentAsOpeningEnd = useCallback(() => {
+    if (!artPlayerRef.current) return;
+    const currentTime = artPlayerRef.current.currentTime || 0;
+    if (currentTime > 0) {
+      setBatchSettings(prev => ({
+        ...prev,
+        openingEnd: secondsToTime(currentTime)
+      }));
+      // 显示提示
+      if (artPlayerRef.current.notice) {
+        artPlayerRef.current.notice.show = `已标记片头结束: ${secondsToTime(currentTime)}`;
+      }
+    }
+  }, [artPlayerRef, secondsToTime]);
+
+  // 快速标记当前时间为片尾开始
+  const markCurrentAsEndingStart = useCallback(() => {
+    if (!artPlayerRef.current || !duration) return;
+    const currentTime = artPlayerRef.current.currentTime || 0;
+    const remainingTime = duration - currentTime;
+    if (remainingTime > 0) {
+      setBatchSettings(prev => ({
+        ...prev,
+        endingStart: secondsToTime(remainingTime),
+        endingMode: 'remaining' // 使用剩余时间模式
+      }));
+      // 显示提示
+      if (artPlayerRef.current.notice) {
+        artPlayerRef.current.notice.show = `已标记片尾开始: 剩余${secondsToTime(remainingTime)}`;
+      }
+    }
+  }, [artPlayerRef, duration, secondsToTime]);
+
   // 加载跳过配置
   const loadSkipConfig = useCallback(async () => {
     try {
@@ -661,14 +695,23 @@ export default function SkipController({
                   <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
                     结束时间 (分:秒)
                   </label>
-                  <input
-                    type="text"
-                    value={batchSettings.openingEnd}
-                    onChange={(e) => setBatchSettings({...batchSettings, openingEnd: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                    placeholder="1:30"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">格式: 分:秒 (如 1:30)</p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={batchSettings.openingEnd}
+                      onChange={(e) => setBatchSettings({...batchSettings, openingEnd: e.target.value})}
+                      className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                      placeholder="1:30"
+                    />
+                    <button
+                      onClick={markCurrentAsOpeningEnd}
+                      className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors whitespace-nowrap"
+                      title="标记当前播放时间为片头结束时间"
+                    >
+                      📍 标记
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">格式: 分:秒 (如 1:30) 或点击标记按钮</p>
                 </div>
               </div>
 
@@ -719,17 +762,26 @@ export default function SkipController({
                   <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
                     {batchSettings.endingMode === 'remaining' ? '剩余时间 (分:秒)' : '开始时间 (分:秒)'}
                   </label>
-                  <input
-                    type="text"
-                    value={batchSettings.endingStart}
-                    onChange={(e) => setBatchSettings({...batchSettings, endingStart: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                    placeholder={batchSettings.endingMode === 'remaining' ? '2:00' : '20:00'}
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={batchSettings.endingStart}
+                      onChange={(e) => setBatchSettings({...batchSettings, endingStart: e.target.value})}
+                      className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                      placeholder={batchSettings.endingMode === 'remaining' ? '2:00' : '20:00'}
+                    />
+                    <button
+                      onClick={markCurrentAsEndingStart}
+                      className="px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded text-sm font-medium transition-colors whitespace-nowrap"
+                      title="标记当前播放时间为片尾开始时间"
+                    >
+                      📍 标记
+                    </button>
+                  </div>
                   <p className="text-xs text-gray-500 mt-1">
                     {batchSettings.endingMode === 'remaining'
-                      ? '当剩余时间达到此值时开始倒计时'
-                      : '从视频开始播放此时间后开始检测片尾'
+                      ? '当剩余时间达到此值时开始倒计时，或点击标记按钮'
+                      : '从视频开始播放此时间后开始检测片尾，或点击标记按钮'
                     }
                   </p>
                 </div>
@@ -754,12 +806,17 @@ export default function SkipController({
               <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
                 <p><strong>当前播放时间:</strong> {secondsToTime(currentTime)}</p>
                 {duration > 0 && (
-                  <p><strong>视频总长度:</strong> {secondsToTime(duration)}</p>
+                  <>
+                    <p><strong>视频总长度:</strong> {secondsToTime(duration)}</p>
+                    <p><strong>剩余时间:</strong> {secondsToTime(duration - currentTime)}</p>
+                  </>
                 )}
-                <div className="text-xs mt-2 text-gray-500 space-y-1">
-                  <p>💡 <strong>片头示例:</strong> 从 0:00 自动跳到 1:30</p>
-                  <p>💡 <strong>片尾示例:</strong> 从 20:00 开始倒计时，自动跳下一集</p>
-                  <p>💡 支持格式: 1:30 (1分30秒) 或 90 (90秒)</p>
+                <div className="text-xs mt-3 text-gray-500 dark:text-gray-400 space-y-1 border-t border-gray-300 dark:border-gray-600 pt-2">
+                  <p className="font-semibold text-gray-700 dark:text-gray-300">📝 使用说明：</p>
+                  <p>🎬 <strong>片头设置:</strong> 播放到片头结束位置，点击"📍 标记"按钮</p>
+                  <p>🎭 <strong>片尾设置:</strong> 播放到片尾开始位置，点击"📍 标记"按钮</p>
+                  <p>💾 设置完成后点击"保存智能配置"即可</p>
+                  <p className="mt-2">💡 也可手动输入时间，支持格式: 1:30 (1分30秒) 或 90 (90秒)</p>
                 </div>
               </div>
             </div>

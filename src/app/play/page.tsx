@@ -3980,19 +3980,20 @@ function PlayPageClient() {
         </div>
         {/* 第二行：播放器和选集 */}
         <div className='space-y-2'>
-          {/* 折叠控制和跳过设置 - 仅在 lg 及以上屏幕显示 */}
-          <div className='hidden lg:flex justify-between items-center'>
-            {/* 跳过设置按钮 */}
+          {/* 折叠控制和跳过设置 */}
+          <div className='flex justify-between items-center'>
+            {/* 跳过设置按钮 - 在移动端和桌面端都显示 */}
             {currentSource && currentId && (
               <SkipSettingsButton onClick={() => setIsSkipSettingOpen(true)} />
             )}
 
             <div className='flex-1'></div>
+            {/* 折叠控制按钮 - 仅在 lg 及以上屏幕显示 */}
             <button
               onClick={() =>
                 setIsEpisodeSelectorCollapsed(!isEpisodeSelectorCollapsed)
               }
-              className='group relative flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-white/80 hover:bg-white dark:bg-gray-800/80 dark:hover:bg-gray-800 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 shadow-sm hover:shadow-md transition-all duration-200'
+              className='hidden lg:flex group relative items-center space-x-1.5 px-3 py-1.5 rounded-full bg-white/80 hover:bg-white dark:bg-gray-800/80 dark:hover:bg-gray-800 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 shadow-sm hover:shadow-md transition-all duration-200'
               title={
                 isEpisodeSelectorCollapsed ? '显示选集面板' : '隐藏选集面板'
               }

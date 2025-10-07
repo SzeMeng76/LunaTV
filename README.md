@@ -210,6 +210,26 @@
 
 ## 🚀 部署
 
+### ⚡ 一键部署到 Zeabur（最简单）
+
+点击下方按钮即可一键部署，自动配置 LunaTV + Kvrocks 数据库：
+
+[![Deploy on Zeabur](https://zeabur.com/button.svg)](https://zeabur.com/templates/2425O0/deploy)
+
+**优势**：
+- ✅ 无需配置，一键启动（自动部署完整环境）
+- ✅ 自动 HTTPS 和全球 CDN 加速
+- ✅ 持久化存储，数据永不丢失
+- ✅ 免费额度足够个人使用
+
+**⚠️ 重要提示**：部署完成后，需要在 Zeabur 中为 LunaTV 服务设置访问域名（Domain）才能在浏览器中访问。详见下方 [设置访问域名](#5-设置访问域名必须) 步骤。
+
+点击按钮后填写环境变量即可完成部署！详细说明见下方 [Zeabur 部署指南](#️-zeabur-部署推荐)。
+
+---
+
+### 🐳 Docker 自托管部署
+
 本项目**仅支持 Docker 或其他基于 Docker 的平台**部署（如 Dockge、Portainer、Komodo 等）。
 
 ### 📦 推荐部署方案：Kvrocks 存储
@@ -370,9 +390,17 @@ Zeabur 是一站式云端部署平台，使用预构建的 Docker 镜像可以�
 
 4. **部署完成**
    - Zeabur 会自动拉取镜像并启动服务
-   - 等待服务就绪后即可访问
+   - 等待服务就绪后，需要手动设置访问域名（见下一步）
 
-5. **绑定自定义域名（可选）**
+5. **设置访问域名（必须）**
+   - 在 LunaTV 服务页面，点击 "Networking" 或 "网络" 标签
+   - 点击 "Generate Domain" 生成 Zeabur 提供的免费域名（如 `xxx.zeabur.app`）
+   - 或者绑定自定义域名：
+     * 点击 "Add Domain" 添加你的域名
+     * 按照提示配置 DNS CNAME 记录指向 Zeabur 提供的目标地址
+   - 设置完域名后即可通过域名访问 LunaTV
+
+6. **绑定自定义域名（可选）**
    - 在服务设置中点击 "Domains"
    - 添加你的自定义域名
    - 配置 DNS CNAME 记录指向 Zeabur 提供的域名

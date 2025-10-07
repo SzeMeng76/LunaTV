@@ -210,6 +210,26 @@ This project is licensed under **CC BY-NC-SA 4.0**, with the following terms:
 
 ## 🚀 Deployment
 
+### ⚡ One-Click Deploy to Zeabur (Easiest)
+
+Click the button below for one-click deployment, automatically configures LunaTV + Kvrocks database:
+
+[![Deploy on Zeabur](https://zeabur.com/button.svg)](https://zeabur.com/templates/2425O0/deploy)
+
+**Advantages**:
+- ✅ Zero configuration, instant startup (auto-deploy complete environment)
+- ✅ Automatic HTTPS and global CDN acceleration
+- ✅ Persistent storage, data never lost
+- ✅ Free tier sufficient for personal use
+
+**⚠️ Important Notice**: After deployment completes, you need to set up an access domain (Domain) for the LunaTV service in Zeabur before you can access it in your browser. See the [Set Up Access Domain](#5-set-up-access-domain-required) step below for details.
+
+After clicking the button, just fill in the environment variables to complete deployment! See [Zeabur Deployment Guide](#️-zeabur-deployment-recommended) below for details.
+
+---
+
+### 🐳 Docker Self-Hosted Deployment
+
 This project **only supports Docker or Docker-based platforms** (such as Dockge, Portainer, Komodo, etc.).
 
 ### 📦 Recommended: Kvrocks Storage
@@ -370,10 +390,18 @@ Zeabur is a one-stop cloud deployment platform. Using pre-built Docker images al
 
 4. **Deployment Complete**
    - Zeabur will automatically pull images and start services
-   - Access the service once it's ready
+   - After services are ready, you need to manually set up an access domain (see next step)
 
-5. **Bind Custom Domain (Optional)**
-   - Click "Domains" in service settings
+5. **Set Up Access Domain (Required)**
+   - In the LunaTV service page, click the "Networking" or "Network" tab
+   - Click "Generate Domain" to create a free Zeabur domain (e.g., `xxx.zeabur.app`)
+   - Or bind a custom domain:
+     * Click "Add Domain" to add your domain
+     * Follow the prompts to configure DNS CNAME record pointing to the Zeabur-provided target
+   - Once the domain is set up, you can access LunaTV through the domain
+
+6. **Bind Custom Domain (Optional)**
+   - In service settings, click "Domains"
    - Add your custom domain
    - Configure DNS CNAME record to point to the Zeabur-provided domain
 
