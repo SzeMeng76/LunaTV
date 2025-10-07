@@ -398,14 +398,16 @@ const PlayStatsPage: React.FC = () => {
     if (authInfo) {
       fetchStats();
     }
-  }, [authInfo, fetchStats]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authInfo]); // ✅ 只在 authInfo 变化时调用
 
   // 获取即将上映内容
   useEffect(() => {
     if (authInfo) {
       fetchUpcomingReleases();
     }
-  }, [authInfo, fetchUpcomingReleases]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authInfo]); // ✅ 只在 authInfo 变化时调用
 
   // 追番更新检查
   useEffect(() => {
