@@ -25,7 +25,7 @@
 ![HLS.js](https://img.shields.io/badge/HLS.js-1.6.13-ec407a)
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Docker Ready](https://img.shields.io/badge/Docker-ready-blue?logo=docker)
-![Version](https://img.shields.io/badge/Version-5.5.4-orange)
+![Version](https://img.shields.io/badge/Version-5.5.5-orange)
 
 </div>
 
@@ -33,7 +33,7 @@
 
 ## 📢 Project Overview
 
-This project is a deeply customized version based on **MoonTV**, continuously developed from **v4.3.1** to the current **v5.5.4**, with **50+ major feature modules** and **300+ detailed optimizations** added. See [CHANGELOG](CHANGELOG) for all new features.
+This project is a deeply customized version based on **MoonTV**, continuously developed from **v4.3.1** to the current **v5.5.5**, with **50+ major feature modules** and **300+ detailed optimizations** added. See [CHANGELOG](CHANGELOG) for all new features.
 
 ### 💡 Core Enhancement Highlights
 
@@ -173,6 +173,7 @@ This project is licensed under **CC BY-NC-SA 4.0**, with the following terms:
 - [Tech Stack](#-tech-stack)
 - [Deployment](#-deployment)
   - [Docker Deployment (Recommended)](#-recommended-kvrocks-storage)
+  - [Zeabur Deployment (Recommended)](#️-zeabur-deployment-recommended)
   - [Vercel Deployment (Serverless)](#-vercel-deployment-serverless)
 - [Configuration File](#️-configuration-file)
 - [Environment Variables](#-environment-variables)
@@ -310,6 +311,116 @@ services:
       - UPSTASH_URL=https://your-instance.upstash.io
       - UPSTASH_TOKEN=your_upstash_token
 ```
+
+### ☁️ Zeabur Deployment (Recommended)
+
+Zeabur is a one-stop cloud deployment platform. Using pre-built Docker images allows for quick deployment without waiting for builds.
+
+**Deployment Steps:**
+
+1. **Add LunaTV Service**
+   - Click "Add Service" > "Docker Images"
+   - Enter image name: `ghcr.io/szemeng76/lunatv:latest`
+   - Configure port: `3000` (HTTP)
+
+2. **Add KVRocks Service**
+   - Click "Add Service" > "Docker Images"
+   - Enter image name: `apache/kvrocks`
+   - Configure port: `6666` (TCP)
+   - **Remember the service name** (usually `apachekvrocks`)
+   - **Configure Persistent Volume (Important)**:
+     * Find "Volumes" section in service settings
+     * Click "Add Volume" to add new volume
+     * Volume ID: `kvrocks-data` (customizable, only letters, numbers, and hyphens)
+     * Path: `/data`
+     * Save configuration
+
+   > 💡 **Important**: Persistent volume path must be set to `/data`, so KVRocks will automatically create config files and database files in that directory.
+
+3. **Configure Environment Variables**
+
+   Add the following environment variables to your LunaTV service:
+
+   ```env
+   # Required: Admin Account
+   USERNAME=admin
+   PASSWORD=your_secure_password
+
+   # Required: Storage Configuration
+   NEXT_PUBLIC_STORAGE_TYPE=kvrocks
+   KVROCKS_URL=redis://apachekvrocks:6666
+
+   # Optional: Site Configuration
+   SITE_BASE=https://your-domain.zeabur.app
+   NEXT_PUBLIC_SITE_NAME=LunaTV Enhanced
+   ANNOUNCEMENT=Welcome to LunaTV Enhanced Edition
+
+   # Optional: Douban Proxy (Recommended)
+   NEXT_PUBLIC_DOUBAN_PROXY_TYPE=cmliussss-cdn-tencent
+   NEXT_PUBLIC_DOUBAN_IMAGE_PROXY_TYPE=cmliussss-cdn-tencent
+   ```
+
+   **Note**:
+   - Use service name as hostname: `redis://apachekvrocks:6666`
+   - Replace with actual service name if different
+   - Both services must be in the same Project
+
+4. **Deployment Complete**
+   - Zeabur will automatically pull images and start services
+   - Access the service once it's ready
+
+5. **Bind Custom Domain (Optional)**
+   - Click "Domains" in service settings
+   - Add your custom domain
+   - Configure DNS CNAME record to point to the Zeabur-provided domain
+
+#### 🔄 Updating Docker Images
+
+When a new Docker image version is released, Zeabur won't automatically update. Manual trigger is required:
+
+**Update Steps:**
+
+1. **Enter Service Settings**
+   - Click on the service you want to update (LunaTV or KVRocks)
+   - Enter service detail page
+   - Switch to **"Settings"** tab
+
+2. **Update Image Tag**
+   - Find **"Service Image"** section
+   - You'll see two input fields: image name and tag
+   - Click on the tag input field (second field), modify or re-enter the tag
+   - For example: Change `latest` to `latest-new` then back to `latest` (force refresh)
+   - Save changes
+
+3. **Automatic Redeployment**
+   - Zeabur will automatically pull the latest image and redeploy
+   - If image pull fails, Zeabur will prompt you to modify again
+
+**Image Tag Strategy:**
+
+- `ghcr.io/szemeng76/lunatv:latest` - Always use latest version
+- `ghcr.io/szemeng76/lunatv:v1.2.3` - Fixed version (recommended for production)
+
+> 💡 **Tips**:
+> - When using `latest` tag, modifying the tag forces Zeabur to re-pull the image
+> - **Restart button won't pull new images**, it only restarts the existing container
+
+#### ✨ Zeabur Deployment Advantages
+
+- ✅ **Automatic HTTPS**: Free SSL certificate auto-configured
+- ✅ **Global CDN**: Built-in worldwide acceleration
+- ✅ **Zero-Config Deployment**: Automatic Dockerfile detection
+- ✅ **Service Discovery**: Containers communicate via service names automatically
+- ✅ **Persistent Storage**: Volume mounting support
+- ✅ **CI/CD Integration**: Auto-deployment on Git push
+- ✅ **Real-time Logs**: Web interface for runtime logs
+
+#### ⚠️ Zeabur Considerations
+
+- **Pricing Model**: Pay-as-you-go based on actual resource usage, free tier sufficient for small projects
+- **Region Selection**: Recommend choosing the region closest to your users
+- **Service Networking**: Services in the same Project communicate via service names (e.g., `apachekvrocks:6666`)
+- **Persistent Storage**: KVRocks must configure persistent volume to `/data` directory, otherwise data will be lost on restart
 
 ---
 
@@ -702,21 +813,26 @@ This project works with [OrionTV](https://github.com/zimplexing/OrionTV) on Andr
 
 For complete feature updates and bug fixes, see [CHANGELOG](CHANGELOG).
 
-### Latest Version: v5.5.4 (2025-10-03)
+### Latest Version: v5.5.5 (2025-10-06)
 
 #### Added
-- 🔐 TVBox regular user access support
-- 🎨 Modernized login/register interface
-- 💾 Calendar cache database migration
+- 🎯 TVBox diagnostics enhancement: Complete diagnostic details display
+- 🔍 Spider management system: Probing, caching, fallback proxy mechanism
+- 📊 Admin stats cards enhancement: New episodes and continue watching cards
+- 🎬 Completed series badge: Smart detection based on vod_remarks
+- 📝 Bilingual README and complete documentation
 
 #### Improved
-- 📊 Frontend database cache optimization
-- 📦 Upgraded react-window to v2.2.0
+- ⚡ Spider JAR optimization: GitHub raw source priority
+- 🔄 Cache mechanism optimization: Memory cache solves slow loading
+- 🎯 Original episodes logic improvement: recordKey exact matching
+- 📊 Search API priority: remarks-first completion status detection
 
 #### Fixed
-- 🔄 Fixed original episodes update logic
-- 🗄️ Upstash object deserialization support
-- 🚫 Eliminated Next.js dynamic route warnings
+- 🔧 original_episodes update logic refinement
+- 💾 Cache update timing fix
+- 📱 QuotaExceededError fix
+- 🎯 Real-time data sync optimization
 
 ### Major Milestone Versions
 

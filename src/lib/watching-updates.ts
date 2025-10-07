@@ -45,6 +45,7 @@ export interface WatchingUpdate {
     newEpisodes?: number;
     remainingEpisodes?: number; // 新增：剩余集数
     latestEpisodes?: number;
+    remarks?: string; // 备注信息（如"已完结"）
   }[];
 }
 
@@ -157,7 +158,8 @@ export async function checkWatchingUpdates(forceRefresh = false): Promise<void> 
           hasContinueWatching: updateInfo.hasContinueWatching,
           newEpisodes: updateInfo.newEpisodes,
           remainingEpisodes: updateInfo.remainingEpisodes,
-          latestEpisodes: updateInfo.latestEpisodes
+          latestEpisodes: updateInfo.latestEpisodes,
+          remarks: record.remarks
         };
 
         updatedSeries.push(seriesInfo);
@@ -192,7 +194,8 @@ export async function checkWatchingUpdates(forceRefresh = false): Promise<void> 
           hasContinueWatching: false,
           newEpisodes: 0,
           remainingEpisodes: 0,
-          latestEpisodes: record.total_episodes
+          latestEpisodes: record.total_episodes,
+          remarks: record.remarks
         };
         updatedSeries.push(seriesInfo);
         return seriesInfo;
@@ -200,6 +203,24 @@ export async function checkWatchingUpdates(forceRefresh = false): Promise<void> 
     });
 
     await Promise.all(updatePromises);
+
+    // 🔧 修复：对 updatedSeries 进行排序，确保每次顺序一致，防止卡片闪烁
+    // 排序规则：
+    // 1. 有新剧集的排在前面
+    // 2. 需要继续观看的排在后面
+    // 3. 相同类型按标题字母顺序排序
+    updatedSeries.sort((a, b) => {
+      // 优先级1: 有新剧集的排在前面
+      if (a.hasNewEpisode !== b.hasNewEpisode) {
+        return a.hasNewEpisode ? -1 : 1;
+      }
+      // 优先级2: 需要继续观看的排在后面
+      if (a.hasContinueWatching !== b.hasContinueWatching) {
+        return a.hasContinueWatching ? -1 : 1;
+      }
+      // 优先级3: 按标题排序
+      return a.title.localeCompare(b.title, 'zh-CN');
+    });
 
     console.log(`检查完成: ${hasAnyUpdates ? `发现${updatedCount}部剧集有新集数更新，${continueWatchingCount}部剧集需要继续观看` : '暂无更新'}`);
 

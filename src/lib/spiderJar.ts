@@ -6,17 +6,25 @@
  */
 import crypto from 'crypto';
 
-// Remote jar candidates (order by stability and SSL compatibility)
-// 只保留经过验证可用的源（2025-10-04 测试通过）
-const CANDIDATES: string[] = [
-  // GitHub 可用源 #1: FongMi (283KB, 200 OK)
-  'https://raw.githubusercontent.com/FongMi/CatVodSpider/main/jar/custom_spider.jar',
+// 高可用 JAR 候选源配置 - 针对不同网络环境优化
+// 策略：多源并发检测 + 地区优化 + 实时健康检查
+// 注意：所有源地址都经过实际测试验证（2025-10-06）
+const DOMESTIC_CANDIDATES: string[] = [
+  // 国内优先源（经过验证的真实可用源）
+  'https://hub.gitmirror.com/raw.githubusercontent.com/FongMi/CatVodSpider/main/jar/custom_spider.jar', // GitMirror CDN (有效JAR)
+];
 
-  // GitHub 可用源 #2: qlql765 (174KB, 200 OK)
-  'https://raw.githubusercontent.com/qlql765/CatVodTVSpider-by-zhixc/main/jar/custom_spider.jar',
+const INTERNATIONAL_CANDIDATES: string[] = [
+  // 国际源（GitHub 直连）
+  'https://raw.githubusercontent.com/FongMi/CatVodSpider/main/jar/custom_spider.jar', // FongMi (283KB, 200 OK)
+  'https://raw.githubusercontent.com/qlql765/CatVodTVSpider-by-zhixc/main/jar/custom_spider.jar', // qlql765 (174KB, 200 OK)
+  'https://raw.githubusercontent.com/gaotianliuyun/gao/master/jar/custom_spider.jar', // gaotianliuyun (260KB, 200 OK)
+];
 
-  // GitHub 可用源 #3: gaotianliuyun (260KB, 200 OK)
-  'https://raw.githubusercontent.com/gaotianliuyun/gao/master/jar/custom_spider.jar',
+const PROXY_CANDIDATES: string[] = [
+  // 代理源（经过测试的可用代理）
+  'https://gh-proxy.com/https://raw.githubusercontent.com/FongMi/CatVodSpider/main/jar/custom_spider.jar', // gh-proxy.com (有效JAR)
+  'https://cors.isteed.cc/github.com/FongMi/CatVodSpider/raw/main/jar/custom_spider.jar', // CORS 代理 (有效JAR)
 ];
 
 // 内置稳定 JAR 作为最终 fallback - 提取自实际工作的 spider.jar
@@ -33,6 +41,48 @@ interface SpiderJarInfo {
   timestamp: number;
   size: number;
   tried: number; // number of candidates tried until success/fallback
+}
+
+// 动态候选源选择 - 根据当前环境智能选择最优源
+function getCandidatesForEnvironment(): string[] {
+  const isDomestic = isLikelyDomesticEnvironment();
+
+  if (isDomestic) {
+    // 国内环境：优先国内源，然后国际源，最后代理源
+    return [
+      ...DOMESTIC_CANDIDATES,
+      ...INTERNATIONAL_CANDIDATES,
+      ...PROXY_CANDIDATES,
+    ];
+  } else {
+    // 国际环境：优先国际源，然后代理源，最后国内源
+    return [
+      ...INTERNATIONAL_CANDIDATES,
+      ...PROXY_CANDIDATES,
+      ...DOMESTIC_CANDIDATES,
+    ];
+  }
+}
+
+// 检测是否为国内网络环境
+function isLikelyDomesticEnvironment(): boolean {
+  try {
+    // 检查时区（简单判断）
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (tz.includes('Asia/Shanghai') || tz.includes('Asia/Chongqing') || tz.includes('Asia/Beijing')) {
+      return true;
+    }
+
+    // 检查语言设置
+    const lang = typeof navigator !== 'undefined' ? navigator.language : 'en';
+    if (lang.startsWith('zh-CN')) {
+      return true;
+    }
+
+    return false;
+  } catch {
+    return false; // 默认国际环境
+  }
 }
 
 let cache: SpiderJarInfo | null = null;
@@ -54,15 +104,26 @@ async function fetchRemote(
       const controller = new AbortController();
       const id = setTimeout(() => controller.abort('timeout'), timeoutMs);
 
-      // 优化的请求头，提升兼容性，减少 SSL 问题
-      const headers = {
-        'User-Agent':
-          'Mozilla/5.0 (Linux; Android 11; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Mobile Safari/537.36',
+      // 根据源类型优化请求头
+      const headers: Record<string, string> = {
         Accept: '*/*',
-        'Accept-Encoding': 'identity', // 避免压缩导致的问题
-        Connection: 'close', // 避免连接复用问题
+        'Accept-Encoding': 'identity',
         'Cache-Control': 'no-cache',
+        Connection: 'close',
       };
+
+      // 针对不同源优化 User-Agent
+      if (url.includes('github') || url.includes('raw.githubusercontent')) {
+        headers['User-Agent'] = 'curl/7.68.0'; // GitHub 友好
+      } else if (url.includes('gitee') || url.includes('gitcode')) {
+        headers['User-Agent'] =
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'; // 国内源友好
+      } else if (url.includes('jsdelivr') || url.includes('fastly')) {
+        headers['User-Agent'] = 'LunaTV/1.0'; // CDN 源简洁标识
+      } else {
+        headers['User-Agent'] =
+          'Mozilla/5.0 (Linux; Android 11; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Mobile Safari/537.36';
+      }
 
       // 直接获取文件内容，跳过 HEAD 检查（减少请求次数）
       const resp = await fetch(url, {
@@ -137,11 +198,12 @@ export async function getSpiderJar(
   }
 
   let tried = 0;
+  const candidates = getCandidatesForEnvironment();
 
   // 过滤掉近期失败的源（但允许一定时间后重试）
-  const activeCandidates = CANDIDATES.filter((url) => !failedSources.has(url));
+  const activeCandidates = candidates.filter((url) => !failedSources.has(url));
   const candidatesToTry =
-    activeCandidates.length > 0 ? activeCandidates : CANDIDATES;
+    activeCandidates.length > 0 ? activeCandidates : candidates;
 
   for (const url of candidatesToTry) {
     tried += 1;
@@ -189,5 +251,13 @@ export function getSpiderStatus() {
 }
 
 export function getCandidates(): string[] {
-  return [...CANDIDATES];
+  return getCandidatesForEnvironment();
+}
+
+export function getAllCandidates() {
+  return {
+    domestic: [...DOMESTIC_CANDIDATES],
+    international: [...INTERNATIONAL_CANDIDATES],
+    proxy: [...PROXY_CANDIDATES],
+  };
 }

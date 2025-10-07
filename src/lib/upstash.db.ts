@@ -5,11 +5,11 @@ import { Redis } from '@upstash/redis';
 import { AdminConfig } from './admin.types';
 import {
   ContentStat,
+  EpisodeSkipConfig,
   Favorite,
   IStorage,
   PlayRecord,
   PlayStatsResult,
-  SkipConfig,
   UserPlayStat,
 } from './types';
 
@@ -315,18 +315,18 @@ export class UpstashRedisStorage implements IStorage {
     userName: string,
     source: string,
     id: string
-  ): Promise<SkipConfig | null> {
+  ): Promise<EpisodeSkipConfig | null> {
     const val = await withRetry(() =>
       this.client.get(this.skipConfigKey(userName, source, id))
     );
-    return val ? (val as SkipConfig) : null;
+    return val ? (val as EpisodeSkipConfig) : null;
   }
 
   async setSkipConfig(
     userName: string,
     source: string,
     id: string,
-    config: SkipConfig
+    config: EpisodeSkipConfig
   ): Promise<void> {
     await withRetry(() =>
       this.client.set(this.skipConfigKey(userName, source, id), config)
@@ -345,7 +345,7 @@ export class UpstashRedisStorage implements IStorage {
 
   async getAllSkipConfigs(
     userName: string
-  ): Promise<{ [key: string]: SkipConfig }> {
+  ): Promise<{ [key: string]: EpisodeSkipConfig }> {
     const pattern = `u:${userName}:skip:*`;
     const keys = await withRetry(() => this.client.keys(pattern));
 
@@ -353,7 +353,7 @@ export class UpstashRedisStorage implements IStorage {
       return {};
     }
 
-    const configs: { [key: string]: SkipConfig } = {};
+    const configs: { [key: string]: EpisodeSkipConfig } = {};
 
     // 批量获取所有配置
     const values = await withRetry(() => this.client.mget(keys));
@@ -365,7 +365,74 @@ export class UpstashRedisStorage implements IStorage {
         const match = key.match(/^u:.+?:skip:(.+)$/);
         if (match) {
           const sourceAndId = match[1];
-          configs[sourceAndId] = value as SkipConfig;
+          configs[sourceAndId] = value as EpisodeSkipConfig;
+        }
+      }
+    });
+
+    return configs;
+  }
+
+  // ---------- 剧集跳过配置（新版，多片段支持）----------
+  private episodeSkipConfigKey(user: string, source: string, id: string) {
+    return `u:${user}:episodeskip:${source}+${id}`;
+  }
+
+  async getEpisodeSkipConfig(
+    userName: string,
+    source: string,
+    id: string
+  ): Promise<EpisodeSkipConfig | null> {
+    const val = await withRetry(() =>
+      this.client.get(this.episodeSkipConfigKey(userName, source, id))
+    );
+    return val ? (val as EpisodeSkipConfig) : null;
+  }
+
+  async saveEpisodeSkipConfig(
+    userName: string,
+    source: string,
+    id: string,
+    config: EpisodeSkipConfig
+  ): Promise<void> {
+    await withRetry(() =>
+      this.client.set(this.episodeSkipConfigKey(userName, source, id), config)
+    );
+  }
+
+  async deleteEpisodeSkipConfig(
+    userName: string,
+    source: string,
+    id: string
+  ): Promise<void> {
+    await withRetry(() =>
+      this.client.del(this.episodeSkipConfigKey(userName, source, id))
+    );
+  }
+
+  async getAllEpisodeSkipConfigs(
+    userName: string
+  ): Promise<{ [key: string]: EpisodeSkipConfig }> {
+    const pattern = `u:${userName}:episodeskip:*`;
+    const keys = await withRetry(() => this.client.keys(pattern));
+
+    if (keys.length === 0) {
+      return {};
+    }
+
+    const configs: { [key: string]: EpisodeSkipConfig } = {};
+
+    // 批量获取所有配置
+    const values = await withRetry(() => this.client.mget(keys));
+
+    keys.forEach((key, index) => {
+      const value = values[index];
+      if (value) {
+        // 从key中提取source+id
+        const match = key.match(/^u:.+?:episodeskip:(.+)$/);
+        if (match) {
+          const sourceAndId = match[1];
+          configs[sourceAndId] = value as EpisodeSkipConfig;
         }
       }
     });

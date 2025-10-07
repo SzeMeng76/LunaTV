@@ -118,15 +118,15 @@ export interface IStorage {
     userName: string,
     source: string,
     id: string
-  ): Promise<SkipConfig | null>;
+  ): Promise<EpisodeSkipConfig | null>;
   setSkipConfig(
     userName: string,
     source: string,
     id: string,
-    config: SkipConfig
+    config: EpisodeSkipConfig
   ): Promise<void>;
   deleteSkipConfig(userName: string, source: string, id: string): Promise<void>;
-  getAllSkipConfigs(userName: string): Promise<{ [key: string]: SkipConfig }>;
+  getAllSkipConfigs(userName: string): Promise<{ [key: string]: EpisodeSkipConfig }>;
 
   // 数据清理相关
   clearAllData(): Promise<void>;
@@ -200,11 +200,25 @@ export interface DoubanResult {
   list: DoubanItem[];
 }
 
-// 跳过片头片尾配置数据结构
-export interface SkipConfig {
-  enable: boolean; // 是否启用跳过片头片尾
-  intro_time: number; // 片头时间（秒）
-  outro_time: number; // 片尾时间（秒）
+// ---- 跳过配置（多片段支持）----
+
+// 单个跳过片段
+export interface SkipSegment {
+  start: number; // 开始时间（秒）
+  end: number; // 结束时间（秒）
+  type: 'opening' | 'ending'; // 片头或片尾
+  title?: string; // 可选的描述
+  autoSkip?: boolean; // 是否自动跳过（默认true）
+  autoNextEpisode?: boolean; // 片尾是否自动跳转下一集（默认true，仅对ending类型有效）
+}
+
+// 剧集跳过配置
+export interface EpisodeSkipConfig {
+  source: string; // 资源站标识
+  id: string; // 剧集ID
+  title: string; // 剧集标题
+  segments: SkipSegment[]; // 跳过片段列表
+  updated_time: number; // 最后更新时间
 }
 
 // 用户播放统计数据结构

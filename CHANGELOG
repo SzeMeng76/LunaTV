@@ -1,3 +1,38 @@
+## [5.5.5] - 2025-10-06
+
+### Added
+
+- 🎯 TVBox诊断增强：新增完整诊断详情展示到用户页面和管理后台，包括基本信息、Spider状态、配置字段等
+- 🔍 Spider管理系统：实现Spider探测、缓存、降级代理机制，支持多个Spider JAR备份源(gaotianliuyun作为第三备份源)
+- 📊 管理统计卡片增强：新增新剧集卡片和继续观看卡片到管理员统计页面，优化布局显示
+- 🎬 已完结系列徽章：基于vod_remarks添加已完结系列徽章功能，支持搜索API和详情API的remarks检测
+- 📝 双语README和完整文档：新增CC BY-NC-SA 4.0协议声明、Vercel部署指南、Selene移动应用说明、重要声明章节
+- 🔄 Spider状态API：新增Spider状态查询端点，增强TVBox诊断UI显示
+
+### Changed
+
+- ⚡ Spider JAR优化：优先使用GitHub raw源以减少失败尝试，实现快速模式和本地代理降级
+- 🔄 缓存机制优化：Kvrocks/Upstash使用内存缓存以解决慢加载问题，防止localStorage写入
+- 🎯 原始集数逻辑改进：信任客户端提供的original_episodes，使用recordKey精确匹配source+id而非标题匹配
+- 📊 搜索API优先级：优先使用搜索API的remarks而非详情API来判断完结状态
+- 🌐 TVBox站点名称动态化：使用动态站点名称替代硬编码的LunaTV
+- 📦 react-window升级至v2.2.0：升级虚拟滚动组件至最新版本
+- 🎨 README优化：修复目录锚点链接，更新Docker配置说明，添加Selene移动应用章节
+
+### Fixed
+
+- 🔧 original_episodes更新逻辑完善：自动修正无效的original_episodes值(大于total_episodes时)，当用户观看新剧集时更新，保留原始值不被覆盖
+- 💾 缓存更新时序修复：在数据库更新成功后清除缓存而非之前，确保数据一致性
+- 🔄 播放记录缓存刷新：当original_episodes更新时强制刷新播放记录和watching-updates缓存
+- 📱 QuotaExceededError修复：watching-updates使用内存缓存解决localStorage配额超限问题
+- ⚙️ ESLint规范修复：将siteExt改为const以修复prefer-const警告
+- 🎯 实时数据同步：为Kvrocks存储模式确保实时数据同步，优化播放记录和watching-updates同步机制
+- 🔍 强制刷新参数：为checkWatchingUpdates和UserMenu添加forceRefresh参数以绕过缓存
+- 🗄️ 数据库original_episodes获取：总是从数据库获取新鲜的original_episodes数据，确保更新检测准确
+- 🎭 TVBox配置问题：修复yingshicang模式下的硬编码spider jar问题，修复长URL溢出显示，优化TVBox页面布局
+- 🔐 localStorage写入限制：防止saveUserCache在使用Kvrocks/Upstash时写入localStorage
+- 📝 UserMenu存储类型初始化：优化存储类型初始化以防止冗余渲染
+
 ## [5.5.4] - 2025-10-03
 
 ### Added
