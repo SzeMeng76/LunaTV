@@ -2265,8 +2265,13 @@ function PlayPageClient() {
         cover: detailRef.current?.poster || '',
         index: currentEpisodeIndexRef.current + 1, // 转换为1基索引
         total_episodes: currentTotalEpisodes,
-        // 关键修复：设置原始集数，首次观看时使用当前集数，后续保持不变
-        original_episodes: existingRecord?.original_episodes || currentTotalEpisodes,
+        // 🔑 关键：不要在这里设置 original_episodes
+        // 让 savePlayRecord 自己处理：
+        // - 首次保存时会自动设置为 total_episodes
+        // - 后续保存时会从数据库读取并保持不变
+        // - 只有当用户看了新集数时才会更新
+        // 这样避免了播放器传入错误的 original_episodes（可能是更新后的值）
+        original_episodes: existingRecord?.original_episodes, // 只传递已有值，不自动填充
         play_time: Math.floor(currentTime),
         total_time: Math.floor(duration),
         save_time: Date.now(),
