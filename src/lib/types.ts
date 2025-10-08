@@ -210,6 +210,8 @@ export interface SkipSegment {
   title?: string; // 可选的描述
   autoSkip?: boolean; // 是否自动跳过（默认true）
   autoNextEpisode?: boolean; // 片尾是否自动跳转下一集（默认true，仅对ending类型有效）
+  mode?: 'absolute' | 'remaining'; // 时间模式：absolute=绝对时间，remaining=剩余时间
+  remainingTime?: number; // 剩余时间（秒），仅在mode=remaining时有效
 }
 
 // 剧集跳过配置

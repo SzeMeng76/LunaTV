@@ -50,13 +50,109 @@ export default function SkipController({
     autoSkip: true,         // 自动跳过开关
     autoNextEpisode: true,  // 自动下一集开关
   });
-  const [showCountdown, setShowCountdown] = useState(false);
-  const [countdownSeconds, setCountdownSeconds] = useState(0);
 
   const lastSkipTimeRef = useRef<number>(0);
   const skipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const autoSkipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // 拖动相关状态
+  const [isDragging, setIsDragging] = useState(false);
+  const [position, setPosition] = useState(() => {
+    // 从 localStorage 读取保存的位置
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('skipControllerPosition');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {
+          console.error('解析保存的位置失败:', e);
+        }
+      }
+    }
+    // 默认左下角
+    return { x: 16, y: window.innerHeight - 200 };
+  });
+  const dragStartPos = useRef({ x: 0, y: 0 });
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // 拖动处理函数
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    // 只在点击顶部标题栏时触发拖动
+    if ((e.target as HTMLElement).closest('.drag-handle')) {
+      setIsDragging(true);
+      dragStartPos.current = {
+        x: e.clientX - position.x,
+        y: e.clientY - position.y,
+      };
+    }
+  }, [position]);
+
+  // 触摸开始
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if ((e.target as HTMLElement).closest('.drag-handle')) {
+      setIsDragging(true);
+      const touch = e.touches[0];
+      dragStartPos.current = {
+        x: touch.clientX - position.x,
+        y: touch.clientY - position.y,
+      };
+    }
+  }, [position]);
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!isDragging) return;
+
+    const newX = e.clientX - dragStartPos.current.x;
+    const newY = e.clientY - dragStartPos.current.y;
+
+    const maxX = window.innerWidth - (panelRef.current?.offsetWidth || 200);
+    const maxY = window.innerHeight - (panelRef.current?.offsetHeight || 200);
+
+    setPosition({
+      x: Math.max(0, Math.min(newX, maxX)),
+      y: Math.max(0, Math.min(newY, maxY)),
+    });
+  }, [isDragging]);
+
+  // 触摸移动
+  const handleTouchMove = useCallback((e: TouchEvent) => {
+    if (!isDragging) return;
+
+    const touch = e.touches[0];
+    const newX = touch.clientX - dragStartPos.current.x;
+    const newY = touch.clientY - dragStartPos.current.y;
+
+    const maxX = window.innerWidth - (panelRef.current?.offsetWidth || 200);
+    const maxY = window.innerHeight - (panelRef.current?.offsetHeight || 200);
+
+    setPosition({
+      x: Math.max(0, Math.min(newX, maxX)),
+      y: Math.max(0, Math.min(newY, maxY)),
+    });
+  }, [isDragging]);
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('skipControllerPosition', JSON.stringify(position));
+    }
+  }, [position]);
+
+  // 添加全局事件监听
+  useEffect(() => {
+    if (isDragging) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+      window.addEventListener('touchmove', handleTouchMove);
+      window.addEventListener('touchend', handleMouseUp);
+      return () => {
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
+        window.removeEventListener('touchmove', handleTouchMove);
+        window.removeEventListener('touchend', handleMouseUp);
+      };
+    }
+  }, [isDragging, handleMouseMove, handleMouseUp, handleTouchMove]);
 
   // 时间格式转换函数
   const timeToSeconds = useCallback((timeStr: string): number => {
@@ -103,19 +199,34 @@ export default function SkipController({
   const markCurrentAsEndingStart = useCallback(() => {
     if (!artPlayerRef.current || !duration) return;
     const currentTime = artPlayerRef.current.currentTime || 0;
-    const remainingTime = duration - currentTime;
-    if (remainingTime > 0) {
-      setBatchSettings(prev => ({
-        ...prev,
-        endingStart: secondsToTime(remainingTime),
-        endingMode: 'remaining' // 使用剩余时间模式
-      }));
-      // 显示提示
-      if (artPlayerRef.current.notice) {
-        artPlayerRef.current.notice.show = `已标记片尾开始: 剩余${secondsToTime(remainingTime)}`;
+
+    if (batchSettings.endingMode === 'remaining') {
+      // 剩余时间模式
+      const remainingTime = duration - currentTime;
+      if (remainingTime > 0) {
+        setBatchSettings(prev => ({
+          ...prev,
+          endingStart: secondsToTime(remainingTime),
+        }));
+        // 显示提示
+        if (artPlayerRef.current.notice) {
+          artPlayerRef.current.notice.show = `已标记片尾开始: 剩余${secondsToTime(remainingTime)}`;
+        }
+      }
+    } else {
+      // 绝对时间模式
+      if (currentTime > 0) {
+        setBatchSettings(prev => ({
+          ...prev,
+          endingStart: secondsToTime(currentTime),
+        }));
+        // 显示提示
+        if (artPlayerRef.current.notice) {
+          artPlayerRef.current.notice.show = `已标记片尾开始: ${secondsToTime(currentTime)}`;
+        }
       }
     }
-  }, [artPlayerRef, duration, secondsToTime]);
+  }, [artPlayerRef, duration, secondsToTime, batchSettings.endingMode]);
 
   // 加载跳过配置
   const loadSkipConfig = useCallback(async () => {
@@ -137,65 +248,30 @@ export default function SkipController({
       return;
     }
 
-    const targetTime = segment.end + 1;
-    console.log('⏭️ 执行跳过，跳转到:', targetTime);
-    artPlayerRef.current.currentTime = targetTime;
-    lastSkipTimeRef.current = Date.now();
+    // 如果是片尾且开启了自动下一集，直接跳转下一集
+    if (segment.type === 'ending' && segment.autoNextEpisode && onNextEpisode) {
+      console.log('⏭️ 片尾自动跳转下一集');
+      onNextEpisode();
+      // 显示跳过提示
+      if (artPlayerRef.current.notice) {
+        artPlayerRef.current.notice.show = '自动跳转下一集';
+      }
+    } else {
+      // 否则跳到片段结束位置
+      const targetTime = segment.end + 1;
+      console.log('⏭️ 执行跳过，跳转到:', targetTime);
+      artPlayerRef.current.currentTime = targetTime;
+      lastSkipTimeRef.current = Date.now();
 
-    // 显示跳过提示
-    if (artPlayerRef.current.notice) {
-      const segmentName = segment.type === 'opening' ? '片头' : '片尾';
-      artPlayerRef.current.notice.show = `自动跳过${segmentName}`;
+      // 显示跳过提示
+      if (artPlayerRef.current.notice) {
+        const segmentName = segment.type === 'opening' ? '片头' : '片尾';
+        artPlayerRef.current.notice.show = `自动跳过${segmentName}`;
+      }
     }
 
     setCurrentSkipSegment(null);
-  }, [artPlayerRef]);
-
-  // 开始片尾倒计时
-  const startEndingCountdown = useCallback((seconds: number) => {
-    setShowCountdown(true);
-    setCountdownSeconds(seconds);
-
-    if (countdownIntervalRef.current) {
-      clearInterval(countdownIntervalRef.current);
-    }
-
-    countdownIntervalRef.current = setInterval(() => {
-      setCountdownSeconds(prev => {
-        if (prev <= 1) {
-          // 倒计时结束，跳转下一集
-          if (onNextEpisode) {
-            onNextEpisode();
-          }
-          setShowCountdown(false);
-          if (countdownIntervalRef.current) {
-            clearInterval(countdownIntervalRef.current);
-          }
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-  }, [onNextEpisode]);
-
-  // 检查片尾倒计时
-  const checkEndingCountdown = useCallback((time: number) => {
-    if (!skipConfig?.segments?.length || !duration || !onNextEpisode) return;
-
-    const endingSegments = skipConfig.segments.filter(s => s.type === 'ending' && s.autoNextEpisode !== false);
-    if (!endingSegments.length) return;
-
-    for (const segment of endingSegments) {
-      const timeToEnd = duration - time;
-      const timeToSegmentStart = duration - segment.start;
-
-      // 当距离视频结束的时间等于设定的片尾开始时间时，开始倒计时
-      if (timeToEnd <= timeToSegmentStart && timeToEnd > 0 && !showCountdown) {
-        startEndingCountdown(Math.ceil(timeToEnd));
-        break;
-      }
-    }
-  }, [skipConfig, duration, onNextEpisode, showCountdown, startEndingCountdown]);
+  }, [artPlayerRef, onNextEpisode]);
 
   // 检查当前播放时间是否在跳过区间内
   const checkSkipSegment = useCallback(
@@ -232,11 +308,26 @@ export default function SkipController({
             end: duration,
             autoSkip: batchSettings.autoSkip,
             autoNextEpisode: batchSettings.autoNextEpisode,
+            mode: batchSettings.endingMode as 'absolute' | 'remaining',
+            remainingTime: batchSettings.endingMode === 'remaining' ? endingStartSeconds : undefined,
           });
         }
 
         segments = tempSegments;
         console.log('📋 使用默认配置:', segments);
+      } else {
+        // 如果有保存的配置，处理 remaining 模式
+        segments = segments.map(seg => {
+          if (seg.type === 'ending' && seg.mode === 'remaining' && seg.remainingTime) {
+            // 重新计算 start 和 end（基于当前视频的 duration）
+            return {
+              ...seg,
+              start: duration - seg.remainingTime,
+              end: duration,
+            };
+          }
+          return seg;
+        });
       }
 
       if (!segments || segments.length === 0) {
@@ -298,11 +389,8 @@ export default function SkipController({
           clearTimeout(autoSkipTimeoutRef.current);
         }
       }
-
-      // 检查片尾倒计时
-      checkEndingCountdown(time);
     },
-    [skipConfig, currentSkipSegment, handleAutoSkip, checkEndingCountdown, batchSettings, duration, timeToSeconds]
+    [skipConfig, currentSkipSegment, handleAutoSkip, batchSettings, duration, timeToSeconds]
   );
 
   // 执行跳过
@@ -396,46 +484,28 @@ export default function SkipController({
     if (batchSettings.endingStart) {
       const endingStartSeconds = timeToSeconds(batchSettings.endingStart);
 
-      // 根据模式计算实际的开始时间
-      let actualStartSeconds: number;
       if (batchSettings.endingMode === 'remaining') {
-        // 剩余时间模式：从视频总长度减去剩余时间
-        actualStartSeconds = duration - endingStartSeconds;
-      } else {
-        // 绝对时间模式：使用输入的时间
-        actualStartSeconds = endingStartSeconds;
-      }
+        // 剩余时间模式：保存剩余时间信息
+        let actualStartSeconds = duration - endingStartSeconds;
 
-      // 确保开始时间在有效范围内
-      if (actualStartSeconds < 0) {
-        actualStartSeconds = 0;
-      } else if (actualStartSeconds >= duration) {
-        alert(`片尾开始时间超出视频长度（总长：${secondsToTime(duration)}）`);
-        return;
-      }
+        if (actualStartSeconds < 0) {
+          actualStartSeconds = 0;
+        }
 
-      // 如果没有设置结束时间，则直接跳转到下一集
-      if (!batchSettings.endingEnd || batchSettings.endingEnd.trim() === '') {
-        // 直接从指定时间跳转下一集
         segments.push({
           start: actualStartSeconds,
-          end: duration, // 设置为视频总长度
+          end: batchSettings.endingEnd ? duration - timeToSeconds(batchSettings.endingEnd) : duration,
           type: 'ending',
-          title: batchSettings.endingMode === 'remaining'
-            ? `剩余${batchSettings.endingStart}时跳转下一集`
-            : '片尾跳转下一集',
+          title: `剩余${batchSettings.endingStart}时跳转下一集`,
           autoSkip: batchSettings.autoSkip,
           autoNextEpisode: batchSettings.autoNextEpisode,
+          mode: 'remaining',
+          remainingTime: endingStartSeconds, // 保存剩余时间
         });
       } else {
-        let actualEndSeconds: number;
-        const endingEndSeconds = timeToSeconds(batchSettings.endingEnd);
-
-        if (batchSettings.endingMode === 'remaining') {
-          actualEndSeconds = duration - endingEndSeconds;
-        } else {
-          actualEndSeconds = endingEndSeconds;
-        }
+        // 绝对时间模式
+        const actualStartSeconds = endingStartSeconds;
+        const actualEndSeconds = batchSettings.endingEnd ? timeToSeconds(batchSettings.endingEnd) : duration;
 
         if (actualStartSeconds >= actualEndSeconds) {
           alert('片尾开始时间必须小于结束时间');
@@ -446,9 +516,10 @@ export default function SkipController({
           start: actualStartSeconds,
           end: actualEndSeconds,
           type: 'ending',
-          title: batchSettings.endingMode === 'remaining' ? '片尾（剩余时间模式）' : '片尾',
+          title: '片尾',
           autoSkip: batchSettings.autoSkip,
           autoNextEpisode: batchSettings.autoNextEpisode,
+          mode: 'absolute',
         });
       }
     }
@@ -536,9 +607,17 @@ export default function SkipController({
         ...prev,
         openingStart: openingSegment ? secondsToTime(openingSegment.start) : '0:00',
         openingEnd: openingSegment ? secondsToTime(openingSegment.end) : '1:30',
-        endingStart: endingSegment ? secondsToTime(duration - endingSegment.start) : '2:00',
-        endingEnd: endingSegment ? (endingSegment.end < duration ? secondsToTime(duration - endingSegment.end) : '') : '',
-        endingMode: 'remaining', // 默认使用剩余时间模式
+        endingStart: endingSegment
+          ? (endingSegment.mode === 'remaining' && endingSegment.remainingTime
+              ? secondsToTime(endingSegment.remainingTime)
+              : secondsToTime(duration - endingSegment.start))
+          : '2:00',
+        endingEnd: endingSegment
+          ? (endingSegment.mode === 'remaining' && endingSegment.end < duration
+              ? secondsToTime(duration - endingSegment.end)
+              : '')
+          : '',
+        endingMode: endingSegment?.mode === 'absolute' ? 'absolute' : 'remaining',
         autoSkip: openingSegment?.autoSkip ?? true,
         autoNextEpisode: endingSegment?.autoNextEpisode ?? true,
       }));
@@ -554,19 +633,14 @@ export default function SkipController({
 
   // 当 source 或 id 变化时，清理所有状态（换集时）
   useEffect(() => {
-    setShowCountdown(false);
     setShowSkipButton(false);
     setCurrentSkipSegment(null);
-    setCountdownSeconds(0);
 
     if (skipTimeoutRef.current) {
       clearTimeout(skipTimeoutRef.current);
     }
     if (autoSkipTimeoutRef.current) {
       clearTimeout(autoSkipTimeoutRef.current);
-    }
-    if (countdownIntervalRef.current) {
-      clearInterval(countdownIntervalRef.current);
     }
   }, [source, id]);
 
@@ -579,39 +653,11 @@ export default function SkipController({
       if (autoSkipTimeoutRef.current) {
         clearTimeout(autoSkipTimeoutRef.current);
       }
-      if (countdownIntervalRef.current) {
-        clearInterval(countdownIntervalRef.current);
-      }
     };
   }, []);
 
   return (
     <div className="skip-controller">
-      {/* 倒计时显示 - 片尾自动跳转下一集 */}
-      {showCountdown && (
-        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-[9999] bg-blue-600/90 text-white px-6 py-3 rounded-lg backdrop-blur-sm border border-white/20 shadow-lg animate-fade-in">
-          <div className="flex items-center space-x-3">
-            <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span className="text-sm font-medium">
-              {countdownSeconds}秒后自动播放下一集
-            </span>
-            <button
-              onClick={() => {
-                setShowCountdown(false);
-                if (countdownIntervalRef.current) {
-                  clearInterval(countdownIntervalRef.current);
-                }
-              }}
-              className="px-2 py-1 bg-white/20 hover:bg-white/30 rounded text-xs transition-colors"
-            >
-              取消
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* 跳过按钮 - 放在播放器内左上角 */}
       {showSkipButton && currentSkipSegment && (
         <div className="absolute top-4 left-4 z-[9999] bg-black/80 text-white px-4 py-2 rounded-lg backdrop-blur-sm border border-white/20 shadow-lg animate-fade-in">
@@ -909,15 +955,28 @@ export default function SkipController({
         </div>
       )}
 
-      {/* 管理已有片段 - 优化布局避免重叠 */}
+      {/* 管理已有片段 - 优化为可拖动 */}
       {skipConfig && skipConfig.segments && skipConfig.segments.length > 0 && !isSettingMode && (
-        <div className="fixed bottom-4 left-4 z-[9998] max-w-sm bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-lg shadow-lg border border-gray-200 dark:border-gray-600 animate-fade-in">
+        <div
+          ref={panelRef}
+          onMouseDown={handleMouseDown}
+          onTouchStart={handleTouchStart}
+          style={{
+            position: 'fixed',
+            left: `${position.x}px`,
+            top: `${position.y}px`,
+            cursor: isDragging ? 'grabbing' : 'default',
+            userSelect: isDragging ? 'none' : 'auto',
+          }}
+          className="z-[9998] max-w-sm bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-lg shadow-lg border border-gray-200 dark:border-gray-600 animate-fade-in"
+        >
           <div className="p-3">
-            <h4 className="font-medium mb-2 text-gray-900 dark:text-gray-100 text-sm flex items-center">
+            <h4 className="drag-handle font-medium mb-2 text-gray-900 dark:text-gray-100 text-sm flex items-center cursor-move select-none">
               <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
               </svg>
               跳过配置
+              <span className="ml-auto text-xs text-gray-500 dark:text-gray-400">可拖动</span>
             </h4>
             <div className="space-y-1">
               {skipConfig.segments.map((segment, index) => (
