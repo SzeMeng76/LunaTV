@@ -366,6 +366,7 @@ function PlayPageClient() {
   const danmuPluginStateRef = useRef<any>(null); // 保存弹幕插件状态
   const isSourceChangingRef = useRef<boolean>(false); // 标记是否正在换源
   const isEpisodeChangingRef = useRef<boolean>(false); // 标记是否正在切换集数
+  const isSkipControllerTriggeredRef = useRef<boolean>(false); // 标记是否通过 SkipController 触发了下一集
 
   // 🚀 新增：连续切换源防抖和资源管理
   const sourceSwitchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -2125,6 +2126,9 @@ function PlayPageClient() {
       if (artPlayerRef.current && !artPlayerRef.current.paused) {
         saveCurrentPlayProgress();
       }
+      // 🔑 标记通过 SkipController 触发了下一集
+      isSkipControllerTriggeredRef.current = true;
+      console.log('🎯 SkipController 触发下一集，设置标记');
       setCurrentEpisodeIndex(idx + 1);
     }
   };
@@ -3664,9 +3668,17 @@ function PlayPageClient() {
 
       // 监听视频播放结束事件，自动播放下一集
       artPlayerRef.current.on('video:ended', () => {
+        // 🔑 检查是否已经通过 SkipController 触发了下一集，避免重复触发
+        if (isSkipControllerTriggeredRef.current) {
+          console.log('⏭️ SkipController 已触发下一集，跳过 video:ended 自动播放');
+          isSkipControllerTriggeredRef.current = false; // 重置标记
+          return;
+        }
+
         const d = detailRef.current;
         const idx = currentEpisodeIndexRef.current;
         if (d && d.episodes && idx < d.episodes.length - 1) {
+          console.log('⏭️ video:ended 触发自动播放下一集');
           setTimeout(() => {
             setCurrentEpisodeIndex(idx + 1);
           }, 1000);
@@ -3985,14 +3997,8 @@ function PlayPageClient() {
         </div>
         {/* 第二行：播放器和选集 */}
         <div className='space-y-2'>
-          {/* 折叠控制和跳过设置 */}
-          <div className='flex justify-between items-center'>
-            {/* 跳过设置按钮 - 在移动端和桌面端都显示 */}
-            {currentSource && currentId && (
-              <SkipSettingsButton onClick={() => setIsSkipSettingOpen(true)} />
-            )}
-
-            <div className='flex-1'></div>
+          {/* 折叠控制 */}
+          <div className='flex justify-end items-center'>
             {/* 折叠控制按钮 - 仅在 lg 及以上屏幕显示 */}
             <button
               onClick={() =>
@@ -4047,6 +4053,38 @@ function PlayPageClient() {
                   ref={artRef}
                   className='bg-black w-full h-full rounded-xl overflow-hidden shadow-lg'
                 ></div>
+
+                {/* 跳过设置按钮 - 播放器内右上角 */}
+                {currentSource && currentId && (
+                  <div className='absolute top-4 right-4 z-10'>
+                    <button
+                      onClick={() => setIsSkipSettingOpen(true)}
+                      className='group flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 backdrop-blur-xl rounded-xl border border-white/30 hover:border-white/50 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)] hover:shadow-[0_8px_32px_0_rgba(255,255,255,0.18)] hover:scale-105 transition-all duration-300 ease-out'
+                      title='跳过设置'
+                      style={{
+                        backdropFilter: 'blur(20px) saturate(180%)',
+                        WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+                      }}
+                    >
+                      <svg
+                        className='w-5 h-5 text-white drop-shadow-lg group-hover:rotate-90 transition-all duration-300'
+                        fill='none'
+                        stroke='currentColor'
+                        viewBox='0 0 24 24'
+                      >
+                        <path
+                          strokeLinecap='round'
+                          strokeLinejoin='round'
+                          strokeWidth={2}
+                          d='M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4'
+                        />
+                      </svg>
+                      <span className='text-sm font-medium text-white drop-shadow-lg transition-all duration-300 hidden sm:inline'>
+                        跳过设置
+                      </span>
+                    </button>
+                  </div>
+                )}
 
                 {/* SkipController 组件 */}
                 {currentSource && currentId && detail?.title && (

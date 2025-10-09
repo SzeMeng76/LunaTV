@@ -167,6 +167,24 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
     return matchedSeries ? (matchedSeries.newEpisodes || 0) : 0;
   };
 
+  // 获取最新的总集数（用于显示，不修改原始数据）
+  const getLatestTotalEpisodes = (record: PlayRecord & { key: string }): number => {
+    if (!watchingUpdates || !watchingUpdates.updatedSeries) return record.total_episodes;
+
+    const { source, id } = parseKey(record.key);
+
+    // 在watchingUpdates中查找匹配的剧集
+    const matchedSeries = watchingUpdates.updatedSeries.find(series =>
+      series.sourceKey === source &&
+      series.videoId === id
+    );
+
+    // 如果找到匹配的剧集且有最新集数信息，返回最新集数；否则返回原始集数
+    return matchedSeries && matchedSeries.totalEpisodes
+      ? matchedSeries.totalEpisodes
+      : record.total_episodes;
+  };
+
   return (
     <section className={`mb-8 ${className || ''}`}>
       <div className='mb-4 flex items-center justify-between'>
@@ -204,6 +222,7 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
             playRecords.map((record) => {
               const { source, id } = parseKey(record.key);
               const newEpisodesCount = getNewEpisodesCount(record);
+              const latestTotalEpisodes = getLatestTotalEpisodes(record);
               return (
                 <div
                   key={record.key}
@@ -217,7 +236,7 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
                     source={source}
                     source_name={record.source_name}
                     progress={getProgress(record)}
-                    episodes={record.total_episodes}
+                    episodes={latestTotalEpisodes}
                     currentEpisode={record.index}
                     query={record.search_title}
                     from='playrecord'
@@ -226,7 +245,7 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
                         prev.filter((r) => r.key !== record.key)
                       )
                     }
-                    type={record.total_episodes > 1 ? 'tv' : ''}
+                    type={latestTotalEpisodes > 1 ? 'tv' : ''}
                     remarks={record.remarks}
                   />
                   {/* 新集数徽章 */}

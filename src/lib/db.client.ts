@@ -814,18 +814,22 @@ export async function savePlayRecord(
   const existingRecords = await getAllPlayRecords();
   const existingRecord = existingRecords[key];
 
-  // 如果是首次保存该记录，且总集数大于1，则保存原始集数
-  if (!existingRecord && record.total_episodes > 1) {
-    record.original_episodes = record.total_episodes;
-    console.log(`✓ 首次保存原始集数: ${key} = ${record.total_episodes}集`);
-  } else if (existingRecord && !existingRecord.original_episodes && record.total_episodes > 1) {
-    // 🔒 关键修复：如果现有记录没有原始集数，使用现有记录的 total_episodes（未被更新的值）
-    // 而不是传入的 record.total_episodes（可能已经被 watching-updates 更新过）
-    record.original_episodes = existingRecord.total_episodes;
-    console.log(`✓ 补充保存原始集数: ${key} = ${existingRecord.total_episodes}集 (使用数据库中的值)`);
-  } else if (existingRecord?.original_episodes) {
-    // 检查用户是否观看了超过原始集数的新集数
-    // 如果是，说明用户已经"消费"了这次更新提醒，应该更新 original_episodes
+  // 🔑 关键修复：确保 original_episodes 一定有值，否则新集数检测永远失效
+  // 优先级：传入值 > 现有记录值 > 当前 total_episodes
+  if (!record.original_episodes || record.original_episodes <= 0) {
+    if (existingRecord?.original_episodes && existingRecord.original_episodes > 0) {
+      // 使用现有记录的 original_episodes
+      record.original_episodes = existingRecord.original_episodes;
+      console.log(`✓ 使用现有原始集数: ${key} = ${existingRecord.original_episodes}集`);
+    } else {
+      // 首次保存或旧数据补充：使用当前 total_episodes
+      record.original_episodes = record.total_episodes;
+      console.log(`✓ 设置原始集数: ${key} = ${record.total_episodes}集 ${existingRecord ? '(补充旧数据)' : '(首次保存)'}`);
+    }
+  }
+
+  // 检查用户是否观看了超过原始集数的新集数
+  if (existingRecord?.original_episodes && existingRecord.original_episodes > 0) {
     const updateResult = await checkShouldUpdateOriginalEpisodes(existingRecord, record, key);
     if (updateResult.shouldUpdate) {
       record.original_episodes = updateResult.latestTotalEpisodes;
@@ -835,9 +839,6 @@ export async function savePlayRecord(
 
       // 🔑 标记需要清除缓存（在数据库更新成功后执行）
       (record as any)._shouldClearCache = true;
-    } else {
-      // 保持现有的原始集数不变
-      record.original_episodes = existingRecord.original_episodes;
     }
   }
 
