@@ -2,7 +2,7 @@
 
 'use client';
 
-import { Brain, ChevronRight } from 'lucide-react';
+import { Brain, ChevronRight, Film, Tv, Calendar, Sparkles, Play } from 'lucide-react';
 import Link from 'next/link';
 import { Suspense, useEffect, useState } from 'react';
 
@@ -22,13 +22,16 @@ import {
 } from '@/lib/db.client';
 import { getDoubanCategories } from '@/lib/douban.client';
 import { DoubanItem } from '@/lib/types';
+import { getAuthInfoFromBrowserCookie } from '@/lib/auth';
 
 import AIRecommendModal from '@/components/AIRecommendModal';
 import CapsuleSwitch from '@/components/CapsuleSwitch';
 import ContinueWatching from '@/components/ContinueWatching';
 import PageLayout from '@/components/PageLayout';
 import ScrollableRow from '@/components/ScrollableRow';
+import SectionTitle from '@/components/SectionTitle';
 import ShortDramaCard from '@/components/ShortDramaCard';
+import SkeletonCard from '@/components/SkeletonCard';
 import { useSite } from '@/components/SiteProvider';
 import VideoCard from '@/components/VideoCard';
 
@@ -43,10 +46,19 @@ function HomeClient() {
   >([]);
   const [loading, setLoading] = useState(true);
   const { announcement } = useSite();
+  const [username, setUsername] = useState<string>('');
 
   const [showAnnouncement, setShowAnnouncement] = useState(false);
   const [showAIRecommendModal, setShowAIRecommendModal] = useState(false);
   const [aiEnabled, setAiEnabled] = useState<boolean | null>(true); // 默认显示，检查后再决定
+
+  // 获取用户名
+  useEffect(() => {
+    const authInfo = getAuthInfoFromBrowserCookie();
+    if (authInfo?.username) {
+      setUsername(authInfo.username);
+    }
+  }, []);
 
   // 检查公告弹窗状态
   useEffect(() => {
@@ -230,6 +242,49 @@ function HomeClient() {
   return (
     <PageLayout>
       <div className='px-2 sm:px-10 py-4 sm:py-8 overflow-visible'>
+        {/* 欢迎横幅 - 在所有 tab 显示 */}
+        <div className='mb-6 mt-0 md:mt-12 relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 p-[2px] shadow-lg animate-[slideDown_0.5s_ease-out]'>
+            <div className='relative bg-white dark:bg-gray-900 rounded-2xl p-5 sm:p-6'>
+              {/* 装饰性背景 */}
+              <div className='absolute top-0 right-0 w-48 h-48 bg-gradient-to-br from-blue-400/10 to-purple-400/10 rounded-full blur-3xl'></div>
+              <div className='absolute bottom-0 left-0 w-32 h-32 bg-gradient-to-tr from-pink-400/10 to-purple-400/10 rounded-full blur-2xl'></div>
+
+              <div className='relative z-10'>
+                <div className='flex items-start justify-between gap-4'>
+                  <div className='flex-1 min-w-0'>
+                    <h2 className='text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-1.5 flex items-center gap-2 flex-wrap'>
+                      <span>
+                        {(() => {
+                          const hour = new Date().getHours();
+                          if (hour < 12) return '早上好';
+                          if (hour < 18) return '下午好';
+                          return '晚上好';
+                        })()}
+                        {username && '，'}
+                      </span>
+                      {username && (
+                        <span className='text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400'>
+                          {username}
+                        </span>
+                      )}
+                      <span className='inline-block animate-wave origin-bottom-right'>👋</span>
+                    </h2>
+                    <p className='text-sm sm:text-base text-gray-600 dark:text-gray-400'>
+                      发现更多精彩影视内容 ✨
+                    </p>
+                  </div>
+
+                  {/* 装饰图标 - 只在大屏幕显示 */}
+                  <div className='hidden lg:block flex-shrink-0'>
+                    <div className='w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center shadow-lg animate-pulse'>
+                      <Film className='w-8 h-8 text-white' />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+        </div>
+
         {/* 顶部 Tab 切换 */}
         <div className='mb-8 flex flex-col sm:flex-row items-center justify-center gap-4'>
           <CapsuleSwitch
@@ -240,16 +295,22 @@ function HomeClient() {
             active={activeTab}
             onChange={(value) => setActiveTab(value as 'home' | 'favorites')}
           />
-          
-          {/* AI推荐按钮 - 只在功能启用时显示 */}
+
+          {/* AI推荐按钮 - 只在功能启用时显示，添加脉冲动画 */}
           {aiEnabled && (
             <button
               onClick={() => setShowAIRecommendModal(true)}
-              className='flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-full font-medium transition-all transform hover:scale-105 shadow-lg hover:shadow-xl'
+              className='relative flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-full font-medium transition-all transform hover:scale-105 shadow-lg hover:shadow-xl group overflow-hidden'
               title='AI影视推荐'
             >
-              <Brain className='h-4 w-4' />
-              <span>AI推荐</span>
+              {/* 脉冲光环 */}
+              <div className='absolute inset-0 rounded-full bg-gradient-to-r from-blue-400 to-purple-400 opacity-0 group-hover:opacity-100 animate-ping'></div>
+
+              {/* 闪烁背景 */}
+              <div className='absolute inset-0 rounded-full bg-gradient-to-r from-blue-400 to-purple-400 opacity-20 animate-pulse'></div>
+
+              <Brain className='h-4 w-4 relative z-10 group-hover:rotate-12 transition-transform duration-300' />
+              <span className='relative z-10'>AI推荐</span>
             </button>
           )}
         </div>
@@ -286,8 +347,34 @@ function HomeClient() {
                   </div>
                 ))}
                 {favoriteItems.length === 0 && (
-                  <div className='col-span-full text-center text-gray-500 py-8 dark:text-gray-400'>
-                    暂无收藏内容
+                  <div className='col-span-full flex flex-col items-center justify-center py-16 px-4'>
+                    {/* SVG 插画 - 空收藏夹 */}
+                    <div className='mb-6 relative'>
+                      <div className='absolute inset-0 bg-gradient-to-r from-pink-300 to-purple-300 dark:from-pink-600 dark:to-purple-600 opacity-20 blur-3xl rounded-full animate-pulse'></div>
+                      <svg className='w-32 h-32 relative z-10' viewBox='0 0 200 200' fill='none' xmlns='http://www.w3.org/2000/svg'>
+                        {/* 心形主体 */}
+                        <path d='M100 170C100 170 30 130 30 80C30 50 50 30 70 30C85 30 95 40 100 50C105 40 115 30 130 30C150 30 170 50 170 80C170 130 100 170 100 170Z'
+                          className='fill-gray-300 dark:fill-gray-600 stroke-gray-400 dark:stroke-gray-500 transition-colors duration-300'
+                          strokeWidth='3'
+                        />
+                        {/* 虚线边框 */}
+                        <path d='M100 170C100 170 30 130 30 80C30 50 50 30 70 30C85 30 95 40 100 50C105 40 115 30 130 30C150 30 170 50 170 80C170 130 100 170 100 170Z'
+                          fill='none'
+                          stroke='currentColor'
+                          strokeWidth='2'
+                          strokeDasharray='5,5'
+                          className='text-gray-400 dark:text-gray-500'
+                        />
+                      </svg>
+                    </div>
+
+                    {/* 文字提示 */}
+                    <h3 className='text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2'>
+                      收藏夹空空如也
+                    </h3>
+                    <p className='text-sm text-gray-500 dark:text-gray-400 text-center max-w-xs'>
+                      快去发现喜欢的影视作品，点击 ❤️ 添加到收藏吧！
+                    </p>
                   </div>
                 )}
               </div>
@@ -301,12 +388,10 @@ function HomeClient() {
               {/* 热门电影 */}
               <section className='mb-8'>
                 <div className='mb-4 flex items-center justify-between'>
-                  <h2 className='text-xl font-bold text-gray-800 dark:text-gray-200'>
-                    热门电影
-                  </h2>
+                  <SectionTitle title="热门电影" icon={Film} iconColor="text-red-500" />
                   <Link
                     href='/douban?type=movie'
-                    className='flex items-center text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                    className='flex items-center text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors'
                   >
                     查看更多
                     <ChevronRight className='w-4 h-4 ml-1' />
@@ -316,15 +401,7 @@ function HomeClient() {
                   {loading
                     ? // 加载状态显示灰色占位数据
                     Array.from({ length: 8 }).map((_, index) => (
-                      <div
-                        key={index}
-                        className='min-w-[96px] w-24 sm:min-w-[180px] sm:w-44'
-                      >
-                        <div className='relative aspect-[2/3] w-full overflow-hidden rounded-lg bg-gray-200 animate-pulse dark:bg-gray-800'>
-                          <div className='absolute inset-0 bg-gray-300 dark:bg-gray-700'></div>
-                        </div>
-                        <div className='mt-2 h-4 bg-gray-200 rounded animate-pulse dark:bg-gray-800'></div>
-                      </div>
+                      <SkeletonCard key={index} />
                     ))
                     : // 显示真实数据
                     hotMovies.map((movie, index) => (
@@ -349,12 +426,10 @@ function HomeClient() {
               {/* 热门剧集 */}
               <section className='mb-8'>
                 <div className='mb-4 flex items-center justify-between'>
-                  <h2 className='text-xl font-bold text-gray-800 dark:text-gray-200'>
-                    热门剧集
-                  </h2>
+                  <SectionTitle title="热门剧集" icon={Tv} iconColor="text-blue-500" />
                   <Link
                     href='/douban?type=tv'
-                    className='flex items-center text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                    className='flex items-center text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors'
                   >
                     查看更多
                     <ChevronRight className='w-4 h-4 ml-1' />
@@ -364,15 +439,7 @@ function HomeClient() {
                   {loading
                     ? // 加载状态显示灰色占位数据
                     Array.from({ length: 8 }).map((_, index) => (
-                      <div
-                        key={index}
-                        className='min-w-[96px] w-24 sm:min-w-[180px] sm:w-44'
-                      >
-                        <div className='relative aspect-[2/3] w-full overflow-hidden rounded-lg bg-gray-200 animate-pulse dark:bg-gray-800'>
-                          <div className='absolute inset-0 bg-gray-300 dark:bg-gray-700'></div>
-                        </div>
-                        <div className='mt-2 h-4 bg-gray-200 rounded animate-pulse dark:bg-gray-800'></div>
-                      </div>
+                      <SkeletonCard key={index} />
                     ))
                     : // 显示真实数据
                     hotTvShows.map((show, index) => (
@@ -396,12 +463,10 @@ function HomeClient() {
               {/* 每日新番放送 */}
               <section className='mb-8'>
                 <div className='mb-4 flex items-center justify-between'>
-                  <h2 className='text-xl font-bold text-gray-800 dark:text-gray-200'>
-                    新番放送
-                  </h2>
+                  <SectionTitle title="新番放送" icon={Calendar} iconColor="text-purple-500" />
                   <Link
                     href='/douban?type=anime'
-                    className='flex items-center text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                    className='flex items-center text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors'
                   >
                     查看更多
                     <ChevronRight className='w-4 h-4 ml-1' />
@@ -411,15 +476,7 @@ function HomeClient() {
                   {loading
                     ? // 加载状态显示灰色占位数据
                     Array.from({ length: 8 }).map((_, index) => (
-                      <div
-                        key={index}
-                        className='min-w-[96px] w-24 sm:min-w-[180px] sm:w-44'
-                      >
-                        <div className='relative aspect-[2/3] w-full overflow-hidden rounded-lg bg-gray-200 animate-pulse dark:bg-gray-800'>
-                          <div className='absolute inset-0 bg-gray-300 dark:bg-gray-700'></div>
-                        </div>
-                        <div className='mt-2 h-4 bg-gray-200 rounded animate-pulse dark:bg-gray-800'></div>
-                      </div>
+                      <SkeletonCard key={index} />
                     ))
                     : // 展示当前日期的番剧
                     (() => {
@@ -472,12 +529,10 @@ function HomeClient() {
               {/* 热门综艺 */}
               <section className='mb-8'>
                 <div className='mb-4 flex items-center justify-between'>
-                  <h2 className='text-xl font-bold text-gray-800 dark:text-gray-200'>
-                    热门综艺
-                  </h2>
+                  <SectionTitle title="热门综艺" icon={Sparkles} iconColor="text-pink-500" />
                   <Link
                     href='/douban?type=show'
-                    className='flex items-center text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                    className='flex items-center text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors'
                   >
                     查看更多
                     <ChevronRight className='w-4 h-4 ml-1' />
@@ -487,15 +542,7 @@ function HomeClient() {
                   {loading
                     ? // 加载状态显示灰色占位数据
                     Array.from({ length: 8 }).map((_, index) => (
-                      <div
-                        key={index}
-                        className='min-w-[96px] w-24 sm:min-w-[180px] sm:w-44'
-                      >
-                        <div className='relative aspect-[2/3] w-full overflow-hidden rounded-lg bg-gray-200 animate-pulse dark:bg-gray-800'>
-                          <div className='absolute inset-0 bg-gray-300 dark:bg-gray-700'></div>
-                        </div>
-                        <div className='mt-2 h-4 bg-gray-200 rounded animate-pulse dark:bg-gray-800'></div>
-                      </div>
+                      <SkeletonCard key={index} />
                     ))
                     : // 显示真实数据
                     hotVarietyShows.map((show, index) => (
@@ -519,12 +566,10 @@ function HomeClient() {
               {/* 热门短剧 */}
               <section className='mb-8'>
                 <div className='mb-4 flex items-center justify-between'>
-                  <h2 className='text-xl font-bold text-gray-800 dark:text-gray-200'>
-                    热门短剧
-                  </h2>
+                  <SectionTitle title="热门短剧" icon={Play} iconColor="text-orange-500" />
                   <Link
                     href='/shortdrama'
-                    className='flex items-center text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                    className='flex items-center text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors'
                   >
                     查看更多
                     <ChevronRight className='w-4 h-4 ml-1' />
@@ -534,15 +579,7 @@ function HomeClient() {
                   {loading
                     ? // 加载状态显示灰色占位数据
                     Array.from({ length: 8 }).map((_, index) => (
-                      <div
-                        key={index}
-                        className='min-w-[96px] w-24 sm:min-w-[180px] sm:w-44'
-                      >
-                        <div className='relative aspect-[2/3] w-full overflow-hidden rounded-lg bg-gray-200 animate-pulse dark:bg-gray-800'>
-                          <div className='absolute inset-0 bg-gray-300 dark:bg-gray-700'></div>
-                        </div>
-                        <div className='mt-2 h-4 bg-gray-200 rounded animate-pulse dark:bg-gray-800'></div>
-                      </div>
+                      <SkeletonCard key={index} />
                     ))
                     : // 显示真实数据
                     hotShortDramas.map((drama, index) => (

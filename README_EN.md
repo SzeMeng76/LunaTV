@@ -25,7 +25,7 @@
 ![HLS.js](https://img.shields.io/badge/HLS.js-1.6.13-ec407a)
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Docker Ready](https://img.shields.io/badge/Docker-ready-blue?logo=docker)
-![Version](https://img.shields.io/badge/Version-5.5.6-orange)
+![Version](https://img.shields.io/badge/Version-5.5.7-orange)
 
 </div>
 
@@ -33,7 +33,7 @@
 
 ## 📢 Project Overview
 
-This project is a deeply customized version based on **MoonTV**, continuously developed from **v4.3.1** to the current **v5.5.6**, with **50+ major feature modules** and **300+ detailed optimizations** added. See [CHANGELOG](CHANGELOG) for all new features.
+This project is a deeply customized version based on **MoonTV**, continuously developed from **v4.3.1** to the current **v5.5.7**, with **50+ major feature modules** and **300+ detailed optimizations** added. See [CHANGELOG](CHANGELOG) for all new features.
 
 ### 💡 Core Enhancement Highlights
 
@@ -856,33 +856,31 @@ This project works with [OrionTV](https://github.com/zimplexing/OrionTV) on Andr
 
 For complete feature updates and bug fixes, see [CHANGELOG](CHANGELOG).
 
-### Latest Version: v5.5.6 (2025-10-08)
+### Latest Version: v5.5.7 (2025-10-11)
 
 #### Added
-- 🎯 Skip intro/outro real-time marking button: Interactive button for real-time marking of intro/outro time points
-- 🎮 Draggable skip config floating window: Draggable floating window component with touch support and position persistence
-- 📱 Mobile skip settings button display: Fixed display issue on mobile devices
-- 🎬 Outro remaining time mode cross-episode support: Correct handling of remaining time mode when switching episodes
-- 📊 Continue watching card completion badges: Added completion badges for all continue watching sections
-- 🔍 TVBox deep JAR diagnostics: JAR file header verification and smart health check system
+- 🎮 Episode switching state management optimization: Multiple ref flags to prevent duplicate triggers and playback time errors
+- 🔍 Skip segment detection optimization: Use source + id combination as unique episode identifier
+- 🎯 Anti-duplicate trigger mechanism: lastProcessedSegmentRef tracks processed segments
 
 #### Improved
-- 📐 Draggable skip config window boundary limits: Optimized drag boundary limits and position persistence
-- 🎨 Zeabur deployment guide simplification: Simplified to Docker image only, removed complex GitHub integration
-- 📝 Zeabur deployment guide KVRocks config correction: Fixed persistence path from `/data` to `/var/lib/kvrocks/db`
-- 🌐 Zeabur one-click deployment template link update
-- 🏠 Zeabur post-deployment domain setup reminder: Added important reminder to set access domain after deployment
-- 📚 README anchor link fixes: Fixed anchor links in "Set Access Domain" section
+- ⚡ Removed auto-skip delay for outro: handleAutoSkip executes immediately, no more setTimeout
+- 🎬 Playback time reset optimization: setCurrentTime(0) ensures new episodes start from beginning
+- 🔄 Flag reset timing optimization: Delayed reset of isSkipControllerTriggeredRef prevents race conditions
+- 📊 Cleanup redundant logs: Removed verbose debug logs in SkipController and play/page
+- 🎨 Keep critical warnings: Only keep anti-duplicate trigger warning logs
+- 🗑️ Remove commented code: Cleanup outdated comments in handleNextEpisode
+- 🎭 Unified segment processing logic: checkSkipSegment handles both intro and outro uniformly
 
 #### Fixed
-- 🔧 original_episodes corruption and infinite API request protection
-- 🛡️ Episode detection auto original_episodes update protection
-- 📝 Episode update detection original_episodes overwrite protection
-- 🎬 Outro skip remaining time mode cross-episode fixes (multiple optimizations)
-- 🔄 KVRocks skip config first load issue
-- 📊 Skip config architecture refactor: New skip config design for more stable intro/outro skip functionality
-- 🎯 Continue watching card flicker optimization: Prevent flicker by sorting updatedSeries
-- 🌐 Zeabur deployment guide and demo site updates
+- 🐛 **Fixed critical bug: Auto-play next episode skipping 2 episodes**: Multi-layer defense mechanism
+  - lastProcessedSegmentRef: Prevents same segment from being processed multiple times
+  - videoEndedHandledRef: Prevents same video:ended event from being handled multiple times
+  - isSkipControllerTriggeredRef: Prevents SkipController and video:ended from both triggering
+  - Removed delayed calls: Avoids race conditions caused by setTimeout
+- 🔧 Prevent multiple triggers from component re-renders: ref-based deduplication
+- 🎬 Fixed currentTime not 0 after episode switch: Pause and reset playback time
+- 📱 Optimized episode switching flow: Correct pause, save, reset sequence
 
 ### Major Milestone Versions
 

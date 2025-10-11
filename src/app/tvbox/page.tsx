@@ -14,6 +14,11 @@ interface SecurityConfig {
   rateLimit: number;
 }
 
+interface Source {
+  key: string;
+  name: string;
+}
+
 interface DiagnosisResult {
   spider?: string;
   spiderPrivate?: boolean;
@@ -146,6 +151,11 @@ export default function TVBoxConfigPage() {
   const [refreshingJar, setRefreshingJar] = useState(false);
   const [jarRefreshMsg, setJarRefreshMsg] = useState<string | null>(null);
 
+  // 🔑 新增：用户专属配置状态
+  const [userToken, setUserToken] = useState('');
+  const [userEnabledSources, setUserEnabledSources] = useState<string[]>([]);
+  const [allSources, setAllSources] = useState<Source[]>([]);
+
   // 智能健康检查状态
   const [smartHealthResult, setSmartHealthResult] = useState<SmartHealthResult | null>(null);
   const [smartHealthLoading, setSmartHealthLoading] = useState(false);
@@ -169,6 +179,10 @@ export default function TVBoxConfigPage() {
         const data = await response.json();
         setSecurityConfig(data.securityConfig || null);
         setSiteName(data.siteName || 'MoonTV');
+        // 🔑 新增：设置用户专属配置
+        setUserToken(data.userToken || '');
+        setUserEnabledSources(data.userEnabledSources || []);
+        setAllSources(data.allSources || []);
       }
     } catch (error) {
       console.error('获取安全配置失败:', error);
@@ -188,8 +202,10 @@ export default function TVBoxConfigPage() {
 
     params.append('format', format);
 
-    // 如果启用了Token验证，自动添加token参数
-    if (securityConfig?.enableAuth && securityConfig.token) {
+    // 🔑 优先使用用户专属 Token，如果没有则使用全局 Token
+    if (userToken) {
+      params.append('token', userToken);
+    } else if (securityConfig?.enableAuth && securityConfig.token) {
       params.append('token', securityConfig.token);
     }
 
@@ -199,7 +215,7 @@ export default function TVBoxConfigPage() {
     }
 
     return `${baseUrl}/api/tvbox?${params.toString()}`;
-  }, [format, configMode, securityConfig]);
+  }, [format, configMode, securityConfig, userToken]);
 
   const handleCopy = async () => {
     try {
@@ -328,8 +344,32 @@ export default function TVBoxConfigPage() {
           </div>
         </div>
 
+        {/* 用户专属配置提示 */}
+        {!loading && userToken && (
+          <div className="mb-6">
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <Shield className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+                <div className="flex-1">
+                  <h3 className="font-semibold text-blue-800 dark:text-blue-200 mb-1">
+                    🔑 您的专属TVBox配置
+                  </h3>
+                  <div className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
+                    <p>• 此配置链接仅供您个人使用，请勿分享给他人</p>
+                    {userEnabledSources.length > 0 ? (
+                      <p>• 源限制：您可以访问 {userEnabledSources.length} 个指定源</p>
+                    ) : (
+                      <p>• 源权限：您可以访问所有可用源（{allSources.length} 个）</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* 安全状态提示 */}
-        {!loading && securityConfig && (
+        {!loading && securityConfig && !userToken && (
           <div className="mb-6">
             {(securityConfig.enableAuth || securityConfig.enableIpWhitelist || securityConfig.enableRateLimit) ? (
               <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg p-4">

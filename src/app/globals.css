@@ -232,6 +232,16 @@ div[data-media-provider] video {
   }
 }
 
+/* VideoCard 光泽扫过动画 */
+@keyframes card-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
 /* 平滑动画效果 */
 @keyframes fade-in {
   from {

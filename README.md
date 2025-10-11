@@ -25,7 +25,7 @@
 ![HLS.js](https://img.shields.io/badge/HLS.js-1.6.13-ec407a)
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Docker Ready](https://img.shields.io/badge/Docker-ready-blue?logo=docker)
-![Version](https://img.shields.io/badge/Version-5.5.6-orange)
+![Version](https://img.shields.io/badge/Version-5.5.7-orange)
 
 </div>
 
@@ -33,7 +33,7 @@
 
 ## 📢 项目说明
 
-本项目是在 **MoonTV** 基础上进行的深度二次开发版本，从 **v4.3.1** 版本开始，持续迭代至当前 **v5.5.6**，累计新增 50+ 重大功能模块，300+ 细节优化。所有新增功能详见 [CHANGELOG](CHANGELOG)。
+本项目是在 **MoonTV** 基础上进行的深度二次开发版本，从 **v4.3.1** 版本开始，持续迭代至当前 **v5.5.7**，累计新增 50+ 重大功能模块，300+ 细节优化。所有新增功能详见 [CHANGELOG](CHANGELOG)。
 
 ### 💡 核心增强亮点
 
@@ -845,26 +845,31 @@ services:
 
 完整的功能更新和 Bug 修复记录请查看 [CHANGELOG](CHANGELOG)。
 
-### 最新版本：v5.5.6 (2025-10-08)
+### 最新版本：v5.5.7 (2025-10-11)
 
 #### 新增功能
-- 🎯 片头片尾跳过实时标记按钮：实时标记片头片尾时间点的交互按钮
-- 🎮 可拖拽跳过配置悬浮窗：支持触摸操作和位置持久化存储
-- 🎬 片尾剩余时间模式跨集数支持：剩余时间模式切换集数正确处理
-- 📊 继续观看卡片完结徽章：为所有继续观看部分添加完结徽章
-- 🔍 TVBox深度JAR诊断系统：JAR文件头验证和智能健康检查
+- 🎮 剧集切换状态管理优化：新增多个 ref 标志防止重复触发和播放时间错误
+- 🔍 跳过片段检测优化：使用 source + id 组合作为唯一集数标识
+- 🎯 防重复触发机制：lastProcessedSegmentRef 跟踪已处理片段
 
 #### 优化改进
-- 📐 可拖拽跳过配置悬浮窗边界限制优化
-- 🎨 Zeabur部署指南简化：仅Docker镜像方式
-- 📝 Zeabur部署指南KVRocks配置更正：`/var/lib/kvrocks/db`
-- 🌐 Zeabur一键部署模板链接更新
+- ⚡ 取消片尾自动跳转延迟：handleAutoSkip 立即执行，不再使用 setTimeout
+- 🎬 播放时间重置优化：setCurrentTime(0) 确保新集数从头播放
+- 🔄 标志重置时机优化：延迟重置 isSkipControllerTriggeredRef 防止竞态条件
+- 📊 清理冗余日志：移除 SkipController 和 play/page 中的详细调试日志
+- 🎨 保留关键警告：仅保留防重复触发的警告日志
+- 🗑️ 移除已注释代码：清理 handleNextEpisode 中的过时注释
+- 🎭 统一片段处理逻辑：checkSkipSegment 统一处理片头和片尾
 
 #### Bug 修复
-- 🔧 original_episodes损坏和无限API请求防护
-- 🛡️ 剧集检测时自动original_episodes更新防护
-- 🎬 片尾跳过剩余时间模式跨集数修复
-- 📊 跳过配置架构重构
+- 🐛 **修复片尾自动播放下一集跳2集的严重Bug**：多层防护机制
+  - lastProcessedSegmentRef：防止同一片段被重复处理
+  - videoEndedHandledRef：防止同一 video:ended 事件被多次处理
+  - isSkipControllerTriggeredRef：防止 SkipController 和 video:ended 同时触发
+  - 移除延迟调用：避免 setTimeout 导致的竞态条件
+- 🔧 防止组件重渲染导致的多次触发：ref-based 去重机制
+- 🎬 修复切换集数后 currentTime 不为 0 的问题：暂停并重置播放时间
+- 📱 优化剧集切换流程：正确的暂停、保存、重置顺序
 
 ### 重大里程碑版本
 

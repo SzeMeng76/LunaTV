@@ -167,12 +167,28 @@ export async function GET(request: NextRequest) {
     // 读取当前配置
     const config = await getConfig();
     const securityConfig = config.TVBoxSecurityConfig;
-    
-    // Token验证（从数据库配置读取）
+
+    // 🔑 新增：基于用户 Token 的身份识别
+    let currentUser: { username: string; tvboxEnabledSources?: string[] } | null = null;
+
+    // 优先尝试用户专属 Token（支持用户级源限制）
+    if (token) {
+      const user = config.UserConfig.Users.find(u => u.tvboxToken === token);
+      if (user) {
+        currentUser = {
+          username: user.username,
+          tvboxEnabledSources: user.tvboxEnabledSources
+        };
+        console.log(`[TVBox] 识别到用户 ${user.username}，源限制:`, user.tvboxEnabledSources || '无限制');
+      }
+    }
+
+    // Token验证（兼容旧的全局 Token 模式）
     if (securityConfig?.enableAuth) {
       const validToken = securityConfig.token;
-      if (!token || token !== validToken) {
-        return NextResponse.json({ 
+      // 如果不是用户专属 Token，则必须是全局 Token
+      if (!currentUser && (!token || token !== validToken)) {
+        return NextResponse.json({
           error: 'Invalid token. Please add ?token=YOUR_TOKEN to the URL',
           hint: '请在URL中添加 ?token=你的密钥 参数'
         }, { status: 401 });
@@ -263,7 +279,14 @@ export async function GET(request: NextRequest) {
     }
 
     // 过滤掉被禁用的源站和没有API地址的源站
-    const enabledSources = sourceConfigs.filter(source => !source.disabled && source.api && source.api.trim() !== '');
+    let enabledSources = sourceConfigs.filter(source => !source.disabled && source.api && source.api.trim() !== '');
+
+    // 🔑 新增：应用用户的源限制（如果有）
+    if (currentUser?.tvboxEnabledSources && currentUser.tvboxEnabledSources.length > 0) {
+      const allowedSourceKeys = new Set(currentUser.tvboxEnabledSources);
+      enabledSources = enabledSources.filter(source => allowedSourceKeys.has(source.key));
+      console.log(`[TVBox] 用户 ${currentUser.username} 限制后的源数量: ${enabledSources.length}`);
+    }
 
     // 跟踪全局 spider jar（从 detail 字段中提取）
     let globalSpiderJar = '';

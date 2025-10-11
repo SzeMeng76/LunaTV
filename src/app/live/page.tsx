@@ -1842,13 +1842,18 @@ function LivePageClient() {
                         })
                       ) : (
                         <div className='flex flex-col items-center justify-center py-12 text-center'>
-                          <div className='w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4'>
-                            <Tv className='w-8 h-8 text-gray-400 dark:text-gray-600' />
+                          <div className='relative mb-6'>
+                            <div className='w-20 h-20 bg-gradient-to-br from-gray-100 to-slate-200 dark:from-gray-700 dark:to-slate-700 rounded-2xl flex items-center justify-center shadow-lg'>
+                              <Tv className='w-10 h-10 text-gray-400 dark:text-gray-500' />
+                            </div>
+                            {/* 装饰小点 */}
+                            <div className='absolute -top-1 -right-1 w-3 h-3 bg-blue-400 rounded-full animate-ping'></div>
+                            <div className='absolute -bottom-1 -left-1 w-2 h-2 bg-purple-400 rounded-full animate-pulse'></div>
                           </div>
-                          <p className='text-gray-500 dark:text-gray-400 font-medium'>
+                          <p className='text-base font-semibold text-gray-700 dark:text-gray-300 mb-2'>
                             暂无可用频道
                           </p>
-                          <p className='text-sm text-gray-400 dark:text-gray-500 mt-1'>
+                          <p className='text-sm text-gray-500 dark:text-gray-400'>
                             请选择其他直播源或稍后再试
                           </p>
                         </div>
@@ -2020,13 +2025,18 @@ function LivePageClient() {
                         })
                       ) : (
                         <div className='flex flex-col items-center justify-center py-12 text-center'>
-                          <div className='w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4'>
-                            <Radio className='w-8 h-8 text-gray-400 dark:text-gray-600' />
+                          <div className='relative mb-6'>
+                            <div className='w-20 h-20 bg-gradient-to-br from-orange-100 to-red-200 dark:from-orange-900/40 dark:to-red-900/40 rounded-2xl flex items-center justify-center shadow-lg'>
+                              <Radio className='w-10 h-10 text-orange-500 dark:text-orange-400' />
+                            </div>
+                            {/* 装饰小点 */}
+                            <div className='absolute -top-1 -right-1 w-3 h-3 bg-orange-400 rounded-full animate-ping'></div>
+                            <div className='absolute -bottom-1 -left-1 w-2 h-2 bg-red-400 rounded-full animate-pulse'></div>
                           </div>
-                          <p className='text-gray-500 dark:text-gray-400 font-medium'>
+                          <p className='text-base font-semibold text-gray-700 dark:text-gray-300 mb-2'>
                             暂无可用直播源
                           </p>
-                          <p className='text-sm text-gray-400 dark:text-gray-500 mt-1'>
+                          <p className='text-sm text-gray-500 dark:text-gray-400'>
                             请检查网络连接或联系管理员添加直播源
                           </p>
                         </div>

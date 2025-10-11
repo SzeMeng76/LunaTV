@@ -1,14 +1,18 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
+import AnimatedCardGrid from '@/components/AnimatedCardGrid';
+
 interface ScrollableRowProps {
   children: React.ReactNode;
   scrollDistance?: number;
+  enableAnimation?: boolean;
 }
 
 export default function ScrollableRow({
   children,
   scrollDistance = 1000,
+  enableAnimation = true,
 }: ScrollableRowProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [showLeftScroll, setShowLeftScroll] = useState(false);
@@ -105,7 +109,13 @@ export default function ScrollableRow({
         className='flex space-x-6 overflow-x-auto scrollbar-hide py-1 sm:py-2 pb-12 sm:pb-14 px-4 sm:px-6'
         onScroll={checkScroll}
       >
-        {children}
+        {enableAnimation ? (
+          <AnimatedCardGrid className="flex space-x-6">
+            {children}
+          </AnimatedCardGrid>
+        ) : (
+          children
+        )}
       </div>
       {showLeftScroll && (
         <div

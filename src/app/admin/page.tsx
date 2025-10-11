@@ -49,6 +49,7 @@ import AIRecommendConfig from '@/components/AIRecommendConfig';
 import CacheManager from '@/components/CacheManager';
 import DataMigration from '@/components/DataMigration';
 import TVBoxSecurityConfig from '@/components/TVBoxSecurityConfig';
+import { TVBoxTokenCell, TVBoxTokenModal } from '@/components/TVBoxTokenManager';
 import YouTubeConfig from '@/components/YouTubeConfig';
 import PageLayout from '@/components/PageLayout';
 
@@ -403,6 +404,15 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
   } | null>(null);
   const [showDeleteUserModal, setShowDeleteUserModal] = useState(false);
   const [deletingUser, setDeletingUser] = useState<string | null>(null);
+
+  // 🔑 TVBox Token 管理状态
+  const [showTVBoxTokenModal, setShowTVBoxTokenModal] = useState(false);
+  const [tvboxTokenUser, setTVBoxTokenUser] = useState<{
+    username: string;
+    tvboxToken?: string;
+    tvboxEnabledSources?: string[];
+  } | null>(null);
+  const [selectedTVBoxSources, setSelectedTVBoxSources] = useState<string[]>([]);
 
   // 当前登录用户名
   const currentUsername = getAuthInfoFromBrowserCookie()?.username || null;
@@ -779,8 +789,11 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
 
   if (!config) {
     return (
-      <div className='text-center text-gray-500 dark:text-gray-400'>
-        加载中...
+      <div className='flex justify-center items-center py-8'>
+        <div className='flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200/50 dark:border-blue-700/50 shadow-md'>
+          <div className='animate-spin rounded-full h-5 w-5 border-2 border-blue-300 border-t-blue-600 dark:border-blue-700 dark:border-t-blue-400'></div>
+          <span className='text-sm font-medium text-gray-700 dark:text-gray-300'>加载配置中...</span>
+        </div>
       </div>
     );
   }
@@ -1072,8 +1085,19 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
               ))}
               {userGroups.length === 0 && (
                 <tr>
-                  <td colSpan={3} className='px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400'>
-                    暂无用户组，请添加用户组来管理用户权限
+                  <td colSpan={3} className='px-6 py-12'>
+                    <div className='flex flex-col items-center justify-center'>
+                      <div className='relative mb-4'>
+                        <div className='w-16 h-16 bg-gradient-to-br from-blue-100 to-indigo-200 dark:from-blue-900/40 dark:to-indigo-900/40 rounded-2xl flex items-center justify-center shadow-lg'>
+                          <svg className='w-8 h-8 text-blue-500 dark:text-blue-400' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                            <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z'></path>
+                          </svg>
+                        </div>
+                        <div className='absolute -top-1 -right-1 w-3 h-3 bg-blue-400 rounded-full animate-ping'></div>
+                      </div>
+                      <p className='text-sm font-medium text-gray-700 dark:text-gray-300 mb-1'>暂无用户组</p>
+                      <p className='text-xs text-gray-500 dark:text-gray-400'>请添加用户组来管理用户权限</p>
+                    </div>
                   </td>
                 </tr>
               )}
@@ -1283,6 +1307,12 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                 </th>
                 <th
                   scope='col'
+                  className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'
+                >
+                  TVBox Token
+                </th>
+                <th
+                  scope='col'
                   className='px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'
                 >
                   操作
@@ -1408,6 +1438,32 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                                   user.username === currentUsername))) && (
                                 <button
                                   onClick={() => handleConfigureUserApis(user)}
+                                  className={buttonStyles.roundedPrimary}
+                                >
+                                  配置
+                                </button>
+                              )}
+                          </div>
+                        </td>
+                        {/* TVBox Token 列 */}
+                        <td className='px-6 py-4 whitespace-nowrap'>
+                          <div className='flex items-center space-x-2'>
+                            <TVBoxTokenCell tvboxToken={user.tvboxToken} />
+                            {/* 配置 TVBox Token 按钮 */}
+                            {(role === 'owner' ||
+                              (role === 'admin' &&
+                                (user.role === 'user' ||
+                                  user.username === currentUsername))) && (
+                                <button
+                                  onClick={() => {
+                                    setTVBoxTokenUser({
+                                      username: user.username,
+                                      tvboxToken: user.tvboxToken,
+                                      tvboxEnabledSources: user.tvboxEnabledSources
+                                    });
+                                    setSelectedTVBoxSources(user.tvboxEnabledSources || []);
+                                    setShowTVBoxTokenModal(true);
+                                  }}
                                   className={buttonStyles.roundedPrimary}
                                 >
                                   配置
@@ -2261,6 +2317,23 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
         document.body
       )}
 
+      {/* TVBox Token 管理弹窗 */}
+      {showTVBoxTokenModal && tvboxTokenUser && createPortal(
+        <TVBoxTokenModal
+          username={tvboxTokenUser.username}
+          tvboxToken={tvboxTokenUser.tvboxToken}
+          tvboxEnabledSources={selectedTVBoxSources}
+          allSources={(config?.SourceConfig || []).filter(s => !s.disabled).map(s => ({ key: s.key, name: s.name }))}
+          onClose={() => {
+            setShowTVBoxTokenModal(false);
+            setTVBoxTokenUser(null);
+            setSelectedTVBoxSources([]);
+          }}
+          onUpdate={refreshConfig}
+        />,
+        document.body
+      )}
+
       {/* 批量设置用户组弹窗 */}
       {showBatchUserGroupModal && createPortal(
         <div className='fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4' onClick={() => {
@@ -2839,8 +2912,11 @@ const VideoSourceConfig = ({
 
   if (!config) {
     return (
-      <div className='text-center text-gray-500 dark:text-gray-400'>
-        加载中...
+      <div className='flex justify-center items-center py-8'>
+        <div className='flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200/50 dark:border-blue-700/50 shadow-md'>
+          <div className='animate-spin rounded-full h-5 w-5 border-2 border-blue-300 border-t-blue-600 dark:border-blue-700 dark:border-t-blue-400'></div>
+          <span className='text-sm font-medium text-gray-700 dark:text-gray-300'>加载配置中...</span>
+        </div>
       </div>
     );
   }
@@ -3349,8 +3425,11 @@ const CategoryConfig = ({
 
   if (!config) {
     return (
-      <div className='text-center text-gray-500 dark:text-gray-400'>
-        加载中...
+      <div className='flex justify-center items-center py-8'>
+        <div className='flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200/50 dark:border-blue-700/50 shadow-md'>
+          <div className='animate-spin rounded-full h-5 w-5 border-2 border-blue-300 border-t-blue-600 dark:border-blue-700 dark:border-t-blue-400'></div>
+          <span className='text-sm font-medium text-gray-700 dark:text-gray-300'>加载配置中...</span>
+        </div>
       </div>
     );
   }
@@ -3585,8 +3664,11 @@ const ConfigFileComponent = ({ config, refreshConfig }: { config: AdminConfig | 
 
   if (!config) {
     return (
-      <div className='text-center text-gray-500 dark:text-gray-400'>
-        加载中...
+      <div className='flex justify-center items-center py-8'>
+        <div className='flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200/50 dark:border-blue-700/50 shadow-md'>
+          <div className='animate-spin rounded-full h-5 w-5 border-2 border-blue-300 border-t-blue-600 dark:border-blue-700 dark:border-t-blue-400'></div>
+          <span className='text-sm font-medium text-gray-700 dark:text-gray-300'>加载配置中...</span>
+        </div>
       </div>
     );
   }
@@ -3889,8 +3971,11 @@ const SiteConfigComponent = ({ config, refreshConfig }: { config: AdminConfig | 
 
   if (!config) {
     return (
-      <div className='text-center text-gray-500 dark:text-gray-400'>
-        加载中...
+      <div className='flex justify-center items-center py-8'>
+        <div className='flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200/50 dark:border-blue-700/50 shadow-md'>
+          <div className='animate-spin rounded-full h-5 w-5 border-2 border-blue-300 border-t-blue-600 dark:border-blue-700 dark:border-t-blue-400'></div>
+          <span className='text-sm font-medium text-gray-700 dark:text-gray-300'>加载配置中...</span>
+        </div>
       </div>
     );
   }
@@ -4645,8 +4730,11 @@ const LiveSourceConfig = ({
 
   if (!config) {
     return (
-      <div className='text-center text-gray-500 dark:text-gray-400'>
-        加载中...
+      <div className='flex justify-center items-center py-8'>
+        <div className='flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200/50 dark:border-blue-700/50 shadow-md'>
+          <div className='animate-spin rounded-full h-5 w-5 border-2 border-blue-300 border-t-blue-600 dark:border-blue-700 dark:border-t-blue-400'></div>
+          <span className='text-sm font-medium text-gray-700 dark:text-gray-300'>加载配置中...</span>
+        </div>
       </div>
     );
   }
@@ -5262,12 +5350,14 @@ function AdminPageClient() {
             <h1 className='text-2xl font-bold text-gray-900 dark:text-gray-100 mb-8'>
               管理员设置
             </h1>
-            <div className='space-y-4'>
+            <div className='space-y-6'>
               {Array.from({ length: 3 }).map((_, index) => (
                 <div
                   key={index}
-                  className='h-20 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse'
-                />
+                  className='relative h-24 bg-gradient-to-r from-gray-100 via-gray-200 to-gray-100 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 rounded-xl overflow-hidden'
+                >
+                  <div className='absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/20 to-transparent'></div>
+                </div>
               ))}
             </div>
           </div>

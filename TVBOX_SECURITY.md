@@ -8,19 +8,37 @@ TVBox的JSON接口默认无鉴权，可能被他人滥用。现已添加多种�
 所有安全配置都可以在 **管理后台 > TVBox安全配置** 页面中进行设置，无需修改环境变量或配置文件。
 
 ### 1. Token鉴权（推荐）
-通过URL参数添加token验证：
 
-**后台配置步骤：**
-1. 登录管理后台
-2. 进入 "TVBox安全配置" 页面
-3. 启用 "Token验证"
-4. 系统会自动生成安全token（也可手动修改）
-5. 保存配置
+#### 🌐 全局 Token
+所有用户共享同一个 token：
 
-**使用方式：**
-- 无鉴权：`https://your-domain.com/api/tvbox`
-- 有鉴权：`https://your-domain.com/api/tvbox?token=你的token`
-- Base64格式：`https://your-domain.com/api/tvbox?format=base64&token=你的token`
+**配置步骤：**
+1. 管理后台 > TVBox安全配置
+2. 启用 "Token验证"
+3. 系统自动生成token（可手动修改）
+4. 保存配置
+
+**使用：**
+```
+https://your-domain.com/api/tvbox?token=你的token
+```
+
+#### 👤 用户专属 Token（v5.5.7 新增）
+
+**特性：**
+- 🎯 每个用户独立 token + 源权限
+- 🔒 token 泄露只影响单个用户
+- 📊 可追踪用户访问
+- 🔄 灵活调整权限
+
+**配置：**
+1. 管理后台 > 用户管理
+2. 点击用户的 "TVBox Token" 管理
+3. 生成 Token 并选择可访问的源
+4. 保存（留空=访问所有源）
+
+**优先级：**
+用户专属 Token > 全局 Token > 无验证
 
 ### 2. IP白名单
 限制只允许特定IP访问：

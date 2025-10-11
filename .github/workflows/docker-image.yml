@@ -100,7 +100,7 @@ jobs:
           file: ./Dockerfile
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
-          tags: ghcr.io/${{ steps.lowercase.outputs.owner }}/lunatv:${{ github.event.inputs.tag || 'latest' }}
+          tags: ${{ steps.meta.outputs.tags }}
           outputs: type=image,name=ghcr.io/${{ steps.lowercase.outputs.owner }}/lunatv,name-canonical=true,push=true
           no-cache: true
           pull: true
@@ -124,6 +124,35 @@ jobs:
     needs:
       - build
     steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Check version
+        id: version_check
+        run: |
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+
+          if git rev-parse HEAD~1 >/dev/null 2>&1; then
+            git checkout HEAD~1 -- package.json 2>/dev/null || echo "{\"version\":\"0.0.0\"}" > package.json.old
+            PREVIOUS_VERSION=$(node -p "try { require('./package.json').version } catch(e) { '0.0.0' }")
+            git checkout HEAD -- package.json
+          else
+            PREVIOUS_VERSION="0.0.0"
+          fi
+
+          echo "previous_version=$PREVIOUS_VERSION" >> $GITHUB_OUTPUT
+
+          if [ "$CURRENT_VERSION" != "$PREVIOUS_VERSION" ]; then
+            echo "version_changed=true" >> $GITHUB_OUTPUT
+            echo "Version changed: $PREVIOUS_VERSION -> $CURRENT_VERSION"
+          else
+            echo "version_changed=false" >> $GITHUB_OUTPUT
+            echo "Version unchanged: $CURRENT_VERSION"
+          fi
+
       - name: Download digests
         uses: actions/download-artifact@v4
         with:
@@ -148,8 +177,21 @@ jobs:
       - name: Create manifest list and push
         working-directory: /tmp/digests
         run: |
-          docker buildx imagetools create -t ghcr.io/${{ steps.lowercase.outputs.owner }}/lunatv:${{ github.event.inputs.tag || 'latest' }} \
+          # Always create latest tag
+          docker buildx imagetools create -t ghcr.io/${{ steps.lowercase.outputs.owner }}/lunatv:latest \
             $(printf 'ghcr.io/${{ steps.lowercase.outputs.owner }}/lunatv@sha256:%s ' *)
+
+          # Create version tag if version changed
+          if [ "${{ steps.version_check.outputs.version_changed }}" = "true" ]; then
+            docker buildx imagetools create -t ghcr.io/${{ steps.lowercase.outputs.owner }}/lunatv:${{ steps.version_check.outputs.current_version }} \
+              $(printf 'ghcr.io/${{ steps.lowercase.outputs.owner }}/lunatv@sha256:%s ' *)
+          fi
+
+          # Create custom tag if provided
+          if [ -n "${{ github.event.inputs.tag }}" ] && [ "${{ github.event.inputs.tag }}" != "latest" ]; then
+            docker buildx imagetools create -t ghcr.io/${{ steps.lowercase.outputs.owner }}/lunatv:${{ github.event.inputs.tag }} \
+              $(printf 'ghcr.io/${{ steps.lowercase.outputs.owner }}/lunatv@sha256:%s ' *)
+          fi
 
   cleanup-refresh:
     runs-on: ubuntu-latest

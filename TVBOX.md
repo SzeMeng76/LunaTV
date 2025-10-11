@@ -82,11 +82,41 @@ https://your-domain.com/api/tvbox?format=json&mode=yingshicang
 
 ### Token 认证
 
-启用后自动在 URL 中包含 token：
+LunaTV 支持两种 Token 认证模式：**全局 Token** 和 **用户专属 Token**。
+
+#### 全局 Token（传统模式）
+
+管理员在 TVBox 安全配置中设置统一的 token，所有用户共享：
 
 ```
-https://your-domain.com/api/tvbox?format=json&token=YOUR_TOKEN
+https://your-domain.com/api/tvbox?format=json&token=GLOBAL_TOKEN
 ```
+
+#### 用户专属 Token（推荐）
+
+**新功能**：管理员可以为每个用户生成独立的 TVBox token，并配置该用户可访问的视频源。
+
+**优势：**
+- 🎯 **细粒度权限控制**：不同用户可访问不同的视频源
+- 🔒 **安全性更高**：每个用户拥有独立 token，泄露影响范围更小
+- 📊 **使用追踪**：通过 token 可以识别访问来源
+- 🔄 **灵活管理**：可随时为单个用户重新生成 token 或调整源权限
+
+**配置步骤：**
+1. 管理员登录后台，进入 **用户管理** 页面
+2. 找到目标用户，点击 **TVBox Token** 管理按钮
+3. 点击 **生成 Token** 为用户创建专属 token
+4. 选择该用户可以访问的视频源（留空表示可访问所有源）
+5. 保存配置
+
+**用户使用：**
+```
+https://your-domain.com/api/tvbox?format=json&token=USER_SPECIFIC_TOKEN
+```
+
+**降级机制：**
+- 如果用户有专属 token，则使用用户配置的源权限
+- 如果用户没有专属 token，则回退使用全局 token（访问所有源）
 
 ### IP 白名单
 

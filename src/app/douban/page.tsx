@@ -784,26 +784,38 @@ function DoubanPageClient() {
 
           {/* 选择器组件 */}
           {type !== 'custom' ? (
-            <div className='bg-white/60 dark:bg-gray-800/40 rounded-2xl p-4 sm:p-6 border border-gray-200/30 dark:border-gray-700/30 backdrop-blur-sm'>
-              <DoubanSelector
-                type={type as 'movie' | 'tv' | 'show' | 'anime'}
-                primarySelection={primarySelection}
-                secondarySelection={secondarySelection}
-                onPrimaryChange={handlePrimaryChange}
-                onSecondaryChange={handleSecondaryChange}
-                onMultiLevelChange={handleMultiLevelChange}
-                onWeekdayChange={handleWeekdayChange}
-              />
+            <div className='relative bg-gradient-to-br from-white/80 via-blue-50/30 to-purple-50/30 dark:from-gray-800/60 dark:via-blue-900/20 dark:to-purple-900/20 rounded-2xl p-4 sm:p-6 border border-blue-200/40 dark:border-blue-700/40 backdrop-blur-md shadow-lg hover:shadow-xl transition-all duration-300'>
+              {/* 装饰性光晕 */}
+              <div className='absolute -top-20 -right-20 w-40 h-40 bg-gradient-to-br from-blue-300/20 to-purple-300/20 rounded-full blur-3xl pointer-events-none'></div>
+              <div className='absolute -bottom-20 -left-20 w-40 h-40 bg-gradient-to-br from-green-300/20 to-teal-300/20 rounded-full blur-3xl pointer-events-none'></div>
+
+              <div className='relative'>
+                <DoubanSelector
+                  type={type as 'movie' | 'tv' | 'show' | 'anime'}
+                  primarySelection={primarySelection}
+                  secondarySelection={secondarySelection}
+                  onPrimaryChange={handlePrimaryChange}
+                  onSecondaryChange={handleSecondaryChange}
+                  onMultiLevelChange={handleMultiLevelChange}
+                  onWeekdayChange={handleWeekdayChange}
+                />
+              </div>
             </div>
           ) : (
-            <div className='bg-white/60 dark:bg-gray-800/40 rounded-2xl p-4 sm:p-6 border border-gray-200/30 dark:border-gray-700/30 backdrop-blur-sm'>
-              <DoubanCustomSelector
-                customCategories={customCategories}
-                primarySelection={primarySelection}
-                secondarySelection={secondarySelection}
-                onPrimaryChange={handlePrimaryChange}
-                onSecondaryChange={handleSecondaryChange}
-              />
+            <div className='relative bg-gradient-to-br from-white/80 via-blue-50/30 to-purple-50/30 dark:from-gray-800/60 dark:via-blue-900/20 dark:to-purple-900/20 rounded-2xl p-4 sm:p-6 border border-blue-200/40 dark:border-blue-700/40 backdrop-blur-md shadow-lg hover:shadow-xl transition-all duration-300'>
+              {/* 装饰性光晕 */}
+              <div className='absolute -top-20 -right-20 w-40 h-40 bg-gradient-to-br from-blue-300/20 to-purple-300/20 rounded-full blur-3xl pointer-events-none'></div>
+              <div className='absolute -bottom-20 -left-20 w-40 h-40 bg-gradient-to-br from-green-300/20 to-teal-300/20 rounded-full blur-3xl pointer-events-none'></div>
+
+              <div className='relative'>
+                <DoubanCustomSelector
+                  customCategories={customCategories}
+                  primarySelection={primarySelection}
+                  secondarySelection={secondarySelection}
+                  onPrimaryChange={handlePrimaryChange}
+                  onSecondaryChange={handleSecondaryChange}
+                />
+              </div>
             </div>
           )}
 
@@ -886,9 +898,28 @@ function DoubanPageClient() {
                   className='flex justify-center mt-12 py-8'
                 >
                   {isLoadingMore && (
-                    <div className='flex items-center gap-2'>
-                      <div className='animate-spin rounded-full h-6 w-6 border-b-2 border-green-500'></div>
-                      <span className='text-gray-600'>加载中...</span>
+                    <div className='relative px-8 py-4 rounded-2xl bg-gradient-to-r from-green-50 via-emerald-50 to-teal-50 dark:from-green-900/20 dark:via-emerald-900/20 dark:to-teal-900/20 border border-green-200/50 dark:border-green-700/50 shadow-lg backdrop-blur-sm overflow-hidden'>
+                      {/* 动画背景 */}
+                      <div className='absolute inset-0 bg-gradient-to-r from-green-400/10 via-emerald-400/10 to-teal-400/10 animate-pulse'></div>
+
+                      {/* 内容 */}
+                      <div className='relative flex items-center gap-3'>
+                        {/* 旋转圈 */}
+                        <div className='relative'>
+                          <div className='animate-spin rounded-full h-8 w-8 border-3 border-green-200 dark:border-green-800'></div>
+                          <div className='absolute inset-0 animate-spin rounded-full h-8 w-8 border-3 border-transparent border-t-green-500 dark:border-t-green-400'></div>
+                        </div>
+
+                        {/* 文字和点动画 */}
+                        <div className='flex items-center gap-1'>
+                          <span className='text-sm font-medium text-gray-700 dark:text-gray-300'>加载中</span>
+                          <span className='flex gap-0.5'>
+                            <span className='animate-bounce' style={{ animationDelay: '0ms' }}>.</span>
+                            <span className='animate-bounce' style={{ animationDelay: '150ms' }}>.</span>
+                            <span className='animate-bounce' style={{ animationDelay: '300ms' }}>.</span>
+                          </span>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -896,12 +927,75 @@ function DoubanPageClient() {
 
               {/* 没有更多数据提示 */}
               {!hasMore && doubanData.length > 0 && (
-                <div className='text-center text-gray-500 py-8'>已加载全部内容</div>
+                <div className='flex justify-center mt-12 py-8'>
+                  <div className='relative px-8 py-5 rounded-2xl bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-900/20 dark:via-indigo-900/20 dark:to-purple-900/20 border border-blue-200/50 dark:border-blue-700/50 shadow-lg backdrop-blur-sm overflow-hidden'>
+                    {/* 装饰性背景 */}
+                    <div className='absolute inset-0 bg-gradient-to-br from-blue-100/20 to-purple-100/20 dark:from-blue-800/10 dark:to-purple-800/10'></div>
+
+                    {/* 内容 */}
+                    <div className='relative flex flex-col items-center gap-2'>
+                      {/* 完成图标 */}
+                      <div className='relative'>
+                        <div className='w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center shadow-lg'>
+                          <svg className='w-7 h-7 text-white' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                            <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2.5' d='M5 13l4 4L19 7'></path>
+                          </svg>
+                        </div>
+                        {/* 光圈效果 */}
+                        <div className='absolute inset-0 rounded-full bg-blue-400/30 animate-ping'></div>
+                      </div>
+
+                      {/* 文字 */}
+                      <div className='text-center'>
+                        <p className='text-base font-semibold text-gray-800 dark:text-gray-200 mb-1'>
+                          已加载全部内容
+                        </p>
+                        <p className='text-xs text-gray-600 dark:text-gray-400'>
+                          共 {doubanData.length} 项
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               )}
 
               {/* 空状态 */}
               {!loading && doubanData.length === 0 && (
-                <div className='text-center text-gray-500 py-8'>暂无相关内容</div>
+                <div className='flex justify-center py-16'>
+                  <div className='relative px-12 py-10 rounded-3xl bg-gradient-to-br from-gray-50 via-slate-50 to-gray-100 dark:from-gray-800/40 dark:via-slate-800/40 dark:to-gray-800/50 border border-gray-200/50 dark:border-gray-700/50 shadow-xl backdrop-blur-sm overflow-hidden max-w-md'>
+                    {/* 装饰性元素 */}
+                    <div className='absolute top-0 left-0 w-32 h-32 bg-gradient-to-br from-blue-200/20 to-purple-200/20 rounded-full blur-3xl'></div>
+                    <div className='absolute bottom-0 right-0 w-32 h-32 bg-gradient-to-br from-pink-200/20 to-orange-200/20 rounded-full blur-3xl'></div>
+
+                    {/* 内容 */}
+                    <div className='relative flex flex-col items-center gap-4'>
+                      {/* 插图图标 */}
+                      <div className='relative'>
+                        <div className='w-24 h-24 rounded-full bg-gradient-to-br from-gray-100 to-slate-200 dark:from-gray-700 dark:to-slate-700 flex items-center justify-center shadow-lg'>
+                          <svg className='w-12 h-12 text-gray-400 dark:text-gray-500' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                            <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='1.5' d='M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4'></path>
+                          </svg>
+                        </div>
+                        {/* 浮动小点装饰 */}
+                        <div className='absolute -top-1 -right-1 w-3 h-3 bg-blue-400 rounded-full animate-ping'></div>
+                        <div className='absolute -bottom-1 -left-1 w-2 h-2 bg-purple-400 rounded-full animate-pulse'></div>
+                      </div>
+
+                      {/* 文字内容 */}
+                      <div className='text-center space-y-2'>
+                        <h3 className='text-xl font-bold text-gray-800 dark:text-gray-200'>
+                          暂无相关内容
+                        </h3>
+                        <p className='text-sm text-gray-600 dark:text-gray-400 max-w-xs'>
+                          尝试调整筛选条件或切换其他分类查看更多内容
+                        </p>
+                      </div>
+
+                      {/* 装饰线 */}
+                      <div className='w-16 h-1 bg-gradient-to-r from-transparent via-gray-300 to-transparent dark:via-gray-600 rounded-full'></div>
+                    </div>
+                  </div>
+                </div>
               )}
             </>
           )}
