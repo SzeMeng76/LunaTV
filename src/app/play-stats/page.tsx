@@ -1431,7 +1431,7 @@ const PlayStatsPage: React.FC = () => {
                               <div className="absolute inset-0 rounded-lg ring-2 ring-red-400 ring-opacity-50 animate-pulse pointer-events-none z-10"></div>
                             </div>
                             {/* 新集数徽章 */}
-                            <div className="absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full shadow-lg animate-bounce z-50">
+                            <div className="absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full shadow-lg animate-bounce z-[600] pointer-events-none">
                               +{series.newEpisodes}集
                             </div>
                           </div>
@@ -1464,7 +1464,7 @@ const PlayStatsPage: React.FC = () => {
                               <div className="absolute inset-0 rounded-lg ring-2 ring-red-400 ring-opacity-50 animate-pulse pointer-events-none z-10"></div>
                             </div>
                             {/* 新集数徽章 */}
-                            <div className="absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full shadow-lg animate-bounce z-50">
+                            <div className="absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full shadow-lg animate-bounce z-[600] pointer-events-none">
                               +{series.newEpisodes}集
                             </div>
                           </div>
