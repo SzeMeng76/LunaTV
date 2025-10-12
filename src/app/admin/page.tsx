@@ -809,8 +809,8 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
             注册设置
           </h4>
           <div className='p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800'>
-            <div className='flex items-center justify-between'>
-              <div>
+            <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3'>
+              <div className='flex-1'>
                 <div className='font-medium text-gray-900 dark:text-gray-100'>
                   允许用户注册
                 </div>
@@ -818,7 +818,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                   控制是否允许新用户通过注册页面自行注册账户
                 </div>
               </div>
-              <div className='flex items-center'>
+              <div className='flex items-center shrink-0'>
                 <button
                   type="button"
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 ${config.UserConfig.AllowRegister ? buttonStyles.toggleOn : buttonStyles.toggleOff
@@ -871,8 +871,8 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
 
             {/* 自动清理非活跃用户设置 */}
             <div className='p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700'>
-              <div className='flex items-center justify-between mb-4'>
-                <div>
+              <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4'>
+                <div className='flex-1'>
                   <div className='font-medium text-gray-900 dark:text-gray-100'>
                     自动清理非活跃用户
                   </div>
@@ -880,7 +880,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                     自动删除指定天数内未登录的非活跃用户账号
                   </div>
                 </div>
-                <div className='flex items-center'>
+                <div className='flex items-center shrink-0'>
                   <button
                     type="button"
                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 ${config.UserConfig.AutoCleanupInactiveUsers ? buttonStyles.toggleOn : buttonStyles.toggleOff
@@ -4370,7 +4370,7 @@ const SiteConfigComponent = ({ config, refreshConfig }: { config: AdminConfig | 
             当服务器IP被限制访问上映日程网站时，填写 CORS 代理服务地址。代理服务会将目标 URL 作为 url 参数传递。留空则直接访问。
           </p>
           <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
-            示例：<code className='px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded'>https://api.allorigins.win/raw</code> 或 
+            示例：<code className='px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded'>https://api.allorigins.win/raw</code> 或
             <code className='ml-1 px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded'>https://corsproxy.io</code>
           </p>
         </div>
