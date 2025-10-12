@@ -1856,7 +1856,7 @@ export const UserMenu: React.FC = () => {
                           from="playrecord"
                         />
                         {/* 新集数徽章 */}
-                        <div className='absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full shadow-lg z-50'>
+                        <div className='absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full shadow-lg z-[600] pointer-events-none'>
                           +{series.newEpisodes}集
                         </div>
                       </div>
@@ -1939,7 +1939,7 @@ export const UserMenu: React.FC = () => {
                   />
                   {/* 新集数徽章 */}
                   {newEpisodesCount > 0 && (
-                    <div className='absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full shadow-lg z-50'>
+                    <div className='absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full shadow-lg z-[600] pointer-events-none'>
                       +{newEpisodesCount}集
                     </div>
                   )}
