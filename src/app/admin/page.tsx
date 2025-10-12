@@ -819,9 +819,8 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
               <div className='flex items-center'>
                 <button
                   type="button"
-                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 ${
-                    config.UserConfig.AllowRegister ? buttonStyles.toggleOn : buttonStyles.toggleOff
-                  }`}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 ${config.UserConfig.AllowRegister ? buttonStyles.toggleOn : buttonStyles.toggleOff
+                    }`}
                   role="switch"
                   aria-checked={config.UserConfig.AllowRegister}
                   onClick={async () => {
@@ -838,7 +837,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                             }
                           })
                         });
-                        
+
                         if (response.ok) {
                           await refreshConfig();
                           showAlert({
@@ -858,9 +857,8 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                 >
                   <span
                     aria-hidden="true"
-                    className={`pointer-events-none inline-block h-5 w-5 rounded-full ${buttonStyles.toggleThumb} shadow transform ring-0 transition duration-200 ease-in-out ${
-                      config.UserConfig.AllowRegister ? buttonStyles.toggleThumbOn : buttonStyles.toggleThumbOff
-                    }`}
+                    className={`inline-block h-4 w-4 transform rounded-full ${buttonStyles.toggleThumb} transition-transform ${config.UserConfig.AllowRegister ? buttonStyles.toggleThumbOn : buttonStyles.toggleThumbOff
+                      }`}
                   />
                 </button>
                 <span className='ml-3 text-sm font-medium text-gray-900 dark:text-gray-100'>
@@ -883,9 +881,8 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                 <div className='flex items-center'>
                   <button
                     type="button"
-                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 ${
-                      config.UserConfig.AutoCleanupInactiveUsers ? buttonStyles.toggleOn : buttonStyles.toggleOff
-                    }`}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 ${config.UserConfig.AutoCleanupInactiveUsers ? buttonStyles.toggleOn : buttonStyles.toggleOff
+                      }`}
                     role="switch"
                     aria-checked={config.UserConfig.AutoCleanupInactiveUsers}
                     onClick={async () => {
@@ -926,9 +923,8 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                   >
                     <span
                       aria-hidden="true"
-                      className={`pointer-events-none inline-block h-5 w-5 rounded-full ${buttonStyles.toggleThumb} shadow transform ring-0 transition duration-200 ease-in-out ${
-                        config.UserConfig.AutoCleanupInactiveUsers ? buttonStyles.toggleThumbOn : buttonStyles.toggleThumbOff
-                      }`}
+                      className={`inline-block h-4 w-4 transform rounded-full ${buttonStyles.toggleThumb} transition-transform ${config.UserConfig.AutoCleanupInactiveUsers ? buttonStyles.toggleThumbOn : buttonStyles.toggleThumbOff
+                        }`}
                     />
                   </button>
                   <span className='ml-3 text-sm font-medium text-gray-900 dark:text-gray-100'>
@@ -4408,16 +4404,14 @@ const SiteConfigComponent = ({ config, refreshConfig }: { config: AdminConfig | 
                 EnableTMDBActorSearch: !prev.EnableTMDBActorSearch,
               }))
             }
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-              siteSettings.EnableTMDBActorSearch
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${siteSettings.EnableTMDBActorSearch
                 ? 'bg-green-600'
                 : 'bg-gray-200 dark:bg-gray-700'
-            }`}
+              }`}
           >
             <span
-              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                siteSettings.EnableTMDBActorSearch ? 'translate-x-6' : 'translate-x-1'
-              }`}
+              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${siteSettings.EnableTMDBActorSearch ? 'translate-x-6' : 'translate-x-1'
+                }`}
             />
           </button>
         </div>
@@ -5017,7 +5011,7 @@ const NetDiskConfig = ({
 }) => {
   const { alertModal, showAlert, hideAlert } = useAlertModal();
   const { isLoading, withLoading } = useLoadingState();
-  
+
   const [netDiskSettings, setNetDiskSettings] = useState({
     enabled: true,
     pansouUrl: 'https://so.252035.xyz',
@@ -5080,7 +5074,7 @@ const NetDiskConfig = ({
   const handleCloudTypeChange = (type: string, enabled: boolean) => {
     setNetDiskSettings(prev => ({
       ...prev,
-      enabledCloudTypes: enabled 
+      enabledCloudTypes: enabled
         ? [...prev.enabledCloudTypes, type]
         : prev.enabledCloudTypes.filter(t => t !== type)
     }));
@@ -5105,9 +5099,9 @@ const NetDiskConfig = ({
               <path fillRule='evenodd' d='M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z' clipRule='evenodd' />
             </svg>
             <span>📡 集成开源项目 <strong>PanSou</strong> 提供网盘资源搜索功能</span>
-            <a 
-              href='https://github.com/fish2018/pansou' 
-              target='_blank' 
+            <a
+              href='https://github.com/fish2018/pansou'
+              target='_blank'
               rel='noopener noreferrer'
               className='text-blue-700 dark:text-blue-300 hover:underline font-medium'
             >
@@ -5115,7 +5109,7 @@ const NetDiskConfig = ({
             </a>
           </div>
         </div>
-        
+
         {/* 启用网盘搜索 */}
         <div className='space-y-4'>
           <div className='flex items-center space-x-3'>
@@ -5233,9 +5227,8 @@ const NetDiskConfig = ({
         <button
           onClick={handleSave}
           disabled={isLoading('saveNetDiskConfig')}
-          className={`px-4 py-2 ${
-            isLoading('saveNetDiskConfig') ? buttonStyles.disabled : buttonStyles.success
-          } rounded-lg transition-colors`}
+          className={`px-4 py-2 ${isLoading('saveNetDiskConfig') ? buttonStyles.disabled : buttonStyles.success
+            } rounded-lg transition-colors`}
         >
           {isLoading('saveNetDiskConfig') ? '保存中…' : '保存配置'}
         </button>
