@@ -3886,14 +3886,14 @@ const SiteConfigComponent = ({ config, refreshConfig }: { config: AdminConfig | 
         DoubanImageProxyType:
           config.SiteConfig.DoubanImageProxyType || 'direct',
         DoubanImageProxy: config.SiteConfig.DoubanImageProxy || '',
-        DisableYellowFilter: config.SiteConfig.DisableYellowFilter || false,
-        FluidSearch: config.SiteConfig.FluidSearch || true,
+        DisableYellowFilter: config.SiteConfig.DisableYellowFilter ?? false,
+        FluidSearch: config.SiteConfig.FluidSearch ?? true,
         // TMDB配置
         TMDBApiKey: config.SiteConfig.TMDBApiKey || '',
         TMDBLanguage: config.SiteConfig.TMDBLanguage || 'zh-CN',
-        EnableTMDBActorSearch: config.SiteConfig.EnableTMDBActorSearch || false,
+        EnableTMDBActorSearch: config.SiteConfig.EnableTMDBActorSearch ?? false,
         // 上映日程代理配置
-        ReleaseCalendarProxyEnabled: config.SiteConfig.ReleaseCalendarProxyEnabled || false,
+        ReleaseCalendarProxyEnabled: config.SiteConfig.ReleaseCalendarProxyEnabled ?? false,
         ReleaseCalendarProxy: config.SiteConfig.ReleaseCalendarProxy || '',
       });
     }
@@ -4406,7 +4406,7 @@ const SiteConfigComponent = ({ config, refreshConfig }: { config: AdminConfig | 
                 请输入支持 URL 参数的 CORS 代理服务地址。代理服务会将目标 URL 作为 url 参数传递。
               </p>
               <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
-                示例：<code className='px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded'>https://api.allorigins.win/raw</code> 或 
+                示例：<code className='px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded'>https://api.allorigins.win/raw</code> 或
                 <code className='ml-1 px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded'>https://corsproxy.io</code>
               </p>
             </div>
