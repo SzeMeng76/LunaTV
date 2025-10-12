@@ -179,12 +179,12 @@ export async function scrapeMovieReleases(proxyConfig?: {
 }): Promise<ReleaseCalendarItem[]> {
   try {
     let url = `${baseUrl}/dianying/shijianbiao/`;
-    
+
     // 如果启用代理，将目标URL作为参数传递给代理服务
     if (proxyConfig?.enabled && proxyConfig?.proxyUrl) {
       url = `${proxyConfig.proxyUrl}?url=${encodeURIComponent(url)}`;
     }
-    
+
     const response = await fetch(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
@@ -213,12 +213,12 @@ export async function scrapeTVReleases(proxyConfig?: {
 }): Promise<ReleaseCalendarItem[]> {
   try {
     let url = `${baseUrl}/dianshiju/shijianbiao/`;
-    
+
     // 如果启用代理，将目标URL作为参数传递给代理服务
     if (proxyConfig?.enabled && proxyConfig?.proxyUrl) {
       url = `${proxyConfig.proxyUrl}?url=${encodeURIComponent(url)}`;
     }
-    
+
     const response = await fetch(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',

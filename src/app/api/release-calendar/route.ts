@@ -103,11 +103,11 @@ export async function GET(request: NextRequest) {
 
     // 获取配置中的代理设置
     const config = await getConfig();
-    const proxyConfig = config?.SiteConfig?.ReleaseCalendarProxyEnabled && config?.SiteConfig?.ReleaseCalendarProxy
+    const proxyConfig = config?.SiteConfig?.ReleaseCalendarProxy
       ? {
-          enabled: config.SiteConfig.ReleaseCalendarProxyEnabled,
-          proxyUrl: config.SiteConfig.ReleaseCalendarProxy,
-        }
+        enabled: true,
+        proxyUrl: config.SiteConfig.ReleaseCalendarProxy,
+      }
       : undefined;
 
     // 获取数据和过滤器
@@ -179,11 +179,11 @@ export async function POST(request: NextRequest) {
 
     // 获取配置中的代理设置
     const config = await getConfig();
-    const proxyConfig = config?.SiteConfig?.ReleaseCalendarProxyEnabled && config?.SiteConfig?.ReleaseCalendarProxy
+    const proxyConfig = config?.SiteConfig?.ReleaseCalendarProxy
       ? {
-          enabled: config.SiteConfig.ReleaseCalendarProxyEnabled,
-          proxyUrl: config.SiteConfig.ReleaseCalendarProxy,
-        }
+        enabled: true,
+        proxyUrl: config.SiteConfig.ReleaseCalendarProxy,
+      }
       : undefined;
 
     // 重新获取数据
