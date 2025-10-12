@@ -60,9 +60,9 @@ function formatLoginDisplay(loginCount: number) {
     isSimple: false,
     level: userLevel,
     displayCount: loginCount === 0 ? '0' :
-                  loginCount > 10000 ? '10000+' :
-                  loginCount > 1000 ? `${Math.floor(loginCount / 1000)}k+` :
-                  loginCount.toString()
+      loginCount > 10000 ? '10000+' :
+        loginCount > 1000 ? `${Math.floor(loginCount / 1000)}k+` :
+          loginCount.toString()
   };
 }
 
@@ -655,21 +655,19 @@ const PlayStatsPage: React.FC = () => {
               <nav className='-mb-px flex space-x-8'>
                 <button
                   onClick={() => setActiveTab('admin')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                    activeTab === 'admin'
-                      ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-                  }`}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'admin'
+                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                    }`}
                 >
                   全站统计
                 </button>
                 <button
                   onClick={() => setActiveTab('personal')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                    activeTab === 'personal'
-                      ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-                  }`}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'personal'
+                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                    }`}
                 >
                   我的统计
                 </button>
@@ -1001,11 +999,10 @@ const PlayStatsPage: React.FC = () => {
                             </div>
                             <div className='flex-shrink-0'>
                               <svg
-                                className={`w-5 h-5 text-gray-400 transition-transform ${
-                                  expandedUsers.has(userStat.username)
-                                    ? 'rotate-180'
-                                    : ''
-                                }`}
+                                className={`w-5 h-5 text-gray-400 transition-transform ${expandedUsers.has(userStat.username)
+                                  ? 'rotate-180'
+                                  : ''
+                                  }`}
                                 fill='none'
                                 stroke='currentColor'
                                 viewBox='0 0 24 24'
@@ -1229,24 +1226,21 @@ const PlayStatsPage: React.FC = () => {
                 </div>
                 {/* 新集数更新 */}
                 <div
-                  className={`p-4 rounded-lg border transition-all ${
-                    (watchingUpdates?.updatedCount || 0) > 0
-                      ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
-                      : 'bg-gray-50 dark:bg-gray-900/20 border-gray-200 dark:border-gray-800'
-                  }`}
+                  className={`p-4 rounded-lg border transition-all ${(watchingUpdates?.updatedCount || 0) > 0
+                    ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                    : 'bg-gray-50 dark:bg-gray-900/20 border-gray-200 dark:border-gray-800'
+                    }`}
                 >
-                  <div className={`text-2xl font-bold ${
-                    (watchingUpdates?.updatedCount || 0) > 0
-                      ? 'text-red-800 dark:text-red-300'
-                      : 'text-gray-800 dark:text-gray-300'
-                  }`}>
+                  <div className={`text-2xl font-bold ${(watchingUpdates?.updatedCount || 0) > 0
+                    ? 'text-red-800 dark:text-red-300'
+                    : 'text-gray-800 dark:text-gray-300'
+                    }`}>
                     {watchingUpdates?.updatedCount || 0}
                   </div>
-                  <div className={`text-sm ${
-                    (watchingUpdates?.updatedCount || 0) > 0
-                      ? 'text-red-600 dark:text-red-400'
-                      : 'text-gray-600 dark:text-gray-400'
-                  }`}>
+                  <div className={`text-sm ${(watchingUpdates?.updatedCount || 0) > 0
+                    ? 'text-red-600 dark:text-red-400'
+                    : 'text-gray-600 dark:text-gray-400'
+                    }`}>
                     新集数更新
                   </div>
                   {(watchingUpdates?.updatedCount || 0) > 0 && (
@@ -1258,24 +1252,21 @@ const PlayStatsPage: React.FC = () => {
 
                 {/* 继续观看提醒 */}
                 <div
-                  className={`p-4 rounded-lg border transition-all ${
-                    (watchingUpdates?.continueWatchingCount || 0) > 0
-                      ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
-                      : 'bg-gray-50 dark:bg-gray-900/20 border-gray-200 dark:border-gray-800'
-                  }`}
+                  className={`p-4 rounded-lg border transition-all ${(watchingUpdates?.continueWatchingCount || 0) > 0
+                    ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
+                    : 'bg-gray-50 dark:bg-gray-900/20 border-gray-200 dark:border-gray-800'
+                    }`}
                 >
-                  <div className={`text-2xl font-bold ${
-                    (watchingUpdates?.continueWatchingCount || 0) > 0
-                      ? 'text-blue-800 dark:text-blue-300'
-                      : 'text-gray-800 dark:text-gray-300'
-                  }`}>
+                  <div className={`text-2xl font-bold ${(watchingUpdates?.continueWatchingCount || 0) > 0
+                    ? 'text-blue-800 dark:text-blue-300'
+                    : 'text-gray-800 dark:text-gray-300'
+                    }`}>
                     {watchingUpdates?.continueWatchingCount || 0}
                   </div>
-                  <div className={`text-sm ${
-                    (watchingUpdates?.continueWatchingCount || 0) > 0
-                      ? 'text-blue-600 dark:text-blue-400'
-                      : 'text-gray-600 dark:text-gray-400'
-                  }`}>
+                  <div className={`text-sm ${(watchingUpdates?.continueWatchingCount || 0) > 0
+                    ? 'text-blue-600 dark:text-blue-400'
+                    : 'text-gray-600 dark:text-gray-400'
+                    }`}>
                     继续观看
                   </div>
                   {(watchingUpdates?.continueWatchingCount || 0) > 0 && (
@@ -1305,7 +1296,7 @@ const PlayStatsPage: React.FC = () => {
                       >
                         <span>查看全部</span>
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"/>
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
                         </svg>
                       </button>
                     </div>
@@ -1427,8 +1418,6 @@ const PlayStatsPage: React.FC = () => {
                                 onDelete={undefined}
                                 remarks={series.remarks}
                               />
-                              {/* 新集数提示光环效果 */}
-                              <div className="absolute inset-0 rounded-lg ring-2 ring-red-400 ring-opacity-50 animate-pulse pointer-events-none z-10"></div>
                             </div>
                             {/* 新集数徽章 */}
                             <div className="absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full shadow-lg animate-bounce z-[600] pointer-events-none">
@@ -1460,8 +1449,6 @@ const PlayStatsPage: React.FC = () => {
                                 onDelete={undefined}
                                 remarks={series.remarks}
                               />
-                              {/* 新集数提示光环效果 */}
-                              <div className="absolute inset-0 rounded-lg ring-2 ring-red-400 ring-opacity-50 animate-pulse pointer-events-none z-10"></div>
                             </div>
                             {/* 新集数徽章 */}
                             <div className="absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full shadow-lg animate-bounce z-[600] pointer-events-none">
@@ -1510,11 +1497,9 @@ const PlayStatsPage: React.FC = () => {
                                 onDelete={undefined}
                                 remarks={series.remarks}
                               />
-                              {/* 继续观看提示光环效果 */}
-                              <div className="absolute inset-0 rounded-lg ring-2 ring-blue-400 ring-opacity-50 animate-pulse pointer-events-none z-10"></div>
                             </div>
                             {/* 继续观看徽章 */}
-                            <div className="absolute -top-2 -right-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-xs px-2 py-1 rounded-full shadow-lg animate-pulse z-50">
+                            <div className="absolute -top-2 -right-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-xs px-2 py-1 rounded-full shadow-lg animate-pulse z-[600] pointer-events-none">
                               继续看
                             </div>
                           </div>
@@ -1543,11 +1528,9 @@ const PlayStatsPage: React.FC = () => {
                                 onDelete={undefined}
                                 remarks={series.remarks}
                               />
-                              {/* 继续观看提示光环效果 */}
-                              <div className="absolute inset-0 rounded-lg ring-2 ring-blue-400 ring-opacity-50 animate-pulse pointer-events-none z-10"></div>
                             </div>
                             {/* 继续观看徽章 */}
-                            <div className="absolute -top-2 -right-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-xs px-2 py-1 rounded-full shadow-lg animate-pulse z-50">
+                            <div className="absolute -top-2 -right-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-xs px-2 py-1 rounded-full shadow-lg animate-pulse z-[600] pointer-events-none">
                               继续看
                             </div>
                           </div>
@@ -1695,21 +1678,21 @@ const PlayStatsPage: React.FC = () => {
                 disabled={loading}
                 className='px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-sm rounded-lg transition-colors flex items-center space-x-2'
               >
-              <svg
-                className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`}
-                fill='none'
-                stroke='currentColor'
-                viewBox='0 0 24 24'
-              >
-                <path
-                  strokeLinecap='round'
-                  strokeLinejoin='round'
-                  strokeWidth='2'
-                  d='M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15'
-                />
-              </svg>
-              <span>{loading ? '刷新中...' : '刷新数据'}</span>
-            </button>
+                <svg
+                  className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`}
+                  fill='none'
+                  stroke='currentColor'
+                  viewBox='0 0 24 24'
+                >
+                  <path
+                    strokeLinecap='round'
+                    strokeLinejoin='round'
+                    strokeWidth='2'
+                    d='M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15'
+                  />
+                </svg>
+                <span>{loading ? '刷新中...' : '刷新数据'}</span>
+              </button>
             </div>
           </div>
 
@@ -1829,24 +1812,21 @@ const PlayStatsPage: React.FC = () => {
             </div>
             {/* 新集数更新 */}
             <div
-              className={`p-4 rounded-lg border transition-all ${
-                (watchingUpdates?.updatedCount || 0) > 0
-                  ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
-                  : 'bg-gray-50 dark:bg-gray-900/20 border-gray-200 dark:border-gray-800'
-              }`}
+              className={`p-4 rounded-lg border transition-all ${(watchingUpdates?.updatedCount || 0) > 0
+                ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                : 'bg-gray-50 dark:bg-gray-900/20 border-gray-200 dark:border-gray-800'
+                }`}
             >
-              <div className={`text-2xl font-bold ${
-                (watchingUpdates?.updatedCount || 0) > 0
-                  ? 'text-red-800 dark:text-red-300'
-                  : 'text-gray-800 dark:text-gray-300'
-              }`}>
+              <div className={`text-2xl font-bold ${(watchingUpdates?.updatedCount || 0) > 0
+                ? 'text-red-800 dark:text-red-300'
+                : 'text-gray-800 dark:text-gray-300'
+                }`}>
                 {watchingUpdates?.updatedCount || 0}
               </div>
-              <div className={`text-sm ${
-                (watchingUpdates?.updatedCount || 0) > 0
-                  ? 'text-red-600 dark:text-red-400'
-                  : 'text-gray-600 dark:text-gray-400'
-              }`}>
+              <div className={`text-sm ${(watchingUpdates?.updatedCount || 0) > 0
+                ? 'text-red-600 dark:text-red-400'
+                : 'text-gray-600 dark:text-gray-400'
+                }`}>
                 新集数更新
               </div>
               {(watchingUpdates?.updatedCount || 0) > 0 && (
@@ -1858,24 +1838,21 @@ const PlayStatsPage: React.FC = () => {
 
             {/* 继续观看提醒 */}
             <div
-              className={`p-4 rounded-lg border transition-all ${
-                (watchingUpdates?.continueWatchingCount || 0) > 0
-                  ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
-                  : 'bg-gray-50 dark:bg-gray-900/20 border-gray-200 dark:border-gray-800'
-              }`}
+              className={`p-4 rounded-lg border transition-all ${(watchingUpdates?.continueWatchingCount || 0) > 0
+                ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
+                : 'bg-gray-50 dark:bg-gray-900/20 border-gray-200 dark:border-gray-800'
+                }`}
             >
-              <div className={`text-2xl font-bold ${
-                (watchingUpdates?.continueWatchingCount || 0) > 0
-                  ? 'text-blue-800 dark:text-blue-300'
-                  : 'text-gray-800 dark:text-gray-300'
-              }`}>
+              <div className={`text-2xl font-bold ${(watchingUpdates?.continueWatchingCount || 0) > 0
+                ? 'text-blue-800 dark:text-blue-300'
+                : 'text-gray-800 dark:text-gray-300'
+                }`}>
                 {watchingUpdates?.continueWatchingCount || 0}
               </div>
-              <div className={`text-sm ${
-                (watchingUpdates?.continueWatchingCount || 0) > 0
-                  ? 'text-blue-600 dark:text-blue-400'
-                  : 'text-gray-600 dark:text-gray-400'
-              }`}>
+              <div className={`text-sm ${(watchingUpdates?.continueWatchingCount || 0) > 0
+                ? 'text-blue-600 dark:text-blue-400'
+                : 'text-gray-600 dark:text-gray-400'
+                }`}>
                 继续观看
               </div>
               {(watchingUpdates?.continueWatchingCount || 0) > 0 && (
@@ -1905,7 +1882,7 @@ const PlayStatsPage: React.FC = () => {
                   >
                     <span>查看全部</span>
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"/>
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
                     </svg>
                   </button>
                 </div>
@@ -2027,11 +2004,9 @@ const PlayStatsPage: React.FC = () => {
                             onDelete={undefined}
                             remarks={series.remarks}
                           />
-                          {/* 新集数提示光环效果 */}
-                          <div className="absolute inset-0 rounded-lg ring-2 ring-red-400 ring-opacity-50 animate-pulse pointer-events-none z-10"></div>
                         </div>
                         {/* 新集数徽章 */}
-                        <div className="absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full shadow-lg animate-bounce z-50">
+                        <div className="absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full shadow-lg animate-bounce z-[600] pointer-events-none">
                           +{series.newEpisodes}集
                         </div>
                       </div>
@@ -2061,11 +2036,9 @@ const PlayStatsPage: React.FC = () => {
                             onDelete={undefined}
                             remarks={series.remarks}
                           />
-                          {/* 新集数提示光环效果 */}
-                          <div className="absolute inset-0 rounded-lg ring-2 ring-red-400 ring-opacity-50 animate-pulse pointer-events-none z-10"></div>
                         </div>
                         {/* 新集数徽章 */}
-                        <div className="absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full shadow-lg animate-bounce z-50">
+                        <div className="absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full shadow-lg animate-bounce z-[600] pointer-events-none">
                           +{series.newEpisodes}集
                         </div>
                       </div>
@@ -2112,11 +2085,9 @@ const PlayStatsPage: React.FC = () => {
                             onDelete={undefined}
                             remarks={series.remarks}
                           />
-                          {/* 继续观看提示光环效果 */}
-                          <div className="absolute inset-0 rounded-lg ring-2 ring-blue-400 ring-opacity-50 animate-pulse pointer-events-none z-10"></div>
                         </div>
                         {/* 继续观看标识 */}
-                        <div className="absolute -top-2 -right-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-xs px-2 py-1 rounded-full shadow-lg z-50">
+                        <div className="absolute -top-2 -right-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-xs px-2 py-1 rounded-full shadow-lg z-[600] pointer-events-none">
                           继续观看
                         </div>
                       </div>
@@ -2146,11 +2117,9 @@ const PlayStatsPage: React.FC = () => {
                             onDelete={undefined}
                             remarks={series.remarks}
                           />
-                          {/* 继续观看提示光环效果 */}
-                          <div className="absolute inset-0 rounded-lg ring-2 ring-blue-400 ring-opacity-50 animate-pulse pointer-events-none z-10"></div>
                         </div>
                         {/* 继续观看标识 */}
-                        <div className="absolute -top-2 -right-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-xs px-2 py-1 rounded-full shadow-lg z-50">
+                        <div className="absolute -top-2 -right-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-xs px-2 py-1 rounded-full shadow-lg z-[600] pointer-events-none">
                           继续观看
                         </div>
                       </div>
