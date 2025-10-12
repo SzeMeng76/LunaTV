@@ -870,7 +870,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
             </div>
 
             {/* 自动清理非活跃用户设置 */}
-            <div className='p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700'>
+            <div className='mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700'>
               <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4'>
                 <div className='flex-1'>
                   <div className='font-medium text-gray-900 dark:text-gray-100'>
