@@ -15,6 +15,7 @@ interface SkipControllerProps {
   source: string;
   id: string;
   title: string;
+  episodeIndex?: number; // 新增：当前集数索引，用于区分不同集数
   artPlayerRef: React.MutableRefObject<any>;
   currentTime?: number;
   duration?: number;
@@ -27,6 +28,7 @@ export default function SkipController({
   source,
   id,
   title,
+  episodeIndex = 0,
   artPlayerRef,
   currentTime = 0,
   duration = 0,
@@ -106,6 +108,9 @@ export default function SkipController({
 
   // 🔥 关键修复：记录已处理的片段，防止重复触发
   const lastProcessedSegmentRef = useRef<{ type: string; episodeId: string } | null>(null);
+
+  // 🔥 新增：防止集数切换后立即触发的冷却时间
+  const episodeSwitchCooldownRef = useRef<number>(0);
 
   // 🔑 使用 ref 来存储 batchSettings，避免触发不必要的重新渲染
   const batchSettingsRef = useRef(batchSettings);
@@ -314,6 +319,10 @@ export default function SkipController({
           artPlayerRef.current.notice.show = '自动跳转下一集';
         }
       }
+      // 🔥 设置冷却时间，防止新集数立即触发
+      episodeSwitchCooldownRef.current = Date.now();
+      console.log(`🚫 [SkipController] 设置集数切换冷却时间: ${episodeSwitchCooldownRef.current}`);
+
       // 🔥 关键修复：立即调用 onNextEpisode，不使用延迟
       onNextEpisode();
     } else {
@@ -335,8 +344,18 @@ export default function SkipController({
   // 检查当前播放时间是否在跳过区间内
   const checkSkipSegment = useCallback(
     (time: number) => {
+      // 🔥 检查冷却时间：如果刚切换集数不到3秒，不处理任何跳过逻辑
+      const cooldownTime = 3000; // 3秒冷却时间
+      const timeSinceSwitch = Date.now() - episodeSwitchCooldownRef.current;
+      if (episodeSwitchCooldownRef.current > 0 && timeSinceSwitch < cooldownTime) {
+        // console.log(`⏳ [SkipController] 冷却中，已过${timeSinceSwitch}ms，还需${cooldownTime - timeSinceSwitch}ms`);
+        return;
+      }
+
       // 🔑 使用 ref 中的 batchSettings，避免闭包问题
       const currentBatchSettings = batchSettingsRef.current;
+
+      console.log(`🔍 [SkipController] 检查时间点 ${time.toFixed(2)}s, autoSkip=${currentBatchSettings.autoSkip}, autoNextEpisode=${currentBatchSettings.autoNextEpisode}`);
 
       // 如果没有保存的配置，使用 batchSettings 默认配置
       let segments = skipConfig?.segments;
@@ -355,6 +374,7 @@ export default function SkipController({
             end: openingEnd,
             autoSkip: currentBatchSettings.autoSkip,
           });
+          console.log(`✅ [SkipController] 添加片头配置: ${openingStart}s-${openingEnd}s, autoSkip=${currentBatchSettings.autoSkip}`);
         }
 
         // 添加片尾配置（如果设置了）
@@ -373,9 +393,11 @@ export default function SkipController({
             mode: currentBatchSettings.endingMode as 'absolute' | 'remaining',
             remainingTime: currentBatchSettings.endingMode === 'remaining' ? endingStartSeconds : undefined,
           });
+          console.log(`✅ [SkipController] 添加片尾配置: ${endingStart}s-${duration}s, autoSkip=${currentBatchSettings.autoSkip}, autoNextEpisode=${currentBatchSettings.autoNextEpisode}`);
         }
 
         segments = tempSegments;
+        console.log(`📋 [SkipController] 使用临时配置，共${tempSegments.length}个片段`);
       } else {
         // 如果有保存的配置，处理 remaining 模式
         segments = segments.map(seg => {
@@ -399,12 +421,17 @@ export default function SkipController({
         (segment) => time >= segment.start && time <= segment.end
       );
 
-      // 🔥 关键修复：使用 source + id 作为集数标识
-      const currentEpisodeId = `${source}_${id}`;
+      console.log(`🔎 [SkipController] 查找片段结果: currentSegment=${currentSegment ? `${currentSegment.type}(${currentSegment.start}s-${currentSegment.end}s)` : 'null'}, currentSkipSegment=${currentSkipSegment?.type || 'null'}`);
+
+      // 🔥 关键修复：使用 source + id + episodeIndex 作为集数标识，确保不同集数有不同的ID
+      const currentEpisodeId = `${source}_${id}_${episodeIndex}`;
       const lastProcessed = lastProcessedSegmentRef.current;
 
       // 比较片段类型而不是对象引用（避免临时对象导致的重复触发）
       if (currentSegment && currentSegment.type !== currentSkipSegment?.type) {
+        console.log(`🎯 [SkipController] 检测到${currentSegment.type}片段: ${currentSegment.start}s-${currentSegment.end}s, autoSkip=${currentSegment.autoSkip}`);
+        console.log(`📌 [SkipController] 防重复检查: lastProcessed=${lastProcessed ? `${lastProcessed.type}@${lastProcessed.episodeId}` : 'null'}, currentEpisodeId=${currentEpisodeId}`);
+
         // 🔥 关键修复：检查是否已经处理过这个片段（同一集同一片段类型）
         if (lastProcessed && lastProcessed.type === currentSegment.type && lastProcessed.episodeId === currentEpisodeId) {
           console.log(`⚠️ [防重复] 已处理过 ${currentSegment.type} 片段，跳过重复触发`);
@@ -415,15 +442,18 @@ export default function SkipController({
 
         // 检查当前片段是否开启自动跳过（默认为true）
         const shouldAutoSkip = currentSegment.autoSkip !== false;
+        console.log(`🔧 [SkipController] shouldAutoSkip=${shouldAutoSkip}, currentSegment.autoSkip=${currentSegment.autoSkip}`);
 
         if (shouldAutoSkip) {
           // 🔥 标记已处理
           lastProcessedSegmentRef.current = { type: currentSegment.type, episodeId: currentEpisodeId };
+          console.log(`🚀 [SkipController] 执行自动跳过: ${currentSegment.type}`);
 
           // 🔥 关键修复：立即执行跳过，不延迟！
           handleAutoSkip(currentSegment);
           setShowSkipButton(false); // 自动跳过时不显示按钮
         } else {
+          console.log(`👆 [SkipController] 显示手动跳过按钮`);
           // 手动模式：显示跳过按钮
           setShowSkipButton(true);
 
@@ -447,7 +477,7 @@ export default function SkipController({
         }
       }
     },
-    [skipConfig, currentSkipSegment, handleAutoSkip, duration, timeToSeconds, source, id] // 🔥 添加 source 和 id 依赖，用于防重复检查
+    [skipConfig, currentSkipSegment, handleAutoSkip, duration, timeToSeconds, source, id, episodeIndex] // 🔥 添加 episodeIndex 依赖，用于防重复检查
   );
 
   // 执行跳过
@@ -702,6 +732,8 @@ export default function SkipController({
     const userAutoSkip = savedEnableAutoSkip !== null ? JSON.parse(savedEnableAutoSkip) : true;
     const userAutoNextEpisode = savedEnableAutoNextEpisode !== null ? JSON.parse(savedEnableAutoNextEpisode) : true;
 
+    console.log(`📖 [SkipController] 读取用户设置: autoSkip=${userAutoSkip}, autoNextEpisode=${userAutoNextEpisode}`);
+
     setBatchSettings(prev => ({
       ...prev,
       autoSkip: userAutoSkip,
@@ -747,12 +779,17 @@ export default function SkipController({
     }
   }, [currentTime, checkSkipSegment]);
 
-  // 当 source 或 id 变化时，清理所有状态（换集时）
+  // 当 source 或 id 或 episodeIndex 变化时，清理所有状态（换集时）
   useEffect(() => {
+    console.log(`🔄 [SkipController] 集数变化: source=${source}, id=${id}, episodeIndex=${episodeIndex}, 清理状态`);
+    console.log(`🧹 [SkipController] 清理前 lastProcessedSegmentRef:`, lastProcessedSegmentRef.current);
     setShowSkipButton(false);
     setCurrentSkipSegment(null);
     // 🔥 清除已处理标记，允许新集数重新处理
     lastProcessedSegmentRef.current = null;
+    // 🔥 设置冷却时间，防止新集数立即触发自动跳过
+    episodeSwitchCooldownRef.current = Date.now();
+    console.log(`✅ [SkipController] 已清除 lastProcessedSegmentRef，设置冷却时间，允许新集数处理`);
 
     if (skipTimeoutRef.current) {
       clearTimeout(skipTimeoutRef.current);
@@ -760,7 +797,7 @@ export default function SkipController({
     if (autoSkipTimeoutRef.current) {
       clearTimeout(autoSkipTimeoutRef.current);
     }
-  }, [source, id]);
+  }, [source, id, episodeIndex]);
 
   // 组件卸载时清理定时器
   useEffect(() => {
