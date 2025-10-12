@@ -42,6 +42,7 @@ export async function POST(request: NextRequest) {
       TMDBApiKey,
       TMDBLanguage,
       EnableTMDBActorSearch,
+      ReleaseCalendarProxy,
     } = body as {
       SiteName: string;
       Announcement: string;
@@ -56,6 +57,7 @@ export async function POST(request: NextRequest) {
       TMDBApiKey?: string;
       TMDBLanguage?: string;
       EnableTMDBActorSearch?: boolean;
+      ReleaseCalendarProxy?: string;
     };
 
     // 参数校验
@@ -102,6 +104,7 @@ export async function POST(request: NextRequest) {
       TMDBApiKey: TMDBApiKey || '',
       TMDBLanguage: TMDBLanguage || 'zh-CN',
       EnableTMDBActorSearch: EnableTMDBActorSearch || false,
+      ReleaseCalendarProxy: ReleaseCalendarProxy || '',
     };
 
     // 写入数据库
