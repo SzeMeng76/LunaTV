@@ -5,6 +5,7 @@ import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getReleaseCalendar, getFilters } from '@/lib/release-calendar-scraper';
 import { ReleaseCalendarResult } from '@/lib/types';
 import { CalendarCacheManager } from '@/lib/calendar-cache';
+import { getConfig } from '@/lib/config';
 
 export const runtime = 'nodejs';
 
@@ -100,6 +101,15 @@ export async function GET(request: NextRequest) {
 
     console.log('🌐 获取新的发布日历数据...');
 
+    // 获取配置中的代理设置
+    const config = await getConfig();
+    const proxyConfig = config?.SiteConfig?.ReleaseCalendarProxyEnabled && config?.SiteConfig?.ReleaseCalendarProxy
+      ? {
+          enabled: config.SiteConfig.ReleaseCalendarProxyEnabled,
+          proxyUrl: config.SiteConfig.ReleaseCalendarProxy,
+        }
+      : undefined;
+
     // 获取数据和过滤器
     const [calendarData, filters] = await Promise.all([
       getReleaseCalendar({
@@ -110,8 +120,9 @@ export async function GET(request: NextRequest) {
         dateTo: dateTo || undefined,
         limit,
         offset,
+        proxyConfig,
       }),
-      getFilters(),
+      getFilters(proxyConfig),
     ]);
 
     const result: ReleaseCalendarResult = {
@@ -124,7 +135,7 @@ export async function GET(request: NextRequest) {
     // 💾 更新数据库缓存（仅在获取完整数据时）
     if (!type && !region && !genre && !dateFrom && !dateTo && offset === 0) {
       console.log('📊 获取完整数据，更新数据库缓存...');
-      const allData = await getReleaseCalendar({});
+      const allData = await getReleaseCalendar({ proxyConfig });
       const cacheData = {
         items: allData.items,
         total: allData.total,
@@ -166,10 +177,19 @@ export async function POST(request: NextRequest) {
     // 清除数据库缓存
     await CalendarCacheManager.clearCalendarData();
 
+    // 获取配置中的代理设置
+    const config = await getConfig();
+    const proxyConfig = config?.SiteConfig?.ReleaseCalendarProxyEnabled && config?.SiteConfig?.ReleaseCalendarProxy
+      ? {
+          enabled: config.SiteConfig.ReleaseCalendarProxyEnabled,
+          proxyUrl: config.SiteConfig.ReleaseCalendarProxy,
+        }
+      : undefined;
+
     // 重新获取数据
     const [calendarData, filters] = await Promise.all([
-      getReleaseCalendar({}),
-      getFilters(),
+      getReleaseCalendar({ proxyConfig }),
+      getFilters(proxyConfig),
     ]);
 
     // 更新数据库缓存

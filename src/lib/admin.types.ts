@@ -20,6 +20,9 @@ export interface AdminConfig {
     TMDBApiKey?: string;
     TMDBLanguage?: string;
     EnableTMDBActorSearch?: boolean;
+    // 上映日程代理配置
+    ReleaseCalendarProxyEnabled?: boolean;  // 是否启用代理
+    ReleaseCalendarProxy?: string;          // 代理地址
   };
   UserConfig: {
     AllowRegister?: boolean; // 是否允许用户注册，默认 true

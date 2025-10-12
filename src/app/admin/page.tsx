@@ -277,6 +277,9 @@ interface SiteConfig {
   TMDBApiKey?: string;
   TMDBLanguage?: string;
   EnableTMDBActorSearch?: boolean;
+  // 上映日程代理配置
+  ReleaseCalendarProxyEnabled?: boolean;
+  ReleaseCalendarProxy?: string;
 }
 
 // 视频源数据类型
@@ -3820,6 +3823,9 @@ const SiteConfigComponent = ({ config, refreshConfig }: { config: AdminConfig | 
     TMDBApiKey: '',
     TMDBLanguage: 'zh-CN',
     EnableTMDBActorSearch: false,
+    // 上映日程代理配置默认值
+    ReleaseCalendarProxyEnabled: false,
+    ReleaseCalendarProxy: '',
   });
 
   // 豆瓣数据源相关状态
@@ -3886,6 +3892,9 @@ const SiteConfigComponent = ({ config, refreshConfig }: { config: AdminConfig | 
         TMDBApiKey: config.SiteConfig.TMDBApiKey || '',
         TMDBLanguage: config.SiteConfig.TMDBLanguage || 'zh-CN',
         EnableTMDBActorSearch: config.SiteConfig.EnableTMDBActorSearch || false,
+        // 上映日程代理配置
+        ReleaseCalendarProxyEnabled: config.SiteConfig.ReleaseCalendarProxyEnabled || false,
+        ReleaseCalendarProxy: config.SiteConfig.ReleaseCalendarProxy || '',
       });
     }
   }, [config]);
@@ -4341,6 +4350,70 @@ const SiteConfigComponent = ({ config, refreshConfig }: { config: AdminConfig | 
         </p>
       </div>
 
+      {/* 上映日程代理配置 */}
+      <div className='border-t border-gray-200 dark:border-gray-700 pt-6'>
+        <h3 className='text-lg font-medium text-gray-900 dark:text-gray-100 mb-4'>
+          上映日程代理配置
+        </h3>
+
+        {/* 启用上映日程代理 */}
+        <div className='mb-6'>
+          <div className='flex items-center justify-between mb-3'>
+            <div>
+              <label className='text-sm font-medium text-gray-700 dark:text-gray-300'>
+                启用上映日程代理
+              </label>
+              <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
+                当服务器IP被限制访问上映日程网站时，可以通过代理服务访问
+              </p>
+            </div>
+            <button
+              type='button'
+              onClick={() =>
+                setSiteSettings((prev) => ({
+                  ...prev,
+                  ReleaseCalendarProxyEnabled: !prev.ReleaseCalendarProxyEnabled,
+                }))
+              }
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${siteSettings.ReleaseCalendarProxyEnabled
+                ? 'bg-green-600'
+                : 'bg-gray-200 dark:bg-gray-700'
+                }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${siteSettings.ReleaseCalendarProxyEnabled ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+              />
+            </button>
+          </div>
+
+          {/* 代理地址输入框 */}
+          {siteSettings.ReleaseCalendarProxyEnabled && (
+            <div>
+              <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+                代理服务地址
+              </label>
+              <input
+                type='text'
+                value={siteSettings.ReleaseCalendarProxy || ''}
+                onChange={(e) =>
+                  setSiteSettings((prev) => ({ ...prev, ReleaseCalendarProxy: e.target.value }))
+                }
+                placeholder='https://example.com/proxy'
+                className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent'
+              />
+              <p className='mt-2 text-xs text-gray-500 dark:text-gray-400'>
+                请输入支持 URL 参数的 CORS 代理服务地址。代理服务会将目标 URL 作为 url 参数传递。
+              </p>
+              <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
+                示例：<code className='px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded'>https://api.allorigins.win/raw</code> 或 
+                <code className='ml-1 px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded'>https://corsproxy.io</code>
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* TMDB配置 */}
       <div className='border-t border-gray-200 dark:border-gray-700 pt-6'>
         <h3 className='text-lg font-medium text-gray-900 dark:text-gray-100 mb-4'>
@@ -4405,8 +4478,8 @@ const SiteConfigComponent = ({ config, refreshConfig }: { config: AdminConfig | 
               }))
             }
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${siteSettings.EnableTMDBActorSearch
-                ? 'bg-green-600'
-                : 'bg-gray-200 dark:bg-gray-700'
+              ? 'bg-green-600'
+              : 'bg-gray-200 dark:bg-gray-700'
               }`}
           >
             <span

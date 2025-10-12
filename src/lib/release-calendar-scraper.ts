@@ -173,9 +173,18 @@ function parseTVHTML(html: string): ReleaseCalendarItem[] {
 /**
  * 抓取电影发布时间表
  */
-export async function scrapeMovieReleases(): Promise<ReleaseCalendarItem[]> {
+export async function scrapeMovieReleases(proxyConfig?: {
+  enabled: boolean;
+  proxyUrl: string;
+}): Promise<ReleaseCalendarItem[]> {
   try {
-    const url = `${baseUrl}/dianying/shijianbiao/`;
+    let url = `${baseUrl}/dianying/shijianbiao/`;
+    
+    // 如果启用代理，将目标URL作为参数传递给代理服务
+    if (proxyConfig?.enabled && proxyConfig?.proxyUrl) {
+      url = `${proxyConfig.proxyUrl}?url=${encodeURIComponent(url)}`;
+    }
+    
     const response = await fetch(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
@@ -198,9 +207,18 @@ export async function scrapeMovieReleases(): Promise<ReleaseCalendarItem[]> {
 /**
  * 抓取电视剧发布时间表
  */
-export async function scrapeTVReleases(): Promise<ReleaseCalendarItem[]> {
+export async function scrapeTVReleases(proxyConfig?: {
+  enabled: boolean;
+  proxyUrl: string;
+}): Promise<ReleaseCalendarItem[]> {
   try {
-    const url = `${baseUrl}/dianshiju/shijianbiao/`;
+    let url = `${baseUrl}/dianshiju/shijianbiao/`;
+    
+    // 如果启用代理，将目标URL作为参数传递给代理服务
+    if (proxyConfig?.enabled && proxyConfig?.proxyUrl) {
+      url = `${proxyConfig.proxyUrl}?url=${encodeURIComponent(url)}`;
+    }
+    
     const response = await fetch(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
@@ -223,20 +241,26 @@ export async function scrapeTVReleases(): Promise<ReleaseCalendarItem[]> {
 /**
  * 抓取所有数据
  */
-export async function scrapeAllReleases(): Promise<ReleaseCalendarItem[]> {
+export async function scrapeAllReleases(proxyConfig?: {
+  enabled: boolean;
+  proxyUrl: string;
+}): Promise<ReleaseCalendarItem[]> {
   try {
     console.log('开始抓取发布日历数据...');
+    if (proxyConfig?.enabled && proxyConfig?.proxyUrl) {
+      console.log(`使用代理: ${proxyConfig.proxyUrl}`);
+    }
 
     // 避免并发请求导致的失败，改为顺序执行
     console.log('抓取电影数据...');
-    const movies = await scrapeMovieReleases();
+    const movies = await scrapeMovieReleases(proxyConfig);
     console.log(`电影数据抓取完成: ${movies.length} 部`);
 
     // 添加延迟避免请求过于频繁
     await new Promise(resolve => setTimeout(resolve, 1000));
 
     console.log('抓取电视剧数据...');
-    const tvShows = await scrapeTVReleases();
+    const tvShows = await scrapeTVReleases(proxyConfig);
     console.log(`电视剧数据抓取完成: ${tvShows.length} 部`);
 
     const allItems = [...movies, ...tvShows];
@@ -260,6 +284,10 @@ export async function getReleaseCalendar(options: {
   dateTo?: string;
   limit?: number;
   offset?: number;
+  proxyConfig?: {
+    enabled: boolean;
+    proxyUrl: string;
+  };
 } = {}): Promise<{
   items: ReleaseCalendarItem[];
   total: number;
@@ -267,7 +295,7 @@ export async function getReleaseCalendar(options: {
 }> {
   try {
     // 获取所有数据
-    const allItems = await scrapeAllReleases();
+    const allItems = await scrapeAllReleases(options.proxyConfig);
 
     // 应用过滤条件
     let filteredItems = allItems;
@@ -321,13 +349,16 @@ export async function getReleaseCalendar(options: {
 /**
  * 获取过滤器选项
  */
-export async function getFilters(): Promise<{
+export async function getFilters(proxyConfig?: {
+  enabled: boolean;
+  proxyUrl: string;
+}): Promise<{
   types: Array<{ value: 'movie' | 'tv'; label: string; count: number }>;
   regions: Array<{ value: string; label: string; count: number }>;
   genres: Array<{ value: string; label: string; count: number }>;
 }> {
   try {
-    const allItems = await scrapeAllReleases();
+    const allItems = await scrapeAllReleases(proxyConfig);
 
     // 统计类型
     const typeCount = { movie: 0, tv: 0 };
