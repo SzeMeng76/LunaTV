@@ -185,7 +185,7 @@ const EpisodeSelector: React.FC<EpisodeSelectorProps> = ({
         }
       }
     }
-    return false;
+    return true;
   });
 
   // 当切换到换源tab并且有源数据时，异步获取视频信息 - 移除 attemptedSources 依赖避免循环触发
