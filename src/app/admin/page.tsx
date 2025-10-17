@@ -35,6 +35,7 @@ import {
   FileText,
   FolderOpen,
   Settings,
+  TestTube,
   Tv,
   Upload,
   Users,
@@ -51,6 +52,7 @@ import AIRecommendConfig from '@/components/AIRecommendConfig';
 import CacheManager from '@/components/CacheManager';
 import DataMigration from '@/components/DataMigration';
 import ImportExportModal from '@/components/ImportExportModal';
+import SourceTestModule from '@/components/SourceTestModule';
 import TVBoxSecurityConfig from '@/components/TVBoxSecurityConfig';
 import { TVBoxTokenCell, TVBoxTokenModal } from '@/components/TVBoxTokenManager';
 import YouTubeConfig from '@/components/YouTubeConfig';
@@ -5504,6 +5506,7 @@ function AdminPageClient() {
   const [expandedTabs, setExpandedTabs] = useState<{ [key: string]: boolean }>({
     userConfig: false,
     videoSource: false,
+    sourceTest: false,
     liveSource: false,
     siteConfig: false,
     categoryConfig: false,
@@ -5687,6 +5690,18 @@ function AdminPageClient() {
               onToggle={() => toggleTab('videoSource')}
             >
               <VideoSourceConfig config={config} refreshConfig={fetchConfig} />
+            </CollapsibleTab>
+
+            {/* 源检测标签 */}
+            <CollapsibleTab
+              title='源检测'
+              icon={
+                <TestTube size={20} className='text-gray-600 dark:text-gray-400' />
+              }
+              isExpanded={expandedTabs.sourceTest}
+              onToggle={() => toggleTab('sourceTest')}
+            >
+              <SourceTestModule />
             </CollapsibleTab>
 
             {/* 直播源配置标签 */}

@@ -2,7 +2,7 @@
 
 'use client';
 
-import { Cat, Clover, Film, Home, Menu, PlaySquare, Radio, Search, Star, Tv } from 'lucide-react';
+import { Cat, Clover, Film, Globe, Home, Menu, PlaySquare, Radio, Search, Star, Tv } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -130,6 +130,11 @@ const Sidebar = ({ onToggle, activePath = '/' }: SidebarProps) => {
   };
 
   const [menuItems, setMenuItems] = useState([
+    {
+      icon: Globe,
+      label: '源浏览器',
+      href: '/source-browser',
+    },
     {
       icon: Film,
       label: '电影',
@@ -280,6 +285,7 @@ const Sidebar = ({ onToggle, activePath = '/' }: SidebarProps) => {
 
                   // 为每个菜单项定义独特的渐变色主题
                   const colorThemes = [
+                    { hover: 'hover:from-emerald-50 hover:to-green-50 dark:hover:from-emerald-500/10 dark:hover:to-green-500/10', active: 'data-[active=true]:from-emerald-500/20 data-[active=true]:to-green-500/20 dark:data-[active=true]:from-emerald-500/15 dark:data-[active=true]:to-green-500/15', text: 'hover:text-emerald-600 data-[active=true]:text-emerald-700 dark:hover:text-emerald-400 dark:data-[active=true]:text-emerald-400', icon: 'group-hover:text-emerald-600 data-[active=true]:text-emerald-700 dark:group-hover:text-emerald-400 dark:data-[active=true]:text-emerald-400', shadow: 'hover:shadow-emerald-500/10 data-[active=true]:shadow-emerald-500/20', border: 'from-emerald-500 to-green-500' }, // 源浏览器
                     { hover: 'hover:from-red-50 hover:to-pink-50 dark:hover:from-red-500/10 dark:hover:to-pink-500/10', active: 'data-[active=true]:from-red-500/20 data-[active=true]:to-pink-500/20 dark:data-[active=true]:from-red-500/15 dark:data-[active=true]:to-pink-500/15', text: 'hover:text-red-600 data-[active=true]:text-red-700 dark:hover:text-red-400 dark:data-[active=true]:text-red-400', icon: 'group-hover:text-red-600 data-[active=true]:text-red-700 dark:group-hover:text-red-400 dark:data-[active=true]:text-red-400', shadow: 'hover:shadow-red-500/10 data-[active=true]:shadow-red-500/20', border: 'from-red-500 to-pink-500' }, // 电影
                     { hover: 'hover:from-blue-50 hover:to-indigo-50 dark:hover:from-blue-500/10 dark:hover:to-indigo-500/10', active: 'data-[active=true]:from-blue-500/20 data-[active=true]:to-indigo-500/20 dark:data-[active=true]:from-blue-500/15 dark:data-[active=true]:to-indigo-500/15', text: 'hover:text-blue-600 data-[active=true]:text-blue-700 dark:hover:text-blue-400 dark:data-[active=true]:text-blue-400', icon: 'group-hover:text-blue-600 data-[active=true]:text-blue-700 dark:group-hover:text-blue-400 dark:data-[active=true]:text-blue-400', shadow: 'hover:shadow-blue-500/10 data-[active=true]:shadow-blue-500/20', border: 'from-blue-500 to-indigo-500' }, // 剧集
                     { hover: 'hover:from-purple-50 hover:to-violet-50 dark:hover:from-purple-500/10 dark:hover:to-violet-500/10', active: 'data-[active=true]:from-purple-500/20 data-[active=true]:to-violet-500/20 dark:data-[active=true]:from-purple-500/15 dark:data-[active=true]:to-violet-500/15', text: 'hover:text-purple-600 data-[active=true]:text-purple-700 dark:hover:text-purple-400 dark:data-[active=true]:text-purple-400', icon: 'group-hover:text-purple-600 data-[active=true]:text-purple-700 dark:group-hover:text-purple-400 dark:data-[active=true]:text-purple-400', shadow: 'hover:shadow-purple-500/10 data-[active=true]:shadow-purple-500/20', border: 'from-purple-500 to-violet-500' }, // 短剧
