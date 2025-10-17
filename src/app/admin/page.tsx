@@ -30,11 +30,13 @@ import {
   ChevronDown,
   ChevronUp,
   Database,
+  Download,
   ExternalLink,
   FileText,
   FolderOpen,
   Settings,
   Tv,
+  Upload,
   Users,
   Video,
 } from 'lucide-react';
@@ -48,6 +50,7 @@ import { getAuthInfoFromBrowserCookie } from '@/lib/auth';
 import AIRecommendConfig from '@/components/AIRecommendConfig';
 import CacheManager from '@/components/CacheManager';
 import DataMigration from '@/components/DataMigration';
+import ImportExportModal from '@/components/ImportExportModal';
 import TVBoxSecurityConfig from '@/components/TVBoxSecurityConfig';
 import { TVBoxTokenCell, TVBoxTokenModal } from '@/components/TVBoxTokenManager';
 import YouTubeConfig from '@/components/YouTubeConfig';
@@ -2467,6 +2470,26 @@ const VideoSourceConfig = ({
     return selectedSources.size === sources.length && selectedSources.size > 0;
   }, [selectedSources.size, sources.length]);
 
+  // 导入导出模态框状态
+  const [importExportModal, setImportExportModal] = useState<{
+    isOpen: boolean;
+    mode: 'import' | 'export' | 'result';
+    result?: {
+      success: number;
+      failed: number;
+      skipped: number;
+      details: Array<{
+        name: string;
+        key: string;
+        status: 'success' | 'failed' | 'skipped';
+        reason?: string;
+      }>;
+    };
+  }>({
+    isOpen: false,
+    mode: 'export',
+  });
+
   // 确认弹窗状态
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -2910,6 +2933,185 @@ const VideoSourceConfig = ({
     });
   };
 
+  // 导出视频源
+  const handleExportSources = () => {
+    try {
+      // 获取要导出的源（如果有选中则导出选中的，否则导出全部）
+      const sourcesToExport =
+        selectedSources.size > 0
+          ? sources.filter((s) => selectedSources.has(s.key))
+          : sources;
+
+      if (sourcesToExport.length === 0) {
+        showAlert({
+          type: 'warning',
+          title: '没有可导出的视频源',
+          message: '请先添加视频源或选择要导出的视频源',
+        });
+        return;
+      }
+
+      // 创建导出数据
+      const exportData = sourcesToExport.map((source) => ({
+        name: source.name,
+        key: source.key,
+        api: source.api,
+        detail: source.detail || '',
+        disabled: source.disabled || false,
+      }));
+
+      // 生成文件名
+      const now = new Date();
+      const timestamp = now.toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      const filename = `video_sources_${timestamp}.json`;
+
+      // 创建下载
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+        type: 'application/json',
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      showAlert({
+        type: 'success',
+        title: '导出成功',
+        message: `已导出 ${sourcesToExport.length} 个视频源到 ${filename}`,
+        timer: 3000,
+      });
+
+      // 关闭模态框
+      setImportExportModal({ isOpen: false, mode: 'export' });
+    } catch (err) {
+      showAlert({
+        type: 'error',
+        title: '导出失败',
+        message: err instanceof Error ? err.message : '未知错误',
+      });
+    }
+  };
+
+  // 导入视频源
+  const handleImportSources = async (
+    file: File,
+    onProgress?: (current: number, total: number) => void
+  ) => {
+    try {
+      const text = await file.text();
+      const importData = JSON.parse(text);
+
+      if (!Array.isArray(importData)) {
+        throw new Error('JSON 格式错误：应为数组格式');
+      }
+
+      const result = {
+        success: 0,
+        failed: 0,
+        skipped: 0,
+        details: [] as Array<{
+          name: string;
+          key: string;
+          status: 'success' | 'failed' | 'skipped';
+          reason?: string;
+        }>,
+      };
+
+      const total = importData.length;
+
+      // 逐个导入
+      for (let i = 0; i < importData.length; i++) {
+        const item = importData[i];
+
+        // 更新进度
+        if (onProgress) {
+          onProgress(i + 1, total);
+        }
+
+        try {
+          // 验证必要字段
+          if (!item.name || !item.key || !item.api) {
+            result.failed++;
+            result.details.push({
+              name: item.name || '未知',
+              key: item.key || '未知',
+              status: 'failed',
+              reason: '缺少必要字段（name、key 或 api）',
+            });
+            continue;
+          }
+
+          // 检查是否已存在
+          const exists = sources.find((s) => s.key === item.key);
+          if (exists) {
+            result.skipped++;
+            result.details.push({
+              name: item.name,
+              key: item.key,
+              status: 'skipped',
+              reason: '该 key 已存在，跳过导入',
+            });
+            continue;
+          }
+
+          // 调用API导入
+          await callSourceApi({
+            action: 'add',
+            key: item.key,
+            name: item.name,
+            api: item.api,
+            detail: item.detail || '',
+          });
+
+          result.success++;
+          result.details.push({
+            name: item.name,
+            key: item.key,
+            status: 'success',
+          });
+        } catch (err) {
+          result.failed++;
+          result.details.push({
+            name: item.name,
+            key: item.key,
+            status: 'failed',
+            reason: err instanceof Error ? err.message : '导入失败',
+          });
+        }
+      }
+
+      // 显示结果
+      setImportExportModal({
+        isOpen: true,
+        mode: 'result',
+        result,
+      });
+
+      // 如果有成功导入的，刷新配置
+      if (result.success > 0) {
+        await refreshConfig();
+      }
+    } catch (err) {
+      showAlert({
+        type: 'error',
+        title: '导入失败',
+        message: err instanceof Error ? err.message : '文件解析失败',
+      });
+      setImportExportModal({ isOpen: false, mode: 'import' });
+    }
+
+    return {
+      success: 0,
+      failed: 0,
+      skipped: 0,
+      details: [],
+    };
+  };
+
   if (!config) {
     return (
       <div className='flex justify-center items-center py-8'>
@@ -2963,6 +3165,32 @@ const VideoSourceConfig = ({
             </>
           )}
           <div className='flex items-center gap-2 order-1 sm:order-2'>
+            <button
+              onClick={() => setImportExportModal({ isOpen: true, mode: 'import' })}
+              className='px-3 py-1 text-sm rounded-lg transition-colors flex items-center space-x-1 bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 text-white'
+              title='从 JSON 文件导入视频源'
+            >
+              <Upload className='w-4 h-4' />
+              <span className='hidden sm:inline'>导入视频源</span>
+              <span className='sm:hidden'>导入</span>
+            </button>
+            <button
+              onClick={() => setImportExportModal({ isOpen: true, mode: 'export' })}
+              className='px-3 py-1 text-sm rounded-lg transition-colors flex items-center space-x-1 bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-700 hover:to-emerald-600 text-white'
+              title={
+                selectedSources.size > 0
+                  ? `导出选中的 ${selectedSources.size} 个视频源`
+                  : '导出所有视频源'
+              }
+            >
+              <Download className='w-4 h-4' />
+              <span className='hidden sm:inline'>
+                {selectedSources.size > 0
+                  ? `导出已选(${selectedSources.size})`
+                  : '导出视频源'}
+              </span>
+              <span className='sm:hidden'>导出</span>
+            </button>
             <button
               onClick={() => setShowValidationModal(true)}
               disabled={isValidating}
@@ -3212,6 +3440,16 @@ const VideoSourceConfig = ({
         </div>,
         document.body
       )}
+
+      {/* 导入导出模态框 */}
+      <ImportExportModal
+        isOpen={importExportModal.isOpen}
+        mode={importExportModal.mode}
+        onClose={() => setImportExportModal({ isOpen: false, mode: 'import' })}
+        onImport={handleImportSources}
+        onExport={handleExportSources}
+        result={importExportModal.result}
+      />
     </div>
   );
 };
