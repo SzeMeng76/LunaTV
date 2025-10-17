@@ -92,6 +92,11 @@ async function searchWithCache(
                 matchEpisodes.push(url);  
               }  
             }
+          });
+          if (matchEpisodes.length > episodes.length) {
+            episodes = matchEpisodes;
+            titles = matchTitles;
+          }
         });
       }
 
