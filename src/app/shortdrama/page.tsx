@@ -3,7 +3,7 @@
 'use client';
 
 import { ChevronUp, Filter, Search } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   getShortDramaCategories,
@@ -27,6 +27,8 @@ export default function ShortDramaPage() {
   const [isSearchMode, setIsSearchMode] = useState(false);
   // 返回顶部按钮显示状态
   const [showBackToTop, setShowBackToTop] = useState(false);
+  // 用于防止分类切换时的闪烁
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   const observer = useRef<IntersectionObserver>();
   const lastDramaElementRef = useCallback(
@@ -95,8 +97,6 @@ export default function ShortDramaPage() {
   // 加载短剧列表
   const loadDramas = useCallback(
     async (pageNum: number, reset = false) => {
-      if (!hasMore && !reset) return;
-
       setLoading(true);
       try {
         let result: { list: ShortDramaItem[]; hasMore: boolean };
@@ -108,6 +108,7 @@ export default function ShortDramaPage() {
 
         if (reset) {
           setDramas(result.list);
+          setIsInitialLoad(false);
         } else {
           setDramas((prev) => [...prev, ...result.list]);
         }
@@ -118,7 +119,7 @@ export default function ShortDramaPage() {
         setLoading(false);
       }
     },
-    [selectedCategory, searchQuery, isSearchMode, hasMore]
+    [selectedCategory, searchQuery, isSearchMode]
   );
 
   // 当分类变化时重新加载
@@ -128,14 +129,14 @@ export default function ShortDramaPage() {
       setHasMore(true);
       loadDramas(1, true);
     }
-  }, [selectedCategory, isSearchMode]);
+  }, [selectedCategory, isSearchMode, loadDramas]);
 
   // 当页码变化时加载更多
   useEffect(() => {
     if (page > 1) {
       loadDramas(page, false);
     }
-  }, [page]);
+  }, [page, loadDramas]);
 
   // 处理搜索
   const handleSearch = useCallback(
@@ -200,7 +201,7 @@ export default function ShortDramaPage() {
           </div>
 
           {/* 分类筛选 */}
-          {!isSearchMode && (
+          {!isSearchMode && categories.length > 0 && (
             <div className="mb-6">
               <div className="flex items-center space-x-2 mb-4">
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-md">
@@ -243,8 +244,8 @@ export default function ShortDramaPage() {
             ))}
           </div>
 
-          {/* 加载状态 */}
-          {loading && (
+          {/* 加载状态 - 只在首次加载或加载更多时显示骨架屏 */}
+          {loading && (isInitialLoad || page > 1) && (
             <div className="mt-8">
               <div className="flex justify-center mb-6">
                 <div className='flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl border border-purple-200/50 dark:border-purple-700/50 shadow-md'>

@@ -1841,22 +1841,24 @@ export const UserMenu: React.FC = () => {
                   {watchingUpdates.updatedSeries
                     .filter(series => series.hasNewEpisode)
                     .map((series, index) => (
-                      <div key={`new-${series.title}_${series.year}_${index}`} className='relative'>
-                        <VideoCard
-                          title={series.title}
-                          poster={series.cover}
-                          year={series.year}
-                          source={series.sourceKey}
-                          source_name={series.source_name}
-                          episodes={series.totalEpisodes}
-                          currentEpisode={series.currentEpisode}
-                          id={series.videoId}
-                          onDelete={undefined}
-                          type={series.totalEpisodes > 1 ? 'tv' : ''}
-                          from="playrecord"
-                        />
+                      <div key={`new-${series.title}_${series.year}_${index}`} className='relative group/card'>
+                        <div className='relative group-hover/card:z-[500] transition-all duration-300'>
+                          <VideoCard
+                            title={series.title}
+                            poster={series.cover}
+                            year={series.year}
+                            source={series.sourceKey}
+                            source_name={series.source_name}
+                            episodes={series.totalEpisodes}
+                            currentEpisode={series.currentEpisode}
+                            id={series.videoId}
+                            onDelete={undefined}
+                            type={series.totalEpisodes > 1 ? 'tv' : ''}
+                            from="playrecord"
+                          />
+                        </div>
                         {/* 新集数徽章 */}
-                        <div className='absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full shadow-lg z-50'>
+                        <div className='absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full shadow-lg z-[502]'>
                           +{series.newEpisodes}集
                         </div>
                       </div>
@@ -1921,25 +1923,27 @@ export const UserMenu: React.FC = () => {
               const { source, id } = parseKey(record.key);
               const newEpisodesCount = getNewEpisodesCount(record);
               return (
-                <div key={record.key} className='relative'>
-                  <VideoCard
-                    id={id}
-                    title={record.title}
-                    poster={record.cover}
-                    year={record.year}
-                    source={source}
-                    source_name={record.source_name}
-                    progress={getProgress(record)}
-                    episodes={record.total_episodes}
-                    currentEpisode={record.index}
-                    query={record.search_title}
-                    from='playrecord'
-                    type={record.total_episodes > 1 ? 'tv' : ''}
-                    remarks={record.remarks}
-                  />
+                <div key={record.key} className='relative group/card'>
+                  <div className='relative group-hover/card:z-[500] transition-all duration-300'>
+                    <VideoCard
+                      id={id}
+                      title={record.title}
+                      poster={record.cover}
+                      year={record.year}
+                      source={source}
+                      source_name={record.source_name}
+                      progress={getProgress(record)}
+                      episodes={record.total_episodes}
+                      currentEpisode={record.index}
+                      query={record.search_title}
+                      from='playrecord'
+                      type={record.total_episodes > 1 ? 'tv' : ''}
+                      remarks={record.remarks}
+                    />
+                  </div>
                   {/* 新集数徽章 */}
                   {newEpisodesCount > 0 && (
-                    <div className='absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full shadow-lg z-50'>
+                    <div className='absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full shadow-lg z-[502]'>
                       +{newEpisodesCount}集
                     </div>
                   )}
