@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
           const searchPromise = Promise.race([
             searchFromApi(site, query),
             new Promise((_, reject) =>
-              setTimeout(() => reject(new Error(`${site.name} timeout`)), 20000)
+              setTimeout(() => reject(new Error(`${site.name} timeout`)), 40000)
             ),
           ]);
 
