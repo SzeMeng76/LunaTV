@@ -26,7 +26,7 @@ async function searchWithCache(
   query: string,
   page: number,
   url: string,
-  timeoutMs = 30000
+  timeoutMs = 8000
 ): Promise<{ results: SearchResult[]; pageCount?: number }> {
   // 先查缓存
   const cached = getCachedSearchPage(apiSite.key, query, page);
