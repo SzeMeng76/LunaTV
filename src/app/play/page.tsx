@@ -59,7 +59,10 @@ function PlayPageClient() {
 
   // 收藏状态
   const [favorited, setFavorited] = useState(false);
-
+  
+  // 复制下载链接状态  
+  const [linkCopied, setLinkCopied] = useState(false); 
+  
   // 豆瓣详情状态
   const [movieDetails, setMovieDetails] = useState<any>(null);
   const [loadingMovieDetails, setLoadingMovieDetails] = useState(false);
