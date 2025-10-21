@@ -4184,95 +4184,116 @@ function PlayPageClient() {
               </div>
             </div>
 {/* 第三方播放器和下载按钮 */}  
-<div className="flex flex-wrap gap-3 mt-4 px-4">  
-  <button  
-    onClick={() => {  
-      window.location.href = `iina://weblink?url=${encodeURIComponent(videoUrl)}`;  
-    }}  
-    className="relative group flex items-center justify-center w-12 h-12 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-lg transition-colors"  
-  >  
-    <img   
-      src="https://fastly.jsdelivr.net/gh/bpking1/embyExternalUrl@0.0.5/embyWebAddExternalUrl/icons/icon-IINA.webp"   
-      alt="IINA"  
-      className="w-6 h-6"  
-    />  
-    {/* Tooltip */}  
-    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-gray-800 text-white text-xs rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 ease-out delay-100 whitespace-nowrap pointer-events-none z-50">  
-      IINA  
-      <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800"></div>  
-    </div>  
-  </button>  
+{(() => {  
+  // 1. 查找源  
+  const bananaSource = availableSources.find(source => source.source === 'banana');  
     
-  <button  
-    onClick={() => {  
-      window.location.href = `potplayer://${encodeURIComponent(videoUrl)}`;  
-    }}  
-    className="relative group flex items-center justify-center w-12 h-12 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-lg transition-colors"  
-  >  
-    <img   
-      src="https://fastly.jsdelivr.net/gh/bpking1/embyExternalUrl@0.0.5/embyWebAddExternalUrl/icons/icon-PotPlayer.webp"   
-      alt="PotPlayer"  
-      className="w-6 h-6"  
-    />  
-    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-gray-800 text-white text-xs rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 ease-out delay-100 whitespace-nowrap pointer-events-none z-50">  
-      PotPlayer  
-      <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800"></div>  
-    </div>  
-  </button>  
+  // 如果没有源,不显示按钮  
+  if (!bananaSource) {  
+    return null;  
+  }  
     
-  <button  
-    onClick={() => {  
-      window.location.href = `vlc://${encodeURIComponent(videoUrl)}`;  
-    }}  
-    className="relative group flex items-center justify-center w-12 h-12 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-lg transition-colors"  
-  >  
-    <img   
-      src="https://fastly.jsdelivr.net/gh/bpking1/embyExternalUrl@0.0.5/embyWebAddExternalUrl/icons/icon-VLC.webp"   
-      alt="VLC"  
-      className="w-6 h-6"  
-    />  
-    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-gray-800 text-white text-xs rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 ease-out delay-100 whitespace-nowrap pointer-events-none z-50">  
-      VLC  
-      <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800"></div>  
-    </div>  
-  </button>  
+  // 2. 获取源当前集数的视频URL  
+  const bananaVideoUrl = bananaSource.episodes?.[currentEpisodeIndex] || '';  
     
-  <button  
-    onClick={() => {  
-      window.location.href = `nplayer-${videoUrl}`;  
-    }}  
-    className="relative group flex items-center justify-center w-12 h-12 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-lg transition-colors"  
-  >  
-    <img   
-      src="https://fastly.jsdelivr.net/gh/bpking1/embyExternalUrl@0.0.5/embyWebAddExternalUrl/icons/icon-NPlayer.webp"   
-      alt="nPlayer"  
-      className="w-6 h-6"  
-    />  
-    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-gray-800 text-white text-xs rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 ease-out delay-100 whitespace-nowrap pointer-events-none z-50">  
-      nPlayer  
-      <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800"></div>  
-    </div>  
-  </button>  
+  // 如果源没有当前集数的URL,不显示按钮  
+  if (!bananaVideoUrl) {  
+    return null;  
+  }  
     
-  <button  
-    onClick={() => {  
-      const a = document.createElement('a');  
-      a.href = videoUrl;  
-      a.download = '';  
-      a.click();  
-    }}  
-    className="relative group flex items-center justify-center w-12 h-12 bg-green-500 hover:bg-green-600 rounded-lg transition-colors"  
-  >  
-    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">  
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />  
-    </svg>  
-    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-gray-800 text-white text-xs rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 ease-out delay-100 whitespace-nowrap pointer-events-none z-50">  
-      下载视频  
-      <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800"></div>  
+  // 3. 条件渲染 - 返回按钮组  
+  return (  
+    <div className="flex flex-wrap gap-2 mt-3 px-4 lg:gap-3 lg:mt-4">  
+      {/* IINA */}  
+      <button  
+        onClick={() => {  
+          // 4. 跨源跳转 - 始终使用URL  
+          window.location.href = `iina://weblink?url=${encodeURIComponent(bananaVideoUrl)}`;  
+        }}  
+        className="relative group flex items-center justify-center w-10 h-10 lg:w-12 lg:h-12 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-lg transition-colors"  
+      >  
+        <img   
+          src="https://fastly.jsdelivr.net/gh/bpking1/embyExternalUrl@0.0.5/embyWebAddExternalUrl/icons/icon-IINA.webp"   
+          alt="IINA"  
+          className="w-5 h-5 lg:w-6 lg:h-6"  
+        />  
+        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-gray-800 text-white text-xs rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 ease-out delay-100 whitespace-nowrap pointer-events-none z-50">  
+          IINA 
+          <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800"></div>  
+        </div>  
+      </button>  
+        
+      {/* PotPlayer */}  
+      <button  
+        onClick={() => {  
+          window.location.href = `potplayer://${encodeURIComponent(bananaVideoUrl)}`;  
+        }}  
+        className="relative group flex items-center justify-center w-10 h-10 lg:w-12 lg:h-12 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-lg transition-colors"  
+      >  
+        <img   
+          src="https://fastly.jsdelivr.net/gh/bpking1/embyExternalUrl@0.0.5/embyWebAddExternalUrl/icons/icon-PotPlayer.webp"   
+          alt="PotPlayer"  
+          className="w-5 h-5 lg:w-6 lg:h-6"  
+        />  
+        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-gray-800 text-white text-xs rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 ease-out delay-100 whitespace-nowrap pointer-events-none z-50">  
+          PotPlayer 
+          <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800"></div>  
+        </div>  
+      </button>  
+        
+      {/* VLC */}  
+      <button  
+        onClick={() => {  
+          window.location.href = `vlc://${encodeURIComponent(bananaVideoUrl)}`;  
+        }}  
+        className="relative group flex items-center justify-center w-10 h-10 lg:w-12 lg:h-12 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-lg transition-colors"  
+      >  
+        <img   
+          src="https://fastly.jsdelivr.net/gh/bpking1/embyExternalUrl@0.0.5/embyWebAddExternalUrl/icons/icon-VLC.webp"   
+          alt="VLC"  
+          className="w-5 h-5 lg:w-6 lg:h-6"  
+        />  
+        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-gray-800 text-white text-xs rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 ease-out delay-100 whitespace-nowrap pointer-events-none z-50">  
+          VLC
+          <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800"></div>  
+        </div>  
+      </button>  
+        
+      {/* nPlayer */}  
+      <button  
+        onClick={() => {  
+          window.location.href = `nplayer-${bananaVideoUrl}`;  
+        }}  
+        className="relative group flex items-center justify-center w-10 h-10 lg:w-12 lg:h-12 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-lg transition-colors"  
+      >  
+        <img   
+          src="https://fastly.jsdelivr.net/gh/bpking1/embyExternalUrl@0.0.5/embyWebAddExternalUrl/icons/icon-NPlayer.webp"   
+          alt="nPlayer"  
+          className="w-5 h-5 lg:w-6 lg:h-6"  
+        />  
+        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-gray-800 text-white text-xs rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 ease-out delay-100 whitespace-nowrap pointer-events-none z-50">  
+          nPlayer
+          <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800"></div>  
+        </div>  
+      </button>  
+        
+      {/* 下载按钮 */}  
+      <a  
+        href={bananaVideoUrl}  
+        download  
+        className="relative group flex items-center justify-center w-10 h-10 lg:w-12 lg:h-12 bg-green-500 hover:bg-green-600 rounded-lg transition-colors"  
+      >  
+        <svg className="w-5 h-5 lg:w-6 lg:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">  
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />  
+        </svg>  
+        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-gray-800 text-white text-xs rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 ease-out delay-100 whitespace-nowrap pointer-events-none z-50">  
+          下载视频
+          <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800"></div>  
+        </div>  
+      </a>  
     </div>  
-  </button>  
-</div>
-
+  );  
+})()}
             {/* 选集和换源 - 在移动端始终显示，在 lg 及以上可折叠 */}
             <div
               className={`h-[300px] lg:h-full md:overflow-hidden transition-all duration-300 ease-in-out ${isEpisodeSelectorCollapsed
