@@ -60,9 +60,6 @@ function PlayPageClient() {
   // 收藏状态
   const [favorited, setFavorited] = useState(false);
   
-  // 复制下载链接状态  
-  const [linkCopied, setLinkCopied] = useState(false); 
-  
   // 豆瓣详情状态
   const [movieDetails, setMovieDetails] = useState<any>(null);
   const [loadingMovieDetails, setLoadingMovieDetails] = useState(false);
@@ -4430,7 +4427,7 @@ function PlayPageClient() {
       <a            
         href={convertedUrl}            
         download            
-        className="relative group flex items-center gap-1.5 bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded-full text-sm font-medium shadow-md transition-colors"            
+        className="relative group flex items-center gap-1.5 bg-green-500 hover:bg-green-600 text-white px-3 py-2.5 rounded-full text-sm font-medium shadow-md transition-colors"            
       >            
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">            
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />            
@@ -4439,41 +4436,7 @@ function PlayPageClient() {
           下载视频             
           <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800"></div>            
         </div>            
-      </a>    
-          
-      {/* 复制链接按钮 - 所有平台 */}    
-      <button    
-        onClick={async () => {    
-          try {    
-            await navigator.clipboard.writeText(convertedUrl);    
-            setLinkCopied(true);    
-            setTimeout(() => setLinkCopied(false), 2000);    
-          } catch (err) {    
-            console.error('复制失败:', err);    
-          }    
-        }}    
-        className="relative group flex items-center gap-1.5 bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-full text-sm font-medium shadow-md transition-colors"    
-      >    
-        {linkCopied ? (    
-          <>    
-            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">    
-              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />    
-            </svg>    
-            <span>已复制</span>    
-          </>    
-        ) : (    
-          <>    
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">    
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />    
-            </svg>    
-            <span>复制链接</span>    
-          </>    
-        )}    
-        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-gray-800 text-white text-xs rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 ease-out delay-100 whitespace-nowrap pointer-events-none z-50">    
-          {linkCopied ? '复制成功' : '复制视频链接'}    
-          <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800"></div>    
-        </div>    
-      </button>    
+      </a>   
     </div>            
   );            
 })()}
