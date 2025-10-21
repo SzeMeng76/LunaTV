@@ -1457,17 +1457,17 @@ function PlayPageClient() {
     // 🔥 标记正在切换集数（只在非换源时）
     if (!isSourceChangingRef.current) {
       isEpisodeChangingRef.current = true;
-      // 🔑 立即重置 SkipController 触发标志，允许新集数自动片头片尾
+      // 🔑 立即重置 SkipController 触发标志，允许新集数自动跳过片头片尾
       isSkipControllerTriggeredRef.current = false;
       videoEndedHandledRef.current = false;
-      console.log('🔄 开始切换集数，重置自动标志');
+      console.log('🔄 开始切换集数，重置自动跳过标志');
     }
 
     updateVideoUrl(detail, currentEpisodeIndex);
 
-    // 🚀 如果正在换源，弹幕处理（换源会在完成后手动处理）
+    // 🚀 如果正在换源，跳过弹幕处理（换源会在完成后手动处理）
     if (isSourceChangingRef.current) {
-      console.log('⏭️ 正在换源，弹幕处理');
+      console.log('⏭️ 正在换源，跳过弹幕处理');
       return;
     }
 
@@ -1502,7 +1502,7 @@ function PlayPageClient() {
         try {
           // 确保播放器和插件仍然存在（防止快速切换时的状态不一致）
           if (!artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
-            console.warn('⚠️ 集数切换后弹幕插件不存在，弹幕加载');
+            console.warn('⚠️ 集数切换后弹幕插件不存在，跳过弹幕加载');
             return;
           }
           
@@ -1757,7 +1757,7 @@ function PlayPageClient() {
 
       let sourcesInfo: SearchResult[] = [];
 
-      // 对于短剧，直接获取详情，搜索
+      // 对于短剧，直接获取详情，跳过搜索
       if (currentSource === 'shortdrama' && currentId) {
         sourcesInfo = await fetchSourceDetail(currentSource, currentId);
       } else {
@@ -2526,7 +2526,7 @@ function PlayPageClient() {
 
             // 🔥 重置集数切换标识
             if (isEpisodeChange) {
-              // 🔑 关键修复：切换集数后显式重置播放时间为 0，确保片头自动能触发
+              // 🔑 关键修复：切换集数后显式重置播放时间为 0，确保片头自动跳过能触发
               artPlayerRef.current.currentTime = 0;
               console.log('🎯 集数切换完成，重置播放时间为 0');
               isEpisodeChangingRef.current = false;
@@ -3714,7 +3714,7 @@ function PlayPageClient() {
         }
       });
 
-      // 合并的timeupdate监听器 - 处理片头片尾和保存进度
+      // 合并的timeupdate监听器 - 处理跳过片头片尾和保存进度
       artPlayerRef.current.on('video:timeupdate', () => {
         const currentTime = artPlayerRef.current.currentTime || 0;
         const duration = artPlayerRef.current.duration || 0;
@@ -3730,7 +3730,7 @@ function PlayPageClient() {
         const interval = process.env.NEXT_PUBLIC_STORAGE_TYPE === 'upstash' ? 20000 : 10000; // 统一提高到10秒
 
         // 🔥 关键修复：如果当前播放位置接近视频结尾（最后3分钟），不保存进度
-        // 这是为了避免自动片尾时保存了片尾位置的进度，导致"继续观看"从错误位置开始
+        // 这是为了避免自动跳过片尾时保存了片尾位置的进度，导致"继续观看"从错误位置开始
         const remainingTime = duration - currentTime;
         const isNearEnd = duration > 0 && remainingTime < 180; // 最后3分钟
 
