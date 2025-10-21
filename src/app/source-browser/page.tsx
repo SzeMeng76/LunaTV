@@ -636,8 +636,9 @@ export default function SourceBrowserPage() {
         {/* Query & Sort */}
         {activeSource && (
           <div className='bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-200 dark:border-gray-700'>
-            <div className='px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between gap-3'>
-              <div className='flex-1 flex items-center gap-2'>
+            <div className='px-4 py-3 border-b border-gray-200 dark:border-gray-700 space-y-3'>
+              {/* 第一行：搜索框 + 清除按钮 + 模式显示 */}
+              <div className='flex items-center gap-2'>
                 <input
                   value={query}
                   onChange={(e) => {
@@ -670,12 +671,19 @@ export default function SourceBrowserPage() {
                       if (activeCategory)
                         fetchItems(activeSourceKey, activeCategory, 1);
                     }}
-                    className='px-2 py-2 text-xs border rounded-md'
+                    className='px-3 py-2 text-xs border rounded-md whitespace-nowrap hover:bg-gray-100 dark:hover:bg-gray-700'
                     title='清除'
                   >
                     清除
                   </button>
                 )}
+                <div className='hidden sm:block text-xs text-gray-500 whitespace-nowrap'>
+                  {mode === 'search' ? '搜索' : '分类'}
+                </div>
+              </div>
+
+              {/* 第二行：筛选控件（移动端自动换行） */}
+              <div className='flex flex-wrap gap-2'>
                 <select
                   value={sortBy}
                   onChange={(e) =>
@@ -688,7 +696,7 @@ export default function SourceBrowserPage() {
                         | 'year-desc'
                     )
                   }
-                  className='px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm'
+                  className='flex-1 min-w-[120px] px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm'
                   title='排序'
                 >
                   <option value='default'>默认顺序</option>
@@ -700,13 +708,13 @@ export default function SourceBrowserPage() {
                 <input
                   value={filterKeyword}
                   onChange={(e) => setFilterKeyword(e.target.value)}
-                  placeholder='地区/关键词筛选（标题或备注包含）'
-                  className='px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm'
+                  placeholder='地区/关键词筛选'
+                  className='flex-1 min-w-[140px] px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm'
                 />
                 <select
                   value={filterYear}
                   onChange={(e) => setFilterYear(e.target.value)}
-                  className='px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm'
+                  className='flex-1 min-w-[100px] px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm'
                   title='年份'
                 >
                   <option value=''>全部年份</option>
@@ -716,9 +724,6 @@ export default function SourceBrowserPage() {
                     </option>
                   ))}
                 </select>
-              </div>
-              <div className='text-xs text-gray-500'>
-                当前模式：{mode === 'search' ? '搜索' : '分类'}
               </div>
             </div>
           </div>
