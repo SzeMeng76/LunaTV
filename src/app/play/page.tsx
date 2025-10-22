@@ -59,7 +59,7 @@ function PlayPageClient() {
 
   // 收藏状态
   const [favorited, setFavorited] = useState(false);
-  
+
   // 豆瓣详情状态
   const [movieDetails, setMovieDetails] = useState<any>(null);
   const [loadingMovieDetails, setLoadingMovieDetails] = useState(false);
@@ -4424,19 +4424,20 @@ function PlayPageClient() {
       )}    
                   
       {/* 下载按钮 - 所有平台 */}            
-      <a            
-        href={convertedUrl}            
-        download            
-        className="relative group flex items-center gap-1.5 bg-green-500 hover:bg-green-600 text-white px-3 py-2.5 rounded-full text-sm font-medium shadow-md transition-colors"            
-      >            
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">            
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />            
-        </svg>         
-        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-gray-800 text-white text-xs rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 ease-out delay-100 whitespace-nowrap pointer-events-none z-50">            
-          下载视频             
-          <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800"></div>            
-        </div>            
-      </a>   
+<a              
+  href={convertedUrl}              
+  target="_blank"  
+  rel="noopener noreferrer"  
+  className="relative group flex items-center gap-1.5 bg-green-500 hover:bg-green-600 text-white px-3 py-2.5 rounded-full text-sm font-medium shadow-md transition-colors"              
+>              
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">              
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />              
+  </svg>           
+  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-gray-800 text-white text-xs rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 ease-out delay-100 whitespace-nowrap pointer-events-none z-50">              
+    下载视频               
+    <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800"></div>              
+  </div>              
+</a>   
     </div>            
   );            
 })()}
