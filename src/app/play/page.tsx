@@ -4268,12 +4268,6 @@ function PlayPageClient() {
                         )}
                       </div>
                     </button>
-
-                        ) : (
-                          <span>网盘资源</span>
-                        )}
-                      </div>
-                    </button>
 {/* 第三方播放器按钮组 - 与网盘资源按钮对齐 */}        
 {(() => {            
   const bananaSource = availableSources.find(source => source.source === 'banana');            
