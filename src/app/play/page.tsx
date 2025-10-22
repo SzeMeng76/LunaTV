@@ -4276,16 +4276,16 @@ function PlayPageClient() {
   const bananaVideoUrl = bananaSource.episodes?.[currentEpisodeIndex] || '';                
   if (!bananaVideoUrl) return null;                
     
-  const convertVideoUrl = (url: string): string => {                
-    try {                
-      const urlObj = new URL(url);                
-      const pathAndQuery = urlObj.pathname + urlObj.search + urlObj.hash;                
-      return `https://vod.yankj.workers.dev${pathAndQuery}`;                
-    } catch (e) {                
-      console.error('URL转换失败:', e);                
-      return url;                
-    }                
-  };                
+const convertVideoUrl = (url: string): string => {  
+  try {  
+    const urlObj = new URL(url);  
+    const pathAndQuery = urlObj.pathname + urlObj.search + urlObj.hash;  
+    return `https://vod.yankj.workers.dev${pathAndQuery}`;  
+  } catch (e) {  
+    // 静默处理错误,返回原始 URL  
+    return url;  
+  }  
+};               
     
   const convertedUrl = convertVideoUrl(bananaVideoUrl);    
       
@@ -4355,17 +4355,16 @@ function PlayPageClient() {
       {/* PotPlayer - Windows 和未知平台 */}                
       {(os === 'Windows' || os === 'Unknown') && (          
         <button                
-          onClick={async () => {    
-            const potUrl = `potplayer://${encodeURI(mediaInfo.streamUrl)} /sub=${encodeURI(mediaInfo.subUrl)} /seek=${getSeek(mediaInfo.position)} /title="${mediaInfo.title}"`;    
-            // Chrome 130+ 需要先写入剪贴板    
-            try {    
-              await navigator.clipboard.writeText(potUrl);    
-              window.location.href = `potplayer:///clipboard`;    
-            } catch (e) {    
-              console.error('剪贴板写入失败,使用直接方式:', e);    
-              window.location.href = potUrl;    
-            }    
-          }}                
+onClick={async () => {  
+  const potUrl = `potplayer://${encodeURI(mediaInfo.streamUrl)} /sub=${encodeURI(mediaInfo.subUrl)} /seek=${getSeek(mediaInfo.position)} /title="${mediaInfo.title}"`;  
+  try {  
+    await navigator.clipboard.writeText(potUrl);  
+    window.location.href = `potplayer:///clipboard`;  
+  } catch (e) {  
+    // 静默处理,使用直接方式  
+    window.location.href = potUrl;  
+  }  
+}}               
           className="relative group flex items-center justify-center bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 w-9 h-9 rounded-full shadow-md transition-colors"                
         >                
           <img                 
