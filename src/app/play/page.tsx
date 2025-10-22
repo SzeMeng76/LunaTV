@@ -4381,7 +4381,7 @@ function PlayPageClient() {
       {(os === 'iOS' || os === 'Unknown') && (    
         <button    
           onClick={() => {    
-            const infuseUrl = `infuse://x-callback-url/play?url=${encodeURIComponent(mediaInfo.streamUrl)}&sub=${encodeURIComponent(mediaInfo.subUrl)}`;    
+            const infuseUrl = `infuse://x-callback-url/play?url=${encodeURIComponent(convertedUrl)}`;    
             window.location.href = infuseUrl;    
           }}    
           className="relative group flex items-center justify-center bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 w-9 h-9 rounded-full shadow-md transition-colors"    
