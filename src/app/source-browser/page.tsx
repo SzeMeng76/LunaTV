@@ -682,8 +682,8 @@ export default function SourceBrowserPage() {
                 </div>
               </div>
 
-              {/* 第二行：筛选控件（移动端自动换行） */}
-              <div className='flex flex-wrap gap-2'>
+              {/* 第二行：筛选控件（移动端优化布局） */}
+              <div className='grid grid-cols-2 sm:flex sm:flex-wrap gap-2'>
                 <select
                   value={sortBy}
                   onChange={(e) =>
@@ -696,25 +696,19 @@ export default function SourceBrowserPage() {
                         | 'year-desc'
                     )
                   }
-                  className='flex-1 min-w-[120px] px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm'
+                  className='sm:flex-1 sm:min-w-[120px] px-2 sm:px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-xs sm:text-sm'
                   title='排序'
                 >
-                  <option value='default'>默认顺序</option>
+                  <option value='default'>默认</option>
                   <option value='title-asc'>标题 A→Z</option>
                   <option value='title-desc'>标题 Z→A</option>
-                  <option value='year-asc'>年份 从低到高</option>
-                  <option value='year-desc'>年份 从高到低</option>
+                  <option value='year-asc'>年份↑</option>
+                  <option value='year-desc'>年份↓</option>
                 </select>
-                <input
-                  value={filterKeyword}
-                  onChange={(e) => setFilterKeyword(e.target.value)}
-                  placeholder='地区/关键词筛选'
-                  className='flex-1 min-w-[140px] px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm'
-                />
                 <select
                   value={filterYear}
                   onChange={(e) => setFilterYear(e.target.value)}
-                  className='flex-1 min-w-[100px] px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm'
+                  className='sm:flex-1 sm:min-w-[100px] px-2 sm:px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-xs sm:text-sm'
                   title='年份'
                 >
                   <option value=''>全部年份</option>
@@ -724,6 +718,12 @@ export default function SourceBrowserPage() {
                     </option>
                   ))}
                 </select>
+                <input
+                  value={filterKeyword}
+                  onChange={(e) => setFilterKeyword(e.target.value)}
+                  placeholder='地区/关键词'
+                  className='col-span-2 sm:flex-1 sm:min-w-[140px] px-2 sm:px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-xs sm:text-sm'
+                />
               </div>
             </div>
           </div>
@@ -807,7 +807,7 @@ export default function SourceBrowserPage() {
                   </div>
                 ) : (
                   <>
-                    <div className='grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'>
+                    <div className='grid gap-3 grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'>
                       {filteredAndSorted.map((item, index) => (
                         <div
                           key={item.id}
@@ -834,10 +834,10 @@ export default function SourceBrowserPage() {
                                 loading='lazy'
                               />
                             ) : (
-                              <div className='w-full h-full flex items-center justify-center text-gray-400 text-sm'>
+                              <div className='w-full h-full flex items-center justify-center text-gray-400 text-xs sm:text-sm'>
                                 <div className='text-center'>
-                                  <Tv className='w-12 h-12 mx-auto mb-2 opacity-50' />
-                                  <div>无封面</div>
+                                  <Tv className='w-8 h-8 sm:w-12 sm:h-12 mx-auto mb-1 sm:mb-2 opacity-50' />
+                                  <div className='text-[10px] sm:text-sm'>无封面</div>
                                 </div>
                               </div>
                             )}
@@ -846,25 +846,25 @@ export default function SourceBrowserPage() {
 
                             {/* 年份标签 */}
                             {item.year && (
-                              <div className='absolute top-2 right-2 px-2 py-1 rounded-lg bg-black/70 backdrop-blur-sm text-white text-xs font-medium'>
+                              <div className='absolute top-1 right-1 sm:top-2 sm:right-2 px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-md sm:rounded-lg bg-black/70 backdrop-blur-sm text-white text-[10px] sm:text-xs font-medium'>
                                 {item.year}
                               </div>
                             )}
 
                             {/* 分类标签 */}
                             {item.type_name && (
-                              <div className='absolute bottom-2 left-2 px-2 py-1 rounded-lg bg-blue-500/90 backdrop-blur-sm text-white text-xs font-medium'>
+                              <div className='absolute bottom-1 left-1 sm:bottom-2 sm:left-2 px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-md sm:rounded-lg bg-blue-500/90 backdrop-blur-sm text-white text-[10px] sm:text-xs font-medium'>
                                 {item.type_name}
                               </div>
                             )}
                           </div>
 
-                          <div className='p-3 space-y-1.5 relative z-20'>
-                            <div className='font-medium text-gray-900 dark:text-white line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors leading-snug min-h-[2.5rem]'>
+                          <div className='p-1.5 sm:p-3 space-y-1 sm:space-y-1.5 relative z-20'>
+                            <div className='font-medium text-xs sm:text-sm text-gray-900 dark:text-white line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors leading-snug min-h-[2rem] sm:min-h-[2.5rem]'>
                               {item.title}
                             </div>
                             {item.remarks && (
-                              <div className='text-xs text-gray-500 dark:text-gray-400 line-clamp-1'>
+                              <div className='text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 line-clamp-1'>
                                 {item.remarks}
                               </div>
                             )}
@@ -897,13 +897,13 @@ export default function SourceBrowserPage() {
         {/* 预览弹层 */}
         {previewOpen && (
           <div
-            className='fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-3 sm:p-4 animate-fadeIn'
+            className='fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 backdrop-blur-sm px-3 py-6 sm:p-4 pb-20 md:pb-4 animate-fadeIn'
             role='dialog'
             aria-modal='true'
             onClick={() => setPreviewOpen(false)}
           >
             <div
-              className='w-full max-w-5xl bg-gradient-to-br from-white via-blue-50/20 to-white dark:from-gray-800 dark:via-blue-900/10 dark:to-gray-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] border-2 border-gray-200/50 dark:border-gray-700/50 animate-scaleIn'
+              className='w-full max-w-5xl bg-gradient-to-br from-white via-blue-50/20 to-white dark:from-gray-800 dark:via-blue-900/10 dark:to-gray-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] md:max-h-[90vh] border-2 border-gray-200/50 dark:border-gray-700/50 animate-scaleIn'
               onClick={(e) => e.stopPropagation()}
             >
               {/* 头部 */}
@@ -948,12 +948,12 @@ export default function SourceBrowserPage() {
                     <div className='text-sm text-gray-500'>暂无详情</div>
                   </div>
                 ) : (
-                  <div className='grid md:grid-cols-3 gap-5 sm:gap-6'>
-                    {/* 左侧封面 */}
+                  <div className='grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5 md:gap-6'>
+                    {/* 左侧封面 - 移动端紧凑显示 */}
                     <div className='md:col-span-1'>
-                      <div className='sticky top-0'>
+                      <div className='md:sticky md:top-0'>
                         {previewItem?.poster ? (
-                          <div className='relative rounded-2xl overflow-hidden shadow-2xl border-2 border-gray-200 dark:border-gray-700 group'>
+                          <div className='relative rounded-xl md:rounded-2xl overflow-hidden shadow-lg md:shadow-2xl border border-gray-200 dark:border-gray-700 md:border-2 group max-w-[200px] mx-auto md:max-w-none'>
                             <img
                               src={previewItem.poster}
                               alt={previewItem.title}
@@ -962,18 +962,18 @@ export default function SourceBrowserPage() {
                             <div className='absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity'></div>
                           </div>
                         ) : (
-                          <div className='w-full aspect-[2/3] bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 rounded-2xl flex items-center justify-center border-2 border-gray-200 dark:border-gray-700'>
+                          <div className='w-full max-w-[200px] mx-auto md:max-w-none aspect-[2/3] bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 rounded-xl md:rounded-2xl flex items-center justify-center border border-gray-200 dark:border-gray-700 md:border-2'>
                             <div className='text-center text-gray-400'>
-                              <Tv className='w-16 h-16 mx-auto mb-2 opacity-50' />
-                              <div className='text-sm'>暂无封面</div>
+                              <Tv className='w-12 h-12 md:w-16 md:h-16 mx-auto mb-2 opacity-50' />
+                              <div className='text-xs md:text-sm'>暂无封面</div>
                             </div>
                           </div>
                         )}
                       </div>
                     </div>
                     <div className='md:col-span-2 space-y-2'>
-                      <div className='flex items-center gap-3 flex-wrap'>
-                        <div className='text-lg font-semibold text-gray-900 dark:text-white'>
+                      <div className='flex items-center gap-2 sm:gap-3 flex-wrap'>
+                        <div className='text-base sm:text-lg font-semibold text-gray-900 dark:text-white'>
                           {previewData.title || previewItem?.title}
                         </div>
                         {/* 评分徽章 */}
@@ -1027,10 +1027,10 @@ export default function SourceBrowserPage() {
                           return null;
                         })()}
                       </div>
-                      <div className='text-sm text-gray-600 dark:text-gray-300'>
+                      <div className='text-xs sm:text-sm text-gray-600 dark:text-gray-300'>
                         年份：{previewData.year || previewItem?.year || '—'}
                       </div>
-                      <div className='text-sm text-gray-600 dark:text-gray-300'>
+                      <div className='text-xs sm:text-sm text-gray-600 dark:text-gray-300'>
                         来源：{activeSource?.name}
                       </div>
                       <div className='flex flex-wrap gap-2 text-xs'>
@@ -1052,7 +1052,7 @@ export default function SourceBrowserPage() {
                             String(previewSearchPick.desc).trim()) ||
                           (previewItem?.remarks && previewItem.remarks.trim());
                         return desc ? (
-                          <div className='mt-1 border rounded-md p-3 bg-gray-50 dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-300 max-h-40 overflow-auto whitespace-pre-line'>
+                          <div className='mt-1 border rounded-md p-2 sm:p-3 bg-gray-50 dark:bg-gray-900 text-xs sm:text-sm text-gray-700 dark:text-gray-300 max-h-32 sm:max-h-40 overflow-auto whitespace-pre-line'>
                             {desc}
                           </div>
                         ) : null;
