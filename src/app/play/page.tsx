@@ -4280,7 +4280,7 @@ function PlayPageClient() {
     try {              
       const urlObj = new URL(url);              
       const pathAndQuery = urlObj.pathname + urlObj.search + urlObj.hash;              
-      return `https://vod.yankj.workers.dev${pathAndQuery}`;              
+      return `https://vod302.199301.xyz${pathAndQuery}`;              
     } catch (e) {              
       console.error('URL转换失败:', e);              
       return url;              
