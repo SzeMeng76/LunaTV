@@ -226,6 +226,10 @@ export class UpstashRedisStorage implements IStorage {
     if (skipConfigKeys.length > 0) {
       await withRetry(() => this.client.del(...skipConfigKeys));
     }
+
+    // 删除用户登入统计数据
+    const loginStatsKey = `user_login_stats:${userName}`;
+    await withRetry(() => this.client.del(loginStatsKey));
   }
 
   // ---------- 搜索历史 ----------
@@ -1003,8 +1007,8 @@ export class UpstashRedisStorage implements IStorage {
         loginStats.firstLoginTime = loginTime;
       }
 
-      // 保存更新后的统计数据
-      await this.client.set(loginStatsKey, JSON.stringify(loginStats));
+      // 保存更新后的统计数据 - Upstash Redis 会自动序列化对象，不需要 JSON.stringify
+      await this.client.set(loginStatsKey, loginStats);
 
       console.log(`用户 ${userName} 登入统计已更新:`, loginStats);
     } catch (error) {
