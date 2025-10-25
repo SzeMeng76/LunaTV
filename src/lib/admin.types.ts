@@ -95,6 +95,15 @@ export interface AdminConfig {
     enableRateLimit: boolean;            // 是否启用频率限制
     rateLimit: number;                   // 每分钟允许的请求次数
   };
+  TelegramAuthConfig?: {
+    enabled: boolean;                    // 是否启用Telegram登录
+    botToken: string;                    // Telegram Bot Token
+    botUsername: string;                 // Telegram Bot Username
+    autoRegister: boolean;               // 是否自动注册新用户
+    buttonSize: 'large' | 'medium' | 'small'; // 按钮大小
+    showAvatar: boolean;                 // 是否显示用户头像
+    requestWriteAccess: boolean;         // 是否请求发送消息权限
+  };
 }
 
 export interface AdminConfigResult {

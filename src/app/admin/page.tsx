@@ -53,6 +53,7 @@ import CacheManager from '@/components/CacheManager';
 import DataMigration from '@/components/DataMigration';
 import ImportExportModal from '@/components/ImportExportModal';
 import SourceTestModule from '@/components/SourceTestModule';
+import { TelegramAuthConfig } from '@/components/TelegramAuthConfig';
 import TVBoxSecurityConfig from '@/components/TVBoxSecurityConfig';
 import { TVBoxTokenCell, TVBoxTokenModal } from '@/components/TVBoxTokenManager';
 import YouTubeConfig from '@/components/YouTubeConfig';
@@ -5514,6 +5515,7 @@ function AdminPageClient() {
     aiRecommendConfig: false,
     youtubeConfig: false,
     tvboxSecurityConfig: false,
+    telegramAuthConfig: false,
     configFile: false,
     cacheManager: false,
     dataMigration: false,
@@ -5790,6 +5792,52 @@ function AdminPageClient() {
             >
               <TVBoxSecurityConfig config={config} refreshConfig={fetchConfig} />
             </CollapsibleTab>
+
+            {/* Telegram 登录配置 - 仅站长可见 */}
+            {role === 'owner' && (
+              <CollapsibleTab
+                title='Telegram 登录配置'
+                icon={
+                  <svg
+                    viewBox='0 0 24 24'
+                    width='20'
+                    height='20'
+                    className='text-blue-500 dark:text-blue-400'
+                    fill='currentColor'
+                  >
+                    <path d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.12.03-1.99 1.27-5.62 3.72-.53.36-1.01.54-1.44.53-.47-.01-1.38-.27-2.05-.49-.82-.27-1.47-.42-1.42-.88.03-.24.37-.48 1.02-.73 4-1.74 6.68-2.88 8.03-3.44 3.82-1.58 4.61-1.85 5.13-1.86.11 0 .37.03.54.17.14.11.18.26.2.37.02.08.03.29.01.45z' />
+                  </svg>
+                }
+                isExpanded={expandedTabs.telegramAuthConfig}
+                onToggle={() => toggleTab('telegramAuthConfig')}
+              >
+                <TelegramAuthConfig
+                  config={
+                    config?.TelegramAuthConfig || {
+                      enabled: false,
+                      botToken: '',
+                      botUsername: '',
+                      autoRegister: true,
+                      buttonSize: 'large',
+                      showAvatar: true,
+                      requestWriteAccess: false,
+                    }
+                  }
+                  onSave={async (newConfig) => {
+                    if (!config) return;
+                    await fetch('/api/admin/config', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        ...config,
+                        TelegramAuthConfig: newConfig,
+                      }),
+                    });
+                    await fetchConfig();
+                  }}
+                />
+              </CollapsibleTab>
+            )}
 
             {/* 缓存管理标签 - 仅站长可见 */}
             {role === 'owner' && (

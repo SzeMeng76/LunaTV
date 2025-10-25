@@ -33,6 +33,7 @@ import SectionTitle from '@/components/SectionTitle';
 import ShortDramaCard from '@/components/ShortDramaCard';
 import SkeletonCard from '@/components/SkeletonCard';
 import { useSite } from '@/components/SiteProvider';
+import { TelegramWelcomeModal } from '@/components/TelegramWelcomeModal';
 import VideoCard from '@/components/VideoCard';
 
 function HomeClient() {
@@ -241,6 +242,9 @@ function HomeClient() {
 
   return (
     <PageLayout>
+      {/* Telegram 新用户欢迎弹窗 */}
+      <TelegramWelcomeModal />
+
       <div className='px-2 sm:px-10 py-4 sm:py-8 overflow-visible'>
         {/* 欢迎横幅 - 在所有 tab 显示 */}
         <div className='mb-6 mt-0 md:mt-12 relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 p-[2px] shadow-lg animate-[slideDown_0.5s_ease-out]'>

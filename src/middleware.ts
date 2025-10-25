@@ -6,24 +6,40 @@ import { getAuthInfoFromCookie } from '@/lib/auth';
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const requestId = Math.random().toString(36).substring(7);
+
+  console.log(`[Middleware ${requestId}] Path:`, pathname);
 
   // 跳过不需要认证的路径
   if (shouldSkipAuth(pathname)) {
+    console.log(`[Middleware ${requestId}] Skipping auth for path:`, pathname);
     return NextResponse.next();
   }
 
   const storageType = process.env.NEXT_PUBLIC_STORAGE_TYPE || 'localstorage';
+  console.log(`[Middleware ${requestId}] Storage type:`, storageType);
 
   if (!process.env.PASSWORD) {
+    console.log(`[Middleware ${requestId}] PASSWORD env not set, redirecting to warning`);
     // 如果没有设置密码，重定向到警告页面
     const warningUrl = new URL('/warning', request.url);
     return NextResponse.redirect(warningUrl);
   }
 
   // 从cookie获取认证信息
+  console.log(`[Middleware ${requestId}] All cookies:`, request.cookies.getAll());
+  console.log(`[Middleware ${requestId}] Cookie header:`, request.headers.get('cookie'));
+
   const authInfo = getAuthInfoFromCookie(request);
+  console.log(`[Middleware ${requestId}] Auth info from cookie:`, authInfo ? {
+    username: authInfo.username,
+    hasSignature: !!authInfo.signature,
+    hasPassword: !!authInfo.password,
+    timestamp: authInfo.timestamp
+  } : null);
 
   if (!authInfo) {
+    console.log(`[Middleware ${requestId}] No auth info, failing auth`);
     return handleAuthFailure(request, pathname);
   }
 
@@ -38,24 +54,33 @@ export async function middleware(request: NextRequest) {
   // 其他模式：只验证签名
   // 检查是否有用户名（非localStorage模式下密码不存储在cookie中）
   if (!authInfo.username || !authInfo.signature) {
+    console.log(`[Middleware ${requestId}] Missing username or signature:`, {
+      hasUsername: !!authInfo.username,
+      hasSignature: !!authInfo.signature
+    });
     return handleAuthFailure(request, pathname);
   }
 
   // 验证签名（如果存在）
   if (authInfo.signature) {
+    console.log(`[Middleware ${requestId}] Verifying signature for user:`, authInfo.username);
     const isValidSignature = await verifySignature(
       authInfo.username,
       authInfo.signature,
       process.env.PASSWORD || ''
     );
 
+    console.log(`[Middleware ${requestId}] Signature valid:`, isValidSignature);
+
     // 签名验证通过即可
     if (isValidSignature) {
+      console.log(`[Middleware ${requestId}] Auth successful, allowing access`);
       return NextResponse.next();
     }
   }
 
   // 签名验证失败或不存在签名
+  console.log(`[Middleware ${requestId}] Signature verification failed, denying access`);
   return handleAuthFailure(request, pathname);
 }
 
@@ -125,6 +150,7 @@ function shouldSkipAuth(pathname: string): boolean {
     '/icons/',
     '/logo.png',
     '/screenshot.png',
+    '/api/telegram/', // Telegram API 端点
   ];
 
   return skipPaths.some((path) => pathname.startsWith(path));
@@ -133,6 +159,6 @@ function shouldSkipAuth(pathname: string): boolean {
 // 配置middleware匹配规则
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|login|register|warning|api/login|api/register|api/logout|api/cron|api/server-config|api/tvbox|api/live/merged|api/parse|api/bing-wallpaper|api/proxy/spider.jar).*)',
+    '/((?!_next/static|_next/image|favicon.ico|login|register|warning|api/login|api/register|api/logout|api/cron|api/server-config|api/tvbox|api/live/merged|api/parse|api/bing-wallpaper|api/proxy/spider.jar|api/telegram/).*)',
   ],
 };

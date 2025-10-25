@@ -8,7 +8,8 @@ export function getAuthInfoFromCookie(request: NextRequest): {
   timestamp?: number;
   loginTime?: number;
 } | null {
-  const authCookie = request.cookies.get('auth');
+  // 尝试新的 cookie 名称 user_auth，如果没有则尝试旧的 auth
+  const authCookie = request.cookies.get('user_auth') || request.cookies.get('auth');
 
   if (!authCookie) {
     return null;
@@ -53,7 +54,8 @@ export function getAuthInfoFromBrowserCookie(): {
       return acc;
     }, {} as Record<string, string>);
 
-    const authCookie = cookies['auth'];
+    // 尝试新的 cookie 名称 user_auth，如果没有则尝试旧的 auth
+    const authCookie = cookies['user_auth'] || cookies['auth'];
     if (!authCookie) {
       return null;
     }

@@ -555,8 +555,29 @@ export abstract class BaseRedisStorage implements IStorage {
 
   async getCache(key: string): Promise<any | null> {
     try {
-      const val = await this.withRetry(() => this.client.get(this.cacheKey(key)));
+      const cacheKey = this.cacheKey(key);
+      const val = await this.withRetry(() => this.client.get(cacheKey));
+
+      // 如果 key 不存在，检查 TTL（调试用）
+      if (!val && process.env.NODE_ENV === 'development') {
+        const ttl = await this.withRetry(() => this.client.ttl(cacheKey));
+        if (ttl === -2) {
+          console.log(`${this.config.clientName} getCache: Key ${key} does not exist (TTL: -2)`);
+        } else if (ttl === -1) {
+          console.warn(`${this.config.clientName} getCache: Key ${key} exists but has no expiration (TTL: -1)`);
+        } else if (ttl > 0) {
+          console.warn(`${this.config.clientName} getCache: Key ${key} exists with TTL ${ttl}s but returned null value`);
+        }
+        return null;
+      }
+
       if (!val) return null;
+
+      // 调试：显示剩余 TTL
+      if (process.env.NODE_ENV === 'development') {
+        const ttl = await this.withRetry(() => this.client.ttl(cacheKey));
+        console.log(`${this.config.clientName} getCache: key=${key}, remaining TTL=${ttl}s`);
+      }
 
       // 智能处理返回值：兼容不同Redis客户端的行为
       if (typeof val === 'string') {
@@ -587,9 +608,39 @@ export abstract class BaseRedisStorage implements IStorage {
       const cacheKey = this.cacheKey(key);
       const value = JSON.stringify(data);
 
-      if (expireSeconds) {
-        await this.withRetry(() => this.client.setEx(cacheKey, expireSeconds, value));
+      if (expireSeconds !== undefined) {
+        // 验证 TTL 值的有效性
+        if (expireSeconds <= 0) {
+          const error = new Error(
+            `${this.config.clientName} Invalid TTL: ${expireSeconds} seconds. TTL must be positive.`
+          );
+          console.error(error.message);
+          throw error;
+        }
+
+        // Kvrocks 兼容性：确保 TTL 是整数
+        const ttl = Math.floor(expireSeconds);
+
+        if (ttl !== expireSeconds) {
+          console.warn(
+            `${this.config.clientName} TTL rounded from ${expireSeconds} to ${ttl} seconds`
+          );
+        }
+
+        console.log(`${this.config.clientName} setCache with TTL: key=${key}, ttl=${ttl}s`);
+        await this.withRetry(() => this.client.setEx(cacheKey, ttl, value));
+
+        // 验证是否成功设置（可选，仅在调试模式下）
+        if (process.env.NODE_ENV === 'development') {
+          const setTtl = await this.withRetry(() => this.client.ttl(cacheKey));
+          console.log(`${this.config.clientName} Verified TTL for ${key}: ${setTtl}s (expected: ${ttl}s)`);
+
+          if (setTtl < 0) {
+            console.warn(`${this.config.clientName} WARNING: TTL not set correctly for ${key}. Got: ${setTtl}`);
+          }
+        }
       } else {
+        console.log(`${this.config.clientName} setCache without TTL: key=${key}`);
         await this.withRetry(() => this.client.set(cacheKey, value));
       }
     } catch (error) {
