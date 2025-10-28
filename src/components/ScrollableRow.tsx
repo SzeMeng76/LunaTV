@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { Children, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import AnimatedCardGrid from '@/components/AnimatedCardGrid';
 
@@ -9,7 +9,7 @@ interface ScrollableRowProps {
   enableAnimation?: boolean;
 }
 
-export default function ScrollableRow({
+function ScrollableRow({
   children,
   scrollDistance = 1000,
   enableAnimation = true,
@@ -18,8 +18,9 @@ export default function ScrollableRow({
   const [showLeftScroll, setShowLeftScroll] = useState(false);
   const [showRightScroll, setShowRightScroll] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const checkScrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const checkScroll = () => {
+  const checkScroll = useCallback(() => {
     if (containerRef.current) {
       const { scrollWidth, clientWidth, scrollLeft } = containerRef.current;
 
@@ -29,22 +30,43 @@ export default function ScrollableRow({
         scrollWidth - (scrollLeft + clientWidth) > threshold;
       const canScrollLeft = scrollLeft > threshold;
 
-      setShowRightScroll(canScrollRight);
-      setShowLeftScroll(canScrollLeft);
+      setShowRightScroll((prev) => (prev !== canScrollRight ? canScrollRight : prev));
+      setShowLeftScroll((prev) => (prev !== canScrollLeft ? canScrollLeft : prev));
     }
-  };
+  }, []);
+
+  // 使用 useMemo 缓存 children 数量，减少不必要的 effect 触发
+  const childrenCount = useMemo(() => Children.count(children), [children]);
 
   useEffect(() => {
-    // 多次延迟检查，确保内容已完全渲染
-    checkScroll();
+    // 延迟检查，确保内容已完全渲染
+    if (checkScrollTimeoutRef.current) {
+      clearTimeout(checkScrollTimeoutRef.current);
+      checkScrollTimeoutRef.current = null;
+    }
+    checkScrollTimeoutRef.current = setTimeout(() => {
+      checkScroll();
+    }, 100);
 
-    // 监听窗口大小变化
-    window.addEventListener('resize', checkScroll);
+    // 监听窗口大小变化（使用防抖）
+    let resizeTimeout: ReturnType<typeof setTimeout> | undefined;
+    const handleResize = () => {
+      if (resizeTimeout) {
+        clearTimeout(resizeTimeout);
+      }
+      resizeTimeout = setTimeout(checkScroll, 150);
+    };
+
+    window.addEventListener('resize', handleResize);
 
     // 创建一个 ResizeObserver 来监听容器大小变化
     const resizeObserver = new ResizeObserver(() => {
-      // 延迟执行检查
-      checkScroll();
+      // 使用防抖来减少不必要的检查
+      if (checkScrollTimeoutRef.current) {
+        clearTimeout(checkScrollTimeoutRef.current);
+        checkScrollTimeoutRef.current = null;
+      }
+      checkScrollTimeoutRef.current = setTimeout(checkScroll, 100);
     });
 
     if (containerRef.current) {
@@ -52,47 +74,34 @@ export default function ScrollableRow({
     }
 
     return () => {
-      window.removeEventListener('resize', checkScroll);
+      window.removeEventListener('resize', handleResize);
       resizeObserver.disconnect();
+      if (resizeTimeout) {
+        clearTimeout(resizeTimeout);
+      }
+      if (checkScrollTimeoutRef.current) {
+        clearTimeout(checkScrollTimeoutRef.current);
+      }
     };
-  }, [children]); // 依赖 children，当子组件变化时重新检查
+  }, [childrenCount, checkScroll]);
 
-  // 添加一个额外的效果来监听子组件的变化
-  useEffect(() => {
-    if (containerRef.current) {
-      // 监听 DOM 变化
-      const observer = new MutationObserver(() => {
-        setTimeout(checkScroll, 100);
-      });
-
-      observer.observe(containerRef.current, {
-        childList: true,
-        subtree: true,
-        attributes: true,
-        attributeFilter: ['style', 'class'],
-      });
-
-      return () => observer.disconnect();
-    }
-  }, []);
-
-  const handleScrollRightClick = () => {
+  const handleScrollRightClick = useCallback(() => {
     if (containerRef.current) {
       containerRef.current.scrollBy({
         left: scrollDistance,
         behavior: 'smooth',
       });
     }
-  };
+  }, [scrollDistance]);
 
-  const handleScrollLeftClick = () => {
+  const handleScrollLeftClick = useCallback(() => {
     if (containerRef.current) {
       containerRef.current.scrollBy({
         left: -scrollDistance,
         behavior: 'smooth',
       });
     }
-  };
+  }, [scrollDistance]);
 
   return (
     <div
@@ -177,3 +186,5 @@ export default function ScrollableRow({
     </div>
   );
 }
+
+export default memo(ScrollableRow);

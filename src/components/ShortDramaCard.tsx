@@ -4,7 +4,7 @@
 
 import { Play, Star } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
 
 import { ShortDramaItem } from '@/lib/types';
 import {
@@ -20,7 +20,7 @@ interface ShortDramaCardProps {
   className?: string;
 }
 
-export default function ShortDramaCard({
+function ShortDramaCard({
   drama,
   showDescription = false,
   className = '',
@@ -173,3 +173,5 @@ export default function ShortDramaCard({
     </div>
   );
 }
+
+export default memo(ShortDramaCard);
