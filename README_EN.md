@@ -25,7 +25,7 @@
 ![HLS.js](https://img.shields.io/badge/HLS.js-1.6.13-ec407a)
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Docker Ready](https://img.shields.io/badge/Docker-ready-blue?logo=docker)
-![Version](https://img.shields.io/badge/Version-5.5.7-orange)
+![Version](https://img.shields.io/badge/Version-5.6.0-orange)
 
 </div>
 
@@ -33,7 +33,7 @@
 
 ## 📢 Project Overview
 
-This project is a deeply customized version based on **MoonTV**, continuously developed from **v4.3.1** to the current **v5.5.7**, with **50+ major feature modules** and **300+ detailed optimizations** added. See [CHANGELOG](CHANGELOG) for all new features.
+This project is a deeply customized version based on **MoonTV**, continuously developed from **v4.3.1** to the current **v5.6.0**, with **50+ major feature modules** and **300+ detailed optimizations** added. See [CHANGELOG](CHANGELOG) for all new features.
 
 ### 💡 Core Enhancement Highlights
 
@@ -58,6 +58,7 @@ This project is a deeply customized version based on **MoonTV**, continuously de
 - **Web-exclusive Input**: Simple "Danmu" button for quick sending (auto-hidden on mobile)
 
 #### 📊 User Management Enhancement
+- **Telegram Magic Link Authentication**: Secure and convenient Telegram-based login with auto webhook configuration
 - **User Level System**: Replaces large login count numbers with friendly level display
 - **Playback Statistics**: Complete viewing data statistics, analysis, visualization, global/personal stats tab switching
 - **Dual Reminder System**: New episodes (red theme) and continue watching (blue theme) with gradient badges and halo effects
@@ -86,6 +87,8 @@ This project is a deeply customized version based on **MoonTV**, continuously de
   - Deep JAR diagnostic system (file header verification, smart health check)
   - Spider management system (multi-Spider JAR backup sources, fallback proxy, gaotianliuyun third backup source)
   - Regular user access support (`/api/tvbox-config` endpoint)
+- **Source Browser & Testing Module**: Source testing, health checks, mobile responsive layout
+- **Resource Search API Authentication**: Enhanced security with user authentication
 - **Calendar Cache Migration**: Migrated from localStorage to database, cross-device sync support
 - **Cache Optimization**: Unified cache management (YouTube, cloud drive, Douban, danmaku)
 - **Enhanced Storage Modes**: Full Kvrocks/Redis/Upstash support, memory cache prevents QuotaExceededError
@@ -144,6 +147,7 @@ This project is licensed under **CC BY-NC-SA 4.0**, with the following terms:
 - ✅ EXT-X-MEDIA URI handling (prevents HLS audio track loading errors)
 
 ### 📊 User Management
+- ✅ Telegram Magic Link authentication (secure convenient login, auto webhook config)
 - ✅ User level system (replaces large login count numbers)
 - ✅ Playback statistics (watch time, video count, recent records, global/personal tab switching)
 - ✅ Dual reminder system (new episodes red theme, continue watching blue theme, gradient badges)
@@ -177,6 +181,8 @@ This project is licensed under **CC BY-NC-SA 4.0**, with the following terms:
 - ✅ TVBox complete ecosystem (IP whitelist, Token auth, full API compatibility, regular user access)
 - ✅ TVBox deep diagnostics (JAR file header verification, smart health check, config field display)
 - ✅ Spider management system (multi-JAR backup sources, fallback proxy, gaotianliuyun third backup source)
+- ✅ Source browser & testing module (source testing, health checks, mobile responsive)
+- ✅ Resource search API authentication (enhanced security)
 - ✅ Calendar cache database migration (cross-device sync)
 - ✅ Unified cache management system (YouTube, cloud drive, Douban, danmaku)
 - ✅ Kvrocks/Redis/Upstash storage (full compatibility handling)
@@ -719,9 +725,15 @@ The admin panel provides the following feature modules (some features are owner-
 - **Video Source Management**:
   - Add video source (name, API address)
   - Batch enable/disable/delete
+  - Import/Export video sources (batch config management for backup and migration)
   - Video source validity detection
   - Drag-and-drop sorting
   - Edit/Delete individual sources
+- **Source Browser & Testing Module**:
+  - Browse and search source content
+  - Source testing and health checks
+  - Mobile responsive layout
+  - Side drawer test results display
 
 #### 📺 Live Source Configuration
 - **Live Source Management**:
@@ -856,34 +868,32 @@ This project works with [OrionTV](https://github.com/zimplexing/OrionTV) on Andr
 
 For complete feature updates and bug fixes, see [CHANGELOG](CHANGELOG).
 
-### Latest Version: v5.5.7 (2025-10-11)
+### Latest Version: v5.6.0 (2025-10-27)
 
 #### Added
-- 🎮 Episode switching state management optimization: Multiple ref flags to prevent duplicate triggers and playback time errors
-- 🔍 Skip segment detection optimization: Use source + id combination as unique episode identifier
-- 🎯 Anti-duplicate trigger mechanism: lastProcessedSegmentRef tracks processed segments
+- 🔐 Telegram Magic Link Authentication: Implemented secure Telegram-based Magic Link authentication for convenient login
+- 🤖 Auto-set Telegram Webhook: Automatically configure Telegram webhook when generating Magic Link, simplifying deployment
+- 🔍 Resource Search Endpoint Authentication: Added user authentication check to /api/search/resources endpoint for enhanced API security
+- 🎯 Source Browser Integration: Added source browser and testing module to admin panel with full source testing and management capabilities
+- 🎨 Enhanced Source Browser UI: Optimized source browser and testing module UI for improved user experience
 
 #### Improved
-- ⚡ Removed auto-skip delay for outro: handleAutoSkip executes immediately, no more setTimeout
-- 🎬 Playback time reset optimization: setCurrentTime(0) ensures new episodes start from beginning
-- 🔄 Flag reset timing optimization: Delayed reset of isSkipControllerTriggeredRef prevents race conditions
-- 📊 Cleanup redundant logs: Removed verbose debug logs in SkipController and play/page
-- 🎨 Keep critical warnings: Only keep anti-duplicate trigger warning logs
-- 🗑️ Remove commented code: Cleanup outdated comments in handleNextEpisode
-- 🎭 Unified segment processing logic: checkSkipSegment handles both intro and outro uniformly
+- 📱 Mobile Source Browser Layout: Improved mobile search controls and responsive layout for various screen sizes
+- 🎯 Side Drawer Replaces Modal: Use side drawer instead of centered modal for source test results, optimizing space utilization
+- 📐 Drawer Card Layout Optimization: Optimized card layout and spacing in drawer mode
 
 #### Fixed
-- 🐛 **Fixed critical bug: Auto-play next episode skipping 2 episodes**: Multi-layer defense mechanism
-  - lastProcessedSegmentRef: Prevents same segment from being processed multiple times
-  - videoEndedHandledRef: Prevents same video:ended event from being handled multiple times
-  - isSkipControllerTriggeredRef: Prevents SkipController and video:ended from both triggering
-  - Removed delayed calls: Avoids race conditions caused by setTimeout
-- 🔧 Prevent multiple triggers from component re-renders: ref-based deduplication
-- 🎬 Fixed currentTime not 0 after episode switch: Pause and reset playback time
-- 📱 Optimized episode switching flow: Correct pause, save, reset sequence
+- 🔧 Prevent Upstash User Auto-deletion: Fixed user auto-deletion issue in Upstash environment and cleanup login statistics
+- 🎭 Drawer z-index Fix: Increased drawer z-index to prevent mobile navigation overlay
+- 🔄 Prevent Source Jumping: Fixed unexpected source jumping in source browser
+- 🚪 Portal Rendering Viewport Fix: Use Portal to render drawer for proper viewport positioning
+- 📱 Preview Modal z-index Fix: Fixed source browser preview modal z-index to prevent header overlay
+- 🔒 Mobile Bottom Nav Overlay Fix: Prevent mobile bottom navigation from covering preview modal content
+- ✨ Remove Short Drama Button Flicker: Removed flickering animation effect from short drama category buttons
 
 ### Major Milestone Versions
 
+- **v5.6.0**: Telegram Magic Link authentication, Source Browser & Testing Module, video source import/export
 - **v5.5.0**: User level system, release calendar, inactive user cleanup
 - **v5.4.0**: Complete short drama features, playback statistics system
 - **v5.3.0**: YouTube integration, AI recommendation system, TVBox security config

@@ -25,7 +25,7 @@
 ![HLS.js](https://img.shields.io/badge/HLS.js-1.6.13-ec407a)
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Docker Ready](https://img.shields.io/badge/Docker-ready-blue?logo=docker)
-![Version](https://img.shields.io/badge/Version-5.5.7-orange)
+![Version](https://img.shields.io/badge/Version-5.6.0-orange)
 
 </div>
 
@@ -33,7 +33,7 @@
 
 ## 📢 项目说明
 
-本项目是在 **MoonTV** 基础上进行的深度二次开发版本，从 **v4.3.1** 版本开始，持续迭代至当前 **v5.5.7**，累计新增 50+ 重大功能模块，300+ 细节优化。所有新增功能详见 [CHANGELOG](CHANGELOG)。
+本项目是在 **MoonTV** 基础上进行的深度二次开发版本，从 **v4.3.1** 版本开始，持续迭代至当前 **v5.6.0**，累计新增 50+ 重大功能模块，300+ 细节优化。所有新增功能详见 [CHANGELOG](CHANGELOG)。
 
 ### 💡 核心增强亮点
 
@@ -58,6 +58,7 @@
 - **Web端专用输入**：简洁"弹字"按钮，一键快速发送弹幕（移动端自动隐藏）
 
 #### 📊 用户管理增强
+- **Telegram Magic Link 认证**：基于 Telegram 的安全便捷登录方式，自动配置 webhook
 - **用户等级系统**：取代大数字登录次数，提供友好的等级显示
 - **播放统计系统**：完整的观看数据统计、分析、可视化，支持全局统计和个人统计选项卡切换
 - **双重提醒系统**：新剧集（红色主题）和继续观看（蓝色主题）独立分类，渐变徽章和光环效果
@@ -139,6 +140,7 @@
 - ✅ EXT-X-MEDIA URI处理（防止HLS音轨加载错误）
 
 ### 📊 用户管理
+- ✅ Telegram Magic Link 认证（安全便捷登录、自动配置 webhook）
 - ✅ 用户等级系统（取代大数字登录次数）
 - ✅ 播放统计（观看时长、影片数量、最近记录、全局/个人选项卡切换）
 - ✅ 双重提醒系统（新剧集红色主题、继续观看蓝色主题、渐变徽章）
@@ -169,6 +171,8 @@
 
 ### 🔐 安全与存储
 - ✅ TVBox 完整 API（IP 白名单、Token 认证）
+- ✅ 源浏览器和测试模块（源站测试、健康检查、移动端响应式）
+- ✅ 资源搜索 API 权限验证（增强安全性）
 - ✅ 日历缓存数据库迁移
 - ✅ 统一缓存管理系统
 - ✅ Kvrocks/Redis/Upstash 存储
@@ -708,9 +712,15 @@ Zeabur 是一站式云端部署平台，使用预构建的 Docker 镜像可以�
 - **视频源管理**：
   - 添加视频源（名称、API 地址）
   - 批量启用/禁用/删除
+  - 视频源导入/导出（支持批量管理配置，便于备份和迁移）
   - 视频源有效性检测
   - 拖拽排序
   - 编辑/删除单个视频源
+- **源浏览器和测试模块**：
+  - 源站内容浏览和搜索
+  - 源站测试和健康检查
+  - 移动端响应式布局
+  - 侧抽屉测试结果展示
 
 #### 📺 直播源配置
 - **直播源管理**：
@@ -845,34 +855,32 @@ services:
 
 完整的功能更新和 Bug 修复记录请查看 [CHANGELOG](CHANGELOG)。
 
-### 最新版本：v5.5.7 (2025-10-11)
+### 最新版本：v5.6.0 (2025-10-27)
 
 #### 新增功能
-- 🎮 剧集切换状态管理优化：新增多个 ref 标志防止重复触发和播放时间错误
-- 🔍 跳过片段检测优化：使用 source + id 组合作为唯一集数标识
-- 🎯 防重复触发机制：lastProcessedSegmentRef 跟踪已处理片段
+- 🔐 Telegram Magic Link身份验证：实现基于Telegram的Magic Link认证功能，提供更安全便捷的登录方式
+- 🤖 自动设置Telegram Webhook：生成Magic Link时自动配置Telegram webhook，简化部署流程
+- 🔍 资源搜索端点权限验证：为/api/search/resources端点新增用户身份验证检查，提升API安全性
+- 🎯 源浏览器完整功能集成：新增源浏览器和测试模块到管理后台，支持源站测试和管理
+- 🎨 源浏览器增强UI设计：优化源浏览器和测试模块UI界面，提升用户体验
 
 #### 优化改进
-- ⚡ 取消片尾自动跳转延迟：handleAutoSkip 立即执行，不再使用 setTimeout
-- 🎬 播放时间重置优化：setCurrentTime(0) 确保新集数从头播放
-- 🔄 标志重置时机优化：延迟重置 isSkipControllerTriggeredRef 防止竞态条件
-- 📊 清理冗余日志：移除 SkipController 和 play/page 中的详细调试日志
-- 🎨 保留关键警告：仅保留防重复触发的警告日志
-- 🗑️ 移除已注释代码：清理 handleNextEpisode 中的过时注释
-- 🎭 统一片段处理逻辑：checkSkipSegment 统一处理片头和片尾
+- 📱 源浏览器移动端布局优化：改进移动端搜索控制和响应式布局，适配各种屏幕尺寸
+- 🎯 侧抽屉替代居中弹窗：用侧边抽屉替代源测试结果的居中弹窗显示，优化空间利用
+- 📐 抽屉卡片布局优化：优化抽屉模式下的卡片布局和间距
 
 #### Bug 修复
-- 🐛 **修复片尾自动播放下一集跳2集的严重Bug**：多层防护机制
-  - lastProcessedSegmentRef：防止同一片段被重复处理
-  - videoEndedHandledRef：防止同一 video:ended 事件被多次处理
-  - isSkipControllerTriggeredRef：防止 SkipController 和 video:ended 同时触发
-  - 移除延迟调用：避免 setTimeout 导致的竞态条件
-- 🔧 防止组件重渲染导致的多次触发：ref-based 去重机制
-- 🎬 修复切换集数后 currentTime 不为 0 的问题：暂停并重置播放时间
-- 📱 优化剧集切换流程：正确的暂停、保存、重置顺序
+- 🔧 防止Upstash用户自动删除：修复Upstash环境下用户被自动删除的问题，并清理登录统计数据
+- 🎭 抽屉z-index层级修复：增加抽屉z-index防止移动端导航栏覆盖问题
+- 🔄 防止源站跳转问题：修复源浏览器中的源站意外跳转问题
+- 🚪 Portal渲染修复视口定位：使用Portal渲染抽屉以修复视口定位问题
+- 📱 预览弹窗z-index修复：修复源浏览器预览弹窗z-index防止被头部覆盖
+- 🔒 移动端底部导航遮挡问题：防止移动端底部导航栏遮挡预览弹窗内容
+- ✨ 移除短剧分类按钮闪烁效果：移除短剧分类按钮的闪烁动画效果，优化视觉体验
 
 ### 重大里程碑版本
 
+- **v5.6.0**：Telegram Magic Link 认证、源浏览器与测试模块、视频源导入导出
 - **v5.5.0**：用户等级系统、发布日历、非活跃用户清理
 - **v5.4.0**：短剧完整功能、播放统计系统
 - **v5.3.0**：YouTube 集成、AI 推荐系统、TVBox 安全配置
