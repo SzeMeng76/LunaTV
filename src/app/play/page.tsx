@@ -4275,7 +4275,14 @@ function PlayPageClient() {
   if (!bananaSource) return null;  
   
   const bananaVideoUrl = bananaSource.episodes?.[currentEpisodeIndex] || '';  
-  if (!bananaVideoUrl) return null;    
+  if (!bananaVideoUrl) return null;  
+  
+  const convertVideoUrl = (url: string): string => {  
+    // 直接返回原地址,不做任何转换  
+    return url;  
+  };  
+  
+  const convertedUrl = convertVideoUrl(bananaVideoUrl);    
   
   // 操作系统检测函数          
   const getOS = () => {          
