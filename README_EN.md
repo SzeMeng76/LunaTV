@@ -447,7 +447,7 @@ When a new Docker image version is released, Zeabur won't automatically update. 
    - Click on the service you want to update (LunaTV or KVRocks)
 
 2. **Restart Service**
-   - Click the **"Restart"** button in the top right corner
+   - Click on the **"Overview"** page, and then click the **"Restart"** button
    - Zeabur will automatically pull the latest `latest` image and redeploy
 
 > 💡 **Tips**:

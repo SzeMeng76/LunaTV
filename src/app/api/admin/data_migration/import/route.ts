@@ -80,20 +80,25 @@ export async function POST(req: NextRequest) {
     // 开始导入数据 - 先清空现有数据
     await db.clearAllData();
 
-    // 导入管理员配置
-    importData.data.adminConfig = configSelfCheck(importData.data.adminConfig);
-    await db.saveAdminConfig(importData.data.adminConfig);
-    await setCachedConfig(importData.data.adminConfig);
-
-    // 导入用户数据
+    // 🔥 修复：先注册所有用户，然后再进行配置自检查
+    // 步骤1：重新注册所有用户（包含密码）
     const userData = importData.data.userData;
     for (const username in userData) {
       const user = userData[username];
-
-      // 重新注册用户（包含密码）
       if (user.password) {
         await db.registerUser(username, user.password);
       }
+    }
+
+    // 步骤2：导入管理员配置并进行自检查
+    // 此时数据库中已有用户，configSelfCheck 可以正确获取用户列表并保留备份中的用户配置
+    importData.data.adminConfig = await configSelfCheck(importData.data.adminConfig);
+    await db.saveAdminConfig(importData.data.adminConfig);
+    await setCachedConfig(importData.data.adminConfig);
+
+    // 步骤3：导入用户的其他数据（播放记录、收藏等）
+    for (const username in userData) {
+      const user = userData[username];
 
       // 导入播放记录
       if (user.playRecords) {
