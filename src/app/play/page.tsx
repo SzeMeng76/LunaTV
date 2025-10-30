@@ -4269,26 +4269,13 @@ function PlayPageClient() {
                         )}
                       </div>
                     </button>
-{/* 第三方播放器按钮组 - 与网盘资源按钮对齐 */}          
-{(() => {              
-  const bananaSource = availableSources.find(source => source.source === 'banana');              
-  if (!bananaSource) return null;              
+{/* 第三方播放器按钮组 - 与网盘资源按钮对齐 */}  
+{(() => {  
+  const bananaSource = availableSources.find(source => source.source === 'banana');  
+  if (!bananaSource) return null;  
   
-  const bananaVideoUrl = bananaSource.episodes?.[currentEpisodeIndex] || '';              
-  if (!bananaVideoUrl) return null;              
-  
-  const convertVideoUrl = (url: string): string => {              
-    try {              
-      const urlObj = new URL(url);              
-      const pathAndQuery = urlObj.pathname + urlObj.search + urlObj.hash;              
-      return `https://vod302.199301.xyz${pathAndQuery}`;              
-    } catch (e) {              
-      console.error('URL转换失败:', e);              
-      return url;              
-    }              
-  };              
-  
-  const convertedUrl = convertVideoUrl(bananaVideoUrl);          
+  const bananaVideoUrl = bananaSource.episodes?.[currentEpisodeIndex] || '';  
+  if (!bananaVideoUrl) return null;    
   
   // 操作系统检测函数          
   const getOS = () => {          
