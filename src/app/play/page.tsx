@@ -4628,7 +4628,6 @@ function PlayPageClient() {
     </svg>  
   </button>  
     
-  {/* hover 显示的下拉菜单 */}  
   <div className="absolute top-full mt-2 right-0 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 min-w-[120px] z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">  
     <a  
       href={convertedUrl}  
@@ -4657,15 +4656,15 @@ function PlayPageClient() {
       download  
       className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"  
     >  
-            VTT字幕    
-          </a>  
-        </div>  {/* 闭合下拉菜单的 div */}  
-      </div>    {/* 闭合 group 的 div */}  
-    </div>      {/* 闭合 flex 容器的 div */}  
-  );            {/* 闭合 return 语句 */}  
-})()}           {/* 闭合 IIFE */}  
-                  </div>  
-                </div>  
+      VTT字幕  
+    </a>  
+  </div>  
+</div>
+</div>              
+  );              
+})()}
+                  </div>
+                </div>
               </div>
 
               {/* 关键信息行 */}
