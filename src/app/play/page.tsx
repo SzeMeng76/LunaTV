@@ -263,21 +263,22 @@ function PlayPageClient() {
     }
     return false;
   });
+
   // 根据视频 URL 生成可能的字幕 URL  
   const generateSubtitleUrls = (videoUrl: string): string[] => {  
     const subtitleUrls: string[] = [];  
-      
+
     // 移除视频文件扩展名  
     const baseUrl = videoUrl.replace(/\.(mkv|mp4|avi|flv|wmv|mov|m3u8)$/i, '');  
-      
+
     // 生成可能的字幕文件 URL  
     subtitleUrls.push(`${baseUrl}.chs.srt`);  
     subtitleUrls.push(`${baseUrl}.chs.ass`);  
     subtitleUrls.push(`${baseUrl}.chs.vtt`);  
-      
+
     return subtitleUrls;  
   };  
-    
+
   // 检查字幕文件是否存在  
   const checkSubtitleExists = async (url: string): Promise<boolean> => {  
     try {  
@@ -287,12 +288,12 @@ function PlayPageClient() {
       return false;  
     }  
   };  
-    
+
   // 自动检测并加载字幕  
   const autoLoadSubtitles = async (videoUrl: string): Promise<Array<{ url: string; type: string; filename: string }>> => {  
     const possibleUrls = generateSubtitleUrls(videoUrl);  
     const availableSubtitles: Array<{ url: string; type: string; filename: string }> = [];  
-      
+
     // 并发检查所有可能的字幕文件  
     const checks = possibleUrls.map(async (url) => {  
       const exists = await checkSubtitleExists(url);  
@@ -307,11 +308,10 @@ function PlayPageClient() {
         });  
       }  
     });  
-      
+
     await Promise.all(checks);  
     return availableSubtitles;  
-  };  
-  
+  };
   // 保存优选时的测速结果，避免EpisodeSelector重复测速
   const [precomputedVideoInfo, setPrecomputedVideoInfo] = useState<
     Map<string, { quality: string; loadSpeed: string; pingTime: number }>
@@ -1592,20 +1592,19 @@ function PlayPageClient() {
         }
       }, 800); // 缩短延迟时间，提高响应性
     }
-  }, [detail, currentEpisodeIndex]);
   // 🆕 集数变化时重新检测字幕  
   if (artPlayerRef.current && !isSourceChangingRef.current) {  
     // 延迟执行,确保视频 URL 已更新  
     setTimeout(async () => {  
       try {  
         if (!artPlayerRef.current) return;  
-          
+
         console.log('🔄 集数变化,重新检测字幕...');  
         const autoSubtitles = await autoLoadSubtitles(videoUrl);  
-          
+
         if (autoSubtitles.length > 0) {  
           console.log('✅ 新集数检测到字幕:', autoSubtitles);  
-            
+
           // 清除旧的字幕设置项  
           if (artPlayerRef.current.setting) {  
             // 移除旧的字幕设置项(如果存在)  
@@ -1615,7 +1614,7 @@ function PlayPageClient() {
               settings.splice(subtitleIndex, 1);  
             }  
           }  
-            
+
           // 添加新的字幕设置项  
           artPlayerRef.current.setting.add({  
             html: '字幕',  
@@ -1642,7 +1641,7 @@ function PlayPageClient() {
                 }  
                 return '关闭';  
               }  
-                
+
               if (artPlayerRef.current) {  
                 artPlayerRef.current.subtitle.switch(item.subtitle.url, {  
                   type: item.subtitle.type,  
@@ -1652,13 +1651,13 @@ function PlayPageClient() {
               return item.html;  
             },  
           });  
-            
+
           // 自动加载第一个字幕  
           const firstSub = autoSubtitles[0];  
           artPlayerRef.current.subtitle.switch(firstSub.url, {  
             type: firstSub.type,  
           });  
-            
+
           if (artPlayerRef.current) {  
             artPlayerRef.current.notice.show = `已加载字幕: ${firstSub.filename}`;  
           }  
@@ -1675,6 +1674,7 @@ function PlayPageClient() {
     }, 1000); // 延迟1秒,确保视频URL已更新  
   }  
 }, [detail, currentEpisodeIndex, videoUrl]); // 添加 videoUrl 依赖
+
   // 进入页面时直接获取全部源信息
   useEffect(() => {
     const fetchSourceDetail = async (
@@ -2755,7 +2755,7 @@ function PlayPageClient() {
         fontSize: '20px',  
         },  
         encoding: 'utf-8',  
-        },  
+        },   
         // AirPlay 仅在支持 WebKit API 的浏览器中启用
         // 主要是 Safari (桌面和移动端) 和 iOS 上的其他浏览器
         airplay: isIOS || isSafari,
