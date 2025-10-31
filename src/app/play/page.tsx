@@ -4639,24 +4639,19 @@ function PlayPageClient() {
     </a>  
     <a  
       href={convertedUrl.replace(/\.(mkv|mp4|avi|flv|wmv|mov|m3u8)$/i, '') + '.chs.srt'}  
-      download  
+      target="_blank"  
+      rel="noopener noreferrer"  
       className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"  
     >  
       SRT字幕  
     </a>  
     <a  
       href={convertedUrl.replace(/\.(mkv|mp4|avi|flv|wmv|mov|m3u8)$/i, '') + '.chs.ass'}  
-      download  
+      target="_blank"  
+      rel="noopener noreferrer"   
       className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"  
     >  
-      ASS字幕  
-    </a>  
-    <a  
-      href={convertedUrl.replace(/\.(mkv|mp4|avi|flv|wmv|mov|m3u8)$/i, '') + '.chs.vtt'}  
-      download  
-      className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"  
-    >  
-      VTT字幕  
+      ASS字幕 
     </a>  
   </div>  
 </div>
