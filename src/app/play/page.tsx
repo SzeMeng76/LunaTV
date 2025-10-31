@@ -4616,16 +4616,21 @@ function PlayPageClient() {
         </a>      
       )}      
   
-{/* 下载按钮 - 带下拉菜单 */}  
+{/* 下载按钮 - 带下拉菜单(无需额外状态) */}  
 {(() => {  
-  const [showDownloadMenu, setShowDownloadMenu] = useState(false);  
+  const bananaSource = availableSources.find(source => source.source === 'banana');  
+  if (!bananaSource) return null;  
+  
+  const bananaVideoUrl = bananaSource.episodes?.[currentEpisodeIndex] || '';  
+  if (!bananaVideoUrl) return null;  
+  
+  const convertedUrl = bananaVideoUrl;  
   const baseUrl = convertedUrl.replace(/\.(mkv|mp4|avi|flv|wmv|mov|m3u8)$/i, '');  
     
   return (  
-    <div className="relative">  
+    <div className="relative group">  
       <button  
-        onClick={() => setShowDownloadMenu(!showDownloadMenu)}  
-        className="relative group flex items-center gap-1.5 bg-green-500 hover:bg-green-600 text-white px-3 py-2.5 rounded-full text-sm font-medium shadow-md transition-colors"  
+        className="relative flex items-center gap-1.5 bg-green-500 hover:bg-green-600 text-white px-3 py-2.5 rounded-full text-sm font-medium shadow-md transition-colors"  
       >  
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">  
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />  
@@ -4636,39 +4641,38 @@ function PlayPageClient() {
         </svg>  
       </button>  
         
-      {showDownloadMenu && (  
-        <div className="absolute top-full mt-2 right-0 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 min-w-[120px] z-50">  
-          <a  
-            href={convertedUrl}  
-            target="_blank"  
-            rel="noopener noreferrer"  
-            className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"  
-          >  
-            视频  
-          </a>  
-          <a  
-            href={`${baseUrl}.chs.srt`}  
-            download  
-            className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"  
-          >  
-            SRT字幕  
-          </a>  
-          <a  
-            href={`${baseUrl}.chs.ass`}  
-            download  
-            className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"  
-          >  
-            ASS字幕  
-          </a>  
-          <a  
-            href={`${baseUrl}.chs.vtt`}  
-            download  
-            className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"  
-          >  
-            VTT字幕  
-          </a>  
-        </div>  
-      )}  
+      {/* 使用 CSS hover 显示下拉菜单 */}  
+      <div className="absolute top-full mt-2 right-0 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 min-w-[120px] z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">  
+        <a  
+          href={convertedUrl}  
+          target="_blank"  
+          rel="noopener noreferrer"  
+          className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"  
+        >  
+          视频  
+        </a>  
+        <a  
+          href={`${baseUrl}.chs.srt`}  
+          download  
+          className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"  
+        >  
+          SRT字幕  
+        </a>  
+        <a  
+          href={`${baseUrl}.chs.ass`}  
+          download  
+          className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"  
+        >  
+          ASS字幕  
+        </a>  
+        <a  
+          href={`${baseUrl}.chs.vtt`}  
+          download  
+          className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"  
+        >  
+          VTT字幕  
+        </a>  
+      </div>  
     </div>  
   );  
 })()}
