@@ -2710,14 +2710,16 @@ const VideoSourceConfig = ({
       showAlert({
         type: 'success',
         title: '操作成功',
-        message: `${markAsAdult ? '标记' : '取消标记'}成功！共处理 ${keys.length} 个视频源`
+        message: `${markAsAdult ? '标记' : '取消标记'}成功！共处理 ${keys.length} 个视频源`,
+        timer: 2000
       });
       setSelectedSources(new Set());
     } catch {
       showAlert({
         type: 'error',
         title: '操作失败',
-        message: `${markAsAdult ? '标记' : '取消标记'}失败，请重试`
+        message: `${markAsAdult ? '标记' : '取消标记'}失败，请重试`,
+        showConfirm: true
       });
     }
   };
