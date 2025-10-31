@@ -45,7 +45,7 @@ interface WakeLockSentinel {
 function PlayPageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
-
+  const [loadedSubtitleUrls, setLoadedSubtitleUrls] = useState<Array<{ url: string; type: string; filename: string }>>([]);
   // -----------------------------------------------------------------------------
   // 状态变量（State）
   // -----------------------------------------------------------------------------
@@ -1604,7 +1604,8 @@ function PlayPageClient() {
 
         if (autoSubtitles.length > 0) {  
           console.log('✅ 新集数检测到字幕:', autoSubtitles);  
-
+           // 🆕 更新字幕 URL  
+          setLoadedSubtitleUrls(autoSubtitles);
           // 清除旧的字幕设置项  
           if (artPlayerRef.current.setting) {  
             // 移除旧的字幕设置项(如果存在)  
@@ -3253,7 +3254,8 @@ function PlayPageClient() {
       
     if (autoSubtitles.length > 0) {  
       console.log('✅ 检测到字幕文件:', autoSubtitles);  
-        
+        // 🆕 保存已加载的字幕 URL  
+      setLoadedSubtitleUrls(autoSubtitles);      
       // 如果有多个字幕,添加切换选项  
       artPlayerRef.current.setting.add({  
         html: '字幕',  
@@ -4616,43 +4618,41 @@ function PlayPageClient() {
         </a>      
       )}      
   
-{/* 下载按钮组 - 视频 + 字幕 */}  
-<div className="relative group">  
-  <button className="relative flex items-center gap-1.5 bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded-full text-sm font-medium shadow-md transition-colors">  
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">  
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />  
-    </svg>  
-    <span>下载</span>  
-    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">  
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />  
-    </svg>  
-  </button>  
-    
-  <div className="absolute top-full mt-2 right-0 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 min-w-[120px] z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">  
-    <a  
-      href={convertedUrl}  
-      target="_blank"  
-      rel="noopener noreferrer"  
-      className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"  
-    >  
-      视频  
-    </a>  
-    <a  
-      href={convertedUrl.replace(/\.(mkv|mp4|avi|flv|wmv|mov|m3u8)$/i, '') + '.chs.srt'}  
-      target="_blank"  
-      rel="noopener noreferrer"  
-      className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"  
-    >  
-      SRT字幕  
-    </a>  
-    <a  
-      href={convertedUrl.replace(/\.(mkv|mp4|avi|flv|wmv|mov|m3u8)$/i, '') + '.chs.ass'}  
-      target="_blank"  
-      rel="noopener noreferrer"   
-      className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"  
-    >  
-      ASS字幕 
-    </a>  
+{/* 下载按钮组 - 视频 + 字幕 */}    
+<div className="relative group">    
+  <button className="relative flex items-center gap-1.5 bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded-full text-sm font-medium shadow-md transition-colors">    
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">    
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />    
+    </svg>    
+    <span>下载</span>    
+    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">    
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />    
+    </svg>    
+  </button>    
+      
+  <div className="absolute top-full mt-2 right-0 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 min-w-[120px] z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">    
+    {/* 视频链接 */}  
+    <a    
+      href={convertedUrl}    
+      target="_blank"    
+      rel="noopener noreferrer"    
+      className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"    
+    >    
+      视频    
+    </a>    
+      
+    {/* 🆕 只显示播放器实际加载的字幕 */}  
+    {loadedSubtitleUrls.map((subtitle) => (  
+      <a  
+        key={subtitle.url}  
+        href={subtitle.url}  
+        target="_blank"  
+        rel="noopener noreferrer"  
+        className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"  
+      >  
+        {subtitle.type.toUpperCase()}字幕  
+      </a>  
+    ))}  
   </div>  
 </div>
 </div>              
