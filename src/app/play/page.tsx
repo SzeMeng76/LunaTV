@@ -263,7 +263,55 @@ function PlayPageClient() {
     }
     return false;
   });
-
+  // 根据视频 URL 生成可能的字幕 URL  
+  const generateSubtitleUrls = (videoUrl: string): string[] => {  
+    const subtitleUrls: string[] = [];  
+      
+    // 移除视频文件扩展名  
+    const baseUrl = videoUrl.replace(/\.(mkv|mp4|avi|flv|wmv|mov|m3u8)$/i, '');  
+      
+    // 生成可能的字幕文件 URL  
+    subtitleUrls.push(`${baseUrl}.chs.srt`);  
+    subtitleUrls.push(`${baseUrl}.chs.ass`);  
+    subtitleUrls.push(`${baseUrl}.chs.vtt`);  
+      
+    return subtitleUrls;  
+  };  
+    
+  // 检查字幕文件是否存在  
+  const checkSubtitleExists = async (url: string): Promise<boolean> => {  
+    try {  
+      const response = await fetch(url, { method: 'HEAD' });  
+      return response.ok;  
+    } catch {  
+      return false;  
+    }  
+  };  
+    
+  // 自动检测并加载字幕  
+  const autoLoadSubtitles = async (videoUrl: string): Promise<Array<{ url: string; type: string; filename: string }>> => {  
+    const possibleUrls = generateSubtitleUrls(videoUrl);  
+    const availableSubtitles: Array<{ url: string; type: string; filename: string }> = [];  
+      
+    // 并发检查所有可能的字幕文件  
+    const checks = possibleUrls.map(async (url) => {  
+      const exists = await checkSubtitleExists(url);  
+      if (exists) {  
+        const ext = url.split('.').pop()?.toLowerCase() || 'srt';  
+        const type = ext === 'vtt' ? 'webvtt' : ext;  
+        const filename = url.split('/').pop() || '';  
+        availableSubtitles.push({   
+          url,   
+          type,  
+          filename: decodeURIComponent(filename)  
+        });  
+      }  
+    });  
+      
+    await Promise.all(checks);  
+    return availableSubtitles;  
+  };  
+  
   // 保存优选时的测速结果，避免EpisodeSelector重复测速
   const [precomputedVideoInfo, setPrecomputedVideoInfo] = useState<
     Map<string, { quality: string; loadSpeed: string; pingTime: number }>
@@ -1545,7 +1593,88 @@ function PlayPageClient() {
       }, 800); // 缩短延迟时间，提高响应性
     }
   }, [detail, currentEpisodeIndex]);
-
+  // 🆕 集数变化时重新检测字幕  
+  if (artPlayerRef.current && !isSourceChangingRef.current) {  
+    // 延迟执行,确保视频 URL 已更新  
+    setTimeout(async () => {  
+      try {  
+        if (!artPlayerRef.current) return;  
+          
+        console.log('🔄 集数变化,重新检测字幕...');  
+        const autoSubtitles = await autoLoadSubtitles(videoUrl);  
+          
+        if (autoSubtitles.length > 0) {  
+          console.log('✅ 新集数检测到字幕:', autoSubtitles);  
+            
+          // 清除旧的字幕设置项  
+          if (artPlayerRef.current.setting) {  
+            // 移除旧的字幕设置项(如果存在)  
+            const settings = artPlayerRef.current.setting.option;  
+            const subtitleIndex = settings.findIndex((item: any) => item.html === '字幕');  
+            if (subtitleIndex >= 0) {  
+              settings.splice(subtitleIndex, 1);  
+            }  
+          }  
+            
+          // 添加新的字幕设置项  
+          artPlayerRef.current.setting.add({  
+            html: '字幕',  
+            tooltip: `当前:${autoSubtitles[0].filename}`,  
+            icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zM4 12h4v2H4v-2zm10 6H4v-2h10v2zm6 0h-4v-2h4v2zm0-4H10v-2h10v2z"/></svg>',  
+            selector: [  
+              {  
+                html: '关闭',  
+                value: 'off',  
+              },  
+              ...autoSubtitles.map((sub) => ({  
+                html: sub.filename,  
+                value: sub.url,  
+                subtitle: {  
+                  url: sub.url,  
+                  type: sub.type,  
+                },  
+              })),  
+            ],  
+            onSelect: function (item) {  
+              if (item.value === 'off') {  
+                if (artPlayerRef.current) {  
+                  artPlayerRef.current.subtitle.show = false;  
+                }  
+                return '关闭';  
+              }  
+                
+              if (artPlayerRef.current) {  
+                artPlayerRef.current.subtitle.switch(item.subtitle.url, {  
+                  type: item.subtitle.type,  
+                });  
+                artPlayerRef.current.subtitle.show = true;  
+              }  
+              return item.html;  
+            },  
+          });  
+            
+          // 自动加载第一个字幕  
+          const firstSub = autoSubtitles[0];  
+          artPlayerRef.current.subtitle.switch(firstSub.url, {  
+            type: firstSub.type,  
+          });  
+            
+          if (artPlayerRef.current) {  
+            artPlayerRef.current.notice.show = `已加载字幕: ${firstSub.filename}`;  
+          }  
+        } else {  
+          console.log('📭 新集数未检测到字幕文件');  
+          // 隐藏字幕  
+          if (artPlayerRef.current) {  
+            artPlayerRef.current.subtitle.show = false;  
+          }  
+        }  
+      } catch (error) {  
+        console.warn('⚠️ 集数切换后字幕检测失败:', error);  
+      }  
+    }, 1000); // 延迟1秒,确保视频URL已更新  
+  }  
+}, [detail, currentEpisodeIndex, videoUrl]); // 添加 videoUrl 依赖
   // 进入页面时直接获取全部源信息
   useEffect(() => {
     const fetchSourceDetail = async (
@@ -2617,6 +2746,16 @@ function PlayPageClient() {
         fastForward: true,
         autoOrientation: true,
         lock: true,
+        // 🆕 添加字幕配置  
+        subtitle: {  
+        url: '',  
+        type: 'srt',  
+        style: {  
+        color: '#fff',  
+        fontSize: '20px',  
+        },  
+        encoding: 'utf-8',  
+        },  
         // AirPlay 仅在支持 WebKit API 的浏览器中启用
         // 主要是 Safari (桌面和移动端) 和 iOS 上的其他浏览器
         airplay: isIOS || isSafari,
@@ -3066,7 +3205,67 @@ function PlayPageClient() {
             .artplayer-plugin-danmuku .apd-emitter {
               display: none !important;
             }
-
+  // 🆕 自动检测并加载字幕  
+  try {  
+    console.log('🔍 开始检测字幕文件...');  
+    const autoSubtitles = await autoLoadSubtitles(videoUrl);  
+      
+    if (autoSubtitles.length > 0) {  
+      console.log('✅ 检测到字幕文件:', autoSubtitles);  
+        
+      // 如果有多个字幕,添加切换选项  
+      artPlayerRef.current.setting.add({  
+        html: '字幕',  
+        tooltip: autoSubtitles.length > 0 ? `当前:${autoSubtitles[0].filename}` : '当前:关闭',  
+        icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zM4 12h4v2H4v-2zm10 6H4v-2h10v2zm6 0h-4v-2h4v2zm0-4H10v-2h10v2z"/></svg>',  
+        selector: [  
+          {  
+            html: '关闭',  
+            value: 'off',  
+          },  
+          ...autoSubtitles.map((sub) => ({  
+            html: sub.filename,  
+            value: sub.url,  
+            subtitle: {  
+              url: sub.url,  
+              type: sub.type,  
+            },  
+          })),  
+        ],  
+        onSelect: function (item) {  
+          if (item.value === 'off') {  
+            if (artPlayerRef.current) {  
+              artPlayerRef.current.subtitle.show = false;  
+            }  
+            return '关闭';  
+          }  
+            
+          if (artPlayerRef.current) {  
+            artPlayerRef.current.subtitle.switch(item.subtitle.url, {  
+              type: item.subtitle.type,  
+            });  
+            artPlayerRef.current.subtitle.show = true;  
+          }  
+          return item.html;  
+        },  
+      });  
+        
+      // 默认加载第一个检测到的字幕  
+      const firstSub = autoSubtitles[0];  
+      artPlayerRef.current.subtitle.switch(firstSub.url, {  
+        type: firstSub.type,  
+      });  
+      console.log('✅ 已自动加载字幕:', firstSub.filename);  
+        
+      if (artPlayerRef.current) {  
+        artPlayerRef.current.notice.show = `已加载字幕: ${firstSub.filename}`;  
+      }  
+    } else {  
+      console.log('📭 未检测到字幕文件');  
+    }  
+  } catch (error) {  
+    console.warn('⚠️ 自动加载字幕失败:', error);  
+  }
             
             /* 弹幕配置面板优化 - 修复全屏模式下点击问题 */
             .artplayer-plugin-danmuku .apd-config {
