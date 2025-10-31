@@ -3205,6 +3205,47 @@ function PlayPageClient() {
             .artplayer-plugin-danmuku .apd-emitter {
               display: none !important;
             }
+            
+            /* 弹幕配置面板优化 - 修复全屏模式下点击问题 */
+            .artplayer-plugin-danmuku .apd-config {
+              position: relative;
+            }
+            
+            .artplayer-plugin-danmuku .apd-config-panel {
+              /* 使用绝对定位而不是fixed，让ArtPlayer的动态定位生效 */
+              position: absolute !important;
+              /* 保持ArtPlayer原版的默认left: 0，让JS动态覆盖 */
+              /* 保留z-index确保层级正确 */
+              z-index: 2147483647 !important; /* 使用最大z-index确保在全屏模式下也能显示在最顶层 */
+              /* 确保面板可以接收点击事件 */
+              pointer-events: auto !important;
+              /* 添加一些基础样式确保可见性 */
+              background: rgba(0, 0, 0, 0.8);
+              border-radius: 6px;
+              backdrop-filter: blur(10px);
+            }
+            
+            /* 全屏模式下的特殊优化 */
+            .artplayer[data-fullscreen="true"] .artplayer-plugin-danmuku .apd-config-panel {
+              /* 全屏时使用固定定位并调整位置 */
+              position: fixed !important;
+              top: auto !important;
+              bottom: 80px !important; /* 距离底部控制栏80px */
+              right: 20px !important; /* 距离右边20px */
+              left: auto !important;
+              z-index: 2147483647 !important;
+            }
+            
+            /* 确保全屏模式下弹幕面板内部元素可点击 */
+            .artplayer[data-fullscreen="true"] .artplayer-plugin-danmuku .apd-config-panel * {
+              pointer-events: auto !important;
+            }
+          `;
+          document.head.appendChild(style);
+        };
+        
+        // 应用CSS优化
+        optimizeDanmukuControlsCSS();
   // 🆕 自动检测并加载字幕  
   try {  
     console.log('🔍 开始检测字幕文件...');  
@@ -3266,48 +3307,6 @@ function PlayPageClient() {
   } catch (error) {  
     console.warn('⚠️ 自动加载字幕失败:', error);  
   }
-            
-            /* 弹幕配置面板优化 - 修复全屏模式下点击问题 */
-            .artplayer-plugin-danmuku .apd-config {
-              position: relative;
-            }
-            
-            .artplayer-plugin-danmuku .apd-config-panel {
-              /* 使用绝对定位而不是fixed，让ArtPlayer的动态定位生效 */
-              position: absolute !important;
-              /* 保持ArtPlayer原版的默认left: 0，让JS动态覆盖 */
-              /* 保留z-index确保层级正确 */
-              z-index: 2147483647 !important; /* 使用最大z-index确保在全屏模式下也能显示在最顶层 */
-              /* 确保面板可以接收点击事件 */
-              pointer-events: auto !important;
-              /* 添加一些基础样式确保可见性 */
-              background: rgba(0, 0, 0, 0.8);
-              border-radius: 6px;
-              backdrop-filter: blur(10px);
-            }
-            
-            /* 全屏模式下的特殊优化 */
-            .artplayer[data-fullscreen="true"] .artplayer-plugin-danmuku .apd-config-panel {
-              /* 全屏时使用固定定位并调整位置 */
-              position: fixed !important;
-              top: auto !important;
-              bottom: 80px !important; /* 距离底部控制栏80px */
-              right: 20px !important; /* 距离右边20px */
-              left: auto !important;
-              z-index: 2147483647 !important;
-            }
-            
-            /* 确保全屏模式下弹幕面板内部元素可点击 */
-            .artplayer[data-fullscreen="true"] .artplayer-plugin-danmuku .apd-config-panel * {
-              pointer-events: auto !important;
-            }
-          `;
-          document.head.appendChild(style);
-        };
-        
-        // 应用CSS优化
-        optimizeDanmukuControlsCSS();
-
         // 精确解决弹幕菜单与进度条拖拽冲突 - 基于ArtPlayer原生拖拽逻辑
         const fixDanmakuProgressConflict = () => {
           let isDraggingProgress = false;
