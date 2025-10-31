@@ -1634,7 +1634,7 @@ function PlayPageClient() {
                 },  
               })),  
             ],  
-            onSelect: function (item) {  
+            onSelect: function (item: any) {  
               if (item.value === 'off') {  
                 if (artPlayerRef.current) {  
                   artPlayerRef.current.subtitle.show = false;  
@@ -3273,7 +3273,7 @@ function PlayPageClient() {
             },  
           })),  
         ],  
-        onSelect: function (item) {  
+        onSelect: function (item: any) {  
           if (item.value === 'off') {  
             if (artPlayerRef.current) {  
               artPlayerRef.current.subtitle.show = false;  
