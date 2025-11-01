@@ -27,6 +27,7 @@ import { getAuthInfoFromBrowserCookie } from '@/lib/auth';
 import AIRecommendModal from '@/components/AIRecommendModal';
 import CapsuleSwitch from '@/components/CapsuleSwitch';
 import ContinueWatching from '@/components/ContinueWatching';
+import HeroBanner from '@/components/HeroBanner';
 import PageLayout from '@/components/PageLayout';
 import ScrollableRow from '@/components/ScrollableRow';
 import SectionTitle from '@/components/SectionTitle';
@@ -283,48 +284,43 @@ function HomeClient() {
       {/* Telegram 新用户欢迎弹窗 */}
       <TelegramWelcomeModal />
 
-      <div className='px-2 sm:px-10 py-4 sm:py-8 overflow-visible'>
-        {/* 欢迎横幅 - 在所有 tab 显示 */}
-        <div className='mb-6 mt-0 md:mt-12 relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 p-[2px] shadow-lg animate-[slideDown_0.5s_ease-out]'>
-            <div className='relative bg-white dark:bg-gray-900 rounded-2xl p-5 sm:p-6'>
-              {/* 装饰性背景 */}
-              <div className='absolute top-0 right-0 w-48 h-48 bg-gradient-to-br from-blue-400/10 to-purple-400/10 rounded-full blur-3xl'></div>
-              <div className='absolute bottom-0 left-0 w-32 h-32 bg-gradient-to-tr from-pink-400/10 to-purple-400/10 rounded-full blur-2xl'></div>
+      <div className='overflow-visible -mt-6 md:mt-0'>
+        {/* 欢迎横幅 - 现代化精简设计 */}
+        <div className='mb-6 relative overflow-hidden rounded-xl bg-gradient-to-r from-blue-500/90 via-purple-500/90 to-pink-500/90 backdrop-blur-sm shadow-xl border border-white/20'>
+          <div className='relative p-4 sm:p-5'>
+            {/* 动态渐变背景 */}
+            <div className='absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-black/5'></div>
 
-              <div className='relative z-10'>
-                <div className='flex items-start justify-between gap-4'>
-                  <div className='flex-1 min-w-0'>
-                    <h2 className='text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-1.5 flex items-center gap-2 flex-wrap'>
-                      <span>
-                        {(() => {
-                          const hour = new Date().getHours();
-                          if (hour < 12) return '早上好';
-                          if (hour < 18) return '下午好';
-                          return '晚上好';
-                        })()}
-                        {username && '，'}
-                      </span>
-                      {username && (
-                        <span className='text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400'>
-                          {username}
-                        </span>
-                      )}
-                      <span className='inline-block animate-wave origin-bottom-right'>👋</span>
-                    </h2>
-                    <p className='text-sm sm:text-base text-gray-600 dark:text-gray-400'>
-                      发现更多精彩影视内容 ✨
-                    </p>
-                  </div>
+            <div className='relative z-10 flex items-center justify-between gap-4'>
+              <div className='flex-1 min-w-0'>
+                <h2 className='text-lg sm:text-xl font-bold text-white mb-1 flex items-center gap-2 flex-wrap'>
+                  <span>
+                    {(() => {
+                      const hour = new Date().getHours();
+                      if (hour < 12) return '早上好';
+                      if (hour < 18) return '下午好';
+                      return '晚上好';
+                    })()}
+                    {username && '，'}
+                  </span>
+                  {username && (
+                    <span className='text-yellow-300 font-semibold'>
+                      {username}
+                    </span>
+                  )}
+                  <span className='inline-block animate-wave origin-bottom-right'>👋</span>
+                </h2>
+                <p className='text-sm text-white/90'>
+                  发现更多精彩影视内容 ✨
+                </p>
+              </div>
 
-                  {/* 装饰图标 - 只在大屏幕显示 */}
-                  <div className='hidden lg:block flex-shrink-0'>
-                    <div className='w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center shadow-lg animate-pulse'>
-                      <Film className='w-8 h-8 text-white' />
-                    </div>
-                  </div>
-                </div>
+              {/* 装饰图标 - 更小更精致 */}
+              <div className='hidden md:flex items-center justify-center flex-shrink-0 w-12 h-12 rounded-full bg-white/10 backdrop-blur-sm border border-white/20'>
+                <Film className='w-6 h-6 text-white' />
               </div>
             </div>
+          </div>
         </div>
 
         {/* 顶部 Tab 切换 */}
@@ -424,6 +420,28 @@ function HomeClient() {
           ) : (
             // 首页视图
             <>
+              {/* Hero Banner 轮播 */}
+              {!loading && (hotMovies.length > 0 || hotTvShows.length > 0) && (
+                <section className='mb-8'>
+                  <HeroBanner
+                    items={[...hotMovies.slice(0, 5), ...hotTvShows.slice(0, 3)]
+                      .map((item) => ({
+                        id: item.id,
+                        title: item.title,
+                        poster: item.poster,
+                        description: item.plot_summary,
+                        year: item.year,
+                        rate: item.rate,
+                        douban_id: Number(item.id),
+                        type: hotMovies.includes(item) ? 'movie' : 'tv',
+                      }))}
+                    autoPlayInterval={5000}
+                    showControls={true}
+                    showIndicators={true}
+                  />
+                </section>
+              )}
+
               {/* 继续观看 */}
               <ContinueWatching />
 

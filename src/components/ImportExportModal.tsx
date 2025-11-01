@@ -24,7 +24,7 @@ interface ImportExportModalProps {
     file: File,
     onProgress?: (current: number, total: number) => void
   ) => Promise<ImportResult>;
-  onExport?: () => void;
+  onExport?: (format?: 'array' | 'config') => void;
   result?: ImportResult;
 }
 
@@ -38,6 +38,7 @@ export default function ImportExportModal({
 }: ImportExportModalProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [exportFormat, setExportFormat] = useState<'array' | 'config'>('array');
   const [importProgress, setImportProgress] = useState({
     current: 0,
     total: 0,
@@ -253,8 +254,56 @@ export default function ImportExportModal({
                   准备导出
                 </h3>
                 <p className='text-sm text-gray-600 dark:text-gray-400'>
-                  点击下方按钮开始导出视频源配置
+                  选择导出格式并点击下方按钮开始导出
                 </p>
+              </div>
+
+              {/* 导出格式选择 */}
+              <div className='bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3'>
+                <h4 className='font-semibold text-blue-900 dark:text-blue-200 mb-2.5 text-sm'>
+                  📋 选择导出格式
+                </h4>
+                <div className='space-y-2.5'>
+                  {/* 数组格式选项 */}
+                  <label className='flex items-start space-x-2.5 cursor-pointer group'>
+                    <input
+                      type='radio'
+                      name='exportFormat'
+                      value='array'
+                      checked={exportFormat === 'array'}
+                      onChange={(e) => setExportFormat(e.target.value as 'array' | 'config')}
+                      className='mt-1 w-4 h-4 text-blue-600 focus:ring-blue-500'
+                    />
+                    <div className='flex-1'>
+                      <div className='font-medium text-sm text-blue-900 dark:text-blue-100 group-hover:text-blue-700 dark:group-hover:text-blue-200'>
+                        数组格式（推荐）
+                      </div>
+                      <div className='text-xs text-blue-700 dark:text-blue-300 mt-0.5'>
+                        适用于批量导入功能，结构：<code className='bg-blue-100 dark:bg-blue-900/40 px-1 py-0.5 rounded'>[&#123;...&#125;]</code>
+                      </div>
+                    </div>
+                  </label>
+
+                  {/* 配置文件格式选项 */}
+                  <label className='flex items-start space-x-2.5 cursor-pointer group'>
+                    <input
+                      type='radio'
+                      name='exportFormat'
+                      value='config'
+                      checked={exportFormat === 'config'}
+                      onChange={(e) => setExportFormat(e.target.value as 'array' | 'config')}
+                      className='mt-1 w-4 h-4 text-blue-600 focus:ring-blue-500'
+                    />
+                    <div className='flex-1'>
+                      <div className='font-medium text-sm text-blue-900 dark:text-blue-100 group-hover:text-blue-700 dark:group-hover:text-blue-200'>
+                        配置文件格式
+                      </div>
+                      <div className='text-xs text-blue-700 dark:text-blue-300 mt-0.5'>
+                        适用于直接插入配置文件，结构：<code className='bg-blue-100 dark:bg-blue-900/40 px-1 py-0.5 rounded'>&#123;api_site: &#123;key: &#123;...&#125;&#125;&#125;</code>
+                      </div>
+                    </div>
+                  </label>
+                </div>
               </div>
 
               <div className='bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3'>
@@ -263,7 +312,7 @@ export default function ImportExportModal({
                 </h4>
                 <ul className='text-xs text-green-800 dark:text-green-300 space-y-0.5'>
                   <li>• 视频源配置将导出为 JSON 格式</li>
-                  <li>• 文件名：video_sources_YYYYMMDD_HHMMSS.json</li>
+                  <li>• 文件名：{exportFormat === 'array' ? 'video_sources' : 'config'}_YYYYMMDD_HHMMSS.json</li>
                   <li>• 包含所有视频源的完整配置信息</li>
                   <li>• 可用于备份或迁移到其他设备</li>
                 </ul>
@@ -353,7 +402,7 @@ export default function ImportExportModal({
         <div className='flex-shrink-0 px-5 py-3 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end space-x-2.5'>
           {mode === 'export' && (
             <button
-              onClick={onExport}
+              onClick={() => onExport?.(exportFormat)}
               className='px-4 py-2 text-sm bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-md hover:shadow-lg font-medium'
             >
               确认导出

@@ -133,6 +133,78 @@ https://your-domain.com/api/tvbox?format=json&token=USER_SPECIFIC_TOKEN
 
 ## 🎛️ 高级功能
 
+### 🎯 智能搜索代理（新功能）
+
+LunaTV 默认启用智能搜索代理，解决 TVBox 搜索结果不精确的问题。
+
+**功能特点：**
+- ✅ **智能排序** - 相关度高的结果优先显示
+- ✅ **成人内容过滤** - 自动过滤敏感内容（可控制）
+- ✅ **严格匹配模式** - 只返回高度相关的结果
+- ✅ **无感知** - TVBox 端无需任何配置，自动生效
+
+**工作原理：**
+1. TVBox 发送搜索请求到视频源
+2. LunaTV 拦截请求，从上游获取结果
+3. 智能排序：完全匹配 > 开头匹配 > 包含匹配 > 模糊匹配
+4. 过滤成人内容（基于关键词和源标记）
+5. 返回优化后的结果给 TVBox
+
+**成人内容过滤：**
+
+默认启用，基于 29+ 敏感关键词过滤：
+- 伦理片、福利、里番动漫、制服诱惑等
+- 被标记为成人内容的源会被完全过滤
+- 分类名称包含敏感词的结果会被移除
+
+**过滤控制方式：**
+
+⭐ **方式一：路径前缀（推荐）**
+
+适用于 OrionTV 等不支持 URL 参数的客户端：
+
+```bash
+# 家庭安全模式（默认，启用过滤）
+https://your-domain.com/api/tvbox
+
+# 完整内容模式（禁用过滤）
+https://your-domain.com/adult/api/tvbox
+```
+
+访问 `/adult/` 开头的路径会自动重写为带 `?adult=1` 参数的请求，无需手动配置。
+
+💡 **方式二：URL 参数**
+
+适用于 TVBox、浏览器等标准客户端：
+
+```bash
+# 默认模式（启用过滤和智能搜索）
+https://your-domain.com/api/tvbox
+
+# 显示成人内容
+https://your-domain.com/api/tvbox?adult=1
+# 或
+https://your-domain.com/api/tvbox?filter=off
+
+# 禁用智能搜索代理（不推荐）
+https://your-domain.com/api/tvbox?proxy=off
+
+# 严格匹配模式（只返回高度相关结果）
+https://your-domain.com/api/tvbox?strict=1
+```
+
+**参数优先级：**
+1. 路径前缀 `/adult/` → 显示成人内容
+2. URL 参数 `?filter=off` → 禁用过滤
+3. URL 参数 `?adult=1` → 显示成人内容
+4. 全局配置 `DisableYellowFilter` → 默认策略
+
+**使用场景：**
+- **家庭模式**：使用默认配置，自动过滤不良内容
+- **OrionTV**：使用 `/adult/` 路径前缀控制
+- **多设备**：不同设备使用不同 URL，灵活控制
+- **个人使用**：添加 `?adult=1` 或使用 `/adult/` 路径查看完整内容
+
 ### 🔄 Spider Jar 智能管理
 
 LunaTV 自动管理 spider jar 文件，确保最佳可用性：
@@ -271,6 +343,10 @@ https://your-domain.com/api/tvbox?format=json&mode=yingshicang&forceSpiderRefres
 | `mode` | string | `standard` | 配置模式：`standard`/`safe`/`fast`/`yingshicang` |
 | `token` | string | - | 访问 token（启用认证时必需） |
 | `forceSpiderRefresh` | string | `0` | 强制刷新 spider 缓存：`1` 启用 |
+| `adult` | string | - | 成人内容控制：`1`/`true` 显示，`0`/`false` 隐藏 |
+| `filter` | string | - | 过滤控制：`on`/`enable` 启用，`off`/`disable` 禁用 |
+| `proxy` | string | - | 智能搜索代理：`off`/`disable` 禁用（默认启用） |
+| `strict` | string | `0` | 严格匹配模式：`1` 启用（只返回高度相关结果） |
 
 ## 🔄 配置更新机制
 
@@ -291,6 +367,28 @@ https://your-domain.com/api/tvbox?format=json&mode=yingshicang&forceSpiderRefres
 ```
 
 ## 🛠️ 故障排除
+
+### 🎯 智能搜索相关
+
+**问题：搜索结果太少**
+- 可能启用了严格匹配模式，移除 `?strict=1` 参数
+- 检查是否被成人内容过滤影响，尝试 `?filter=off`
+- 确认原始源有搜索结果
+
+**问题：搜索结果包含不相关内容**
+- 启用严格匹配模式：`?strict=1`
+- 智能排序会自动将相关度高的结果置顶
+- 检查搜索关键词是否过于宽泛
+
+**问题：想查看被过滤的内容**
+- 添加 `?adult=1` 参数
+- 或使用 `?filter=off` 完全禁用过滤
+- 注意：此设置会影响所有搜索结果
+
+**问题：搜索速度慢**
+- 智能搜索代理需要处理时间（通常 < 1秒）
+- 如需直连原始 API，使用 `?proxy=off`（不推荐）
+- 检查网络连接和上游源响应速度
 
 ### ⚡ 快速模式相关
 
@@ -428,6 +526,20 @@ GET /api/tvbox/health?url=JAR_URL
 本功能遵循项目主许可证，仅供学习和个人使用。请遵守相关法律法规，不要用于商业用途。
 
 ## 🆕 更新日志
+
+### v3.0 - 2025-11-01
+
+- ✨ **智能搜索代理** - 默认启用，解决 TVBox 搜索不精确问题
+  - 相关性智能排序（完全匹配 > 开头匹配 > 包含匹配 > 模糊匹配）
+  - Levenshtein 距离算法优化匹配精度
+  - 年份和评分加权排序
+- ✨ **成人内容过滤** - 基于 29+ 敏感关键词自动过滤
+  - 源级别过滤（`is_adult` 标记）
+  - 分类级别过滤（关键词匹配）
+  - URL 参数灵活控制（`adult`/`filter`/`proxy`/`strict`）
+- ✨ **严格匹配模式** - `?strict=1` 只返回高度相关结果
+- 🔧 搜索结果缓存优化（5 分钟）
+- 📝 完善使用文档和故障排除指南
 
 ### v2.0 - 2025-01-04
 

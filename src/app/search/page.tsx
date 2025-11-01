@@ -873,7 +873,7 @@ function SearchPageClient() {
 
   return (
     <PageLayout activePath='/search'>
-      <div className='px-4 sm:px-10 py-4 sm:py-8 overflow-visible mb-10'>
+      <div className='overflow-visible mb-10 -mt-6 md:mt-0'>
         {/* 搜索框区域 - 美化版 */}
         <div className='mb-8'>
           {/* 搜索类型选项卡 - 美化版 */}

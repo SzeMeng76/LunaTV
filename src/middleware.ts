@@ -10,11 +10,56 @@ export async function middleware(request: NextRequest) {
 
   console.log(`[Middleware ${requestId}] Path:`, pathname);
 
+  // 处理 /adult/ 路径前缀，重写为实际 API 路径
+  if (pathname.startsWith('/adult/')) {
+    console.log(`[Middleware ${requestId}] Adult path detected, rewriting...`);
+
+    // 移除 /adult 前缀
+    const newPathname = pathname.replace(/^\/adult/, '');
+
+    // 创建新的 URL
+    const url = request.nextUrl.clone();
+    url.pathname = newPathname || '/';
+
+    // 添加 adult=1 参数（如果还没有）
+    if (!url.searchParams.has('adult')) {
+      url.searchParams.set('adult', '1');
+    }
+
+    console.log(`[Middleware ${requestId}] Rewritten path: ${url.pathname}${url.search}`);
+
+    // 重写请求
+    const response = NextResponse.rewrite(url);
+
+    // 设置响应头标识成人内容模式
+    response.headers.set('X-Content-Mode', 'adult');
+
+    // 继续执行认证检查（对于 API 路径）
+    if (newPathname.startsWith('/api')) {
+      // 将重写后的请求传递给认证逻辑
+      const modifiedRequest = new NextRequest(url, request);
+      return handleAuthentication(modifiedRequest, newPathname, requestId, response);
+    }
+
+    return response;
+  }
+
   // 跳过不需要认证的路径
   if (shouldSkipAuth(pathname)) {
     console.log(`[Middleware ${requestId}] Skipping auth for path:`, pathname);
     return NextResponse.next();
   }
+
+  return handleAuthentication(request, pathname, requestId);
+}
+
+// 提取认证处理逻辑为单独的函数
+async function handleAuthentication(
+  request: NextRequest,
+  pathname: string,
+  requestId: string,
+  response?: NextResponse
+) {
 
   const storageType = process.env.NEXT_PUBLIC_STORAGE_TYPE || 'localstorage';
   console.log(`[Middleware ${requestId}] Storage type:`, storageType);
@@ -48,7 +93,7 @@ export async function middleware(request: NextRequest) {
     if (!authInfo.password || authInfo.password !== process.env.PASSWORD) {
       return handleAuthFailure(request, pathname);
     }
-    return NextResponse.next();
+    return response || NextResponse.next();
   }
 
   // 其他模式：只验证签名
@@ -75,7 +120,7 @@ export async function middleware(request: NextRequest) {
     // 签名验证通过即可
     if (isValidSignature) {
       console.log(`[Middleware ${requestId}] Auth successful, allowing access`);
-      return NextResponse.next();
+      return response || NextResponse.next();
     }
   }
 

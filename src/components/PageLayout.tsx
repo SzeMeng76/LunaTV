@@ -1,16 +1,55 @@
 import { BackButton } from './BackButton';
 import MobileBottomNav from './MobileBottomNav';
 import MobileHeader from './MobileHeader';
+import ModernNav from './ModernNav';
 import Sidebar from './Sidebar';
+import { useSite } from './SiteProvider';
 import { ThemeToggle } from './ThemeToggle';
 import { UserMenu } from './UserMenu';
 
 interface PageLayoutProps {
   children: React.ReactNode;
   activePath?: string;
+  useModernNav?: boolean; // 新增：是否使用2025现代化导航
 }
 
-const PageLayout = ({ children, activePath = '/' }: PageLayoutProps) => {
+const PageLayout = ({ children, activePath = '/', useModernNav = true }: PageLayoutProps) => {
+  const { siteName } = useSite();
+
+  if (useModernNav) {
+    // 2025 Modern Navigation Layout
+    return (
+      <div className='w-full min-h-screen'>
+        {/* Modern Navigation - Top (Desktop) & Bottom (Mobile) */}
+        <ModernNav />
+
+        {/* 移动端头部 - Logo和用户菜单 */}
+        <div className='md:hidden fixed top-0 left-0 right-0 z-40 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl shadow-sm'>
+          <div className='flex items-center justify-between h-11 px-4'>
+            {/* Logo */}
+            <div className='text-base font-bold bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 dark:from-green-400 dark:via-emerald-400 dark:to-teal-400 bg-clip-text text-transparent'>
+              {siteName}
+            </div>
+
+            {/* User Menu & Theme Toggle */}
+            <div className='flex items-center gap-2'>
+              <ThemeToggle />
+              <UserMenu />
+            </div>
+          </div>
+        </div>
+
+        {/* Main Content - 移动端44px，桌面端64px */}
+        <main className='w-full min-h-screen pt-[44px] md:pt-16 pb-32 md:pb-8'>
+          <div className='w-full max-w-[1920px] mx-auto px-4 sm:px-6 md:px-8'>
+            {children}
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // Legacy Sidebar Layout (原来的设计)
   return (
     <div className='w-full min-h-screen'>
       {/* 移动端头部 */}

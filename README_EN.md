@@ -25,7 +25,7 @@
 ![HLS.js](https://img.shields.io/badge/HLS.js-1.6.13-ec407a)
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Docker Ready](https://img.shields.io/badge/Docker-ready-blue?logo=docker)
-![Version](https://img.shields.io/badge/Version-5.6.0-orange)
+![Version](https://img.shields.io/badge/Version-5.6.1-orange)
 
 </div>
 
@@ -33,7 +33,7 @@
 
 ## 📢 Project Overview
 
-This project is a deeply customized version based on **MoonTV**, continuously developed from **v4.3.1** to the current **v5.6.0**, with **50+ major feature modules** and **300+ detailed optimizations** added. See [CHANGELOG](CHANGELOG) for all new features.
+This project is a deeply customized version based on **MoonTV**, continuously developed from **v4.3.1** to the current **v5.6.1**, with **50+ major feature modules** and **300+ detailed optimizations** added. See [CHANGELOG](CHANGELOG) for all new features.
 
 ### 💡 Core Enhancement Highlights
 
@@ -73,20 +73,26 @@ This project is a deeply customized version based on **MoonTV**, continuously de
 - **Episode Group Scrolling**: Playback page episode selection supports scroll pagination for smooth browsing
 
 #### 📱 Interface Experience Optimization
+- **Hero Banner**: Auto-rotating hero banner on homepage with gradient backgrounds, enhanced visual appeal
+- **Modern Navigation UI**: Desktop horizontal top navbar, mobile Liquid Glass bottom navigation, responsive switching
+- **Mobile Layout Optimization**: Reduced header height, tighter layout design, fixed excessive spacing issues
 - **Virtual Scrolling**: react-window 2.2.0, smooth loading for massive content, smart container size detection (ResizeObserver)
 - **Virtual Scrolling Toggle**: Gradient styles, icons, animations, user switchable display modes
 - **Responsive Grid**: 2-8 column adaptive, auto-calculated optimal layout
-- **Douban Details Enhancement**: Complete rating, cast & crew, premiere date, duration, production info
+- **Douban Details Enhancement**: Complete rating, cast & crew, premiere date, duration, production info, poster proxy to prevent 403 errors
 - **User Menu Features**: Update reminders, continue watching (with new episode badges), favorites quick access, TVBox settings integration
 - **Login Interface Modernization**: Dynamic random wallpapers, gradient cards, responsive design
 - **Back to Top Button**: Quick return for long pages like release calendar
 
 #### 🔐 Security & Storage
 - **TVBox Complete Ecosystem**:
-  - IP whitelist, Token authentication, full API compatibility
+  - IP whitelist, user-specific Token authentication, full API compatibility, intelligent search proxy
+  - TVBox Intelligent Search Proxy with adult content filtering, path prefix support, UI controls
   - Deep JAR diagnostic system (file header verification, smart health check)
   - Spider management system (multi-Spider JAR backup sources, fallback proxy, gaotianliuyun third backup source)
   - Regular user access support (`/api/tvbox-config` endpoint)
+- **Adult Content Management**: Dual-layer filtering system, auto-detection, batch operations, user/group-level controls
+- **Video Source Import/Export**: Array/config file format export, backup & migration, quick copy buttons
 - **Source Browser & Testing Module**: Source testing, health checks, mobile responsive layout
 - **Resource Search API Authentication**: Enhanced security with user authentication
 - **Calendar Cache Migration**: Migrated from localStorage to database, cross-device sync support
@@ -166,19 +172,26 @@ This project is licensed under **CC BY-NC-SA 4.0**, with the following terms:
 - ✅ Episode group scroll pagination (smooth browsing for large episode counts)
 
 ### 🎨 Interface Experience
+- ✅ Hero banner (homepage auto-rotating, gradient backgrounds, enhanced visual appeal)
+- ✅ Modern navigation UI (desktop horizontal top bar, mobile Liquid Glass bottom nav, responsive switching)
+- ✅ Mobile layout optimization (reduced header height, tighter layout, fixed excessive spacing)
 - ✅ Virtual scrolling (react-window 2.2.0, ResizeObserver smart detection, progressive loading)
 - ✅ Virtual scrolling toggle (gradient styles, icons, animations, user switchable)
 - ✅ Responsive grid (2-8 column adaptive, actual container width dynamic calculation)
-- ✅ Douban details enhancement (rating, cast & crew, premiere date, duration, production info)
+- ✅ Douban details enhancement (rating, cast & crew, premiere date, duration, production info, poster proxy to prevent 403)
 - ✅ User menu enhancement (update reminders, continue watching with new episode badges, favorites quick access, TVBox settings)
 - ✅ Login/register modernization (dynamic random wallpapers, gradient cards, responsive design)
 - ✅ Back to top button (long pages like release calendar)
 - ✅ Completed series badges (based on vod_remarks, search API priority)
 - ✅ Search result filtering (source, title, year filtering, year sorting)
 - ✅ Video card right-click/long-press menu (new tab play, favorites, etc.)
+- ✅ z-index hierarchy optimization (cards, badges, modals display correctly)
 
 ### 🔐 Security & Storage
-- ✅ TVBox complete ecosystem (IP whitelist, Token auth, full API compatibility, regular user access)
+- ✅ TVBox complete ecosystem (IP whitelist, user-specific Token auth, full API compatibility, intelligent search proxy)
+- ✅ TVBox intelligent search proxy (adult content filtering, path prefix support, UI controls)
+- ✅ Adult content management system (dual-layer filtering, auto-detection, batch operations, user/group-level controls)
+- ✅ Video source import/export (array/config file formats, backup & migration, quick copy buttons)
 - ✅ TVBox deep diagnostics (JAR file header verification, smart health check, config field display)
 - ✅ Spider management system (multi-JAR backup sources, fallback proxy, gaotianliuyun third backup source)
 - ✅ Source browser & testing module (source testing, health checks, mobile responsive)
@@ -868,31 +881,33 @@ This project works with [OrionTV](https://github.com/zimplexing/OrionTV) on Andr
 
 For complete feature updates and bug fixes, see [CHANGELOG](CHANGELOG).
 
-### Latest Version: v5.6.0 (2025-10-27)
+### Latest Version: v5.6.1 (2025-11-01)
 
 #### Added
-- 🔐 Telegram Magic Link Authentication: Implemented secure Telegram-based Magic Link authentication for convenient login
-- 🤖 Auto-set Telegram Webhook: Automatically configure Telegram webhook when generating Magic Link, simplifying deployment
-- 🔍 Resource Search Endpoint Authentication: Added user authentication check to /api/search/resources endpoint for enhanced API security
-- 🎯 Source Browser Integration: Added source browser and testing module to admin panel with full source testing and management capabilities
-- 🎨 Enhanced Source Browser UI: Optimized source browser and testing module UI for improved user experience
+- 🎨 Hero Banner & Modern Navigation UI: Added auto-rotating hero banner with gradient backgrounds, redesigned navigation (desktop horizontal top bar + mobile Liquid Glass bottom nav)
+- 🎯 TVBox Intelligent Search Proxy: Added TVBox intelligent search proxy with adult content filtering and UI controls
+- 📋 Quick Copy TVBox Config Buttons: Added quick copy buttons for TVBox config modes to simplify configuration
+- 🔧 Adult Content Path Prefix Support: Added path prefix support for adult content filtering
+- 📤 Video Source Export Format Selection: Added export format selection supporting array and config file formats
+- ⏱️ Auto-dismiss for Batch Adult Marking: Added auto-dismiss timer to batch adult content marking success alert
 
 #### Improved
-- 📱 Mobile Source Browser Layout: Improved mobile search controls and responsive layout for various screen sizes
-- 🎯 Side Drawer Replaces Modal: Use side drawer instead of centered modal for source test results, optimizing space utilization
-- 📐 Drawer Card Layout Optimization: Optimized card layout and spacing in drawer mode
+- 📱 Fix Excessive Mobile Spacing: Reduced mobile header height and applied tighter layout, fixing excessive spacing across all pages
+- 🎨 Optimize Short Drama Loading Indicator: Improved loading indicator display for short drama page in light mode
 
 #### Fixed
-- 🔧 Prevent Upstash User Auto-deletion: Fixed user auto-deletion issue in Upstash environment and cleanup login statistics
-- 🎭 Drawer z-index Fix: Increased drawer z-index to prevent mobile navigation overlay
-- 🔄 Prevent Source Jumping: Fixed unexpected source jumping in source browser
-- 🚪 Portal Rendering Viewport Fix: Use Portal to render drawer for proper viewport positioning
-- 📱 Preview Modal z-index Fix: Fixed source browser preview modal z-index to prevent header overlay
-- 🔒 Mobile Bottom Nav Overlay Fix: Prevent mobile bottom navigation from covering preview modal content
-- ✨ Remove Short Drama Button Flicker: Removed flickering animation effect from short drama category buttons
+- 🔧 Fix Card & Badge z-index Hierarchy: Corrected z-index hierarchy for cards and badges to prevent layering issues
+- 🎭 Reduce Episode Badge z-index: Reduced episode badge z-index to prevent modal overlay issues
+- 📱 Increase Mobile PageLayout Bottom Padding: Increased bottom padding in PageLayout for mobile devices to improve layout
+- 🔝 Increase AI Modal z-index: Increased AI recommendation modal z-index to prevent badge overlap
+- 🖼️ Fix Douban Poster 403 Error: Route Douban poster images through proxy to prevent 403 forbidden errors
+- 🎬 Remove White Background Box: Removed white background box from short drama page for better visual effect
+- 🔄 Revert Loading Indicator Style: Reverted style improvements for short drama loading indicator in light mode
+- 🐛 Fix Webkit Cursor & iPadOS Progress Bar: Fixed Webkit cursor display and iPadOS progress bar interaction issues
 
 ### Major Milestone Versions
 
+- **v5.6.1**: Hero Banner & Modern Navigation UI, TVBox Intelligent Search Proxy, Export Format Selection
 - **v5.6.0**: Telegram Magic Link authentication, Source Browser & Testing Module, video source import/export
 - **v5.5.0**: User level system, release calendar, inactive user cleanup
 - **v5.4.0**: Complete short drama features, playback statistics system

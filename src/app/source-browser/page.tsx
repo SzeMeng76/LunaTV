@@ -547,7 +547,7 @@ export default function SourceBrowserPage() {
 
   return (
     <PageLayout activePath='/source-browser'>
-      <div className='max-w-7xl mx-auto p-4 md:p-6 space-y-6'>
+      <div className='max-w-7xl mx-auto space-y-6 -mt-6 md:mt-0'>
         {/* Header - 美化版 */}
         <div className='relative'>
           <div className='absolute inset-0 bg-gradient-to-r from-emerald-400/10 via-green-400/10 to-teal-400/10 rounded-2xl blur-3xl'></div>

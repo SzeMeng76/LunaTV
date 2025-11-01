@@ -3096,7 +3096,7 @@ const VideoSourceConfig = ({
   };
 
   // 导出视频源
-  const handleExportSources = () => {
+  const handleExportSources = (exportFormat: 'array' | 'config' = 'array') => {
     try {
       // 获取要导出的源（如果有选中则导出选中的，否则导出全部）
       const sourcesToExport =
@@ -3113,20 +3113,41 @@ const VideoSourceConfig = ({
         return;
       }
 
-      // 创建导出数据
-      const exportData = sourcesToExport.map((source) => ({
-        name: source.name,
-        key: source.key,
-        api: source.api,
-        detail: source.detail || '',
-        disabled: source.disabled || false,
-        is_adult: source.is_adult || false,
-      }));
-
-      // 生成文件名
+      let exportData: any;
+      let filename: string;
       const now = new Date();
       const timestamp = now.toISOString().replace(/[:.]/g, '-').slice(0, 19);
-      const filename = `video_sources_${timestamp}.json`;
+
+      if (exportFormat === 'array') {
+        // 数组格式：[{name, key, api, detail, disabled, is_adult}]
+        exportData = sourcesToExport.map((source) => ({
+          name: source.name,
+          key: source.key,
+          api: source.api,
+          detail: source.detail || '',
+          disabled: source.disabled || false,
+          is_adult: source.is_adult || false,
+        }));
+        filename = `video_sources_${timestamp}.json`;
+      } else {
+        // 配置文件格式：{"api_site": {"key": {name, api, detail?, is_adult?}}}
+        exportData = { api_site: {} };
+        sourcesToExport.forEach((source) => {
+          const sourceData: any = {
+            name: source.name,
+            api: source.api,
+          };
+          // 只在有值时添加可选字段
+          if (source.detail) {
+            sourceData.detail = source.detail;
+          }
+          if (source.is_adult) {
+            sourceData.is_adult = source.is_adult;
+          }
+          exportData.api_site[source.key] = sourceData;
+        });
+        filename = `config_${timestamp}.json`;
+      }
 
       // 创建下载
       const blob = new Blob([JSON.stringify(exportData, null, 2)], {
@@ -3144,7 +3165,7 @@ const VideoSourceConfig = ({
       showAlert({
         type: 'success',
         title: '导出成功',
-        message: `已导出 ${sourcesToExport.length} 个视频源到 ${filename}`,
+        message: `已导出 ${sourcesToExport.length} 个视频源到 ${filename}（${exportFormat === 'array' ? '数组格式' : '配置文件格式'}）`,
         timer: 3000,
       });
 
@@ -5827,7 +5848,7 @@ function AdminPageClient() {
   if (loading) {
     return (
       <PageLayout activePath='/admin'>
-        <div className='px-2 sm:px-10 py-4 sm:py-8'>
+        <div className='-mt-6 md:mt-0'>
           <div className='max-w-[95%] mx-auto'>
             <h1 className='text-2xl font-bold text-gray-900 dark:text-gray-100 mb-8'>
               管理员设置
@@ -5855,7 +5876,7 @@ function AdminPageClient() {
 
   return (
     <PageLayout activePath='/admin'>
-      <div className='px-2 sm:px-10 py-4 sm:py-8'>
+      <div className='-mt-6 md:mt-0'>
         <div className='max-w-[95%] mx-auto'>
           {/* 标题 + 重置配置按钮 */}
           <div className='flex items-center gap-2 mb-8'>
