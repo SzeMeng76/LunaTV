@@ -41,7 +41,7 @@ const PageLayout = ({ children, activePath = '/', useModernNav = true }: PageLay
 
         {/* Main Content - 移动端44px，桌面端64px */}
         <main className='w-full min-h-screen pt-[44px] md:pt-16 pb-32 md:pb-8'>
-          <div className='w-full max-w-[1920px] mx-auto px-4 sm:px-6 md:px-8'>
+          <div className='w-full max-w-[2560px] mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 2xl:px-20'>
             {children}
           </div>
         </main>

@@ -153,6 +153,11 @@ function LivePageClient() {
   const favoritedRef = useRef(false);
   const currentChannelRef = useRef<LiveChannel | null>(null);
 
+  // DVR 回放检测状态
+  const [dvrDetected, setDvrDetected] = useState(false);
+  const [dvrSeekableRange, setDvrSeekableRange] = useState(0);
+  const [enableDvrMode, setEnableDvrMode] = useState(false); // 用户手动启用DVR模式
+
   // EPG数据清洗函数 - 去除重叠的节目，保留时间较短的，只显示今日节目
   const cleanEpgData = (programs: Array<{ start: string; end: string; title: string }>) => {
     if (!programs || programs.length === 0) return programs;
@@ -1249,7 +1254,7 @@ function LivePageClient() {
           url: targetUrl,
           poster: currentChannel.logo,
           volume: 0.7,
-          isLive: true, // 设置为直播模式
+          isLive: !enableDvrMode, // 根据用户设置决定是否为直播模式
           muted: false,
           autoplay: true,
           pip: true,
@@ -1292,6 +1297,34 @@ function LivePageClient() {
           setError(null);
           setIsVideoLoading(false);
 
+          // 延迟检测是否支持 DVR/时移回放（仅在未启用DVR模式时检测）
+          if (!enableDvrMode) {
+            setTimeout(() => {
+              if (artPlayerRef.current && artPlayerRef.current.video) {
+                const video = artPlayerRef.current.video;
+
+                try {
+                  if (video.seekable && video.seekable.length > 0) {
+                    const seekableEnd = video.seekable.end(0);
+                    const seekableStart = video.seekable.start(0);
+                    const seekableRange = seekableEnd - seekableStart;
+
+                    // 如果可拖动范围大于60秒，说明支持回放
+                    if (seekableRange > 60) {
+                      console.log('✓ 检测到支持回放，可拖动范围:', Math.floor(seekableRange), '秒');
+                      setDvrDetected(true);
+                      setDvrSeekableRange(Math.floor(seekableRange));
+                    } else {
+                      console.log('✗ 纯直播流，可拖动范围:', Math.floor(seekableRange), '秒');
+                      setDvrDetected(false);
+                    }
+                  }
+                } catch (error) {
+                  console.log('DVR检测失败:', error);
+                }
+              }
+            }, 3000); // 等待3秒让HLS加载足够的片段
+          }
         });
 
         artPlayerRef.current.on('loadstart', () => {
@@ -1645,6 +1678,50 @@ function LivePageClient() {
                           请尝试其他频道
                         </p>
                       </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* DVR 回放支持提示 */}
+                {dvrDetected && (
+                  <div className='absolute top-4 left-4 right-4 bg-gradient-to-r from-blue-500/90 to-cyan-500/90 backdrop-blur-sm rounded-lg px-4 py-3 shadow-lg z-[550] animate-in fade-in slide-in-from-top-2 duration-300'>
+                    <div className='flex items-center justify-between'>
+                      <div className='flex items-center gap-3 flex-1'>
+                        <div className='flex-shrink-0'>
+                          <div className='w-8 h-8 bg-white/20 rounded-full flex items-center justify-center'>
+                            <span className='text-lg'>⏯️</span>
+                          </div>
+                        </div>
+                        <div className='flex-1 min-w-0'>
+                          <p className='text-sm font-semibold text-white'>
+                            此频道支持回放功能
+                          </p>
+                          <p className='text-xs text-white/90 mt-0.5'>
+                            可拖动范围: {Math.floor(dvrSeekableRange / 60)} 分钟
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          // 启用DVR模式并重新加载播放器
+                          setEnableDvrMode(true);
+                          setDvrDetected(false); // 隐藏提示
+                          if (currentChannel) {
+                            const currentUrl = currentChannel.url;
+                            setVideoUrl('');
+                            setTimeout(() => setVideoUrl(currentUrl), 100);
+                          }
+                        }}
+                        className='ml-2 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white text-xs font-medium rounded transition-colors whitespace-nowrap'
+                      >
+                        启用进度条
+                      </button>
+                      <button
+                        onClick={() => setDvrDetected(false)}
+                        className='ml-2 p-1 hover:bg-white/20 rounded transition-colors'
+                      >
+                        <X className='w-4 h-4 text-white' />
+                      </button>
                     </div>
                   </div>
                 )}

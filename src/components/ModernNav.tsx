@@ -132,7 +132,7 @@ export default function ModernNav() {
     <>
       {/* Desktop Top Navigation - 2025 Disney+ Style */}
       <nav className='hidden md:block fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-700/50'>
-        <div className='max-w-[1920px] mx-auto px-6'>
+        <div className='max-w-[2560px] mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 2xl:px-20'>
           <div className='flex items-center justify-between h-16 gap-4'>
             {/* Logo */}
             <Link href='/' className='flex-shrink-0'>
