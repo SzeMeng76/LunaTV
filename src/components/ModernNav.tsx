@@ -275,10 +275,9 @@ export default function ModernNav() {
 
       {/* Mobile Bottom Navigation - 2025 Liquid Glass Design */}
       <nav
-        className='md:hidden fixed bottom-0 left-0 right-0'
+        className='md:hidden fixed bottom-0 left-0 right-0 z-40'
         style={{
           paddingBottom: 'env(safe-area-inset-bottom)',
-          zIndex: 2147483647,
         }}
       >
         {/* Liquid Glass Container - iOS WWDC25 Style */}
