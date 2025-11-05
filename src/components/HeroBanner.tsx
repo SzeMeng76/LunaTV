@@ -150,14 +150,14 @@ export default function HeroBanner({
         </div>
 
         {/* 右侧：内容信息 */}
-        <div className='flex-1 min-w-0 space-y-1 sm:space-y-2 md:space-y-3'>
+        <div className='flex-1 min-w-0 flex flex-col justify-center gap-1 sm:gap-2 md:gap-2.5 max-h-full py-2'>
           {/* 标题 */}
-          <h1 className='text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-white drop-shadow-lg leading-tight line-clamp-2'>
+          <h1 className='text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-white drop-shadow-lg leading-tight line-clamp-2 flex-shrink-0'>
             {currentItem.title}
           </h1>
 
           {/* 元数据 */}
-          <div className='flex items-center gap-2 sm:gap-3 text-xs sm:text-sm'>
+          <div className='flex items-center gap-2 sm:gap-3 text-xs sm:text-sm flex-shrink-0 flex-wrap'>
             {currentItem.year && (
               <span className='text-white/90 font-medium'>{currentItem.year}</span>
             )}
@@ -178,15 +178,15 @@ export default function HeroBanner({
             )}
           </div>
 
-          {/* 描述 - 只在较大屏幕显示 */}
+          {/* 描述 - 只在较大屏幕显示，且限制最多2行 */}
           {currentItem.description && (
-            <p className='hidden md:block text-sm text-white/80 line-clamp-2 max-w-2xl'>
+            <p className='hidden md:block text-sm lg:text-base text-white/80 line-clamp-2 max-w-2xl flex-shrink min-h-0'>
               {currentItem.description}
             </p>
           )}
 
           {/* 操作按钮 */}
-          <div className='flex flex-wrap gap-2 sm:gap-3 pt-1 sm:pt-2'>
+          <div className='flex flex-wrap gap-2 sm:gap-3 flex-shrink-0'>
             <Link
               href={`/play?title=${encodeURIComponent(currentItem.title)}${currentItem.year ? `&year=${currentItem.year}` : ''}${currentItem.douban_id ? `&douban_id=${currentItem.douban_id}` : ''}`}
               className='flex items-center gap-2 px-4 sm:px-5 py-2 bg-white text-black font-semibold rounded-lg hover:bg-gray-200 transition-all transform hover:scale-105 shadow-lg text-sm sm:text-base'

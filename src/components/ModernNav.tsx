@@ -203,82 +203,84 @@ export default function ModernNav() {
         </div>
       </nav>
 
-      {/* Mobile Bottom Navigation - 2025 Liquid Glass Design */}
-      <nav
-        className='md:hidden fixed bottom-0 left-0 right-0 z-50'
-        style={{
-          paddingBottom: 'env(safe-area-inset-bottom)',
-        }}
-      >
-        {/* More Menu Modal */}
-        {showMoreMenu && (
+      {/* More Menu Modal - Render outside nav to avoid z-index issues */}
+      {showMoreMenu && (
+        <div
+          className='md:hidden fixed inset-0 bg-black/40 backdrop-blur-sm'
+          style={{ zIndex: 2147483647 }}
+          onClick={() => setShowMoreMenu(false)}
+        >
           <div
-            className='fixed inset-0 bg-black/40 backdrop-blur-sm z-40'
-            onClick={() => setShowMoreMenu(false)}
+            className='absolute bottom-20 left-2 right-2 bg-white/90 dark:bg-gray-900/90 backdrop-blur-3xl rounded-3xl shadow-2xl border border-white/20 dark:border-gray-800/30 overflow-hidden'
+            onClick={(e) => e.stopPropagation()}
           >
-            <div
-              className='absolute bottom-20 left-2 right-2 bg-white/90 dark:bg-gray-900/90 backdrop-blur-3xl rounded-3xl shadow-2xl border border-white/20 dark:border-gray-800/30 overflow-hidden'
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Header */}
-              <div className='flex items-center justify-between px-6 py-4 border-b border-gray-200/50 dark:border-gray-700/50'>
-                <h3 className='text-lg font-semibold text-gray-900 dark:text-white'>全部分类</h3>
-                <button
-                  onClick={() => setShowMoreMenu(false)}
-                  className='p-2 rounded-full hover:bg-gray-200/50 dark:hover:bg-gray-700/50 transition-colors'
-                >
-                  <X className='w-5 h-5 text-gray-600 dark:text-gray-400' />
-                </button>
-              </div>
+            {/* Header */}
+            <div className='flex items-center justify-between px-6 py-4 border-b border-gray-200/50 dark:border-gray-700/50'>
+              <h3 className='text-lg font-semibold text-gray-900 dark:text-white'>全部分类</h3>
+              <button
+                onClick={() => setShowMoreMenu(false)}
+                className='p-2 rounded-full hover:bg-gray-200/50 dark:hover:bg-gray-700/50 transition-colors'
+              >
+                <X className='w-5 h-5 text-gray-600 dark:text-gray-400' />
+              </button>
+            </div>
 
-              {/* All menu items in grid */}
-              <div className='grid grid-cols-4 gap-4 p-4'>
-                {menuItems.map((item) => {
-                  const Icon = item.icon;
-                  const active = isActive(item.href);
+            {/* All menu items in grid */}
+            <div className='grid grid-cols-4 gap-4 p-4'>
+              {menuItems.map((item) => {
+                const Icon = item.icon;
+                const active = isActive(item.href);
 
-                  return (
-                    <Link
-                      key={item.label}
-                      href={item.href}
-                      onClick={() => {
-                        setActive(item.href);
-                        setShowMoreMenu(false);
-                      }}
-                      className='flex flex-col items-center gap-2 p-3 rounded-2xl transition-all duration-300 active:scale-95 hover:bg-gray-100/50 dark:hover:bg-gray-800/50'
+                return (
+                  <Link
+                    key={item.label}
+                    href={item.href}
+                    onClick={() => {
+                      setActive(item.href);
+                      setShowMoreMenu(false);
+                    }}
+                    className='flex flex-col items-center gap-2 p-3 rounded-2xl transition-all duration-300 active:scale-95 hover:bg-gray-100/50 dark:hover:bg-gray-800/50'
+                  >
+                    <div
+                      className={`flex items-center justify-center w-12 h-12 rounded-2xl ${
+                        active
+                          ? `bg-gradient-to-br ${item.gradient}`
+                          : 'bg-gray-100 dark:bg-gray-800'
+                      }`}
                     >
-                      <div
-                        className={`flex items-center justify-center w-12 h-12 rounded-2xl ${
+                      <Icon
+                        className={`w-6 h-6 ${
                           active
-                            ? `bg-gradient-to-br ${item.gradient}`
-                            : 'bg-gray-100 dark:bg-gray-800'
+                            ? 'text-white'
+                            : 'text-gray-600 dark:text-gray-400'
                         }`}
-                      >
-                        <Icon
-                          className={`w-6 h-6 ${
-                            active
-                              ? 'text-white'
-                              : 'text-gray-600 dark:text-gray-400'
-                          }`}
-                        />
-                      </div>
-                      <span
-                        className={`text-xs font-medium ${
-                          active
-                            ? item.color
-                            : 'text-gray-700 dark:text-gray-300'
-                        }`}
-                      >
-                        {item.label}
-                      </span>
-                    </Link>
-                  );
-                })}
-              </div>
+                      />
+                    </div>
+                    <span
+                      className={`text-xs font-medium ${
+                        active
+                          ? item.color
+                          : 'text-gray-700 dark:text-gray-300'
+                      }`}
+                    >
+                      {item.label}
+                    </span>
+                  </Link>
+                );
+              })}
             </div>
           </div>
-        )}
+        </div>
+      )}
 
+      {/* Mobile Bottom Navigation - 2025 Liquid Glass Design */}
+      <nav
+        className='md:hidden fixed bottom-0 left-0 right-0'
+        style={{
+          paddingBottom: 'env(safe-area-inset-bottom)',
+          zIndex: 2147483647,
+        }}
+      >
         {/* Liquid Glass Container - iOS WWDC25 Style */}
         <div className='mx-2 mb-2 rounded-[28px] bg-white/70 dark:bg-gray-900/70 backdrop-blur-3xl shadow-2xl border border-white/20 dark:border-gray-800/30 overflow-hidden'>
           {/* Floating gradient accent line on top */}
