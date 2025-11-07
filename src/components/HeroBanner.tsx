@@ -33,6 +33,8 @@ export default function HeroBanner({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
 
   // 处理图片 URL，使用代理绕过防盗链
   const getProxiedImageUrl = (url: string) => {
@@ -84,6 +86,32 @@ export default function HeroBanner({
     setTimeout(() => setIsTransitioning(false), 500);
   };
 
+  // 触摸手势处理
+  const minSwipeDistance = 50;
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe) {
+      handleNext();
+    } else if (isRightSwipe) {
+      handlePrev();
+    }
+  };
+
   if (!items || items.length === 0) {
     return null;
   }
@@ -93,9 +121,12 @@ export default function HeroBanner({
 
   return (
     <div
-      className='relative w-full h-[280px] sm:h-[320px] md:h-[360px] overflow-hidden rounded-2xl group'
+      className='relative w-full h-[420px] sm:h-[460px] md:h-[360px] overflow-hidden rounded-2xl group'
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
     >
       {/* 渐变背景 */}
       <div className='absolute inset-0'>
@@ -129,9 +160,9 @@ export default function HeroBanner({
         })}
       </div>
 
-      {/* 主要内容区域 - 左图右文布局 */}
-      <div className='relative h-full flex items-center gap-3 sm:gap-6 md:gap-8 lg:gap-12 px-4 sm:px-6 md:px-8 lg:px-12'>
-        {/* 左侧：海报图片 - 移动端也显示 */}
+      {/* 主要内容区域 - 移动端竖版，桌面端横版 */}
+      <div className='relative h-full flex flex-col md:flex-row items-center justify-center md:justify-start gap-4 md:gap-8 lg:gap-12 px-4 sm:px-6 md:px-8 lg:px-12 py-6 md:py-0'>
+        {/* 海报图片 - 移动端居中大图，桌面端左侧 */}
         <div className='flex-shrink-0'>
           {items.map((item, index) => (
             <div
@@ -143,21 +174,21 @@ export default function HeroBanner({
               <img
                 src={getProxiedImageUrl(item.poster)}
                 alt={item.title}
-                className='w-20 sm:w-32 md:w-40 lg:w-48 h-auto rounded-lg shadow-2xl ring-2 ring-white/20'
+                className='w-40 sm:w-48 md:w-40 lg:w-48 h-auto rounded-xl shadow-2xl ring-4 ring-white/30'
               />
             </div>
           ))}
         </div>
 
-        {/* 右侧：内容信息 */}
-        <div className='flex-1 min-w-0 flex flex-col justify-center gap-1 sm:gap-2 md:gap-2.5 max-h-full py-2'>
+        {/* 内容信息 - 移动端居中，桌面端左对齐 */}
+        <div className='flex-1 min-w-0 flex flex-col items-center md:items-start justify-center gap-2 md:gap-2.5 max-h-full text-center md:text-left'>
           {/* 标题 */}
           <h1 className='text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-white drop-shadow-lg leading-tight line-clamp-2 flex-shrink-0'>
             {currentItem.title}
           </h1>
 
           {/* 元数据 */}
-          <div className='flex items-center gap-2 sm:gap-3 text-xs sm:text-sm flex-shrink-0 flex-wrap'>
+          <div className='flex items-center justify-center md:justify-start gap-2 sm:gap-3 text-xs sm:text-sm flex-shrink-0 flex-wrap'>
             {currentItem.year && (
               <span className='text-white/90 font-medium'>{currentItem.year}</span>
             )}
@@ -186,12 +217,12 @@ export default function HeroBanner({
           )}
 
           {/* 操作按钮 */}
-          <div className='flex flex-wrap gap-2 sm:gap-3 flex-shrink-0'>
+          <div className='flex flex-wrap justify-center md:justify-start gap-2 sm:gap-3 flex-shrink-0'>
             <Link
               href={`/play?title=${encodeURIComponent(currentItem.title)}${currentItem.year ? `&year=${currentItem.year}` : ''}${currentItem.douban_id ? `&douban_id=${currentItem.douban_id}` : ''}`}
-              className='flex items-center gap-2 px-4 sm:px-5 py-2 bg-white text-black font-semibold rounded-lg hover:bg-gray-200 transition-all transform hover:scale-105 shadow-lg text-sm sm:text-base'
+              className='flex items-center gap-2 px-5 sm:px-6 py-2.5 sm:py-3 bg-white text-black font-semibold rounded-xl hover:bg-gray-200 transition-all transform hover:scale-105 active:scale-95 shadow-lg text-sm sm:text-base'
             >
-              <Play className='w-4 h-4' fill='currentColor' />
+              <Play className='w-4 h-4 sm:w-5 sm:h-5' fill='currentColor' />
               <span>播放</span>
             </Link>
             <Link
@@ -202,28 +233,28 @@ export default function HeroBanner({
                       currentItem.type === 'variety' ? 'show' : (currentItem.type || 'movie')
                     }`
               }
-              className='flex items-center gap-2 px-4 sm:px-5 py-2 bg-white/20 backdrop-blur-sm text-white font-semibold rounded-lg hover:bg-white/30 transition-all transform hover:scale-105 text-sm sm:text-base'
+              className='flex items-center gap-2 px-5 sm:px-6 py-2.5 sm:py-3 bg-white/20 backdrop-blur-sm text-white font-semibold rounded-xl hover:bg-white/30 transition-all transform hover:scale-105 active:scale-95 shadow-lg text-sm sm:text-base'
             >
-              <Info className='w-4 h-4' />
+              <Info className='w-4 h-4 sm:w-5 sm:h-5' />
               <span>更多</span>
             </Link>
           </div>
         </div>
       </div>
 
-      {/* 导航按钮 */}
+      {/* 导航按钮 - 桌面端显示 */}
       {showControls && items.length > 1 && (
         <>
           <button
             onClick={handlePrev}
-            className='absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-black/30 backdrop-blur-sm text-white flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-black/50 transition-all transform hover:scale-110'
+            className='hidden md:flex absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-black/30 backdrop-blur-sm text-white items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-black/50 transition-all transform hover:scale-110'
             aria-label='上一张'
           >
             <ChevronLeft className='w-5 h-5 sm:w-6 sm:h-6' />
           </button>
           <button
             onClick={handleNext}
-            className='absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-black/30 backdrop-blur-sm text-white flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-black/50 transition-all transform hover:scale-110'
+            className='hidden md:flex absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-black/30 backdrop-blur-sm text-white items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-black/50 transition-all transform hover:scale-110'
             aria-label='下一张'
           >
             <ChevronRight className='w-5 h-5 sm:w-6 sm:h-6' />
@@ -231,17 +262,17 @@ export default function HeroBanner({
         </>
       )}
 
-      {/* 指示器 */}
+      {/* 指示器 - 移动端更大更易点击 */}
       {showIndicators && items.length > 1 && (
-        <div className='absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 flex gap-2'>
+        <div className='absolute bottom-4 sm:bottom-6 md:bottom-4 left-1/2 -translate-x-1/2 flex gap-2 md:gap-2'>
           {items.map((_, index) => (
             <button
               key={index}
               onClick={() => handleIndicatorClick(index)}
-              className={`h-1 sm:h-1.5 rounded-full transition-all duration-300 ${
+              className={`h-1.5 md:h-1.5 rounded-full transition-all duration-300 ${
                 index === currentIndex
-                  ? 'w-8 sm:w-10 bg-white'
-                  : 'w-1 sm:w-1.5 bg-white/50 hover:bg-white/75'
+                  ? 'w-10 md:w-10 bg-white shadow-lg'
+                  : 'w-1.5 md:w-1.5 bg-white/50 hover:bg-white/75'
               }`}
               aria-label={`跳转到第 ${index + 1} 张`}
             />

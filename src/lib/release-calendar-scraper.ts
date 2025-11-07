@@ -44,6 +44,26 @@ function parseMovieHTML(html: string): ReleaseCalendarItem[] {
       // 提取主演 - 需要处理多个链接
       const actorsMatch = /<div class="dd-d2">主演：(.*?)<\/div>/.exec(block);
 
+      // 提取海报图片 - 优先从 data-original 获取（懒加载），否则从 src
+      const dataOriginalMatch = /<img[^>]*data-original=["']([^"']+)["']/.exec(block);
+      const srcMatch = /<img[^>]*src=["']([^"']+)["']/.exec(block);
+
+      let coverUrl: string | undefined;
+      if (dataOriginalMatch) {
+        coverUrl = dataOriginalMatch[1].trim();
+      } else if (srcMatch) {
+        coverUrl = srcMatch[1].trim();
+      }
+
+      // 处理海报URL：添加协议前缀
+      if (coverUrl && coverUrl.startsWith('//')) {
+        coverUrl = 'https:' + coverUrl;
+      }
+      // 过滤掉占位符图片
+      if (coverUrl && coverUrl.includes('loadimg.gif')) {
+        coverUrl = undefined;
+      }
+
       if (titleMatch && dateMatch) {
         const title = titleMatch[1].trim();
         const dateStr = dateMatch[1].replace(/\//g, '-'); // 转换日期格式
@@ -75,6 +95,7 @@ function parseMovieHTML(html: string): ReleaseCalendarItem[] {
             region: region,
             genre: genre,
             releaseDate: dateStr,
+            cover: coverUrl,
             source: 'manmankan',
             createdAt: now,
             updatedAt: now,
@@ -123,6 +144,26 @@ function parseTVHTML(html: string): ReleaseCalendarItem[] {
       // 提取主演 - 需要处理多个链接
       const actorsMatch = /<div class="dd-d2">主演：(.*?)<\/div>/.exec(block);
 
+      // 提取海报图片 - 优先从 data-original 获取（懒加载），否则从 src
+      const dataOriginalMatch = /<img[^>]*data-original=["']([^"']+)["']/.exec(block);
+      const srcMatch = /<img[^>]*src=["']([^"']+)["']/.exec(block);
+
+      let coverUrl: string | undefined;
+      if (dataOriginalMatch) {
+        coverUrl = dataOriginalMatch[1].trim();
+      } else if (srcMatch) {
+        coverUrl = srcMatch[1].trim();
+      }
+
+      // 处理海报URL：添加协议前缀
+      if (coverUrl && coverUrl.startsWith('//')) {
+        coverUrl = 'https:' + coverUrl;
+      }
+      // 过滤掉占位符图片
+      if (coverUrl && coverUrl.includes('loadimg.gif')) {
+        coverUrl = undefined;
+      }
+
       if (titleMatch && dateMatch) {
         const title = titleMatch[1].trim();
         const dateStr = dateMatch[1].replace(/\//g, '-'); // 转换日期格式
@@ -154,6 +195,7 @@ function parseTVHTML(html: string): ReleaseCalendarItem[] {
             region: region,
             genre: genre,
             releaseDate: dateStr,
+            cover: coverUrl,
             source: 'manmankan',
             createdAt: now,
             updatedAt: now,

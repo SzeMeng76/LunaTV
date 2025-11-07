@@ -302,8 +302,27 @@ export default function ReleaseCalendarPage() {
 
   return (
     <PageLayout activePath="/release-calendar">
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
-      <div className="max-w-7xl mx-auto">
+      <div className="min-h-screen relative overflow-hidden p-6">
+        {/* Aurora Mesh Gradient Background */}
+        <div className="absolute inset-0 -z-10">
+          {/* Light mode: Aurora mesh gradient */}
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:hidden"></div>
+          <div className="absolute top-0 -left-4 w-72 h-72 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob dark:hidden"></div>
+          <div className="absolute top-0 -right-4 w-72 h-72 bg-yellow-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000 dark:hidden"></div>
+          <div className="absolute -bottom-8 left-20 w-72 h-72 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000 dark:hidden"></div>
+
+          {/* Dark mode: Deep aurora mesh gradient */}
+          <div className="hidden dark:block absolute inset-0 bg-gradient-to-br from-gray-900 via-blue-950 to-purple-950"></div>
+          <div className="hidden dark:block absolute top-0 -left-4 w-72 h-72 bg-purple-700 rounded-full mix-blend-screen filter blur-3xl opacity-30 animate-blob"></div>
+          <div className="hidden dark:block absolute top-0 -right-4 w-72 h-72 bg-cyan-700 rounded-full mix-blend-screen filter blur-3xl opacity-30 animate-blob animation-delay-2000"></div>
+          <div className="hidden dark:block absolute -bottom-8 left-20 w-72 h-72 bg-pink-700 rounded-full mix-blend-screen filter blur-3xl opacity-30 animate-blob animation-delay-4000"></div>
+
+          {/* Grain texture overlay */}
+          <div className="absolute inset-0 opacity-[0.015] dark:opacity-[0.025]" style={{
+            backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 400 400\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noiseFilter\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'4.5\' numOctaves=\'4\' /%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noiseFilter)\' /%3E%3C/svg%3E")'
+          }}></div>
+        </div>
+      <div className="max-w-7xl mx-auto relative">
         {/* 页面标题 */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-4">
@@ -674,11 +693,15 @@ export default function ReleaseCalendarPage() {
                           days.push(
                             <div
                               key={dateStr}
-                              className={`${expandedDates.has(dateStr) ? 'min-h-[150px]' : 'min-h-[100px]'} p-2 border border-gray-200 dark:border-gray-700 rounded-lg transition-all duration-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 ${
-                                !isCurrentMonth ? 'bg-gray-50 dark:bg-gray-800/50 text-gray-400' : 'bg-white dark:bg-gray-800'
+                              className={`${expandedDates.has(dateStr) ? 'min-h-[150px]' : 'min-h-[100px]'} p-2 rounded-xl transition-all duration-300 ${
+                                !isCurrentMonth
+                                  ? 'bg-gradient-to-br from-gray-50/50 to-gray-100/30 dark:from-gray-800/30 dark:to-gray-900/20 text-gray-400'
+                                  : 'bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-800/80 shadow-sm hover:shadow-md'
                               } ${
-                                isToday ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/20' : ''
-                              }`}
+                                isToday
+                                  ? 'ring-2 ring-blue-400 bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-900/30 dark:to-blue-800/20 shadow-lg shadow-blue-500/20'
+                                  : ''
+                              } hover:scale-[1.02] hover:-translate-y-0.5`}
                             >
                               {/* 日期数字 */}
                               <div className={`text-sm font-medium mb-1 ${
@@ -768,8 +791,10 @@ export default function ReleaseCalendarPage() {
                       }
 
                       return daysWithMovies.map(({ date, dateStr, isToday, items }) => (
-                        <div key={dateStr} className={`bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 ${
-                          isToday ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/20' : ''
+                        <div key={dateStr} className={`rounded-xl p-4 transition-all duration-300 ${
+                          isToday
+                            ? 'ring-2 ring-blue-400 bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-900/30 dark:to-blue-800/20 shadow-lg shadow-blue-500/20'
+                            : 'bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-800/80 shadow-sm hover:shadow-md'
                         }`}>
                           {/* 日期标题 */}
                           <div className={`flex items-center justify-between mb-3 pb-2 border-b border-gray-200 dark:border-gray-700`}>
@@ -1091,7 +1116,7 @@ export default function ReleaseCalendarPage() {
         {showBackToTop && (
           <button
             onClick={scrollToTop}
-            className="fixed bottom-6 right-6 z-50 group bg-blue-600 dark:bg-blue-700 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-all duration-300 hover:scale-110"
+            className="fixed bottom-20 right-6 md:bottom-6 z-50 group bg-blue-600 dark:bg-blue-700 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-all duration-300 hover:scale-110"
             aria-label="返回顶部"
           >
             <ChevronUp className="w-6 h-6 transition-transform group-hover:scale-110" />
