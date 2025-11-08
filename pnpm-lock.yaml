@@ -84,11 +84,11 @@ importers:
         specifier: ^5.4.0
         version: 5.5.0(react@18.3.1)
       react-window:
-        specifier: ^2.2.0
-        version: 2.2.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        specifier: ^2.2.3
+        version: 2.2.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       react-window-infinite-loader:
         specifier: ^1.0.10
-        version: 1.0.10(react-window@2.2.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)
+        version: 1.0.10(react-window@2.2.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)
       redis:
         specifier: ^4.6.7
         version: 4.7.1
@@ -4358,8 +4358,8 @@ packages:
     resolution: {integrity: sha512-wS+hAgJShR0KhEvPJArfuPVN1+Hz1t0Y6n5jLrGQbkb4urgPE/0Rve+1kMB1v/oWgHgm4WIcV+i7F2pTVj+2iQ==}
     engines: {node: '>=0.10.0'}
 
-  react-window@2.2.0:
-    resolution: {integrity: sha512-Y2L7yonHq6K1pQA2P98wT5QdIsEcjBTB7T8o6Mub12hH9eYppXoYu6vgClmcjlh3zfNcW2UrXiJJJqDxUY7GVw==}
+  react-window@2.2.3:
+    resolution: {integrity: sha512-gTRqQYC8ojbiXyd9duYFiSn2TJw0ROXCgYjenOvNKITWzK0m0eCvkUsEUM08xvydkMh7ncp+LE0uS3DeNGZxnQ==}
     engines: {node: '>=10'}
     peerDependencies:
       react: ^18.0.0 || ^19.0.0
@@ -10262,15 +10262,15 @@ snapshots:
     dependencies:
       loose-envify: 1.4.0
 
-  react-window@2.2.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
+  react-window@2.2.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
     dependencies:
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
 
-  react-window-infinite-loader@1.0.10(react-window@2.2.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1):
+  react-window-infinite-loader@1.0.10(react-window@2.2.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1):
     dependencies:
       react: 18.3.1
-      react-window: 2.2.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      react-window: 2.2.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
 
   read-cache@1.0.0:
     dependencies:

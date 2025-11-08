@@ -18,7 +18,7 @@ import PageLayout from '@/components/PageLayout';
 import SearchResultFilter, { SearchFilterCategory } from '@/components/SearchResultFilter';
 import SearchSuggestions from '@/components/SearchSuggestions';
 import VideoCard, { VideoCardHandle } from '@/components/VideoCard';
-import VirtualSearchGrid from '@/components/VirtualSearchGrid';
+import VirtualSearchGrid, { VirtualSearchGridRef } from '@/components/VirtualSearchGrid';
 import NetDiskSearchResults from '@/components/NetDiskSearchResults';
 import YouTubeVideoCard from '@/components/YouTubeVideoCard';
 import DirectYouTubePlayer from '@/components/DirectYouTubePlayer';
@@ -29,6 +29,8 @@ function SearchPageClient() {
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
   // 返回顶部按钮显示状态
   const [showBackToTop, setShowBackToTop] = useState(false);
+  // VirtualSearchGrid ref for scroll control
+  const virtualGridRef = useRef<VirtualSearchGridRef>(null);
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -857,14 +859,19 @@ function SearchPageClient() {
     // 其余由 searchParams 变化的 effect 处理
   };
 
-  // 返回顶部功能
+  // 返回顶部功能 - 同时滚动页面和重置虚拟列表
   const scrollToTop = () => {
     try {
-      // 根据调试结果，真正的滚动容器是 document.body
+      // 1. 滚动页面到顶部
       document.body.scrollTo({
         top: 0,
         behavior: 'smooth',
       });
+
+      // 2. 重置虚拟列表到第一项
+      if (virtualGridRef.current) {
+        virtualGridRef.current.scrollToTop();
+      }
     } catch (error) {
       // 如果平滑滚动完全失败，使用立即滚动
       document.body.scrollTop = 0;
@@ -1442,6 +1449,7 @@ function SearchPageClient() {
               {/* 条件渲染：虚拟化 vs 传统网格 */}
               {useVirtualization ? (
                 <VirtualSearchGrid
+                  ref={virtualGridRef}
                   allResults={searchResults}
                   filteredResults={filteredAllResults}
                   aggregatedResults={aggregatedResults}

@@ -74,6 +74,10 @@ function PlayPageClient() {
   const [bangumiDetails, setBangumiDetails] = useState<any>(null);
   const [loadingBangumiDetails, setLoadingBangumiDetails] = useState(false);
 
+  // 短剧详情状态（用于显示简介等信息）
+  const [shortdramaDetails, setShortdramaDetails] = useState<any>(null);
+  const [loadingShortdramaDetails, setLoadingShortdramaDetails] = useState(false);
+
   // 网盘搜索状态
   const [netdiskResults, setNetdiskResults] = useState<{ [key: string]: any[] } | null>(null);
   const [netdiskLoading, setNetdiskLoading] = useState(false);
@@ -131,6 +135,9 @@ function PlayPageClient() {
     searchParams.get('source') || ''
   );
   const [currentId, setCurrentId] = useState(searchParams.get('id') || '');
+
+  // 短剧ID（用于获取详情显示，不影响源搜索）
+  const [shortdramaId] = useState(searchParams.get('shortdrama_id') || '');
 
   // 搜索所需信息
   const [searchTitle] = useState(searchParams.get('stitle') || '');
@@ -227,6 +234,30 @@ function PlayPageClient() {
 
     loadMovieDetails();
   }, [videoDoubanId, loadingMovieDetails, movieDetails, loadingBangumiDetails, bangumiDetails]);
+
+  // 加载短剧详情（仅用于显示简介等信息，不影响源搜索）
+  useEffect(() => {
+    const loadShortdramaDetails = async () => {
+      if (!shortdramaId || loadingShortdramaDetails || shortdramaDetails) {
+        return;
+      }
+
+      setLoadingShortdramaDetails(true);
+      try {
+        const response = await fetch(`/api/shortdrama/detail?id=${shortdramaId}&episode=1`);
+        if (response.ok) {
+          const data = await response.json();
+          setShortdramaDetails(data);
+        }
+      } catch (error) {
+        console.error('Failed to load shortdrama details:', error);
+      } finally {
+        setLoadingShortdramaDetails(false);
+      }
+    };
+
+    loadShortdramaDetails();
+  }, [shortdramaId, loadingShortdramaDetails, shortdramaDetails]);
 
   // 自动网盘搜索：当有视频标题时可以随时搜索
   useEffect(() => {
@@ -1227,21 +1258,156 @@ function PlayPageClient() {
     }
   };
 
-  // 去广告相关函数
+  // ============================================================================
+  // 智能广告过滤系统 - Smart Ad Filtering System
+  // 基于行业标准广告标记和URL模式检测
+  // ============================================================================
+
+  /**
+   * 检查 URL 是否包含广告关键词
+   */
+  function isAdUrl(url: string): boolean {
+    const adKeywords = [
+      '/ad/', '/ads/', '/advert/', '/commercial/',
+      'doubleclick', 'googlesyndication', 'advertising',
+      'ad-', 'ads-', '-ad-', '-ads-',
+      'adserver', 'adservice'
+    ];
+
+    const lowerUrl = url.toLowerCase();
+    return adKeywords.some(keyword => lowerUrl.includes(keyword));
+  }
+
+  /**
+   * 检测常见广告时长模式（15秒、30秒、60秒等）
+   */
+  function isAdDuration(duration: number): boolean {
+    const commonAdDurations = [15, 30, 60];
+    const tolerance = 1; // 允许1秒误差
+
+    return commonAdDurations.some(
+      adDuration => Math.abs(duration - adDuration) < tolerance
+    );
+  }
+
+  /**
+   * 智能广告过滤 - 综合多种检测方法
+   * 1. 检测行业标准广告标记（EXT-X-CUE-OUT/IN, DATERANGE, SCTE35）
+   * 2. 检测 DISCONTINUITY + 广告时长模式
+   * 3. 检测 URL 中的广告关键词
+   */
   function filterAdsFromM3U8(m3u8Content: string): string {
     if (!m3u8Content) return '';
 
-    // 按行分割M3U8内容
     const lines = m3u8Content.split('\n');
-    const filteredLines = [];
+    const filteredLines: string[] = [];
+
+    let inAdBlock = false; // 是否在广告区块内
+    let skipNextUrl = false; // 是否跳过下一个 URL 行
+    let adSegmentCount = 0; // 移除的广告片段数量
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
+      const trimmedLine = line.trim();
 
-      // 只过滤#EXT-X-DISCONTINUITY标识
-      if (!line.includes('#EXT-X-DISCONTINUITY')) {
-        filteredLines.push(line);
+      // 1. 检测明确的广告标记标签（行业标准）
+      if (
+        trimmedLine.includes('#EXT-X-CUE-OUT') ||
+        trimmedLine.includes('#EXT-X-CUE') ||
+        trimmedLine.startsWith('#EXT-X-DATERANGE') ||
+        trimmedLine.includes('SCTE35') ||
+        trimmedLine.includes('#EXT-OATCLS-SCTE35')
+      ) {
+        inAdBlock = true;
+        adSegmentCount++;
+        continue; // 跳过广告标记行
       }
+
+      // 2. 检测广告结束标记
+      if (trimmedLine.includes('#EXT-X-CUE-IN')) {
+        inAdBlock = false;
+        continue;
+      }
+
+      // 3. 如果在广告区块内，跳过所有内容
+      if (inAdBlock) {
+        // 统计跳过的片段
+        if (trimmedLine.startsWith('#EXTINF:')) {
+          adSegmentCount++;
+        }
+        continue;
+      }
+
+      // 4. 检测 DISCONTINUITY 标记（可能是广告插入点）
+      if (trimmedLine.includes('#EXT-X-DISCONTINUITY')) {
+        // 检查接下来的片段是否有广告特征
+        let hasAdCharacteristics = false;
+
+        // 向前看最多3行，检测广告特征
+        for (let j = i + 1; j < Math.min(i + 4, lines.length); j++) {
+          const nextLine = lines[j].trim();
+
+          // 检查 EXTINF 行的时长
+          if (nextLine.startsWith('#EXTINF:')) {
+            const durationMatch = nextLine.match(/#EXTINF:([\d.]+)/);
+            if (durationMatch) {
+              const duration = parseFloat(durationMatch[1]);
+              if (isAdDuration(duration)) {
+                hasAdCharacteristics = true;
+                break;
+              }
+            }
+          }
+
+          // 检查 URL 是否包含广告关键词
+          if (!nextLine.startsWith('#') && nextLine.length > 0) {
+            if (isAdUrl(nextLine)) {
+              hasAdCharacteristics = true;
+              break;
+            }
+            break; // 找到 URL 后就停止
+          }
+        }
+
+        if (hasAdCharacteristics) {
+          skipNextUrl = true;
+          adSegmentCount++;
+          continue; // 跳过 DISCONTINUITY
+        }
+      }
+
+      // 5. 检查 URL 行是否包含广告关键词
+      if (!trimmedLine.startsWith('#') && trimmedLine.length > 0) {
+        if (isAdUrl(trimmedLine)) {
+          // 同时移除前一行的 #EXTINF（如果存在）
+          if (filteredLines.length > 0 &&
+              filteredLines[filteredLines.length - 1].trim().startsWith('#EXTINF:')) {
+            filteredLines.pop();
+          }
+          skipNextUrl = false;
+          adSegmentCount++;
+          continue;
+        }
+
+        // 如果标记为跳过，则跳过此 URL
+        if (skipNextUrl) {
+          // 同时移除前一行的 #EXTINF（如果存在）
+          if (filteredLines.length > 0 &&
+              filteredLines[filteredLines.length - 1].trim().startsWith('#EXTINF:')) {
+            filteredLines.pop();
+          }
+          skipNextUrl = false;
+          continue;
+        }
+      }
+
+      // 6. 保留非广告内容
+      filteredLines.push(line);
+    }
+
+    // 输出过滤统计
+    if (adSegmentCount > 0) {
+      console.log(`✅ 广告过滤: 移除 ${adSegmentCount} 个广告片段`);
     }
 
     return filteredLines.join('\n');
@@ -1743,16 +1909,23 @@ function PlayPageClient() {
             // 处理搜索结果，使用智能模糊匹配（与downstream评分逻辑保持一致）
             const filteredResults = data.results.filter(
               (result: SearchResult) => {
+                // 如果有 douban_id，优先使用 douban_id 精确匹配
+                if (videoDoubanIdRef.current && videoDoubanIdRef.current > 0 && result.douban_id) {
+                  return result.douban_id === videoDoubanIdRef.current;
+                }
+
                 const queryTitle = videoTitleRef.current.replaceAll(' ', '').toLowerCase();
                 const resultTitle = result.title.replaceAll(' ', '').toLowerCase();
 
                 // 智能标题匹配：支持数字变体和标点符号变化
+                // 优先使用精确包含匹配，避免短标题（如"玫瑰"）匹配到包含该字的其他电影（如"玫瑰的故事"）
                 const titleMatch = resultTitle.includes(queryTitle) ||
                   queryTitle.includes(resultTitle) ||
                   // 移除数字和标点后匹配（针对"死神来了：血脉诅咒" vs "死神来了6：血脉诅咒"）
                   resultTitle.replace(/\d+|[：:]/g, '') === queryTitle.replace(/\d+|[：:]/g, '') ||
-                  // 通用关键词匹配：检查是否包含查询中的所有关键词
-                  checkAllKeywordsMatch(queryTitle, resultTitle);
+                  // 通用关键词匹配：仅当查询标题较长时（4个字符以上）才使用关键词匹配
+                  // 避免短标题（如"玫瑰"2字）被拆分匹配
+                  (queryTitle.length > 4 && checkAllKeywordsMatch(queryTitle, resultTitle));
 
                 const yearMatch = videoYearRef.current
                   ? result.year.toLowerCase() === videoYearRef.current.toLowerCase()
@@ -1894,8 +2067,9 @@ function PlayPageClient() {
       if (currentSource === 'shortdrama' && currentId) {
         sourcesInfo = await fetchSourceDetail(currentSource, currentId);
       } else {
-        // 其他情况先搜索
+        // 其他情况先搜索所有视频源
         sourcesInfo = await fetchSourcesData(searchTitle || videoTitle);
+
         if (
           currentSource &&
           currentId &&
@@ -1904,6 +2078,27 @@ function PlayPageClient() {
           )
         ) {
           sourcesInfo = await fetchSourceDetail(currentSource, currentId);
+        }
+
+        // 如果有 shortdrama_id，额外添加短剧源到可用源列表
+        // 但只有在没有指定其他源时才添加，避免电影等内容错误加载短剧源
+        if (shortdramaId && !currentSource && !currentId) {
+          try {
+            const shortdramaSource = await fetchSourceDetail('shortdrama', shortdramaId);
+            if (shortdramaSource.length > 0) {
+              // 检查是否已存在相同的短剧源，避免重复
+              const existingShortdrama = sourcesInfo.find(
+                (s) => s.source === 'shortdrama' && s.id === shortdramaId
+              );
+              if (!existingShortdrama) {
+                sourcesInfo.push(...shortdramaSource);
+                // 重新设置 availableSources 以包含短剧源
+                setAvailableSources(sourcesInfo);
+              }
+            }
+          } catch (error) {
+            console.error('添加短剧源失败:', error);
+          }
         }
       }
       if (sourcesInfo.length === 0) {
@@ -3709,6 +3904,129 @@ useEffect(() => {
           }
         });
 
+        // ============================================================================
+        // 视频播放器悬浮广告屏蔽系统
+        // ============================================================================
+
+        // 添加CSS来隐藏常见的悬浮广告元素
+        const adBlockerStyles = document.createElement('style');
+        adBlockerStyles.id = 'video-ad-blocker-styles';
+        adBlockerStyles.textContent = `
+          /* 屏蔽播放器内的悬浮广告 */
+          .art-video-player .ad-overlay,
+          .art-video-player .video-ad,
+          .art-video-player .player-ad,
+          .art-video-player [class*="ad-banner"],
+          .art-video-player [class*="ad-overlay"],
+          .art-video-player [class*="advertisement"],
+          .art-video-player [id*="ad-banner"],
+          .art-video-player [id*="ad-overlay"],
+          .art-video-player iframe[src*="doubleclick"],
+          .art-video-player iframe[src*="googlesyndication"],
+          .art-video-player iframe[src*="/ad/"],
+          .art-video-player iframe[src*="/ads/"],
+          .art-video-player div[style*="z-index: 999"],
+          .art-video-player div[style*="z-index: 9999"] {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+          }
+
+          /* 屏蔽暂停时的广告 */
+          .art-video-player .pause-ad,
+          .art-video-player .pause-overlay,
+          .art-video-player [class*="pause-ad"] {
+            display: none !important;
+          }
+        `;
+
+        // 添加样式到页面
+        if (!document.getElementById('video-ad-blocker-styles')) {
+          document.head.appendChild(adBlockerStyles);
+          console.log('✅ 播放器广告屏蔽CSS已加载');
+        }
+
+        // 监控并移除动态插入的广告元素
+        const removeOverlayAds = () => {
+          if (!artRef.current) return;
+
+          const adSelectors = [
+            '[class*="ad-overlay"]',
+            '[class*="ad-banner"]',
+            '[class*="advertisement"]',
+            '[id*="ad-banner"]',
+            '[id*="ad-overlay"]',
+            'iframe[src*="doubleclick"]',
+            'iframe[src*="googlesyndication"]',
+            'iframe[src*="/ad/"]',
+            'iframe[src*="/ads/"]',
+            '.pause-ad',
+            '.video-ad',
+            '.player-ad'
+          ];
+
+          let removedCount = 0;
+          adSelectors.forEach(selector => {
+            const elements = artRef.current?.querySelectorAll(selector);
+            elements?.forEach(el => {
+              if (el && el.parentNode) {
+                el.remove();
+                removedCount++;
+              }
+            });
+          });
+
+          if (removedCount > 0) {
+            console.log(`✅ 移除了 ${removedCount} 个悬浮广告元素`);
+          }
+        };
+
+        // 初始检查
+        setTimeout(removeOverlayAds, 1000);
+
+        // 定期检查（每5秒）
+        const adBlockerInterval = setInterval(removeOverlayAds, 5000);
+
+        // 使用MutationObserver监听DOM变化
+        if (artRef.current) {
+          const observer = new MutationObserver((mutations) => {
+            let hasAdLikeElements = false;
+
+            mutations.forEach((mutation) => {
+              mutation.addedNodes.forEach((node) => {
+                if (node.nodeType === 1) { // Element node
+                  const element = node as Element;
+                  const className = element.className?.toString().toLowerCase() || '';
+                  const id = element.id?.toLowerCase() || '';
+
+                  // 检测是否是广告相关元素
+                  if (className.includes('ad') || id.includes('ad') ||
+                      element.tagName === 'IFRAME') {
+                    hasAdLikeElements = true;
+                  }
+                }
+              });
+            });
+
+            if (hasAdLikeElements) {
+              removeOverlayAds();
+            }
+          });
+
+          observer.observe(artRef.current, {
+            childList: true,
+            subtree: true
+          });
+
+          // 清理函数
+          artPlayerRef.current.on('destroy', () => {
+            observer.disconnect();
+            clearInterval(adBlockerInterval);
+            console.log('广告屏蔽监听已停止');
+          });
+        }
+
         // 监听播放进度跳转，优化弹幕重置（减少闪烁）
         artPlayerRef.current.on('seek', () => {
           if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
@@ -4477,7 +4795,22 @@ useEffect(() => {
                 currentSource={currentSource}
                 currentId={currentId}
                 videoTitle={searchTitle || videoTitle}
-                availableSources={availableSources}
+                availableSources={availableSources.filter(source => {
+                  // 必须有集数数据
+                  if (!source.episodes || source.episodes.length < 1) return false;
+
+                  // 如果当前有 detail，只显示集数相近的源（允许 ±30% 的差异）
+                  if (detail && detail.episodes && detail.episodes.length > 0) {
+                    const currentEpisodes = detail.episodes.length;
+                    const sourceEpisodes = source.episodes.length;
+                    const tolerance = Math.max(5, Math.ceil(currentEpisodes * 0.3)); // 至少5集的容差
+
+                    // 在合理范围内
+                    return Math.abs(sourceEpisodes - currentEpisodes) <= tolerance;
+                  }
+
+                  return true;
+                })}
                 sourceSearchLoading={sourceSearchLoading}
                 sourceSearchError={sourceSearchError}
                 precomputedVideoInfo={precomputedVideoInfo}
@@ -4740,7 +5073,7 @@ useEffect(() => {
 
               {/* 关键信息行 */}
               <div className='flex flex-wrap items-center gap-3 text-base mb-4 opacity-80 flex-shrink-0'>
-                {detail?.class && (
+                {detail?.class && String(detail.class) !== '0' && (
                   <span className='text-green-600 font-semibold'>
                     {detail.class}
                   </span>
@@ -4757,7 +5090,7 @@ useEffect(() => {
               </div>
 
               {/* 详细信息（豆瓣或bangumi） */}
-              {currentSource !== 'shortdrama' && videoDoubanId && videoDoubanId !== 0 && detail && detail.source !== 'shortdrama' && (
+              {currentSource !== 'shortdrama' && videoDoubanId !== 0 && detail && detail.source !== 'shortdrama' && (
                 <div className='mb-4 flex-shrink-0'>
                   {/* 加载状态 */}
                   {(loadingMovieDetails || loadingBangumiDetails) && !movieDetails && !bangumiDetails && (
@@ -4961,15 +5294,16 @@ useEffect(() => {
               )}
 
               {/* 短剧详细信息 */}
-              {detail?.source === 'shortdrama' && (
+              {(detail?.source === 'shortdrama' || shortdramaDetails) && (
                 <div className='mb-4 flex-shrink-0'>
                   <div className='space-y-2 text-sm'>
                     {/* 集数信息 */}
-                    {detail?.episodes && detail.episodes.length > 0 && (
+                    {((detail?.source === 'shortdrama' && detail?.episodes && detail.episodes.length > 0) ||
+                      (shortdramaDetails?.episodes && shortdramaDetails.episodes.length > 0)) && (
                       <div className='flex flex-wrap gap-2'>
                         <span className='relative group bg-gradient-to-r from-blue-500/90 to-indigo-500/90 dark:from-blue-600/90 dark:to-indigo-600/90 text-white px-3 py-1 rounded-full text-xs font-medium shadow-md hover:shadow-lg hover:shadow-blue-500/30 transition-all duration-300 hover:scale-105'>
                           <span className='absolute inset-0 bg-gradient-to-r from-blue-400 to-indigo-400 rounded-full opacity-0 group-hover:opacity-20 blur transition-opacity duration-300'></span>
-                          <span className='relative'>共{detail.episodes.length}集</span>
+                          <span className='relative'>共{(shortdramaDetails?.episodes || detail?.episodes)?.length}集</span>
                         </span>
                         <span className='relative group bg-gradient-to-r from-green-500/90 to-emerald-500/90 dark:from-green-600/90 dark:to-emerald-600/90 text-white px-3 py-1 rounded-full text-xs font-medium shadow-md hover:shadow-lg hover:shadow-green-500/30 transition-all duration-300 hover:scale-105'>
                           <span className='absolute inset-0 bg-gradient-to-r from-green-400 to-emerald-400 rounded-full opacity-0 group-hover:opacity-20 blur transition-opacity duration-300'></span>
@@ -4977,7 +5311,7 @@ useEffect(() => {
                         </span>
                         <span className='relative group bg-gradient-to-r from-purple-500/90 to-pink-500/90 dark:from-purple-600/90 dark:to-pink-600/90 text-white px-3 py-1 rounded-full text-xs font-medium shadow-md hover:shadow-lg hover:shadow-purple-500/30 transition-all duration-300 hover:scale-105'>
                           <span className='absolute inset-0 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full opacity-0 group-hover:opacity-20 blur transition-opacity duration-300'></span>
-                          <span className='relative'>{detail.year}年</span>
+                          <span className='relative'>{shortdramaDetails?.year || detail?.year}年</span>
                         </span>
                       </div>
                     )}
@@ -4986,12 +5320,12 @@ useEffect(() => {
               )}
 
               {/* 剧情简介 */}
-              {(detail?.desc || bangumiDetails?.summary) && (
+              {(shortdramaDetails?.desc || detail?.desc || bangumiDetails?.summary) && (
                 <div
                   className='mt-0 text-base leading-relaxed opacity-90 overflow-y-auto pr-2 flex-1 min-h-0 scrollbar-hide'
                   style={{ whiteSpace: 'pre-line' }}
                 >
-                  {bangumiDetails?.summary || detail?.desc}
+                  {shortdramaDetails?.desc || bangumiDetails?.summary || detail?.desc}
                 </div>
               )}
               

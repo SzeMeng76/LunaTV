@@ -217,6 +217,39 @@ div[data-media-provider] video {
   }
 }
 
+/* 超小屏幕适配 - 确保控制按钮完整显示 */
+@media (max-width: 380px) {
+  /* 减小控制按钮的间距和尺寸 */
+  .art-controls button,
+  .art-control {
+    min-width: 28px !important;
+    padding: 0 4px !important;
+    font-size: 13px !important;
+  }
+
+  /* 减小控制栏的内边距 */
+  .art-controls {
+    padding: 0 4px !important;
+  }
+
+  /* 确保全屏按钮始终可见 */
+  .art-control-fullscreen {
+    display: flex !important;
+    min-width: 32px !important;
+  }
+
+  /* 调整播放器时间显示更紧凑 */
+  .art-control-time {
+    font-size: 11px !important;
+    padding: 0 2px !important;
+  }
+
+  /* 减小进度条高度以节省空间 */
+  .art-progress {
+    height: 3px !important;
+  }
+}
+
 /* 修复音量控制hover区域 - 精确控制触发范围 */
 @media (hover: hover) {
   .art-control-volume {

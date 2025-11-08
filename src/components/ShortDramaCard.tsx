@@ -94,7 +94,7 @@ function ShortDramaCard({
   return (
     <div className={`group relative ${className} transition-all duration-300 ease-in-out hover:scale-[1.05] hover:z-[500] hover:drop-shadow-2xl`}>
       <Link
-        href={`/play?source=shortdrama&id=${drama.id}&title=${encodeURIComponent(drama.name)}`}
+        href={`/play?title=${encodeURIComponent(drama.name)}&shortdrama_id=${drama.id}`}
         className="block"
       >
         {/* 封面图片 */}

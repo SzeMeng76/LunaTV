@@ -219,7 +219,11 @@ export default function HeroBanner({
           {/* 操作按钮 */}
           <div className='flex flex-wrap justify-center md:justify-start gap-2 sm:gap-3 flex-shrink-0'>
             <Link
-              href={`/play?title=${encodeURIComponent(currentItem.title)}${currentItem.year ? `&year=${currentItem.year}` : ''}${currentItem.douban_id ? `&douban_id=${currentItem.douban_id}` : ''}`}
+              href={
+                currentItem.type === 'shortdrama'
+                  ? `/play?title=${encodeURIComponent(currentItem.title)}&shortdrama_id=${currentItem.id}`
+                  : `/play?title=${encodeURIComponent(currentItem.title)}${currentItem.year ? `&year=${currentItem.year}` : ''}${currentItem.douban_id ? `&douban_id=${currentItem.douban_id}` : ''}${currentItem.type ? `&stype=${currentItem.type}` : ''}`
+              }
               className='flex items-center gap-2 px-5 sm:px-6 py-2.5 sm:py-3 bg-white text-black font-semibold rounded-xl hover:bg-gray-200 transition-all transform hover:scale-105 active:scale-95 shadow-lg text-sm sm:text-base'
             >
               <Play className='w-4 h-4 sm:w-5 sm:h-5' fill='currentColor' />
