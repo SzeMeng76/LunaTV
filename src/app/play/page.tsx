@@ -1088,10 +1088,25 @@ function PlayPageClient() {
       }
     } else {
       // 普通视频格式
-      const newUrl = episodeData || '';
-      if (newUrl !== videoUrl) {
-        setVideoUrl(newUrl);
-      }
+      let newUrl = episodeData || '';  // ✅ 改为 let  
+    
+      // 🎬 添加转码逻辑: 如果是 banana 源且是 /r/ 端点,转换为 /t/ 转码端点    
+      if (detailData.source === 'banana' && newUrl.includes('/r/')) {    
+        const match = newUrl.match(/\/r\/([^.]+)\.(\w+)/);    
+        if (match) {    
+          const [, fileId, extension] = match;    
+          const needsTranscode = ['mkv', 'avi', 'flv', 'webm', 'mov'].includes(extension.toLowerCase());    
+          
+          if (needsTranscode) {    
+            newUrl = newUrl.replace(/\/r\/([^.]+)\.\w+/, '/t/$1.m3u8');    
+            console.log(`🎬 [转码] 将 ${episodeData} 转换为 ${newUrl}`);    
+          }    
+        }    
+      }    
+      
+      if (newUrl !== videoUrl) {    
+        setVideoUrl(newUrl);    
+      }    
     }
   };
 
