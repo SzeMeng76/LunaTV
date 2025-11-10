@@ -46,6 +46,8 @@ export interface Favorite {
   save_time: number;
   search_title?: string;
   origin?: 'vod' | 'live';
+  releaseDate?: string; // 上映日期 (YYYY-MM-DD)，用于即将上映内容
+  remarks?: string; // 备注信息（如"X天后上映"、"已上映"等）
 }
 
 // ---- 缓存数据结构 ----

@@ -148,6 +148,8 @@ function HomeClient() {
     currentEpisode?: number;
     search_title?: string;
     origin?: 'vod' | 'live';
+    releaseDate?: string;
+    remarks?: string;
   };
 
   const [favoriteItems, setFavoriteItems] = useState<FavoriteItem[]>([]);
@@ -380,18 +382,75 @@ function HomeClient() {
           console.log('📅 日期过滤后的数据:', upcoming.length, '条');
           console.log('📅 过滤后的标题:', upcoming.map((i: ReleaseCalendarItem) => `${i.title} (${i.releaseDate})`));
 
+          // 智能去重：识别同系列内容（如"XX"和"XX第二季"）以及副标题（如"过关斩将：猎杀游戏"和"猎杀游戏"）
+          const normalizeTitle = (title: string): string => {
+            // 先统一冒号格式
+            let normalized = title.replace(/：/g, ':').trim();
+
+            // 处理副标题：如果有冒号，取冒号后的部分（主标题）
+            // 例如 "过关斩将:猎杀游戏" -> "猎杀游戏"
+            if (normalized.includes(':')) {
+              const parts = normalized.split(':').map(p => p.trim());
+              // 取最后一部分作为主标题（通常主标题在冒号后面）
+              normalized = parts[parts.length - 1];
+            }
+
+            // 再移除季数、集数等后缀和空格
+            normalized = normalized
+              .replace(/第[一二三四五六七八九十\d]+季/g, '')
+              .replace(/[第]?[一二三四五六七八九十\d]+季/g, '')
+              .replace(/Season\s*\d+/gi, '')
+              .replace(/S\d+/gi, '')
+              .replace(/\s+\d+$/g, '') // 移除末尾数字
+              .replace(/\s+/g, '') // 移除所有空格
+              .trim();
+
+            return normalized;
+          };
+
           // 去重：基于标题去重，保留最早的那条记录
           const uniqueUpcoming = upcoming.reduce((acc: ReleaseCalendarItem[], current: ReleaseCalendarItem) => {
-            const existingItem = acc.find(item => item.title === current.title);
-            if (!existingItem) {
-              acc.push(current);
-            } else {
-              // 如果已存在，保留上映日期更早的
+            const normalizedCurrent = normalizeTitle(current.title);
+
+            // 先检查精确匹配
+            const exactMatch = acc.find(item => item.title === current.title);
+            if (exactMatch) {
+              // 精确匹配：保留上映日期更早的
               const existingIndex = acc.findIndex(item => item.title === current.title);
-              if (new Date(current.releaseDate) < new Date(existingItem.releaseDate)) {
+              if (new Date(current.releaseDate) < new Date(exactMatch.releaseDate)) {
                 acc[existingIndex] = current;
               }
+              return acc;
             }
+
+            // 再检查归一化后的模糊匹配（识别同系列）
+            const similarMatch = acc.find(item => {
+              const normalizedExisting = normalizeTitle(item.title);
+              return normalizedCurrent === normalizedExisting;
+            });
+
+            if (similarMatch) {
+              // 模糊匹配：优先保留没有"第X季"标记的原版
+              const existingIndex = acc.findIndex(item => normalizeTitle(item.title) === normalizedCurrent);
+              const currentHasSeason = /第[一二三四五六七八九十\d]+季|Season\s*\d+|S\d+/i.test(current.title);
+              const existingHasSeason = /第[一二三四五六七八九十\d]+季|Season\s*\d+|S\d+/i.test(similarMatch.title);
+
+              // 如果当前没有季数标记，而已存在的有，则替换
+              if (!currentHasSeason && existingHasSeason) {
+                acc[existingIndex] = current;
+              }
+              // 如果都有季数标记或都没有，则保留日期更早的
+              else if (currentHasSeason === existingHasSeason) {
+                if (new Date(current.releaseDate) < new Date(similarMatch.releaseDate)) {
+                  acc[existingIndex] = current;
+                }
+              }
+              // 如果当前有季数标记而已存在的没有，则保留已存在的（不替换）
+              return acc;
+            }
+
+            // 没有匹配，添加新项
+            acc.push(current);
             return acc;
           }, []);
 
@@ -523,6 +582,8 @@ function HomeClient() {
           currentEpisode,
           search_title: fav?.search_title,
           origin: fav?.origin,
+          releaseDate: fav?.releaseDate,
+          remarks: fav?.remarks,
         } as FavoriteItem;
       });
     setFavoriteItems(sorted);
@@ -650,16 +711,39 @@ function HomeClient() {
                 )}
               </div>
               <div className='justify-start grid grid-cols-3 gap-x-2 gap-y-14 sm:gap-y-20 px-0 sm:px-2 sm:grid-cols-[repeat(auto-fill,_minmax(11rem,_1fr))] sm:gap-x-8'>
-                {favoriteItems.map((item) => (
-                  <div key={item.id + item.source} className='w-full'>
-                    <VideoCard
-                      query={item.search_title}
-                      {...item}
-                      from='favorite'
-                      type={item.episodes > 1 ? 'tv' : ''}
-                    />
-                  </div>
-                ))}
+                {favoriteItems.map((item) => {
+                  // 智能计算即将上映状态
+                  let calculatedRemarks = item.remarks;
+
+                  if (item.releaseDate) {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const releaseDate = new Date(item.releaseDate);
+                    const daysDiff = Math.ceil((releaseDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+                    // 根据天数差异动态更新显示文字
+                    if (daysDiff < 0) {
+                      const daysAgo = Math.abs(daysDiff);
+                      calculatedRemarks = `已上映${daysAgo}天`;
+                    } else if (daysDiff === 0) {
+                      calculatedRemarks = '今日上映';
+                    } else {
+                      calculatedRemarks = `${daysDiff}天后上映`;
+                    }
+                  }
+
+                  return (
+                    <div key={item.id + item.source} className='w-full'>
+                      <VideoCard
+                        query={item.search_title}
+                        {...item}
+                        from='favorite'
+                        type={item.episodes > 1 ? 'tv' : ''}
+                        remarks={calculatedRemarks}
+                      />
+                    </div>
+                  );
+                })}
                 {favoriteItems.length === 0 && (
                   <div className='col-span-full flex flex-col items-center justify-center py-16 px-4'>
                     {/* SVG 插画 - 空收藏夹 */}
@@ -826,8 +910,9 @@ function HomeClient() {
                             year={release.releaseDate.split('-')[0]}
                             type={release.type}
                             remarks={remarksText}
+                            releaseDate={release.releaseDate}
                             query={release.title}
-                            episodes={release.type === 'tv' ? 99 : 1}
+                            episodes={release.episodes || (release.type === 'tv' ? undefined : 1)}
                           />
                         </div>
                       );

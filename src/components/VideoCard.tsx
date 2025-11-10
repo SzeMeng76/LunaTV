@@ -48,6 +48,7 @@ export interface VideoCardProps {
   isAggregate?: boolean;
   origin?: 'vod' | 'live';
   remarks?: string; // 备注信息（如"已完结"、"更新至20集"等）
+  releaseDate?: string; // 上映日期 (YYYY-MM-DD)，用于即将上映内容
 }
 
 export type VideoCardHandle = {
@@ -78,6 +79,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
     isAggregate = false,
     origin = 'vod',
     remarks,
+    releaseDate,
   }: VideoCardProps,
   ref
 ) {
@@ -129,8 +131,11 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
     ? (actualEpisodes && actualEpisodes === 1 ? 'movie' : 'tv')
     : type;
 
-  // 判断是否为即将上映（未发布的内容）
-  const isUpcoming = remarks && (remarks.includes('天后上映') || remarks.includes('已上映') || remarks.includes('今日上映'));
+  // 判断是否为即将上映（未发布的内容）- 只有真正未上映的才算
+  const isUpcoming = remarks && remarks.includes('天后上映');
+
+  // 判断是否有上映相关标记（包括已上映、今日上映、即将上映）
+  const hasReleaseTag = remarks && (remarks.includes('天后上映') || remarks.includes('已上映') || remarks.includes('今日上映'));
 
   // 获取收藏状态（搜索结果页面不检查，但即将上映需要检查）
   useEffect(() => {
@@ -194,6 +199,8 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
             total_episodes: actualEpisodes ?? 1,
             save_time: Date.now(),
             search_title: actualQuery || actualTitle, // 保存搜索标题用于后续查找资源
+            releaseDate: releaseDate, // 保存上映日期
+            remarks: remarks, // 保存备注信息
           });
           if (from === 'search') {
             setSearchFavorited(true);
@@ -249,7 +256,8 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
       // 直播内容跳转到直播页面
       const url = `/live?source=${actualSource.replace('live_', '')}&id=${actualId.replace('live_', '')}`;
       router.push(url);
-    } else if (from === 'douban' || (isAggregate && !actualSource && !actualId)) {
+    } else if (from === 'douban' || (isAggregate && !actualSource && !actualId) || actualSource === 'upcoming_release') {
+      // 豆瓣内容 或 聚合搜索 或 即将上映（已上映）内容 - 只用标题和年份搜索
       const url = `/play?title=${encodeURIComponent(actualTitle.trim())}${actualYear ? `&year=${actualYear}` : ''
         }${doubanIdParam}${actualSearchType ? `&stype=${actualSearchType}` : ''}${isAggregate ? '&prefer=true' : ''}${actualQuery ? `&stitle=${encodeURIComponent(actualQuery.trim())}` : ''}`;
       router.push(url);
@@ -280,12 +288,13 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
   const handlePlayInNewTab = useCallback(() => {
     // 构建豆瓣ID参数
     const doubanIdParam = actualDoubanId && actualDoubanId > 0 ? `&douban_id=${actualDoubanId}` : '';
-    
+
     if (origin === 'live' && actualSource && actualId) {
       // 直播内容跳转到直播页面
       const url = `/live?source=${actualSource.replace('live_', '')}&id=${actualId.replace('live_', '')}`;
       window.open(url, '_blank');
-    } else if (from === 'douban' || (isAggregate && !actualSource && !actualId)) {
+    } else if (from === 'douban' || (isAggregate && !actualSource && !actualId) || actualSource === 'upcoming_release') {
+      // 豆瓣内容 或 聚合搜索 或 即将上映（已上映）内容 - 只用标题和年份搜索
       const url = `/play?title=${encodeURIComponent(actualTitle.trim())}${actualYear ? `&year=${actualYear}` : ''}${doubanIdParam}${actualSearchType ? `&stype=${actualSearchType}` : ''}${isAggregate ? '&prefer=true' : ''}${actualQuery ? `&stitle=${encodeURIComponent(actualQuery.trim())}` : ''}`;
       window.open(url, '_blank');
     } else if (actualSource && actualId) {
@@ -739,8 +748,8 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
             </div>
           )}
 
-          {/* 操作按钮 */}
-          {(config.showHeart || config.showCheckCircle) && (
+          {/* 操作按钮 - hover显示（非收藏页面） */}
+          {(config.showHeart || config.showCheckCircle) && from !== 'favorite' && (
             <div
               data-button="true"
               className='absolute bottom-3 right-3 flex gap-3 opacity-0 translate-y-2 transition-all duration-300 ease-in-out sm:group-hover:opacity-100 sm:group-hover:translate-y-0'
@@ -792,8 +801,31 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
             </div>
           )}
 
+          {/* 收藏页面专用：固定显示的爱心按钮 */}
+          {from === 'favorite' && config.showHeart && (
+            <div
+              className='absolute bottom-2 right-2 z-30'
+              onClick={handleToggleFavorite}
+              style={{
+                WebkitUserSelect: 'none',
+                userSelect: 'none',
+                WebkitTouchCallout: 'none',
+                cursor: 'pointer',
+              } as React.CSSProperties}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                return false;
+              }}
+            >
+              <Heart
+                size={16}
+                className='fill-red-500 stroke-red-500 transition-all duration-300 hover:scale-110 hover:fill-red-600 hover:stroke-red-600'
+              />
+            </div>
+          )}
+
           {/* 类型徽章 - 左上角第一位（电影/电视剧）*/}
-          {remarks && (remarks.includes('天后上映') || remarks.includes('已上映') || remarks.includes('今日上映')) && type && (
+          {hasReleaseTag && type && (
             <div
               className={`absolute top-2 left-2 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg ring-2 ring-white/30 transition-all duration-300 ease-out group-hover:scale-105 z-30 ${
                 type === 'movie'
@@ -823,7 +855,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
           {actualEpisodes && actualEpisodes > 1 && !isUpcoming && !(from === 'favorite' && actualEpisodes === 99) && (
             <div
               className={`absolute left-2 bg-gradient-to-br from-emerald-500/95 via-teal-500/95 to-cyan-600/95 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg ring-2 ring-white/30 transition-all duration-300 ease-out group-hover:scale-105 group-hover:shadow-emerald-500/60 group-hover:ring-emerald-300/50 z-30 ${
-                remarks && remarks.includes('天后上映') && type ? 'top-[48px]' : 'top-2'
+                hasReleaseTag && type ? 'top-[48px]' : 'top-2'
               }`}
               style={{
                 WebkitUserSelect: 'none',
@@ -850,8 +882,8 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
               className={`absolute left-2 bg-gradient-to-br from-indigo-500/90 via-purple-500/90 to-pink-500/90 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg ring-2 ring-white/30 transition-all duration-300 ease-out group-hover:scale-105 group-hover:shadow-purple-500/50 group-hover:ring-purple-300/50 ${
                 (() => {
                   let offset = 2; // 默认 top-2
-                  // 如果有即将上映的类型徽章
-                  if (remarks && remarks.includes('天后上映') && type) {
+                  // 如果有上映相关的类型徽章
+                  if (hasReleaseTag && type) {
                     offset += 46; // top-[48px]
                   }
                   // 如果有集数徽章
@@ -900,25 +932,45 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
           )}
 
           {/* 上映状态徽章 - 美化版，放在底部左侧 */}
-          {remarks && (remarks.includes('天后上映') || remarks.includes('已上映') || remarks.includes('今日上映')) && (
-            <div
-              className="absolute bottom-2 left-2 bg-gradient-to-br from-orange-500/95 via-red-500/95 to-pink-600/95 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg ring-2 ring-white/30 transition-all duration-300 ease-out group-hover:scale-105 group-hover:shadow-orange-500/60 group-hover:ring-orange-300/50 animate-pulse"
-              style={{
-                WebkitUserSelect: 'none',
-                userSelect: 'none',
-                WebkitTouchCallout: 'none',
-              } as React.CSSProperties}
-              onContextMenu={(e) => {
-                e.preventDefault();
-                return false;
-              }}
-            >
-              <span className="flex items-center gap-1">
-                <span className="text-[10px]">🔜</span>
-                {remarks}
-              </span>
-            </div>
-          )}
+          {hasReleaseTag && (() => {
+            // 根据状态选择emoji和颜色
+            let emoji = '🔜';
+            let bgColors = 'from-orange-500/95 via-red-500/95 to-pink-600/95';
+            let shadowColor = 'group-hover:shadow-orange-500/60';
+            let ringColor = 'group-hover:ring-orange-300/50';
+
+            if (remarks?.includes('已上映')) {
+              emoji = '🎬';
+              bgColors = 'from-green-500/95 via-emerald-500/95 to-teal-600/95';
+              shadowColor = 'group-hover:shadow-green-500/60';
+              ringColor = 'group-hover:ring-green-300/50';
+            } else if (remarks?.includes('今日上映')) {
+              emoji = '🎉';
+              bgColors = 'from-yellow-500/95 via-orange-500/95 to-red-600/95';
+              shadowColor = 'group-hover:shadow-yellow-500/60';
+              ringColor = 'group-hover:ring-yellow-300/50';
+            }
+
+            return (
+              <div
+                className={`absolute bottom-2 left-2 bg-gradient-to-br ${bgColors} backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg ring-2 ring-white/30 transition-all duration-300 ease-out group-hover:scale-105 ${shadowColor} ${ringColor} animate-pulse`}
+                style={{
+                  WebkitUserSelect: 'none',
+                  userSelect: 'none',
+                  WebkitTouchCallout: 'none',
+                } as React.CSSProperties}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  return false;
+                }}
+              >
+                <span className="flex items-center gap-1">
+                  <span className="text-[10px]">{emoji}</span>
+                  {remarks}
+                </span>
+              </div>
+            );
+          })()}
 
           {/* 评分徽章 - 动态颜色 */}
           {config.showRating && rate && (() => {
@@ -1214,21 +1266,53 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
               ></div>
             </div>
           </div>
-          {config.showSourceName && source_name && (
-            <div
-              className='flex items-center justify-center mt-2'
-              style={{
-                WebkitUserSelect: 'none',
-                userSelect: 'none',
-                WebkitTouchCallout: 'none',
-              } as React.CSSProperties}
-              onContextMenu={(e) => {
-                e.preventDefault();
-                return false;
-              }}
-            >
-              <span
-                className='relative inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-full border border-gray-300/60 dark:border-gray-600/60 text-gray-600 dark:text-gray-400 transition-all duration-300 ease-out overflow-hidden group-hover:border-green-500/80 group-hover:text-green-600 dark:group-hover:text-green-400 group-hover:shadow-md group-hover:shadow-green-500/20 group-hover:scale-105'
+          {config.showSourceName && source_name && (() => {
+            // 智能显示source_name：如果有上映状态标记，优先显示状态；否则显示来源
+            let displayText = source_name;
+            let themeColor = 'green'; // 默认绿色主题
+
+            if (hasReleaseTag && remarks) {
+              // 有上映状态时，根据状态显示不同文本和颜色
+              if (remarks.includes('天后上映')) {
+                displayText = remarks; // 显示"X天后上映"
+                themeColor = 'orange';
+              } else if (remarks.includes('今日上映')) {
+                displayText = '今日上映';
+                themeColor = 'yellow';
+              } else if (remarks.includes('已上映')) {
+                displayText = remarks; // 显示"已上映X天"
+                themeColor = 'green';
+              }
+            }
+
+            // 根据主题颜色设置class
+            const colorClasses = {
+              green: 'group-hover:border-green-500/80 group-hover:text-green-600 dark:group-hover:text-green-400 group-hover:shadow-green-500/20',
+              orange: 'group-hover:border-orange-500/80 group-hover:text-orange-600 dark:group-hover:text-orange-400 group-hover:shadow-orange-500/20',
+              yellow: 'group-hover:border-yellow-500/80 group-hover:text-yellow-600 dark:group-hover:text-yellow-400 group-hover:shadow-yellow-500/20',
+            }[themeColor];
+
+            const bgGradient = {
+              green: 'group-hover:via-green-50/80 dark:group-hover:via-green-500/20',
+              orange: 'group-hover:via-orange-50/80 dark:group-hover:via-orange-500/20',
+              yellow: 'group-hover:via-yellow-50/80 dark:group-hover:via-yellow-500/20',
+            }[themeColor];
+
+            const dotColor = {
+              green: 'group-hover:bg-green-500 dark:group-hover:bg-green-400 group-hover:shadow-[0_0_8px_rgba(16,185,129,0.6)]',
+              orange: 'group-hover:bg-orange-500 dark:group-hover:bg-orange-400 group-hover:shadow-[0_0_8px_rgba(249,115,22,0.6)]',
+              yellow: 'group-hover:bg-yellow-500 dark:group-hover:bg-yellow-400 group-hover:shadow-[0_0_8px_rgba(234,179,8,0.6)]',
+            }[themeColor];
+
+            const iconColor = {
+              green: 'group-hover:text-green-500 dark:group-hover:text-green-400',
+              orange: 'group-hover:text-orange-500 dark:group-hover:text-orange-400',
+              yellow: 'group-hover:text-yellow-500 dark:group-hover:text-yellow-400',
+            }[themeColor];
+
+            return (
+              <div
+                className='flex items-center justify-center mt-2'
                 style={{
                   WebkitUserSelect: 'none',
                   userSelect: 'none',
@@ -1239,23 +1323,36 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
                   return false;
                 }}
               >
-                {/* 背景渐变效果 */}
-                <span className='absolute inset-0 bg-gradient-to-r from-transparent via-green-50/0 to-transparent dark:via-green-500/0 group-hover:via-green-50/80 dark:group-hover:via-green-500/20 transition-all duration-300'></span>
+                <span
+                  className={`relative inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-full border border-gray-300/60 dark:border-gray-600/60 text-gray-600 dark:text-gray-400 transition-all duration-300 ease-out overflow-hidden group-hover:shadow-md group-hover:scale-105 ${colorClasses}`}
+                  style={{
+                    WebkitUserSelect: 'none',
+                    userSelect: 'none',
+                    WebkitTouchCallout: 'none',
+                  } as React.CSSProperties}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    return false;
+                  }}
+                >
+                  {/* 背景渐变效果 */}
+                  <span className={`absolute inset-0 bg-gradient-to-r from-transparent via-green-50/0 to-transparent dark:via-green-500/0 transition-all duration-300 ${bgGradient}`}></span>
 
-                {/* 左侧装饰点 */}
-                <span className='relative w-1.5 h-1.5 rounded-full bg-gray-400 dark:bg-gray-500 group-hover:bg-green-500 dark:group-hover:bg-green-400 transition-all duration-300 group-hover:shadow-[0_0_8px_rgba(16,185,129,0.6)]'></span>
+                  {/* 左侧装饰点 */}
+                  <span className={`relative w-1.5 h-1.5 rounded-full bg-gray-400 dark:bg-gray-500 transition-all duration-300 ${dotColor}`}></span>
 
-                {origin === 'live' && (
-                  <Radio size={12} className="relative inline-block transition-all duration-300 group-hover:text-green-500 dark:group-hover:text-green-400" />
-                )}
+                  {origin === 'live' && (
+                    <Radio size={12} className={`relative inline-block transition-all duration-300 ${iconColor}`} />
+                  )}
 
-                <span className='relative font-semibold'>{source_name}</span>
+                  <span className='relative font-semibold'>{displayText}</span>
 
-                {/* 右侧装饰点 */}
-                <span className='relative w-1.5 h-1.5 rounded-full bg-gray-400 dark:bg-gray-500 group-hover:bg-green-500 dark:group-hover:bg-green-400 transition-all duration-300 group-hover:shadow-[0_0_8px_rgba(16,185,129,0.6)]'></span>
-              </span>
-            </div>
-          )}
+                  {/* 右侧装饰点 */}
+                  <span className={`relative w-1.5 h-1.5 rounded-full bg-gray-400 dark:bg-gray-500 transition-all duration-300 ${dotColor}`}></span>
+                </span>
+              </div>
+            );
+          })()}
         </div>
       </div>
 
