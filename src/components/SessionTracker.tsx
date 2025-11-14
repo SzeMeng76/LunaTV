@@ -20,7 +20,7 @@ export function SessionTracker() {
 
         // 检查用户是否已登录
         const authCookie = document.cookie.split(';').find(cookie =>
-          cookie.trim().startsWith('auth=')
+          cookie.trim().startsWith('user_auth=')
         );
 
         if (!authCookie) {
