@@ -1,0 +1,19 @@
+name: Sync Fork
+
+on:
+  schedule:
+    - cron: '* */24 * * *' # 每天一次
+  workflow_dispatch: # on button click
+
+jobs:
+  sync:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: tgymnich/fork-sync@v2.0
+        with:
+          token: ${{ secrets.PERSONAL_TOKEN }}
+          owner: SzeMeng76
+          base: master
+          head: master
