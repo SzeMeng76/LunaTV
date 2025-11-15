@@ -107,6 +107,9 @@ export function createRedisClient(config: RedisConnectionConfig, globalSymbol: s
       },
       // 添加其他配置
       pingInterval: 30000, // 30秒ping一次，保持连接活跃
+      // 添加命令超时，防止命令无限期等待
+      commandsQueueMaxLength: 1000, // 命令队列最大长度
+      disableOfflineQueue: false, // 允许离线队列
     };
 
     client = createClient(clientConfig);

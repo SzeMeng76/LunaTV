@@ -448,42 +448,6 @@ const PlayStatsPage: React.FC = () => {
     }
   }, [authInfo]);
 
-  // 🔧 新增：监听登入时间更新和页面可见性变化
-  useEffect(() => {
-    if (!authInfo) return;
-
-    let lastRecordedLogin = localStorage.getItem('lastRecordedLogin');
-
-    // 1. 监听 localStorage 变化（跨标签页通信）
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'lastRecordedLogin' && e.newValue !== lastRecordedLogin) {
-        console.log('检测到登入时间更新，刷新统计数据');
-        lastRecordedLogin = e.newValue;
-        fetchStats();
-      }
-    };
-
-    // 2. 监听页面可见性变化（用户返回页面时）
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        const currentLastLogin = localStorage.getItem('lastRecordedLogin');
-        if (currentLastLogin !== lastRecordedLogin) {
-          console.log('页面可见，检测到登入时间已更新，刷新统计数据');
-          lastRecordedLogin = currentLastLogin;
-          fetchStats();
-        }
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [authInfo, fetchStats]);
-
   // 处理追番更新卡片点击
   const handleWatchingUpdatesClick = () => {
     console.log('点击追番卡片，watchingUpdates:', watchingUpdates);

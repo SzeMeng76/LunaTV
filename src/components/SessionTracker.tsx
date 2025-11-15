@@ -18,10 +18,11 @@ export function SessionTracker() {
           return;
         }
 
-        // 检查用户是否已登录
-        const authCookie = document.cookie.split(';').find(cookie =>
-          cookie.trim().startsWith('auth=')
-        );
+        // 检查用户是否已登录（兼容 user_auth 和 auth cookie）
+        const authCookie = document.cookie.split(';').find(cookie => {
+          const trimmed = cookie.trim();
+          return trimmed.startsWith('user_auth=') || trimmed.startsWith('auth=');
+        });
 
         if (!authCookie) {
           // 用户未登录，不需要记录
