@@ -1907,11 +1907,15 @@ function LivePageClient() {
                                   )}
                                 </div>
                                 <div className='flex-1 min-w-0'>
-                                  <div className='text-sm font-medium text-gray-900 dark:text-gray-100 truncate' title={channel.name}>
-                                    {channel.name}
+                                  <div className='text-sm font-medium text-gray-900 dark:text-gray-100 overflow-hidden group/channelName'>
+                                    <span className='inline-block whitespace-nowrap group-hover/channelName:animate-scroll-text'>
+                                      {channel.name}
+                                    </span>
                                   </div>
-                                  <div className='text-xs text-gray-500 dark:text-gray-400 mt-1' title={channel.group}>
-                                    {channel.group}
+                                  <div className='text-xs text-gray-500 dark:text-gray-400 mt-1 overflow-hidden group/channelGroup'>
+                                    <span className='inline-block whitespace-nowrap group-hover/channelGroup:animate-scroll-text'>
+                                      {channel.group}
+                                    </span>
                                   </div>
                                 </div>
                               </div>
@@ -1979,18 +1983,22 @@ function LivePageClient() {
                                     )}
                                   </div>
                                   <div className='flex-1 min-w-0'>
-                                    <div 
-                                      className='text-sm font-medium text-gray-900 dark:text-gray-100 truncate'
-                                      dangerouslySetInnerHTML={{ 
-                                        __html: searchQuery ? 
-                                          channel.name.replace(
-                                            new RegExp(`(${searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'), 
-                                            '<mark class="bg-yellow-200 dark:bg-yellow-800 px-0.5 rounded">$1</mark>'
-                                          ) : channel.name 
-                                      }}
-                                    />
-                                    <div className='text-xs text-gray-500 dark:text-gray-400 mt-1'>
-                                      {channel.group}
+                                    <div className='text-sm font-medium text-gray-900 dark:text-gray-100 overflow-hidden group/searchName'>
+                                      <span
+                                        className='inline-block whitespace-nowrap group-hover/searchName:animate-scroll-text'
+                                        dangerouslySetInnerHTML={{
+                                          __html: searchQuery ?
+                                            channel.name.replace(
+                                              new RegExp(`(${searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'),
+                                              '<mark class="bg-yellow-200 dark:bg-yellow-800 px-0.5 rounded">$1</mark>'
+                                            ) : channel.name
+                                        }}
+                                      />
+                                    </div>
+                                    <div className='text-xs text-gray-500 dark:text-gray-400 mt-1 overflow-hidden group/searchGroup'>
+                                      <span className='inline-block whitespace-nowrap group-hover/searchGroup:animate-scroll-text'>
+                                        {channel.group}
+                                      </span>
                                     </div>
                                   </div>
                                 </div>
