@@ -101,6 +101,10 @@ const config: Config = {
           '0%': { transform: 'translateX(-20px)', opacity: '0' },
           '100%': { transform: 'translateX(0)', opacity: '1' },
         },
+        scrollText: {
+          '0%': { transform: 'translateX(0)' },
+          '100%': { transform: 'translateX(calc(-100% + 100px))' },
+        },
       },
       animation: {
         blob: 'blob 7s infinite',
@@ -113,6 +117,7 @@ const config: Config = {
         'slide-in-from-left': 'slideInFromLeft 0.3s ease-out',
         'ken-burns': 'kenBurns 20s ease-out infinite alternate',
         wave: 'wave 2s ease-in-out infinite',
+        'scroll-text': 'scrollText 3s linear infinite',
       },
       animationDelay: {
         '2000': '2s',

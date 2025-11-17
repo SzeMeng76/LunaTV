@@ -1828,6 +1828,8 @@ function PlayPageClient() {
       // 对于短剧，直接获取详情，跳过搜索
       if (currentSource === 'shortdrama' && currentId) {
         sourcesInfo = await fetchSourceDetail(currentSource, currentId);
+        // 设置可用源列表（即使只有短剧源本身）
+        setAvailableSources(sourcesInfo);
       } else {
         // 其他情况先搜索所有视频源
         sourcesInfo = await fetchSourcesData(searchTitle || videoTitle);
@@ -1843,8 +1845,8 @@ function PlayPageClient() {
         }
 
         // 如果有 shortdrama_id，额外添加短剧源到可用源列表
-        // 但只有在没有指定其他源时才添加，避免电影等内容错误加载短剧源
-        if (shortdramaId && !currentSource && !currentId) {
+        // 即使已经有其他源，也尝试添加短剧源到换源列表中
+        if (shortdramaId) {
           try {
             const shortdramaSource = await fetchSourceDetail('shortdrama', shortdramaId);
             if (shortdramaSource.length > 0) {
@@ -4331,6 +4333,9 @@ function PlayPageClient() {
                 availableSources={availableSources.filter(source => {
                   // 必须有集数数据
                   if (!source.episodes || source.episodes.length < 1) return false;
+
+                  // 短剧源始终显示，不受集数差异限制
+                  if (source.source === 'shortdrama') return true;
 
                   // 如果当前有 detail，只显示集数相近的源（允许 ±30% 的差异）
                   if (detail && detail.episodes && detail.episodes.length > 0) {
