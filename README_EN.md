@@ -25,7 +25,7 @@
 ![HLS.js](https://img.shields.io/badge/HLS.js-1.6.13-ec407a)
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Docker Ready](https://img.shields.io/badge/Docker-ready-blue?logo=docker)
-![Version](https://img.shields.io/badge/Version-5.6.2-orange)
+![Version](https://img.shields.io/badge/Version-5.6.3-orange)
 
 </div>
 
@@ -33,7 +33,7 @@
 
 ## 📢 Project Overview
 
-This project is a deeply customized version based on **MoonTV**, continuously developed from **v4.3.1** to the current **v5.6.2**, with **50+ major feature modules** and **300+ detailed optimizations** added. See [CHANGELOG](CHANGELOG) for all new features.
+This project is a deeply customized version based on **MoonTV**, continuously developed from **v4.3.1** to the current **v5.6.3**, with **50+ major feature modules** and **300+ detailed optimizations** added. See [CHANGELOG](CHANGELOG) for all new features.
 
 ### 💡 Core Enhancement Highlights
 
@@ -885,45 +885,54 @@ This project works with [OrionTV](https://github.com/zimplexing/OrionTV) on Andr
 
 For complete feature updates and bug fixes, see [CHANGELOG](CHANGELOG).
 
-### Latest Version: v5.6.2 (2025-11-06)
+### Latest Version: v5.6.3 (2025-11-17)
 
 #### Added
-- 🎬 Hero Banner Full Category Support: Added detailed descriptions to hero banner for all content types (movies, series, variety shows, short dramas, anime)
-- 📅 Upcoming Release Calendar: Added upcoming releases section displaying movie and TV show releases within the next 30 days
-- 🖼️ Release Calendar Poster Extraction: Implemented poster image scraping from manmankan website for upcoming content (supports lazy-loaded data-original)
-- 🎨 Aurora Mesh Gradient Background: Implemented Aurora Mesh Gradient background for release calendar page with animated blob effects
-- 📱 Mobile Banner Swipeable Card Layout: Implemented mobile-friendly swipeable card-style banner layout with touch gesture navigation
-- 🔖 Upcoming Type Badges: Added movie/TV show type badges for upcoming release cards (top-left corner)
-- ⭐ Upcoming Release Favoriting: Support favoriting upcoming releases, automatically converting to playable status after release
-- 🔄 Auto-update Favorite Episode Count: Playback page automatically updates placeholder episode count (99 episodes) in favorites to actual count
-- 📺 Post-load DVR Detection for Live Streams: Player uses video.seekable API after loading to detect DVR/timeshift support, displays notification banner when seekable range exceeds 60 seconds, adds button to enable progress bar and reload player in DVR mode
+- 🎉 Short Drama Multi-source Search: Enabled multi-source search for short drama content with detail integration triggered from banners and cards
+- 🎨 Enhanced Virtual Scrolling: Added auto-scroll and image preloading to improve browsing experience
+- 📊 Smart Distribution Algorithm: Implemented intelligent time distribution algorithm for upcoming releases section
 
 #### Improved
-- 🎨 Release Calendar UI Beautification: Optimized release calendar page visual effects with gradient backgrounds and modern design
-- 📱 Large Screen Responsive Layout: Improved responsive layout effects on large screen devices
-- 🎯 Upcoming Content Deduplication: Deduplicate upcoming release data based on title, keeping earliest release date
-- 🚫 Disable Playback for Upcoming Content: Unreleased content shows "Coming Soon" instead of play button to prevent user confusion
-- 👁️ Hide Upcoming Episode Badges: Don't display placeholder episode counts for upcoming content to avoid misleading users
-- ⚡ Playback Progress Save Frequency: Increased playback progress save interval to reduce network overhead
-- 🔍 New Episode Detection Optimization: Skip redundant fetch requests during playback to optimize performance
-- 📊 Playback Record Request Optimization: Reduced playback record API request frequency to lower network burden
+- 🔐 SessionTracker Compatibility Enhancement: Support both auth and user_auth cookies for improved session tracking stability
+- 📈 Release Calendar API Limit Increase: Increased from 20 to 100 to show more upcoming content
+- 🔍 Upcoming Time Range Extension: Extended from 30 to 90 days for longer-term content preview
+- 📅 Today's Release Hard Limit: Prevent today's releases from dominating the upcoming releases section
+- 📊 Upcoming Distribution Algorithm Improvement: Optimized distribution of upcoming release content
+- 📺 Channel Name Scrolling Animation: Added scrolling text animation for channel names in live view
 
 #### Fixed
-- 🖼️ manmankan Image Proxy Support: Added Referer support for manmankan.com to image proxy to bypass hotlink protection
-- 🔧 Douban Details Plot Summary Fix: Fixed extraction of complete plot summary from Douban details
-- 🗑️ Douban Details Cache Invalidation: Automatically invalidate cache when plot_summary is missing to ensure data integrity
-- 🔗 Short Drama Banner More Button Link Fix: Fixed more button link for short drama category in hero banner
-- 🔝 Play Page Back-to-Top Button Position Fix: Adjusted back-to-top button responsive position on mobile to prevent overlap with more menu
-- 📐 Search Page z-index Fix: Prevent bottom navigation from being covered by back-to-top button
-- 🎬 Banner Content Truncation Fix: Prevent hero banner content truncation when description is too long
-- 🎮 Video Player z-index Fix: Fixed mobile bottom menu being covered by video player
-- 🔍 Mobile Short Drama Search Parameter Fix: Use correct query parameter for mobile short drama search
-- 🐛 isUpcoming Variable Declaration Order Fix: Moved isUpcoming declaration before useEffect to resolve compilation error
-- 📦 getAllFavorites Import Fix: Use correct static import instead of dynamic import to fix TypeScript compilation error
-- 🎯 Async Details Fetch Fix: Fixed async details fetching logic for all hero banner items
+- 🔧 Fixed rendering 0 from videoDoubanId check: Prevent incorrect display when Douban ID is 0
+- 🎯 Smart Source Filtering Implementation: Auto-filter zero values in class field and sources, as well as sources without episodes
+- 🚫 Filter Invalid Data: Clean zero values in class field and sources without episode counts
+- 📺 Update availableSources State: Ensure source selector only shows valid video sources
+- 🔝 Improve Fullscreen Button Visibility: Optimize fullscreen button display on small screens
+- 🎪 Hide Placeholder Episodes in Favorites: Avoid showing 99 episode placeholder for short dramas to prevent user confusion
+- 🚫 Prevent Short Drama Source Misassignment: Ensure short drama sources are not added to non-short drama content
+- 🎯 Fix VideoCard Badge Display: Support proper badge display for all release status types
+- ⏰ Resolve Date Comparison Timezone Issue: Fix timezone-related date judgment errors in upcoming releases filter
+- 🔗 Fix HeroBanner Play Link: Add stype parameter for correct navigation
+- 🎯 Fix HeroBanner Search Matching: Use douban_id instead of title matching for improved search accuracy
+- 🎬 Improve Short Film Title Search: Optimize fuzzy search algorithm accuracy for short film titles
+- 🔝 Fix Skip Button z-index: Prevent skip button from covering navigation bar
+- 📍 Fix Skip Button Positioning: Keep skip button at fixed position within player container
+- ❤️ Add Dedicated Favorite Heart Button: Add dedicated clickable heart button for favorites panel
+- 🎯 Hide Favorite Hover Buttons: Prevent floating heart button from interfering with user operations
+- 🗑️ Remove Duplicate Favorites Panel Elements: Clean duplicate heart and date labels in favorites panel
+- 🧹 Clean Released Content Play URLs: Ensure released upcoming content can play normally
+- 🏷️ Smart Source Tag System: Support dynamic status and color theme source tags
+- 🎨 Dynamic Release Badges: Display badges dynamically based on release status and hide placeholder episode counts
+- ▶️ Enable Released Favorite Playback: Smart detection of whether upcoming content has been released and enable playback
+- 🔄 Smart Deduplication and Dynamic Status: Optimize deduplication and status updates for upcoming releases
+- 🎯 Enhanced M3U8 Ad Filtering: Add SCTE-35 detection to improve ad filtering effectiveness
+- 🔧 Fix Subtitle Deduplication Logic: Improve title duplicate detection algorithm
+- 📊 Fix Card z-index Conflicts: Prevent all card components from covering navigation bar
+- 📱 Fix VideoCard Hover z-index: Resolve VideoCard covering navigation bar on hover/click
+- 🎯 Fix Tooltip z-index Conflicts: Ensure VideoCard tooltips don't conflict with navigation bar
+- 🔧 Fix Short Drama Source Display: Ensure short drama sources display correctly in source selector
 
 ### Major Milestone Versions
 
+- **v5.6.3**: Short Drama Multi-source Search, Smart Source Filtering, Upcoming Smart Distribution, Comprehensive z-index Conflict Fixes
 - **v5.6.2**: Upcoming Release Calendar, Hero Banner Full Category Support, Live DVR Detection, Mobile Banner Optimization
 - **v5.6.1**: Hero Banner & Modern Navigation UI, TVBox Intelligent Search Proxy, Export Format Selection
 - **v5.6.0**: Telegram Magic Link authentication, Source Browser & Testing Module, video source import/export
