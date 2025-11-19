@@ -3959,21 +3959,6 @@ useEffect(() => {
             }, 500); // 增加到500ms延迟，减少频繁重置导致的闪烁
           }
         });
-        // 添加 banana 转码的 seek 支持  
-        artPlayerRef.current.on('seek', (currentTime: number) => {  
-          // 只在 banana 源且使用 /t/ 端点时处理  
-          if (detail?.source === 'banana' && videoUrl.includes('/t/')) {  
-            const baseUrl = videoUrl.split('?')[0];  
-            const params = new URLSearchParams(videoUrl.split('?')[1] || '');  
-            params.set('start', currentTime.toString());  
-              
-            const newUrl = `${baseUrl}?${params.toString()}`;  
-            console.log(`⏩ 跳转到 ${currentTime.toFixed(2)}s`);  
-              
-            // 使用 switchQuality 重新加载视频  
-            artPlayerRef.current.switchQuality(newUrl);  
-          }  
-        }); 
         // 👇 添加防抖优化的 banana 转码 seek 支持  
         let seekTimeout: NodeJS.Timeout | null = null;  
   
