@@ -133,6 +133,10 @@ function LivePageClient() {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentSourceSearchResults, setCurrentSourceSearchResults] = useState<LiveChannel[]>([]);
 
+  // 直播源搜索状态
+  const [sourceSearchQuery, setSourceSearchQuery] = useState('');
+  const [filteredSources, setFilteredSources] = useState<LiveSource[]>([]);
+
   // 节目单信息
   const [epgData, setEpgData] = useState<{
     tvgId: string;
@@ -755,7 +759,7 @@ function LivePageClient() {
     }
 
     const normalizedQuery = query.toLowerCase();
-    const results = currentChannels.filter(channel => 
+    const results = currentChannels.filter(channel =>
       channel.name.toLowerCase().includes(normalizedQuery) ||
       channel.group.toLowerCase().includes(normalizedQuery)
     );
@@ -769,6 +773,30 @@ function LivePageClient() {
   const handleSearchChange = (query: string) => {
     setSearchQuery(query);
     debouncedSearch(query);
+  };
+
+  // 搜索直播源
+  const searchLiveSources = (query: string) => {
+    if (!query.trim()) {
+      setFilteredSources(liveSources);
+      return;
+    }
+
+    const normalizedQuery = query.toLowerCase();
+    const results = liveSources.filter(source =>
+      source.name.toLowerCase().includes(normalizedQuery) ||
+      source.key.toLowerCase().includes(normalizedQuery)
+    );
+    setFilteredSources(results);
+  };
+
+  // 防抖搜索直播源
+  const debouncedSourceSearch = debounce(searchLiveSources, 300);
+
+  // 处理直播源搜索输入
+  const handleSourceSearchChange = (query: string) => {
+    setSourceSearchQuery(query);
+    debouncedSourceSearch(query);
   };
 
   // 切换收藏
@@ -823,6 +851,15 @@ function LivePageClient() {
   //     loadAllChannelsAcrossSources();
   //   }
   // }, [liveSources]);
+
+  // 当 liveSources 改变时，更新 filteredSources
+  useEffect(() => {
+    if (!sourceSearchQuery.trim()) {
+      setFilteredSources(liveSources);
+    } else {
+      searchLiveSources(sourceSearchQuery);
+    }
+  }, [liveSources]);
 
   // 检查收藏状态
   useEffect(() => {
@@ -2025,6 +2062,28 @@ function LivePageClient() {
                 {/* 直播源 Tab 内容 */}
                 {activeTab === 'sources' && (
                   <div className='flex flex-col h-full mt-4'>
+                    {/* 搜索框 */}
+                    <div className='mb-4 -mx-6 px-6 flex-shrink-0'>
+                      <div className='relative'>
+                        <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400' />
+                        <input
+                          type='text'
+                          placeholder='搜索直播源...'
+                          value={sourceSearchQuery}
+                          onChange={(e) => handleSourceSearchChange(e.target.value)}
+                          className='w-full pl-10 pr-8 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent'
+                        />
+                        {sourceSearchQuery && (
+                          <button
+                            onClick={() => handleSourceSearchChange('')}
+                            className='absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
+                          >
+                            <X className='w-4 h-4' />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
                     {/* 刷新控制区域 */}
                     <div className='mb-4 -mx-6 px-6 flex-shrink-0 space-y-3'>
                       {/* 手动刷新按钮 */}
@@ -2071,10 +2130,19 @@ function LivePageClient() {
                         )}
                       </div>
                     </div>
-                    
+
+                    {/* 搜索结果统计 */}
+                    {sourceSearchQuery.trim() && filteredSources.length > 0 && (
+                      <div className='mb-2 -mx-6 px-6 flex-shrink-0'>
+                        <div className='text-xs text-gray-500 dark:text-gray-400'>
+                          找到 {filteredSources.length} 个直播源
+                        </div>
+                      </div>
+                    )}
+
                     <div className='flex-1 overflow-y-auto space-y-2 pb-20'>
-                      {liveSources.length > 0 ? (
-                        liveSources.map((source) => {
+                      {filteredSources.length > 0 ? (
+                        filteredSources.map((source) => {
                           const isCurrentSource = source.key === currentSource?.key;
                           return (
                             <div
@@ -2094,7 +2162,18 @@ function LivePageClient() {
                               {/* 信息 */}
                               <div className='flex-1 min-w-0'>
                                 <div className='text-sm font-medium text-gray-900 dark:text-gray-100 truncate'>
-                                  {source.name}
+                                  {sourceSearchQuery ? (
+                                    <span
+                                      dangerouslySetInnerHTML={{
+                                        __html: source.name.replace(
+                                          new RegExp(`(${sourceSearchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'),
+                                          '<mark class="bg-yellow-200 dark:bg-yellow-800 px-0.5 rounded">$1</mark>'
+                                        )
+                                      }}
+                                    />
+                                  ) : (
+                                    source.name
+                                  )}
                                 </div>
                                 <div className='text-xs text-gray-500 dark:text-gray-400 mt-1'>
                                   {!source.channelNumber || source.channelNumber === 0 ? '-' : `${source.channelNumber} 个频道`}
@@ -2110,20 +2189,38 @@ function LivePageClient() {
                         })
                       ) : (
                         <div className='flex flex-col items-center justify-center py-12 text-center'>
-                          <div className='relative mb-6'>
-                            <div className='w-20 h-20 bg-gradient-to-br from-orange-100 to-red-200 dark:from-orange-900/40 dark:to-red-900/40 rounded-2xl flex items-center justify-center shadow-lg'>
-                              <Radio className='w-10 h-10 text-orange-500 dark:text-orange-400' />
-                            </div>
-                            {/* 装饰小点 */}
-                            <div className='absolute -top-1 -right-1 w-3 h-3 bg-orange-400 rounded-full animate-ping'></div>
-                            <div className='absolute -bottom-1 -left-1 w-2 h-2 bg-red-400 rounded-full animate-pulse'></div>
-                          </div>
-                          <p className='text-base font-semibold text-gray-700 dark:text-gray-300 mb-2'>
-                            暂无可用直播源
-                          </p>
-                          <p className='text-sm text-gray-500 dark:text-gray-400'>
-                            请检查网络连接或联系管理员添加直播源
-                          </p>
+                          {sourceSearchQuery.trim() ? (
+                            // 搜索无结果
+                            <>
+                              <div className='w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4'>
+                                <Search className='w-8 h-8 text-gray-400 dark:text-gray-600' />
+                              </div>
+                              <p className='text-gray-500 dark:text-gray-400 font-medium'>
+                                未找到匹配的直播源
+                              </p>
+                              <p className='text-sm text-gray-400 dark:text-gray-500 mt-1'>
+                                搜索 "{sourceSearchQuery}" 无结果
+                              </p>
+                            </>
+                          ) : (
+                            // 无直播源
+                            <>
+                              <div className='relative mb-6'>
+                                <div className='w-20 h-20 bg-gradient-to-br from-orange-100 to-red-200 dark:from-orange-900/40 dark:to-red-900/40 rounded-2xl flex items-center justify-center shadow-lg'>
+                                  <Radio className='w-10 h-10 text-orange-500 dark:text-orange-400' />
+                                </div>
+                                {/* 装饰小点 */}
+                                <div className='absolute -top-1 -right-1 w-3 h-3 bg-orange-400 rounded-full animate-ping'></div>
+                                <div className='absolute -bottom-1 -left-1 w-2 h-2 bg-red-400 rounded-full animate-pulse'></div>
+                              </div>
+                              <p className='text-base font-semibold text-gray-700 dark:text-gray-300 mb-2'>
+                                暂无可用直播源
+                              </p>
+                              <p className='text-sm text-gray-500 dark:text-gray-400'>
+                                请检查网络连接或联系管理员添加直播源
+                              </p>
+                            </>
+                          )}
                         </div>
                       )}
                     </div>
