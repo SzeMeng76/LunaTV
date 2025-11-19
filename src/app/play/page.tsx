@@ -290,7 +290,13 @@ useEffect(() => {
       // 👇 在这里添加字幕选择器,确保播放器已初始化  
       if (artPlayerRef.current && data.subtitleTracks && data.subtitleTracks.length > 0) {  
         console.log('📝 添加内嵌字幕选择器');  
-          
+      if (artPlayerRef.current.setting) {  
+      const settings = artPlayerRef.current.setting.option;  
+      const subtitleIndex = settings.findIndex((item: any) => item.html === '内嵌字幕');  
+      if (subtitleIndex >= 0) {  
+        settings.splice(subtitleIndex, 1);  
+      }  
+    }         
         artPlayerRef.current.setting.add({  
           html: '内嵌字幕',  
           tooltip: '选择字幕',  
