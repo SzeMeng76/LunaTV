@@ -3553,7 +3553,6 @@ useEffect(() => {
       console.log('✅ 检测到字幕文件:', autoSubtitles);
         // 🆕 保存已加载的字幕 URL
       setLoadedSubtitleUrls(autoSubtitles);
-      clearSubtitleSettings();
       // 如果有多个字幕,添加切换选项
       artPlayerRef.current.setting.add({
         html: '外部字幕',
