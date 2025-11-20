@@ -2840,6 +2840,7 @@ function PlayPageClient() {
             hls.on(Hls.Events.ERROR, function (event: any, data: any) {
               console.error('HLS Error:', event, data);
 
+              // v1.6.15 改进：优化了播放列表末尾空片段/间隙处理，改进了音频TS片段duration处理
               // v1.6.13 增强：处理片段解析错误（针对initPTS修复）
               if (data.details === Hls.ErrorDetails.FRAG_PARSING_ERROR) {
                 console.log('片段解析错误，尝试重新加载...');
