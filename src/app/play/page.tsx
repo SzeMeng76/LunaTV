@@ -289,14 +289,7 @@ useEffect(() => {
       console.log('✅ Banana 元数据获取成功:', data);  
       // 👇 在这里添加字幕选择器,确保播放器已初始化  
       if (artPlayerRef.current && data.subtitleTracks && data.subtitleTracks.length > 0) {  
-        console.log('📝 添加内嵌字幕选择器');  
-      if (artPlayerRef.current.setting) {  
-      const settings = artPlayerRef.current.setting.option;  
-      const subtitleIndex = settings.findIndex((item: any) => item.html === '内嵌字幕');  
-      if (subtitleIndex >= 0) {  
-        settings.splice(subtitleIndex, 1);  
-      }  
-    }         
+        console.log('📝 添加内嵌字幕选择器');           
         artPlayerRef.current.setting.add({  
           html: '内嵌字幕',  
           tooltip: '选择字幕',  
@@ -1803,15 +1796,15 @@ useEffect(() => {
           console.log('✅ 新集数检测到字幕:', autoSubtitles);  
            // 🆕 更新字幕 URL  
           setLoadedSubtitleUrls(autoSubtitles);
-          // 清除旧的字幕设置项  
-          if (artPlayerRef.current.setting) {  
-            // 移除旧的字幕设置项(如果存在)  
-            const settings = artPlayerRef.current.setting.option;  
-            const subtitleIndex = settings.findIndex((item: any) => item.html === '字幕');  
-            if (subtitleIndex >= 0) {  
-              settings.splice(subtitleIndex, 1);  
+           // 清除所有旧的字幕设置项(包括"外部字幕"和"内嵌字幕")  
+        if (artPlayerRef.current.setting) {    
+          const settings = artPlayerRef.current.setting.option;      
+          for (let i = settings.length - 1; i >= 0; i--) {  
+            if (settings[i].html === '外部字幕' || settings[i].html === '内嵌字幕') {  
+              settings.splice(i, 1);  
             }  
           }  
+        }
 
           // 添加新的字幕设置项  
           artPlayerRef.current.setting.add({  
