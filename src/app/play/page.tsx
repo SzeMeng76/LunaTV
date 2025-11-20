@@ -1799,8 +1799,7 @@ useEffect(() => {
     // 延迟执行,确保视频 URL 已更新
     setTimeout(async () => {
       try {
-        if (!artPlayerRef.current) return;
-
+        if (!artPlayerRef.current || !detail) return;
         console.log('🔄 集数变化,重新检测字幕...');
         const newVideoUrl = detail.episodes?.[currentEpisodeIndex] || '';
         const autoSubtitles = await autoLoadSubtitles(newVideoUrl);
