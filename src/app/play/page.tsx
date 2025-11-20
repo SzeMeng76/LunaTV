@@ -3543,19 +3543,7 @@ useEffect(() => {
         
         // 应用CSS优化
         optimizeDanmukuControlsCSS();
-        // 👇 在这里添加 video:loadedmetadata 事件监听  
-        artPlayerRef.current.on('video:loadedmetadata', () => {  
-          if (detail?.source === 'banana' && bananaMetadata?.duration) {  
-            const video = artPlayerRef.current.video as HTMLVideoElement;  
-            if (video.duration === Infinity || isNaN(video.duration)) {  
-              Object.defineProperty(video, 'duration', {  
-                value: bananaMetadata.duration,  
-                writable: false  
-              });  
-              console.log(`✅ 修正视频时长: ${bananaMetadata.duration}秒`);  
-            }  
-          }  
-        });  
+
   // 🆕 自动检测并加载字幕
   try {
     console.log('🔍 开始检测字幕文件...');
