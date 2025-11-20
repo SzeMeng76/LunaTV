@@ -445,7 +445,7 @@ useEffect(() => {
     // 并发检查所有可能的字幕文件
     const checks = possibleUrls.map(async (url) => {
       const exists = await checkSubtitleExists(url);
-      if (exists) {  
+      if (exists) {
         const ext = url.split('.').pop()?.toLowerCase() || 'srt';
         const type = ext === 'vtt' ? 'webvtt' : ext;
         const filename = url.split('/').pop() || '';
@@ -1217,7 +1217,7 @@ useEffect(() => {
           }
         }
       }
-      
+
       if (newUrl !== videoUrl) {
         setVideoUrl(newUrl);
       }
@@ -1354,7 +1354,7 @@ useEffect(() => {
       try {
         // 👇 在这里添加 video 元素清理,用于停止转码
         const video = artPlayerRef.current.video as HTMLVideoElement;
-        
+
         // 中止所有网络请求
         if (video) {
           video.pause();
@@ -2824,7 +2824,7 @@ useEffect(() => {
           // 忽略错误
         }
       }
-      
+
       setIndependentSubtitles(available);
     } catch (error) {
       console.warn('独立字幕检测失败:', error);
@@ -4954,7 +4954,7 @@ useEffect(() => {
           </div>
         </a>
       )}
-      
+
 {/* 下载按钮组 - 视频 + 字幕 */}
 <div className="relative group">
   <button className="relative flex items-center gap-1.5 bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded-full text-sm font-medium shadow-md transition-colors">
@@ -4977,7 +4977,7 @@ useEffect(() => {
     >
       视频
     </a>
-  
+
     {/* 🆕 使用独立检测的字幕状态 */}
     {independentSubtitles.map((subtitle) => (
       <a
