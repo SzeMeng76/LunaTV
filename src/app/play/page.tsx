@@ -1777,7 +1777,9 @@ useEffect(() => {
         console.log('🔍 [调试] 新视频URL:', newVideoUrl);
         // 1️⃣ 先清除所有旧的字幕设置
         console.log('🔍 [调试] 准备清除旧字幕');
-        clearSubtitleSettings();
+        if (!isInitialLoad) {
+          clearSubtitleSettings();
+        } 
         
         // 2️⃣ 检测外部字幕
         const autoSubtitles = await autoLoadSubtitles(newVideoUrl);
@@ -1883,7 +1885,7 @@ useEffect(() => {
       }
     }, 1000);
   }
-}, [detail, currentEpisodeIndex, videoUrl, bananaMetadata]); // 添加 videoUrl 依赖
+}, [detail, currentEpisodeIndex, videoUrl]); // 添加 videoUrl 依赖
 
   // 进入页面时直接获取全部源信息
   useEffect(() => {
