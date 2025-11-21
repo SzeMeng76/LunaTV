@@ -1892,7 +1892,7 @@ useEffect(() => {
         if (bananaSubtitles && bananaSubtitles.length > 0) {
           console.log('✅ 新集数检测到内嵌字幕:', bananaSubtitles.length, '条');
           const settings = artPlayerRef.current.setting.option;  
-          const hasEmbeddedSubtitle = settings.some(s => s.html === '内嵌字幕');  
+          const hasEmbeddedSubtitle = settings.some((s: any) => s.html === '内嵌字幕');  
     
         if (!hasEmbeddedSubtitle) {
           artPlayerRef.current.setting.add({
