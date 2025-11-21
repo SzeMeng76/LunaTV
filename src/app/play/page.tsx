@@ -1777,9 +1777,7 @@ useEffect(() => {
         console.log('🔍 [调试] 新视频URL:', newVideoUrl);
         // 1️⃣ 先清除所有旧的字幕设置
         console.log('🔍 [调试] 准备清除旧字幕');
-        if (!isInitialLoad) {
-          clearSubtitleSettings();
-        } 
+        clearSubtitleSettings(); 
         
         // 2️⃣ 检测外部字幕
         const autoSubtitles = await autoLoadSubtitles(newVideoUrl);
