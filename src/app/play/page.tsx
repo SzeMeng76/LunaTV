@@ -306,7 +306,7 @@ useEffect(() => {
       
       // 先检查是否已经存在内嵌字幕选择器,避免重复添加
       const settings = artPlayerRef.current.setting.option;
-      const hasEmbeddedSubtitle = settings.some(s => s.html === '内嵌字幕');
+      const hasEmbeddedSubtitle = settings.some((s: any) => s.html === '内嵌字幕');
         
       if (!hasEmbeddedSubtitle) {
         const match = videoUrl.match(/\/[rt]\/([^.]+)/);
@@ -1848,7 +1848,7 @@ useEffect(() => {
           console.log('✅ 新集数检测到外部字幕:', autoSubtitles);
           setLoadedSubtitleUrls(autoSubtitles);
           const settings = artPlayerRef.current.setting.option;
-          const hasExternalSubtitle = settings.some(s => s.html === '外部字幕');
+          const hasExternalSubtitle = settings.some((s: any) => s.html === '外部字幕');
     
         if (!hasExternalSubtitle) {       
           artPlayerRef.current.setting.add({
