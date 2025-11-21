@@ -264,10 +264,10 @@ function PlayPageClient() {
   }, [shortdramaId, loadingShortdramaDetails, shortdramaDetails]);
   // 统一的字幕设置清理函数
   const clearSubtitleSettings = () => {
-    console.log('🔍 [调试] clearSubtitleSettings 被调用');  
-    console.trace('🔍 [调试] 调用堆栈:'); // 打印调用堆栈
+    console.log('🔍 [调试] clearSubtitleSettings 被调用');
     if (artPlayerRef.current?.setting) {
       const settings = artPlayerRef.current.setting.option;
+      // 从后往前遍历,避免索引问题
       for (let i = settings.length - 1; i >= 0; i--) {
         if (settings[i].html === '外部字幕' || settings[i].html === '内嵌字幕') {
           console.log('🔍 [调试] 删除字幕设置项:', settings[i].html);
@@ -301,7 +301,49 @@ useEffect(() => {
       const data = await response.json();
       setBananaMetadata(data);
       console.log('✅ Banana 元数据获取成功:', data);
-      console.log('🔍 [调试] 第301行已删除,不应该有清理操作');
+      if (artPlayerRef.current && data.subtitleTracks && data.subtitleTracks.length > 0) {
+      console.log('📝 添加内嵌字幕选择器');
+      
+      // 先检查是否已经存在内嵌字幕选择器,避免重复添加
+      const settings = artPlayerRef.current.setting.option;
+      const hasEmbeddedSubtitle = settings.some(s => s.html === '内嵌字幕');
+        
+      if (!hasEmbeddedSubtitle) {
+        const match = videoUrl.match(/\/[rt]\/([^.]+)/);
+        if (match) {
+          const fileId = match[1];
+          
+          artPlayerRef.current.setting.add({
+            html: '内嵌字幕',
+            tooltip: '选择字幕',
+            icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zM4 12h4v2H4v-2zm10 6H4v-2h10v2zm6 0h-4v-2h4v2zm0-4H10v-2h10v2z"/></svg>',
+            selector: [
+              { html: '关闭', value: 'off' },
+              ...data.subtitleTracks.map((track: any, index: number) => ({
+                html: track.tags?.title || track.tags?.language || `字幕 ${index + 1}`,
+                value: index,
+                subtitle: {
+                  url: `http://us.199301.xyz:4000/s/${fileId}.${index}.srt`,
+                  type: 'srt',
+                },
+              })),
+            ],
+            onSelect: function (item: any) {
+              if (item.value === 'off') {
+                artPlayerRef.current.subtitle.show = false;
+                return '关闭';
+              }
+              console.log(`📝 加载内嵌字幕: ${item.html}`);
+              artPlayerRef.current.subtitle.switch(item.subtitle.url, {
+                type: item.subtitle.type,
+              });
+              artPlayerRef.current.subtitle.show = true;
+              return item.html;
+            },
+          });
+        }
+      }
+    }
       // 👇 在这里添加选择器,确保播放器已初始化
       if (artPlayerRef.current && data.audioTracks && data.audioTracks.length > 1) {
         console.log('🎵 添加音轨选择器');
@@ -1805,7 +1847,11 @@ useEffect(() => {
         if (autoSubtitles.length > 0) {
           console.log('✅ 新集数检测到外部字幕:', autoSubtitles);
           setLoadedSubtitleUrls(autoSubtitles);
-          
+        // 先检查是否已经存在外部字幕选择器
+        const settings = artPlayerRef.current.setting.option;
+        const hasExternalSubtitle = settings.some(s => s.html === '外部字幕');
+
+        if (!hasExternalSubtitle) {
           artPlayerRef.current.setting.add({
             html: '外部字幕',
             tooltip: `当前:${autoSubtitles[0].filename}`,
