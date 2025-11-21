@@ -1809,6 +1809,7 @@ useEffect(() => {
   // 🆕 集数变化时重新检测字幕
   if (artPlayerRef.current && !isSourceChangingRef.current) {
     console.log('🔍 [调试] 剧集切换字幕检测开始');
+    const isInitialLoad = !loadedSubtitleUrls || loadedSubtitleUrls.length === 0;
     setTimeout(async () => {
       console.log('🔍 [调试] 1秒延迟后开始处理字幕');
       try {
@@ -1818,8 +1819,10 @@ useEffect(() => {
         const newVideoUrl = detail.episodes?.[currentEpisodeIndex] || '';
         console.log('🔍 [调试] 新视频URL:', newVideoUrl);
         // 1️⃣ 先清除所有旧的字幕设置
-        console.log('🔍 [调试] 准备清除旧字幕'); 
-        clearSubtitleSettings();  
+        console.log('🔍 [调试] 准备清除旧字幕');
+        if (!isInitialLoad) {
+          clearSubtitleSettings();
+        }
         
         // 2️⃣ 检测外部字幕
         const autoSubtitles = await autoLoadSubtitles(newVideoUrl);
@@ -1844,11 +1847,10 @@ useEffect(() => {
         if (autoSubtitles.length > 0) {
           console.log('✅ 新集数检测到外部字幕:', autoSubtitles);
           setLoadedSubtitleUrls(autoSubtitles);
-        // 先检查是否已经存在外部字幕选择器
-        const settings = artPlayerRef.current.setting.option;
-        const hasExternalSubtitle = settings.some(s => s.html === '外部字幕');
-
-        if (!hasExternalSubtitle) {
+          const settings = artPlayerRef.current.setting.option;
+          const hasExternalSubtitle = settings.some(s => s.html === '外部字幕');
+    
+        if (!hasExternalSubtitle) {       
           artPlayerRef.current.setting.add({
             html: '外部字幕',
             tooltip: `当前:${autoSubtitles[0].filename}`,
@@ -1885,11 +1887,14 @@ useEffect(() => {
           });
           artPlayerRef.current.notice.show = `已加载字幕: ${firstSub.filename}`;
         }
-        
+      }
         // 5️⃣ 添加内嵌字幕选择器(如果有)
         if (bananaSubtitles && bananaSubtitles.length > 0) {
           console.log('✅ 新集数检测到内嵌字幕:', bananaSubtitles.length, '条');
-          
+          const settings = artPlayerRef.current.setting.option;  
+          const hasEmbeddedSubtitle = settings.some(s => s.html === '内嵌字幕');  
+    
+        if (!hasEmbeddedSubtitle) {
           artPlayerRef.current.setting.add({
             html: '内嵌字幕',
             tooltip: '选择字幕',
@@ -1916,6 +1921,7 @@ useEffect(() => {
             },
           });
         }
+      }
         
         // 6️⃣ 如果没有任何字幕
         if (autoSubtitles.length === 0 && (!bananaSubtitles || bananaSubtitles.length === 0)) {
