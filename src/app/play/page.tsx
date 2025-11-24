@@ -1370,8 +1370,12 @@ useEffect(() => {
         // 中止所有网络请求
         if (video) {
           video.pause();
+          const sources = video.querySelectorAll('source');
+          sources.forEach(s => s.remove());
           video.src = '';
-          video.load(); // 触发中止
+          video.removeAttribute('src');
+          video.load();
+          video.remove();
           console.log('🛑 已中止视频加载');
         }
         // 1. 清理弹幕插件的WebWorker
