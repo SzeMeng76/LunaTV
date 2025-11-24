@@ -262,21 +262,7 @@ function PlayPageClient() {
 
     loadShortdramaDetails();
   }, [shortdramaId, loadingShortdramaDetails, shortdramaDetails]);
-  // 统一的字幕设置清理函数
-  const clearSubtitleSettings = () => {
-    console.log('🔍 [调试] clearSubtitleSettings 被调用');
-    if (artPlayerRef.current?.setting) {
-      const settings = artPlayerRef.current.setting.option;
-      // 从后往前遍历,避免索引问题
-      for (let i = settings.length - 1; i >= 0; i--) {
-        if (settings[i].html === '外部字幕' || settings[i].html === '内嵌字幕') {
-          console.log('🔍 [调试] 删除字幕设置项:', settings[i].html);
-          settings.splice(i, 1);
-        }
-      }
-      console.log('🧹 已清理旧的字幕设置项');
-    }
-  };
+
   // 自动网盘搜索：当有视频标题时可以随时搜索
   useEffect(() => {
     // 移除自动搜索，改为用户点击按钮时触发
@@ -291,28 +277,26 @@ useEffect(() => {
     if (detail?.source !== 'banana' || !videoUrl) return;
     
     const match = videoUrl.match(/\/[rt]\/([^.]+)/);
-    if (!match) return;
-      
+    if (!match) return;     
     const fileId = match[1];
     console.log('🔍 正在获取 banana 元数据:', fileId);
-    
     try {
       const response = await fetch(`http://us.199301.xyz:4000/info/${fileId}`);
       const data = await response.json();
       setBananaMetadata(data);
       console.log('✅ Banana 元数据获取成功:', data);
       if (artPlayerRef.current && data.subtitleTracks && data.subtitleTracks.length > 0) {
-      console.log('📝 添加内嵌字幕选择器');
+      console.log(`📝 [内嵌字幕] 准备添加内嵌字幕选择器 (时间戳: ${new Date().getTime()})`);
       
       // 先检查是否已经存在内嵌字幕选择器,避免重复添加
       const settings = artPlayerRef.current.setting.option;
       const hasEmbeddedSubtitle = settings.some((s: any) => s.html === '内嵌字幕');
-        
+      console.log(`🔍 [内嵌字幕] 当前设置项数量: ${settings.length}, 已存在内嵌字幕: ${hasEmbeddedSubtitle}`);   
       if (!hasEmbeddedSubtitle) {
         const match = videoUrl.match(/\/[rt]\/([^.]+)/);
         if (match) {
           const fileId = match[1];
-          
+          console.log(`➕ [内嵌字幕] 正在添加内嵌字幕菜单项`); 
           artPlayerRef.current.setting.add({
             html: '内嵌字幕',
             tooltip: '选择字幕',
@@ -341,7 +325,11 @@ useEffect(() => {
               return item.html;
             },
           });
-        }
+          console.log(`✅ [内嵌字幕] 内嵌字幕菜单已添加, 当前设置项数量: ${artPlayerRef.current.setting.option.length}`);
+          }
+      } else {  
+      // 👇 第二个日志加在这里  
+      console.log(`ℹ️ [内嵌字幕] 内嵌字幕项已存在,跳过添加`);  
       }
     }
       // 👇 在这里添加选择器,确保播放器已初始化
@@ -385,7 +373,6 @@ useEffect(() => {
       console.error('❌ 获取 banana 元数据失败:', error);
     }
   };
-  
   fetchBananaMetadata();
 }, [detail?.source, videoUrl]);
   // 总集数
@@ -1214,7 +1201,7 @@ useEffect(() => {
       }
     } else {
       // 普通视频格式
-      let newUrl = episodeData || '';  // ✅ 改为 let
+      let newUrl = episodeData || '';
 
       // 🎬 添加转码逻辑: 如果是 banana 源且是 /r/ 端点,转换为 /t/ 转码端点
       if (detailData.source === 'banana' && newUrl.includes('/r/')) {
@@ -1364,9 +1351,8 @@ useEffect(() => {
     
     if (artPlayerRef.current) {
       try {
-        // 👇 在这里添加 video 元素清理,用于停止转码
+        // 添加 video 元素清理,用于停止转码
         const video = artPlayerRef.current.video as HTMLVideoElement;
-
         // 中止所有网络请求
         if (video) {
           video.pause();
@@ -1810,136 +1796,27 @@ useEffect(() => {
         }
       }, 800); // 缩短延迟时间，提高响应性
     }
-  // 🆕 集数变化时重新检测字幕
-  if (artPlayerRef.current && !isSourceChangingRef.current) {
-    console.log('🔍 [调试] 剧集切换字幕检测开始');
-    const isInitialLoad = !loadedSubtitleUrls || loadedSubtitleUrls.length === 0;
-    setTimeout(async () => {
-      console.log('🔍 [调试] 1秒延迟后开始处理字幕');
-      try {
-        if (!artPlayerRef.current || !detail) return;
-        console.log('🔄 集数变化,重新检测字幕...');
-        
-        const newVideoUrl = detail.episodes?.[currentEpisodeIndex] || '';
-        console.log('🔍 [调试] 新视频URL:', newVideoUrl);
-        // 1️⃣ 先清除所有旧的字幕设置
-        console.log('🔍 [调试] 准备清除旧字幕');
-        if (!isInitialLoad) {
-          clearSubtitleSettings();
-        }
-        
-        // 2️⃣ 检测外部字幕
-        const autoSubtitles = await autoLoadSubtitles(newVideoUrl);
-        
-        // 3️⃣ 获取内嵌字幕信息(如果是 banana 源)
-        let bananaSubtitles = null;
-        if (detail.source === 'banana' && bananaMetadata?.subtitleTracks) {
-          bananaSubtitles = bananaMetadata.subtitleTracks;
-          const match = newVideoUrl.match(/\/[rt]\/([^.]+)/);
-          if (match) {
-            const fileId = match[1];
-            bananaSubtitles = bananaMetadata.subtitleTracks.map((track: any, index: number) => ({
-              ...track,
-              url: `http://us.199301.xyz:4000/s/${fileId}.${index}.srt`,
-              type: 'srt',
-              index
-            }));
+	// 🆕 集数变化时重新检测字幕
+    if (artPlayerRef.current && !isSourceChangingRef.current) {
+      (async () => {
+        console.log('🔄 [集数切换] 开始重新检测字幕...');
+        try {
+          const autoSubtitles = await autoLoadSubtitles(videoUrl);
+          if (autoSubtitles.length > 0) {
+            console.log('✅ [集数切换] 检测到字幕:', autoSubtitles);
+            setLoadedSubtitleUrls(autoSubtitles);
+          } else {
+            console.log('📭 [集数切换] 未检测到字幕文件');
+            if (artPlayerRef.current) {
+              artPlayerRef.current.subtitle.show = false;
+            }
           }
+        } catch (error) {
+          console.warn('⚠️ [集数切换] 字幕检测失败:', error);
         }
-        
-        // 4️⃣ 添加外部字幕选择器(如果有)
-        if (autoSubtitles.length > 0) {
-          console.log('✅ 新集数检测到外部字幕:', autoSubtitles);
-          setLoadedSubtitleUrls(autoSubtitles);
-          const settings = artPlayerRef.current.setting.option;
-          const hasExternalSubtitle = settings.some((s: any) => s.html === '外部字幕');
-    
-        if (!hasExternalSubtitle) {       
-          artPlayerRef.current.setting.add({
-            html: '外部字幕',
-            tooltip: `当前:${autoSubtitles[0].filename}`,
-            icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zM4 12h4v2H4v-2zm10 6H4v-2h10v2zm6 0h-4v-2h4v2zm0-4H10v-2h10v2z"/></svg>',
-            selector: [
-              { html: '关闭', value: 'off' },
-              ...autoSubtitles.map((sub) => ({
-                html: sub.filename,
-                value: sub.url,
-                subtitle: { url: sub.url, type: sub.type },
-              })),
-            ],
-            onSelect: function (item: any) {
-              if (item.value === 'off') {
-                if (artPlayerRef.current) {
-                  artPlayerRef.current.subtitle.show = false;
-                }
-                return '关闭';
-              }
-              if (artPlayerRef.current) {
-                artPlayerRef.current.subtitle.switch(item.subtitle.url, {
-                  type: item.subtitle.type,
-                });
-                artPlayerRef.current.subtitle.show = true;
-              }
-              return item.html;
-            },
-          });
-          
-          // 自动加载第一个外部字幕
-          const firstSub = autoSubtitles[0];
-          artPlayerRef.current.subtitle.switch(firstSub.url, {
-            type: firstSub.type,
-          });
-          artPlayerRef.current.notice.show = `已加载字幕: ${firstSub.filename}`;
-        }
-      }
-        // 5️⃣ 添加内嵌字幕选择器(如果有)
-        if (bananaSubtitles && bananaSubtitles.length > 0) {
-          console.log('✅ 新集数检测到内嵌字幕:', bananaSubtitles.length, '条');
-          const settings = artPlayerRef.current.setting.option;  
-          const hasEmbeddedSubtitle = settings.some((s: any) => s.html === '内嵌字幕');  
-    
-        if (!hasEmbeddedSubtitle) {
-          artPlayerRef.current.setting.add({
-            html: '内嵌字幕',
-            tooltip: '选择字幕',
-            icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zM4 12h4v2H4v-2zm10 6H4v-2h10v2zm6 0h-4v-2h4v2zm0-4H10v-2h10v2z"/></svg>',
-            selector: [
-              { html: '关闭', value: 'off' },
-              ...bananaSubtitles.map((track: any) => ({
-                html: track.tags?.title || track.tags?.language || `字幕 ${track.index + 1}`,
-                value: track.index,
-                subtitle: { url: track.url, type: track.type },
-              })),
-            ],
-            onSelect: function (item: any) {
-              if (item.value === 'off') {
-                artPlayerRef.current.subtitle.show = false;
-                return '关闭';
-              }
-              console.log(`📝 加载内嵌字幕: ${item.html}`);
-              artPlayerRef.current.subtitle.switch(item.subtitle.url, {
-                type: item.subtitle.type,
-              });
-              artPlayerRef.current.subtitle.show = true;
-              return item.html;
-            },
-          });
-        }
-      }
-        
-        // 6️⃣ 如果没有任何字幕
-        if (autoSubtitles.length === 0 && (!bananaSubtitles || bananaSubtitles.length === 0)) {
-          console.log('📭 新集数未检测到任何字幕文件');
-          if (artPlayerRef.current) {
-            artPlayerRef.current.subtitle.show = false;
-          }
-        }
-      } catch (error) {
-        console.warn('⚠️ 集数切换后字幕检测失败:', error);
-      }
-    }, 1000);
-  }
-}, [detail, currentEpisodeIndex, videoUrl]); // 添加 videoUrl 依赖
+      })();
+    }
+  }, [detail, currentEpisodeIndex, videoUrl]);
 
   // 进入页面时直接获取全部源信息
   useEffect(() => {
@@ -2868,6 +2745,7 @@ useEffect(() => {
       console.error('切换收藏失败:', err);
     }
   };
+
 // 🆕 独立的字幕检测 - 不依赖播放器加载状态
 useEffect(() => {
   const detectSubtitlesIndependently = async () => {
@@ -2904,6 +2782,101 @@ useEffect(() => {
   
   detectSubtitlesIndependently();
 }, [availableSources, currentEpisodeIndex]);
+//添加 V8 修复的 useEffect
+useEffect(() => {
+  const art = artPlayerRef.current;
+  const autoSubtitles = loadedSubtitleUrls;
+
+  if (art && autoSubtitles.length > 0) {
+    console.log(`🎬 [V8] 准备强制刷新字幕设置...`);
+
+    // 定义加载字幕的函数
+    const loadSubtitle = () => {
+      if (!art.video || art.video.readyState < 2) {
+        return;
+      }
+      try {
+        const firstSub = autoSubtitles[0];
+
+        const newSubtitleOption = {
+          html: '外部字幕',
+          name: 'external_subs',
+          tooltip: `当前: ${firstSub.filename}`,
+          icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zM4 12h4v2H4v-2zm10 6H4v-2h10v2zm6 0h-4v-2h4v2zm0-4H10v-2h10v2z"/></svg>',
+          selector: [
+            { html: '关闭', value: 'off' },
+            ...autoSubtitles.map((sub) => ({
+              html: sub.filename,
+              value: sub.url,
+              subtitle: { url: sub.url, type: sub.type },
+            })),
+          ],
+          onSelect: function (item: any) {
+            if (item.value === 'off') {
+              art.subtitle.show = false;
+              return '关闭';
+            }
+            art.subtitle.switch(item.subtitle.url, { type: item.subtitle.type });
+            art.subtitle.show = true;
+            return item.html;
+          },
+        };
+
+        const cleanOptions = art.setting.option.filter(
+          (item: any) => item.html !== '外部字幕'
+        );
+        cleanOptions.push(newSubtitleOption);
+        art.setting.option = [...cleanOptions];
+
+        console.log(`🔍 [V8] 当前字幕 URL: ${art.subtitle.url}, 目标 URL: ${firstSub.url}`);
+        if (art.subtitle.url !== firstSub.url) {
+          art.subtitle.switch(firstSub.url, { type: firstSub.type });
+          art.subtitle.show = true;
+          art.notice.show = `已加载字幕: ${firstSub.filename}`;
+        } 
+        console.log('✅ [V8] 字幕加载完成');
+      } catch (error) {
+        console.warn('❌ [V8] 异常:', error);
+      }
+    };
+
+    // 🔑 关键改变:总是监听 canplay 事件
+   const handleCanPlay = () => {
+     console.log('🎬 [V8] canplay 事件触发,开始加载字幕');
+     loadSubtitle();
+     art.off('video:canplay', handleCanPlay);
+   };
+
+   // 如果视频已经可以播放,立即触发一次
+   if (art.video && art.video.readyState >= 2) {
+     console.log('🎬 [V8] 视频已就绪,立即加载字幕');
+     loadSubtitle();
+   }
+
+   // 同时监听 canplay,以防视频重新加载
+   art.on('video:canplay', handleCanPlay);
+
+   return () => {
+     art.off('video:canplay', handleCanPlay);
+   };
+  } else if (art && autoSubtitles.length === 0) {
+    console.log(`🧹 [V8] 无字幕,清理外部字幕设置`);
+    art.subtitle.show = false;
+    const cleanOptions = art.setting.option.filter(
+      (item: any) => item.html !== '外部字幕'
+    );
+    if (cleanOptions.length !== art.setting.option.length) {
+      art.setting.option = [...cleanOptions];
+      console.log(`✅ [V8] 已移除外部字幕菜单项`);
+    }
+  } else {
+    // 其他情况(播放器未就绪等)
+    console.log(`ℹ️ [V8] 条件不满足:`, {
+      hasArt: !!art,
+      subtitlesCount: autoSubtitles.length
+    });
+  }
+}, [loadedSubtitleUrls]);
   useEffect(() => {
     // 异步初始化播放器，避免SSR问题
     const initPlayer = async () => {
@@ -3616,68 +3589,59 @@ useEffect(() => {
         // 应用CSS优化
         optimizeDanmukuControlsCSS();
 
-  // 🆕 自动检测并加载字幕
-  try {
-    console.log('🔍 开始检测字幕文件...');
-    const autoSubtitles = await autoLoadSubtitles(videoUrl);
-    
-    if (autoSubtitles.length > 0) {
-      console.log('✅ 检测到字幕文件:', autoSubtitles);
-        // 🆕 保存已加载的字幕 URL
-      setLoadedSubtitleUrls(autoSubtitles);
-      // 如果有多个字幕,添加切换选项
-      artPlayerRef.current.setting.add({
-        html: '外部字幕',
-        tooltip: autoSubtitles.length > 0 ? `当前:${autoSubtitles[0].filename}` : '当前:关闭',
-        icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zM4 12h4v2H4v-2zm10 6H4v-2h10v2zm6 0h-4v-2h4v2zm0-4H10v-2h10v2z"/></svg>',
-        selector: [
-          {
-            html: '关闭',
-            value: 'off',
-          },
-          ...autoSubtitles.map((sub) => ({
-            html: sub.filename,
-            value: sub.url,
-            subtitle: {
-              url: sub.url,
-              type: sub.type,
-            },
-          })),
-        ],
-        onSelect: function (item: any) {
-          if (item.value === 'off') {
-            if (artPlayerRef.current) {
-              artPlayerRef.current.subtitle.show = false;
-            }
-            return '关闭';
-          }
-          
-          if (artPlayerRef.current) {
-            artPlayerRef.current.subtitle.switch(item.subtitle.url, {
-              type: item.subtitle.type,
-            });
-            artPlayerRef.current.subtitle.show = true;
-          }
-          return item.html;
-        },
-      });
-      
-      // 默认加载第一个检测到的字幕
-      const firstSub = autoSubtitles[0];
-      artPlayerRef.current.subtitle.switch(firstSub.url, {
-        type: firstSub.type,
-      });
-      console.log('✅ 已自动加载字幕:', firstSub.filename);
-      
-      if (artPlayerRef.current) {
-        artPlayerRef.current.notice.show = `已加载字幕: ${firstSub.filename}`;
-      }
-    } else {
-      console.log('📭 未检测到字幕文件');
-    }
-  } catch (error) {
-    console.warn('⚠️ 自动加载字幕失败:', error);
-  }
+		// 🆕 自动检测并加载字幕
+		(async () => {
+		  try {
+			console.log('🔍 [初始化] 开始检测字幕文件...');
+			console.log('🔍 [初始化] 当前 videoUrl:', videoUrl);
+			const autoSubtitles = await autoLoadSubtitles(videoUrl);
+
+			if (autoSubtitles.length > 0) {
+			  console.log('✅ [初始化] 检测到字幕文件:', autoSubtitles);
+
+			  // ✅ 只更新状态,触发 V8 useEffect
+			  setLoadedSubtitleUrls(autoSubtitles);
+
+			  // ✅ 添加设置菜单
+			  artPlayerRef.current.setting.add({
+				html: '外部字幕',
+				tooltip: autoSubtitles.length > 0 ? `当前:${autoSubtitles[0].filename}` : '当前:关闭',
+				icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zM4 12h4v2H4v-2zm10 6H4v-2h10v2zm6 0h-4v-2h4v2zm0-4H10v-2h10v2z"/></svg>',
+				selector: [
+				  { html: '关闭', value: 'off' },
+				  ...autoSubtitles.map((sub) => ({
+					html: sub.filename,
+					value: sub.url,
+					subtitle: { url: sub.url, type: sub.type },
+				  })),
+				],
+				onSelect: function (item: any) {
+				  if (item.value === 'off') {
+					if (artPlayerRef.current) {
+					  artPlayerRef.current.subtitle.show = false;
+					}
+					return '关闭';
+				  }
+
+				  if (artPlayerRef.current) {
+					artPlayerRef.current.subtitle.switch(item.subtitle.url, {
+					  type: item.subtitle.type,
+					});
+					artPlayerRef.current.subtitle.show = true;
+				  }
+				  return item.html;
+				},
+			  });
+
+			  console.log('✅ [初始化] 设置菜单已添加,等待 V8 useEffect 加载字幕');
+			} else {
+			  console.log('📭 未检测到字幕文件');
+			}
+		  } catch (error) {
+			console.warn('⚠️ 自动加载字幕失败:', error);
+		  }
+		})();
+
         // 精确解决弹幕菜单与进度条拖拽冲突 - 基于ArtPlayer原生拖拽逻辑
         const fixDanmakuProgressConflict = () => {
           let isDraggingProgress = false;
@@ -4021,20 +3985,18 @@ useEffect(() => {
             }, 500); // 增加到500ms延迟，减少频繁重置导致的闪烁
           }
         });
+
         // 👇 添加防抖优化的 banana 转码 seek 支持
         let seekTimeout: NodeJS.Timeout | null = null;
-
         artPlayerRef.current.on('seek', (currentTime: number) => {
           if (detail?.source === 'banana' && videoUrl.includes('/t/')) {
             // 清除之前的定时器,避免频繁触发
             if (seekTimeout) clearTimeout(seekTimeout);
-            
             // 延迟 500ms 执行,只在用户停止拖动后才重新加载
             seekTimeout = setTimeout(() => {
               const baseUrl = videoUrl.split('?')[0];
               const params = new URLSearchParams(videoUrl.split('?')[1] || '');
               params.set('start', currentTime.toString());
-                
               const newUrl = `${baseUrl}?${params.toString()}`;
               console.log(`⏩ 跳转到 ${currentTime.toFixed(2)}s`);
               artPlayerRef.current.switchQuality(newUrl);
