@@ -1203,19 +1203,29 @@ useEffect(() => {
       // 普通视频格式
       let newUrl = episodeData || '';
 
-      // 🎬 添加转码逻辑: 如果是 banana 源且是 /r/ 端点,转换为 /t/ 转码端点
-      if (detailData.source === 'banana' && newUrl.includes('/r/')) {
-        const match = newUrl.match(/\/r\/([^.]+)\.(\w+)/);
-        if (match) {
-          const [, fileId, extension] = match;
-          const needsTranscode = ['mkv', 'avi', 'flv', 'webm', 'mov'].includes(extension.toLowerCase());
-          
-          if (needsTranscode) {
-            newUrl = newUrl.replace(/\/r\/([^.]+)\.\w+/, '/t/$1.mp4');
-            console.log(`🎬 [转码] 将 ${episodeData} 转换为 ${newUrl}`);
+      // 🎬 添加转换逻辑: 如果是 banana 源且是 /r/ 端点,转换为 /t/ 转换端点
+      if (detailData.source === 'banana') {
+        const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+        const isIOS = /iPad|iPhone|iPod/i.test(navigator.userAgent);
+
+        if (isSafari || isIOS) {
+          // Safari/iOS直接使用原始URL,不做任何转换
+          console.log('🍎 Safari/iOS检测到,使用原始URL:', newUrl);
+        } else {
+          // Chrome等浏览器继续使用转码逻辑
+          if (newUrl.includes('/r/')) {
+            const match = newUrl.match(/\/r\/([^.]+)\.(\w+)/);
+            if (match) {
+              const [, fileId, extension] = match;
+              const needsTranscode = ['mkv', 'avi', 'flv', 'webm', 'mov'].includes(extension.toLowerCase());
+
+              if (needsTranscode) {
+                newUrl = newUrl.replace(/\/r\/([^.]+)\.\w+/, '/t/$1.mp4');
+                console.log(`🎬 [转码] 将 ${episodeData} 转换为 ${newUrl}`);
+              }
+            }
           }
-        }
-      }
+         }
 
       if (newUrl !== videoUrl) {
         setVideoUrl(newUrl);
