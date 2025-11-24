@@ -1226,7 +1226,7 @@ useEffect(() => {
             }
           }
          }
-
+      }
       if (newUrl !== videoUrl) {
         setVideoUrl(newUrl);
       }
