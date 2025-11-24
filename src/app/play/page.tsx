@@ -1212,7 +1212,7 @@ useEffect(() => {
           // Safari/iOS直接使用原始URL,不做任何转换
           console.log('🍎 Safari/iOS检测到,使用原始URL:', newUrl);
         } else {
-          // Chrome等浏览器继续使用转码逻辑
+          // Chrome等浏览器继续使用转换逻辑
           if (newUrl.includes('/r/')) {
             const match = newUrl.match(/\/r\/([^.]+)\.(\w+)/);
             if (match) {
@@ -1221,7 +1221,7 @@ useEffect(() => {
 
               if (needsTranscode) {
                 newUrl = newUrl.replace(/\/r\/([^.]+)\.\w+/, '/t/$1.mp4');
-                console.log(`🎬 [转码] 将 ${episodeData} 转换为 ${newUrl}`);
+                console.log(`🎬 [转换] 将 ${episodeData} 转换为 ${newUrl}`);
               }
             }
           }
