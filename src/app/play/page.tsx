@@ -1798,7 +1798,13 @@ useEffect(() => {
     }
 	// 🆕 集数变化时重新检测字幕
     if (artPlayerRef.current && !isSourceChangingRef.current) {
-      (async () => {
+      const art = artPlayerRef.current;
+      art.subtitle.show = false;
+      const cleanOptions = art.setting.option.filter(
+        (item: any) => item.html !== '外部字幕'
+      );
+      art.setting.option = [...cleanOptions];	  
+	  (async () => {
         console.log('🔄 [集数切换] 开始重新检测字幕...');
         try {
           const autoSubtitles = await autoLoadSubtitles(videoUrl);
