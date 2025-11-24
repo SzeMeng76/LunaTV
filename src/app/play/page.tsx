@@ -3552,15 +3552,16 @@ useEffect(() => {
         if (videoUrl.includes('/r/')) {
           artPlayerRef.current.notice.show = '💡 建议使用夸克浏览器播放以获得最佳体验';
         }
+
         // 使用 /t/ 端点且仅有内置字幕的提示
-        if (videoUrl.includes('/t/') && bananaMetadata?.subtitleTracks?.length > 0) {
+        if (videoUrl.includes('/t/') && (bananaMetadata?.subtitleTracks?.length ?? 0) > 0) {
           // 检查是否没有外部字幕
           const hasExternalSubs = loadedSubtitleUrls.length > 0;
-         if (!hasExternalSubs) {
+          if (!hasExternalSubs) {
             artPlayerRef.current.notice.show = '💡 仅内置字幕,建议使用下面外部第三方播放器跳转播放';
           }
         }
-        }
+      }
         // 添加弹幕插件按钮选择性隐藏CSS
         const optimizeDanmukuControlsCSS = () => {
           if (document.getElementById('danmuku-controls-optimize')) return;
