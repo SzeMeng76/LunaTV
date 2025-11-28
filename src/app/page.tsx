@@ -716,10 +716,9 @@ function HomeClient() {
                   let calculatedRemarks = item.remarks;
 
                   if (item.releaseDate) {
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0);
+                    const now = new Date();
                     const releaseDate = new Date(item.releaseDate);
-                    const daysDiff = Math.ceil((releaseDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                    const daysDiff = Math.ceil((releaseDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
                     // 根据天数差异动态更新显示文字
                     if (daysDiff < 0) {
@@ -880,10 +879,9 @@ function HomeClient() {
                   <ScrollableRow>
                     {upcomingReleases.map((release, index) => {
                       // 计算距离上映还有几天
-                      const today = new Date();
-                      today.setHours(0, 0, 0, 0);
+                      const now = new Date();
                       const releaseDate = new Date(release.releaseDate);
-                      const daysDiff = Math.ceil((releaseDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                      const daysDiff = Math.ceil((releaseDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
                       // 根据天数差异显示不同文字
                       let remarksText;
