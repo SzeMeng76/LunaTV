@@ -128,13 +128,17 @@ export interface IStorage {
     config: EpisodeSkipConfig
   ): Promise<void>;
   deleteSkipConfig(userName: string, source: string, id: string): Promise<void>;
-  getAllSkipConfigs(userName: string): Promise<{ [key: string]: EpisodeSkipConfig }>;
+  getAllSkipConfigs(
+    userName: string
+  ): Promise<{ [key: string]: EpisodeSkipConfig }>;
 
   // 数据清理相关
   clearAllData(): Promise<void>;
 
   // 通用缓存相关（新增）
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   getCache(key: string): Promise<any | null>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   setCache(key: string, data: any, expireSeconds?: number): Promise<void>;
   deleteCache(key: string): Promise<void>;
   clearExpiredCache(prefix?: string): Promise<void>;
@@ -225,6 +229,20 @@ export interface EpisodeSkipConfig {
   updated_time: number; // 最后更新时间
 }
 
+// 直播观看记录数据结构
+export interface LiveViewRecord {
+  username: string; // 用户名
+  channelName: string; // 频道名称
+  channelId: string; // 频道ID
+  sourceName: string; // 直播源名称
+  sourceKey: string; // 直播源key
+  startTime: number; // 开始观看时间戳
+  endTime: number; // 结束观看时间戳
+  duration: number; // 观看时长（秒）
+  channelGroup?: string; // 频道分组
+  channelLogo?: string; // 频道logo
+}
+
 // 用户播放统计数据结构
 export interface UserPlayStat {
   username: string; // 用户名
@@ -311,6 +329,41 @@ export interface ContentStat {
   averageWatchTime: number; // 平均观看时长
   lastPlayed: number; // 最后播放时间
   uniqueUsers: number; // 观看用户数
+}
+
+// 直播统计结果数据结构
+export interface LiveStatsResult {
+  totalUsers: number; // 总用户数
+  totalWatchTime: number; // 总观看时长（秒）
+  totalViews: number; // 总观看次数
+  avgWatchTimePerUser: number; // 用户平均观看时长
+  avgViewsPerUser: number; // 用户平均观看次数
+  userStats: Array<{
+    username: string;
+    totalWatchTime: number;
+    totalViews: number;
+    lastViewTime: number;
+    recentRecords: LiveViewRecord[];
+    avgWatchTime: number;
+    mostWatchedChannel: string;
+    mostWatchedSource: string;
+  }>;
+  topChannels: Array<{
+    channelName: string;
+    channelId: string;
+    viewCount: number;
+    totalWatchTime: number;
+  }>;
+  topSources: Array<{
+    sourceName: string;
+    sourceKey: string;
+    viewCount: number;
+  }>;
+  dailyStats: Array<{
+    date: string;
+    watchTime: number;
+    views: number;
+  }>;
 }
 
 // 发布日历数据结构
