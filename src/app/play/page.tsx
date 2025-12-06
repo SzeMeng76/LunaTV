@@ -11,6 +11,7 @@ import EpisodeSelector from '@/components/EpisodeSelector';
 import NetDiskSearchResults from '@/components/NetDiskSearchResults';
 import PageLayout from '@/components/PageLayout';
 import SkipController, { SkipSettingsButton } from '@/components/SkipController';
+import VideoCard from '@/components/VideoCard';
 import artplayerPluginChromecast from '@/lib/artplayer-plugin-chromecast';
 import { ClientCache } from '@/lib/client-cache';
 import {
@@ -4670,15 +4671,155 @@ function PlayPageClient() {
               )}
 
               {/* 剧情简介 */}
-              {(shortdramaDetails?.desc || detail?.desc || bangumiDetails?.summary) && (
+              {(shortdramaDetails?.desc || detail?.desc || bangumiDetails?.summary || movieDetails?.plot_summary) && (
                 <div
                   className='mt-0 text-base leading-relaxed opacity-90 overflow-y-auto pr-2 flex-1 min-h-0 scrollbar-hide'
                   style={{ whiteSpace: 'pre-line' }}
                 >
-                  {shortdramaDetails?.desc || bangumiDetails?.summary || detail?.desc}
+                  {movieDetails?.plot_summary || shortdramaDetails?.desc || bangumiDetails?.summary || detail?.desc}
                 </div>
               )}
-              
+
+              {/* 演员阵容 */}
+              {movieDetails?.celebrities && movieDetails.celebrities.length > 0 && (
+                <div className='mt-6 border-t border-gray-200 dark:border-gray-700 pt-6'>
+                  <h3 className='text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4 flex items-center gap-2'>
+                    <span>🎭</span>
+                    <span>演员阵容</span>
+                  </h3>
+                  <div className='flex gap-4 overflow-x-auto pb-4 scrollbar-hide'>
+                    {movieDetails.celebrities.slice(0, 15).map((celebrity: any) => (
+                      <a
+                        key={celebrity.id}
+                        href={`https://www.douban.com/personage/${celebrity.id}/`}
+                        target='_blank'
+                        rel='noopener noreferrer'
+                        className='flex-shrink-0 text-center group cursor-pointer'
+                      >
+                        <div className='w-20 h-20 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 mb-2 ring-2 ring-transparent group-hover:ring-blue-500 transition-all duration-300 group-hover:scale-110 shadow-md group-hover:shadow-xl'>
+                          <img
+                            src={processImageUrl(celebrity.avatar)}
+                            alt={celebrity.name}
+                            className='w-full h-full object-cover'
+                            loading='lazy'
+                            onError={(e) => {
+                              console.error('演员头像加载失败:', celebrity.name, celebrity.avatar, processImageUrl(celebrity.avatar));
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
+                        </div>
+                        <p className='text-xs font-medium text-gray-700 dark:text-gray-300 w-20 truncate group-hover:text-blue-500 transition-colors' title={celebrity.name}>
+                          {celebrity.name}
+                        </p>
+                        {celebrity.role && (
+                          <p className='text-[10px] text-gray-500 dark:text-gray-500 w-20 truncate mt-0.5' title={celebrity.role}>
+                            {celebrity.role}
+                          </p>
+                        )}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 推荐影片 */}
+              {movieDetails?.recommendations && movieDetails.recommendations.length > 0 && (
+                <div className='mt-6 border-t border-gray-200 dark:border-gray-700 pt-6'>
+                  <h3 className='text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4 flex items-center gap-2'>
+                    <span>💡</span>
+                    <span>喜欢这部{movieDetails.episodes ? '剧' : '电影'}的人也喜欢</span>
+                  </h3>
+                  <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4'>
+                    {movieDetails.recommendations.map((item: any) => {
+                      const playUrl = `/play?title=${encodeURIComponent(item.title)}&douban_id=${item.id}&prefer=true`;
+                      return (
+                        <div
+                          key={item.id}
+                          ref={(node) => {
+                            if (node) {
+                              // 移除旧的监听器
+                              const oldClick = (node as any)._clickHandler;
+                              const oldTouchStart = (node as any)._touchStartHandler;
+                              const oldTouchEnd = (node as any)._touchEndHandler;
+                              if (oldClick) node.removeEventListener('click', oldClick, true);
+                              if (oldTouchStart) node.removeEventListener('touchstart', oldTouchStart, true);
+                              if (oldTouchEnd) node.removeEventListener('touchend', oldTouchEnd, true);
+
+                              // 长按检测
+                              let touchStartTime = 0;
+                              let isLongPress = false;
+                              let longPressTimer: NodeJS.Timeout | null = null;
+
+                              const touchStartHandler = (e: Event) => {
+                                touchStartTime = Date.now();
+                                isLongPress = false;
+
+                                // 设置长按定时器（500ms）
+                                longPressTimer = setTimeout(() => {
+                                  isLongPress = true;
+                                }, 500);
+                              };
+
+                              const touchEndHandler = (e: Event) => {
+                                // 清除长按定时器
+                                if (longPressTimer) {
+                                  clearTimeout(longPressTimer);
+                                  longPressTimer = null;
+                                }
+
+                                const touchDuration = Date.now() - touchStartTime;
+
+                                // 如果是长按（超过500ms）或已标记为长按，不跳转
+                                if (isLongPress || touchDuration >= 500) {
+                                  // 让 VideoCard 的长按菜单正常工作
+                                  return;
+                                }
+
+                                // 否则是短按，执行跳转
+                                e.preventDefault();
+                                e.stopPropagation();
+                                e.stopImmediatePropagation();
+                                window.location.href = playUrl;
+                              };
+
+                              const clickHandler = (e: Event) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                e.stopImmediatePropagation();
+                                window.location.href = playUrl;
+                              };
+
+                              node.addEventListener('touchstart', touchStartHandler, true);
+                              node.addEventListener('touchend', touchEndHandler, true);
+                              node.addEventListener('click', clickHandler, true);
+
+                              // 保存引用以便清理
+                              (node as any)._touchStartHandler = touchStartHandler;
+                              (node as any)._touchEndHandler = touchEndHandler;
+                              (node as any)._clickHandler = clickHandler;
+                            }
+                          }}
+                          style={{
+                            WebkitTapHighlightColor: 'transparent',
+                            touchAction: 'manipulation'
+                          }}
+                        >
+                          <VideoCard
+                            id={item.id}
+                            title={item.title}
+                            poster={item.poster}
+                            rate={item.rate}
+                            douban_id={parseInt(item.id)}
+                            from='douban'
+                            isAggregate={true}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* 网盘资源区域 */}
               <div id="netdisk-section" className='mt-6'>
                 <div className='border-t border-gray-200 dark:border-gray-700 pt-6'>

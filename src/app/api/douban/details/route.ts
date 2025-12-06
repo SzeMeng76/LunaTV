@@ -162,6 +162,85 @@ function parseDoubanDetails(html: string, id: string) {
       }
     }
 
+    // 提取演员照片（从 celebrities 区域）
+    const celebrities: Array<{
+      id: string;
+      name: string;
+      avatar: string;
+      role: string;
+    }> = [];
+
+    const celebritiesSection = html.match(/<div id="celebrities"[\s\S]*?<ul class="celebrities-list[^"]*">([\s\S]*?)<\/ul>/);
+    if (celebritiesSection) {
+      const celebrityItems = celebritiesSection[1].match(/<li class="celebrity">[\s\S]*?<\/li>/g);
+      if (celebrityItems) {
+        celebrityItems.forEach(item => {
+          // 提取演员ID和名字 - 支持 personage 和 celebrity 两种URL格式
+          const linkMatch = item.match(/<a href="https:\/\/www\.douban\.com\/(personage|celebrity)\/(\d+)\/[^"]*"\s+title="([^"]+)"/);
+          // 提取头像 - 注意URL可能没有引号
+          const avatarMatch = item.match(/background-image:\s*url\(([^)]+)\)/);
+          // 提取角色
+          const roleMatch = item.match(/<span class="role"[^>]*>([^<]+)<\/span>/);
+
+
+          if (linkMatch && avatarMatch) {
+            // 清理URL（去掉可能的引号）
+            let avatarUrl = avatarMatch[1].trim();
+            avatarUrl = avatarUrl.replace(/^['"]|['"]$/g, ''); // 去掉首尾引号
+            avatarUrl = avatarUrl.replace(/^http:/, 'https:'); // 转换为 https
+
+            // 过滤掉默认头像和无效图片
+            const isDefaultAvatar = avatarUrl.includes('personage-default') ||
+                                   avatarUrl.includes('celebrity-default') ||
+                                   avatarUrl.includes('has_douban');
+
+            if (!isDefaultAvatar) {
+              celebrities.push({
+                id: linkMatch[2],  // 第二个捕获组是ID
+                name: linkMatch[3].split(' ')[0], // 第三个捕获组是名字，只取中文名
+                avatar: avatarUrl,
+                role: roleMatch ? roleMatch[1].trim() : ''
+              });
+            }
+          }
+        });
+      }
+    }
+
+    // 提取推荐影片
+    const recommendations: Array<{
+      id: string;
+      title: string;
+      poster: string;
+      rate: string;
+    }> = [];
+
+    const recommendationsSection = html.match(/<div id="recommendations">[\s\S]*?<div class="recommendations-bd">([\s\S]*?)<\/div>/);
+    if (recommendationsSection) {
+      const recommendItems = recommendationsSection[1].match(/<dl>[\s\S]*?<\/dl>/g);
+      if (recommendItems) {
+        recommendItems.forEach(item => {
+          // 提取影片ID
+          const idMatch = item.match(/\/subject\/(\d+)\//);
+          // 提取标题
+          const titleMatch = item.match(/alt="([^"]+)"/);
+          // 提取海报
+          const posterMatch = item.match(/<img src="([^"]+)"/);
+          // 提取评分
+          const rateMatch = item.match(/<span class="subject-rate">([^<]+)<\/span>/);
+
+          if (idMatch && titleMatch && posterMatch) {
+            recommendations.push({
+              id: idMatch[1],
+              title: titleMatch[1],
+              poster: posterMatch[1],
+              rate: rateMatch ? rateMatch[1] : ''
+            });
+          }
+        });
+      }
+    }
+
     // 提取类型
     const genreMatches = html.match(/<span[^>]*property="v:genre">([^<]+)<\/span>/g);
     const genres = genreMatches ? genreMatches.map(match => {
@@ -244,7 +323,9 @@ function parseDoubanDetails(html: string, id: string) {
         episode_length,
         movie_duration,
         first_aired,
-        plot_summary
+        plot_summary,
+        celebrities,
+        recommendations
       }
     };
   } catch (error) {

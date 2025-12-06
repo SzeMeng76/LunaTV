@@ -22,10 +22,10 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-4.9.5-3178c6?logo=typescript)
 ![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.4.17-38bdf8?logo=tailwindcss)
 ![ArtPlayer](https://img.shields.io/badge/ArtPlayer-5.3.0-ff6b6b)
-![HLS.js](https://img.shields.io/badge/HLS.js-1.6.13-ec407a)
+![HLS.js](https://img.shields.io/badge/HLS.js-1.6.15-ec407a)
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Docker Ready](https://img.shields.io/badge/Docker-ready-blue?logo=docker)
-![Version](https://img.shields.io/badge/Version-5.6.3-orange)
+![Version](https://img.shields.io/badge/Version-5.7.0-orange)
 
 </div>
 
@@ -33,7 +33,7 @@
 
 ## 📢 项目说明
 
-本项目是在 **MoonTV** 基础上进行的深度二次开发版本，从 **v4.3.1** 版本开始，持续迭代至当前 **v5.6.3**，累计新增 50+ 重大功能模块，300+ 细节优化。所有新增功能详见 [CHANGELOG](CHANGELOG)。
+本项目是在 **MoonTV** 基础上进行的深度二次开发版本，从 **v4.3.1** 版本开始，持续迭代至当前 **v5.7.0**，累计新增 50+ 重大功能模块，300+ 细节优化。所有新增功能详见 [CHANGELOG](CHANGELOG)。
 
 ### 💡 核心增强亮点
 
@@ -41,7 +41,7 @@
 - **YouTube 集成**：完整的 YouTube 搜索、播放、直播功能，支持无 Cookie 域名减少验证
 - **网盘搜索 (PanSou)**：集成高级筛选和缓存管理的网盘资源搜索
 - **短剧完整功能**：短剧搜索、播放、详情展示，专用移动端 API 代理
-- **IPTV 直播**：m3u/m3u8 订阅、EPG 节目单（支持多源和 url-tvg）、直播源聚合、台标代理、频道当前源内搜索
+- **IPTV 直播**：m3u/m3u8 订阅、EPG 节目单（支持多源和 url-tvg）、直播源聚合、台标代理、频道当前源内搜索、直播源标签页快速搜索
 - **Bangumi 动漫**：动漫信息智能检测、API 集成、缓存机制
 
 #### 🤖 智能推荐系统
@@ -81,6 +81,7 @@
 - **虚拟滚动美化开关**：渐变样式、图标、动画效果，用户可自由切换显示模式
 - **响应式网格**：2-8 列自适应，自动计算最优布局
 - **豆瓣详情增强**：评分、演职人员、首播日期、时长、制作信息完整展示，海报代理防403错误
+- **演员头像与推荐影片**：播放页展示演员头像（支持 celebrity 和 personage URL）、类似影片推荐，智能图片代理（自动迁移 direct 到 server 模式）
 - **用户菜单增强**：更新提醒、继续观看（含新剧集徽章）、我的收藏快捷入口、TVBox设置集成
 - **登录界面现代化**：动态随机壁纸、渐变卡片、响应式设计
 - **返回顶部按钮**：发布日历等长页面快捷返回
@@ -197,7 +198,7 @@
 - ✅ 用户注册系统（可配置开关）
 
 ### 🛠️ 技术优化
-- ✅ ArtPlayer 5.3.0 + HLS.js 1.6.13
+- ✅ ArtPlayer 5.3.0 + HLS.js 1.6.15
 - ✅ 弹幕插件 5.2.0（Web Worker 加速）
 - ✅ Next.js SSR 兼容性
 - ✅ Docker 构建优化
@@ -233,7 +234,7 @@
 | 前端框架  | [Next.js 14.2.23](https://nextjs.org/) · App Router                                                        |
 | UI & 样式 | [Tailwind CSS 3.4.17](https://tailwindcss.com/) · [Framer Motion 12](https://www.framer.com/motion/)                                                       |
 | 语言      | TypeScript 4.9.5                                                                                          |
-| 播放器    | [ArtPlayer 5.3.0](https://github.com/zhw2590582/ArtPlayer) · [HLS.js 1.6.13](https://github.com/video-dev/hls.js/)  · [artplayer-plugin-danmuku 5.2.0](https://github.com/zhw2590582/ArtPlayer) |
+| 播放器    | [ArtPlayer 5.3.0](https://github.com/zhw2590582/ArtPlayer) · [HLS.js 1.6.15](https://github.com/video-dev/hls.js/)  · [artplayer-plugin-danmuku 5.2.0](https://github.com/zhw2590582/ArtPlayer) |
 | 状态管理  | React Context API · React Hooks                                                                              |
 | 数据存储  | Kvrocks · Redis · Upstash · localStorage                                                                              |
 | 虚拟化  | [react-window 2.2.0](https://github.com/bvaughn/react-window) · ResizeObserver                                                                              |
@@ -872,53 +873,37 @@ services:
 
 完整的功能更新和 Bug 修复记录请查看 [CHANGELOG](CHANGELOG)。
 
-### 最新版本：v5.6.3 (2025-11-17)
+### 最新版本：v5.7.0 (2025-12-06)
 
 #### 新增功能
-- 🎉 短剧多源搜索功能：为短剧内容启用多源搜索，支持从横幅和卡片触发的详情集成
-- 🎨 虚拟滚动增强功能：添加自动滚动和图片预加载，提升浏览体验
-- 📊 智能分布算法：为即将上映部分实现智能时间分布算法
+- 🎭 演员头像和推荐影片功能：在播放页面展示演员头像和类似影片推荐
+- 🔍 直播源标签页搜索功能：为直播源标签页添加搜索功能，快速查找直播频道
 
 #### 优化改进
-- 🔐 SessionTracker兼容性增强：同时支持auth和user_auth cookies，提升会话追踪稳定性
-- 📈 发布日历API限制提升：从20增加到100，显示更多即将上映内容
-- 🔍 即将上映时间范围扩展：从30天扩展到90天，提供更长期的内容预览
-- 📅 今日发布硬性限制：防止今日发布内容在即将上映部分占主导地位
-- 📊 即将上映时间分布算法改进：优化即将上映内容的展示分布
-- 📺 频道名称滚动动画：为直播视图中的频道名称添加滚动文字动画
+- 🖼️ 默认图片代理模式改为 server：在所有组件中将默认图片代理从 direct 改为 server 模式
+- 📅 演员信息显示优化：为演员姓名和角色添加 tooltip，防止文本截断
+- 📦 升级依赖：升级 hls.js 到 v1.6.15
 
 #### Bug 修复
-- 🔧 修复videoDoubanId检查时渲染0值的问题：防止豆瓣ID为0时的错误显示
-- 🎯 智能源过滤实现：自动过滤class字段和源中的零值以及无集数的视频源
-- 🚫 过滤无效数据：清理class字段中的零值和没有集数的源
-- 📺 更新availableSources状态：确保源选择器仅显示有效视频源
-- 🔝 改进全屏按钮可见性：优化小屏幕设备上全屏按钮的显示
-- 🎪 隐藏收藏中的占位集数：避免显示短剧的99集占位符误导用户
-- 🚫 防止短剧源错误添加：确保短剧源不被添加到非短剧内容
-- 🎯 修复VideoCard徽章显示：支持所有发布状态类型的徽章正确显示
-- ⏰ 解决日期比较时区问题：修复即将上映过滤中的时区导致的日期判断错误
-- 🔗 修复HeroBanner播放链接：添加stype参数确保正确跳转
-- 🎯 修复HeroBanner搜索匹配：使用douban_id替代标题匹配，提升搜索准确性
-- 🎬 改进短片标题搜索：优化短片标题的模糊搜索算法准确性
-- 🔝 修复跳过按钮z-index：防止跳过按钮覆盖导航栏
-- 📍 修复跳过按钮定位：确保跳过按钮保持在播放器容器内的固定位置
-- ❤️ 添加专用收藏心形按钮：为收藏面板添加专用可点击心形按钮
-- 🎯 隐藏收藏悬停按钮：防止浮动心形按钮干扰用户操作
-- 🗑️ 移除收藏面板重复元素：清理收藏面板中的重复心形和日期标签
-- 🧹 清理已上映内容播放URL：确保已上映的即将上映内容可正常播放
-- 🏷️ 智能源标签系统：支持动态状态和配色主题的源标签
-- 🎨 动态发布徽章：根据发布状态动态显示徽章并隐藏占位集数
-- ▶️ 启用已上映收藏播放：智能检测即将上映内容是否已上映并启用播放
-- 🔄 智能去重和动态状态：优化即将上映内容的去重和状态更新逻辑
-- 🎯 增强M3U8广告过滤：添加SCTE-35检测提升广告过滤效果
-- 🔧 修复带副标题的去重逻辑：改进标题重复检测算法
-- 📊 修复卡片z-index冲突：防止所有卡片组件覆盖导航栏
-- 📱 修复VideoCard悬停z-index：解决VideoCard悬停/点击时覆盖导航栏的问题
-- 🎯 修复工具提示z-index冲突：确保VideoCard工具提示不与导航栏冲突
-- 🔧 修复短剧源显示问题：确保短剧源正确显示在源选择器中
+- 🖼️ 修复演员头像显示问题：
+  - 支持 `/celebrity/` 和 `/personage/` URL 格式
+  - 过滤默认占位符头像
+  - 实现图片代理自动修复（从 direct 迁移到 server 模式）
+  - 自动迁移旧版 localStorage 配置
+- 📱 修复推荐卡片移动端导航问题：
+  - 使用捕获阶段事件监听拦截 VideoCard 内部事件
+  - 添加长按检测（500ms）以保留操作菜单功能
+  - 修复移动端点击跳转到页面顶部的问题
+  - 保留所有 VideoCard hover 效果和 UI 显示
+- 🎯 修复推荐卡片事件冲突：
+  - 使用 `addEventListener` 的捕获模式优先拦截事件
+  - 添加 `stopImmediatePropagation` 防止事件干扰
+  - 短按跳转，长按显示菜单，完美兼容移动端和桌面端
+- 🔧 修复日期计算不一致性：修复首页和发布日历之间的日期计算差异
 
 ### 重大里程碑版本
 
+- **v5.7.0**：演员头像和推荐影片、直播源搜索、图片代理优化、移动端导航修复
 - **v5.6.3**：短剧多源搜索、智能源过滤、即将上映智能分布、全面z-index冲突修复
 - **v5.6.2**：即将上映日历、英雄横幅全品类支持、直播DVR检测、移动端横幅优化
 - **v5.6.1**：英雄横幅与现代化导航UI、TVBox智能搜索代理、导出格式选择
