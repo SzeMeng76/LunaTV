@@ -11,6 +11,36 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "5.7.0",
+    date: "2025-12-06",
+    added: [
+    "🎭 演员头像和推荐影片功能：在播放页面展示演员头像和类似影片推荐",
+    "🔍 直播源标签页搜索功能：为直播源标签页添加搜索功能，快速查找直播频道"
+    ],
+    changed: [
+    "🖼️ 默认图片代理模式改为 server：在所有组件中将默认图片代理从 direct 改为 server 模式",
+    "📅 演员信息显示优化：为演员姓名和角色添加 tooltip，防止文本截断",
+    "📦 升级依赖：升级 hls.js 到 v1.6.15"
+    ],
+    fixed: [
+    "🖼️ 修复演员头像显示问题：",
+    "支持 `/celebrity/` 和 `/personage/` URL 格式",
+    "过滤默认占位符头像",
+    "实现图片代理自动修复（从 direct 迁移到 server 模式）",
+    "自动迁移旧版 localStorage 配置",
+    "📱 修复推荐卡片移动端导航问题：",
+    "使用捕获阶段事件监听拦截 VideoCard 内部事件",
+    "添加长按检测（500ms）以保留操作菜单功能",
+    "修复移动端点击跳转到页面顶部的问题",
+    "保留所有 VideoCard hover 效果和 UI 显示",
+    "🎯 修复推荐卡片事件冲突：",
+    "使用 `addEventListener` 的捕获模式优先拦截事件",
+    "添加 `stopImmediatePropagation` 防止事件干扰",
+    "短按跳转，长按显示菜单，完美兼容移动端和桌面端",
+    "🔧 修复日期计算不一致性：修复首页和发布日历之间的日期计算差异"
+    ]
+  },
+  {
     version: "5.6.3",
     date: "2025-11-17",
     added: [

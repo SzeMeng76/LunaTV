@@ -202,6 +202,29 @@ export interface DoubanResult {
   list: DoubanItem[];
 }
 
+// 豆瓣短评数据结构
+export interface DoubanComment {
+  username: string;
+  user_id: string;
+  avatar: string;
+  rating: number; // 0-5, 0表示未评分
+  time: string;
+  location: string;
+  content: string;
+  useful_count: number;
+}
+
+export interface DoubanCommentsResult {
+  code: number;
+  message: string;
+  data?: {
+    comments: DoubanComment[];
+    start: number;
+    limit: number;
+    count: number;
+  };
+}
+
 // ---- 跳过配置（多片段支持）----
 
 // 单个跳过片段

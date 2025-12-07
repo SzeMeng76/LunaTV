@@ -219,7 +219,7 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
               </div>
             ))
           : // 显示真实数据
-            playRecords.map((record) => {
+            playRecords.map((record, index) => {
               const { source, id } = parseKey(record.key);
               const newEpisodesCount = getNewEpisodesCount(record);
               const latestTotalEpisodes = getLatestTotalEpisodes(record);
@@ -248,6 +248,7 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
                       }
                       type={latestTotalEpisodes > 1 ? 'tv' : ''}
                       remarks={record.remarks}
+                      priority={index < 4}
                     />
                   </div>
                   {/* 新集数徽章 */}

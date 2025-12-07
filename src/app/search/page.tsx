@@ -1162,7 +1162,6 @@ function SearchPageClient() {
                       {tmdbActorResults.map((item, index) => (
                         <div key={item.id || index} className='w-full'>
                           <VideoCard
-                            id={item.id}
                             title={item.title}
                             poster={item.poster}
                             year={item.year}

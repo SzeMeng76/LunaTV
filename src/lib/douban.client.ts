@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any,no-console,no-case-declarations */
 
 import { ClientCache } from './client-cache';
-import { DoubanItem, DoubanResult } from './types';
+import { DoubanItem, DoubanResult, DoubanCommentsResult } from './types';
 
 // 豆瓣数据缓存配置（秒）
 const DOUBAN_CACHE_EXPIRE = {
@@ -9,6 +9,7 @@ const DOUBAN_CACHE_EXPIRE = {
   lists: 2 * 60 * 60,     // 列表2小时（更新频繁）
   categories: 2 * 60 * 60, // 分类2小时
   recommends: 2 * 60 * 60, // 推荐2小时
+  comments: 1 * 60 * 60,   // 短评1小时（更新频繁）
 };
 
 // 缓存工具函数
@@ -892,6 +893,81 @@ export async function getDoubanActorMovies(
       code: 500,
       message: `搜索演员 ${actorName} 失败: ${(error as Error).message}`,
       list: []
+    };
+  }
+}
+
+/**
+ * 获取豆瓣影片短评
+ */
+interface DoubanCommentsParams {
+  id: string;
+  start?: number;
+  limit?: number;
+  sort?: 'new_score' | 'time';
+}
+
+export async function getDoubanComments(
+  params: DoubanCommentsParams
+): Promise<DoubanCommentsResult> {
+  const { id, start = 0, limit = 10, sort = 'new_score' } = params;
+
+  // 验证参数
+  if (!id) {
+    return {
+      code: 400,
+      message: 'id 参数不能为空'
+    };
+  }
+
+  if (limit < 1 || limit > 50) {
+    return {
+      code: 400,
+      message: 'limit 必须在 1-50 之间'
+    };
+  }
+
+  if (start < 0) {
+    return {
+      code: 400,
+      message: 'start 不能小于 0'
+    };
+  }
+
+  // 检查缓存 - 如果缓存中的数据是空数组，则重新获取
+  const cacheKey = getCacheKey('comments', { id, start, limit, sort });
+  const cached = await getCache(cacheKey);
+  if (cached && cached.data?.comments?.length > 0) {
+    console.log(`豆瓣短评缓存命中: ${id}/${start}`);
+    return cached;
+  }
+  if (cached && cached.data?.comments?.length === 0) {
+    console.log(`豆瓣短评缓存无效(空数据): ${id}/${start}，重新获取`);
+    // 缓存无效，继续执行下面的逻辑重新获取
+  }
+
+  try {
+    const response = await fetch(
+      `/api/douban/comments?id=${id}&start=${start}&limit=${limit}&sort=${sort}`
+    );
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+
+    const result = await response.json();
+
+    // 保存到缓存
+    if (result.code === 200) {
+      await setCache(cacheKey, result, DOUBAN_CACHE_EXPIRE.comments);
+      console.log(`豆瓣短评已缓存: ${id}/${start}`);
+    }
+
+    return result;
+  } catch (error) {
+    return {
+      code: 500,
+      message: `获取豆瓣短评失败: ${(error as Error).message}`
     };
   }
 }
