@@ -49,6 +49,7 @@ export interface VideoCardProps {
   origin?: 'vod' | 'live';
   remarks?: string; // 备注信息（如"已完结"、"更新至20集"等）
   releaseDate?: string; // 上映日期 (YYYY-MM-DD)，用于即将上映内容
+  priority?: boolean; // 图片加载优先级（用于首屏可见图片）
 }
 
 export type VideoCardHandle = {
@@ -80,6 +81,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
     origin = 'vod',
     remarks,
     releaseDate,
+    priority = false,
   }: VideoCardProps,
   ref
 ) {
@@ -119,6 +121,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
     setDoubanId: (id?: number) => setDynamicDoubanId(id),
   }));
 
+  // 使用 useMemo 缓存计算值，避免每次渲染重新计算
   const actualTitle = title;
   const actualPoster = poster;
   const actualSource = source;
@@ -127,15 +130,25 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
   const actualEpisodes = dynamicEpisodes;
   const actualYear = year;
   const actualQuery = query || '';
-  const actualSearchType = isAggregate
-    ? (actualEpisodes && actualEpisodes === 1 ? 'movie' : 'tv')
-    : type;
+
+  const actualSearchType = useMemo(() =>
+    isAggregate
+      ? (actualEpisodes && actualEpisodes === 1 ? 'movie' : 'tv')
+      : type,
+    [isAggregate, actualEpisodes, type]
+  );
 
   // 判断是否为即将上映（未发布的内容）- 只有真正未上映的才算
-  const isUpcoming = remarks && remarks.includes('天后上映');
+  const isUpcoming = useMemo(() =>
+    remarks && remarks.includes('天后上映'),
+    [remarks]
+  );
 
   // 判断是否有上映相关标记（包括已上映、今日上映、即将上映）
-  const hasReleaseTag = remarks && (remarks.includes('天后上映') || remarks.includes('已上映') || remarks.includes('今日上映'));
+  const hasReleaseTag = useMemo(() =>
+    remarks && (remarks.includes('天后上映') || remarks.includes('已上映') || remarks.includes('今日上映')),
+    [remarks]
+  );
 
   // 获取收藏状态（搜索结果页面不检查，但即将上映需要检查）
   useEffect(() => {
@@ -350,9 +363,11 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
     longPressDelay: 500,
   });
 
-  // 根据评分获取徽章样式
-  const getRatingBadgeStyle = useCallback((rateStr: string) => {
-    const rateNum = parseFloat(rateStr);
+  // 根据评分获取徽章样式 - 使用 useMemo 缓存结果
+  const ratingBadgeStyle = useMemo(() => {
+    if (!rate) return null;
+
+    const rateNum = parseFloat(rate);
 
     if (rateNum >= 8.5) {
       // 高分：金色 + 发光
@@ -391,7 +406,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
         glowClass: 'group-hover:shadow-gray-500/50',
       };
     }
-  }, []);
+  }, [rate]);
 
   const config = useMemo(() => {
     const configs = {
@@ -656,12 +671,13 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
             alt={actualTitle}
             fill
             sizes="(max-width: 640px) 33vw, (max-width: 768px) 25vw, (max-width: 1024px) 20vw, 16vw"
-            className={`${origin === 'live' ? 'object-contain' : 'object-cover'} transition-all duration-700 ease-out ${
+            className={`${origin === 'live' ? 'object-contain' : 'object-cover'} transition-all duration-500 ease-out ${
               imageLoaded ? 'opacity-100 blur-0 scale-100' : 'opacity-0 blur-md scale-105'
             }`}
             referrerPolicy='no-referrer'
-            loading='lazy'
-            quality={85}
+            loading={priority ? undefined : 'lazy'}
+            priority={priority}
+            quality={75}
             onLoadingComplete={() => {
               setIsLoading(true);
               setImageLoaded(true);
@@ -973,11 +989,9 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
           })()}
 
           {/* 评分徽章 - 动态颜色 */}
-          {config.showRating && rate && (() => {
-            const badgeStyle = getRatingBadgeStyle(rate);
-            return (
+          {config.showRating && rate && ratingBadgeStyle && (
               <div
-                className={`absolute top-2 right-2 ${badgeStyle.bgColor} ${badgeStyle.ringColor} ${badgeStyle.shadowColor} ${badgeStyle.textColor} ${badgeStyle.glowClass} text-xs font-bold rounded-full flex flex-col items-center justify-center transition-all duration-300 ease-out group-hover:scale-110 backdrop-blur-sm w-9 h-9 sm:w-10 sm:h-10`}
+                className={`absolute top-2 right-2 ${ratingBadgeStyle.bgColor} ${ratingBadgeStyle.ringColor} ${ratingBadgeStyle.shadowColor} ${ratingBadgeStyle.textColor} ${ratingBadgeStyle.glowClass} text-xs font-bold rounded-full flex flex-col items-center justify-center transition-all duration-300 ease-out group-hover:scale-110 backdrop-blur-sm w-9 h-9 sm:w-10 sm:h-10`}
                 style={{
                   WebkitUserSelect: 'none',
                   userSelect: 'none',
@@ -991,8 +1005,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
                 <Star size={10} className="fill-current mb-0.5" />
                 <span className="text-[10px] sm:text-xs font-extrabold leading-none">{rate}</span>
               </div>
-            );
-          })()}
+          )}
 
           {/* 豆瓣链接 */}
           {config.showDoubanLink && actualDoubanId && actualDoubanId !== 0 && (
