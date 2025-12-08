@@ -212,6 +212,9 @@ export const VirtualDoubanGrid = React.forwardRef<VirtualDoubanGridRef, VirtualD
       <div style={{ ...style, padding: '8px' }} {...ariaAttributes}>
         <VideoCard
           from='douban'
+          source='douban'
+          id={item.id}
+          source_name='豆瓣'
           title={item.title}
           poster={item.poster}
           douban_id={Number(item.id)}

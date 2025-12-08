@@ -2,9 +2,9 @@
 
 'use client';
 
-import { Play, Star } from 'lucide-react';
+import { Play, Star, Heart } from 'lucide-react';
 import Link from 'next/link';
-import { memo, useEffect, useState } from 'react';
+import { memo, useEffect, useState, useCallback } from 'react';
 
 import { ShortDramaItem } from '@/lib/types';
 import {
@@ -13,6 +13,13 @@ import {
   getCache,
   setCache,
 } from '@/lib/shortdrama-cache';
+import {
+  isFavorited,
+  saveFavorite,
+  deleteFavorite,
+  generateStorageKey,
+  subscribeToDataUpdates,
+} from '@/lib/db.client';
 
 interface ShortDramaCardProps {
   drama: ShortDramaItem;
@@ -27,6 +34,37 @@ function ShortDramaCard({
 }: ShortDramaCardProps) {
   const [realEpisodeCount, setRealEpisodeCount] = useState<number>(drama.episode_count);
   const [imageLoaded, setImageLoaded] = useState(false); // 图片加载状态
+  const [favorited, setFavorited] = useState(false); // 收藏状态
+
+  // 短剧的source固定为shortdrama
+  const source = 'shortdrama';
+  const id = drama.id.toString(); // 转换为字符串
+
+  // 检查收藏状态
+  useEffect(() => {
+    const fetchFavoriteStatus = async () => {
+      try {
+        const fav = await isFavorited(source, id);
+        setFavorited(fav);
+      } catch (err) {
+        console.error('检查收藏状态失败:', err);
+      }
+    };
+
+    fetchFavoriteStatus();
+
+    // 监听收藏状态更新事件
+    const storageKey = generateStorageKey(source, id);
+    const unsubscribe = subscribeToDataUpdates(
+      'favoritesUpdated',
+      (newFavorites: Record<string, any>) => {
+        const isNowFavorited = !!newFavorites[storageKey];
+        setFavorited(isNowFavorited);
+      }
+    );
+
+    return unsubscribe;
+  }, [source, id]);
 
   // 获取真实集数（带统一缓存）
   useEffect(() => {
@@ -77,6 +115,37 @@ function ShortDramaCard({
       fetchEpisodeCount();
     }
   }, [drama.id, drama.episode_count]);
+
+  // 处理收藏切换
+  const handleToggleFavorite = useCallback(
+    async (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      try {
+        if (favorited) {
+          // 取消收藏
+          await deleteFavorite(source, id);
+          setFavorited(false);
+        } else {
+          // 添加收藏
+          await saveFavorite(source, id, {
+            title: drama.name,
+            source_name: '短剧',
+            year: '',
+            cover: drama.cover,
+            total_episodes: realEpisodeCount,
+            save_time: Date.now(),
+            search_title: drama.name,
+          });
+          setFavorited(true);
+        }
+      } catch (err) {
+        console.error('切换收藏状态失败:', err);
+      }
+    },
+    [favorited, source, id, drama.name, drama.cover, realEpisodeCount]
+  );
 
   const formatScore = (score: number) => {
     return score > 0 ? score.toFixed(1) : '--';
@@ -145,6 +214,21 @@ function ShortDramaCard({
               {formatScore(drama.score)}
             </div>
           )}
+
+          {/* 收藏按钮 - 右下角 */}
+          <button
+            onClick={handleToggleFavorite}
+            className="absolute bottom-2 right-2 h-8 w-8 flex items-center justify-center rounded-full bg-black/50 backdrop-blur-sm opacity-0 transition-all duration-300 group-hover:opacity-100 hover:scale-110 hover:bg-black/70 z-20"
+            aria-label={favorited ? '取消收藏' : '添加收藏'}
+          >
+            <Heart
+              className={`h-4 w-4 transition-all duration-300 ${
+                favorited
+                  ? 'fill-red-500 text-red-500 scale-110'
+                  : 'text-white hover:text-red-400'
+              }`}
+            />
+          </button>
         </div>
 
         {/* 信息区域 */}

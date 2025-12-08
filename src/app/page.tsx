@@ -983,6 +983,9 @@ function HomeClient() {
                       >
                         <VideoCard
                           from='douban'
+                          source='douban'
+                          id={movie.id}
+                          source_name='豆瓣'
                           title={movie.title}
                           poster={movie.poster}
                           douban_id={Number(movie.id)}
@@ -1021,6 +1024,9 @@ function HomeClient() {
                       >
                         <VideoCard
                           from='douban'
+                          source='douban'
+                          id={show.id}
+                          source_name='豆瓣'
                           title={show.title}
                           poster={show.poster}
                           douban_id={Number(show.id)}
@@ -1078,6 +1084,9 @@ function HomeClient() {
                         >
                           <VideoCard
                             from='douban'
+                            source='bangumi'
+                            id={anime.id.toString()}
+                            source_name='Bangumi'
                             title={anime.name_cn || anime.name}
                             poster={
                               anime.images?.large ||
@@ -1124,6 +1133,9 @@ function HomeClient() {
                       >
                         <VideoCard
                           from='douban'
+                          source='douban'
+                          id={show.id}
+                          source_name='豆瓣'
                           title={show.title}
                           poster={show.poster}
                           douban_id={Number(show.id)}
