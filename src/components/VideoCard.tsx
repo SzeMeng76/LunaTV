@@ -213,6 +213,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
             total_episodes: actualEpisodes ?? 1,
             save_time: Date.now(),
             search_title: actualQuery || actualTitle, // 保存搜索标题用于后续查找资源
+            type: type, // 保存内容类型（movie/tv/variety等）
             releaseDate: releaseDate, // 保存上映日期
             remarks: remarks, // 保存备注信息
           });
@@ -692,13 +693,21 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
               setImageLoaded(true);
             }}
             onError={(e) => {
-              // 图片加载失败时的重试机制
+              // 图片加载失败时的处理
               const img = e.target as HTMLImageElement;
-              if (!img.dataset.retried) {
+              if (origin === 'live') {
+                // 直播频道使用默认图标，不重试避免闪烁
+                img.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="300" viewBox="0 0 200 300"%3E%3Crect fill="%23374151" width="200" height="300"/%3E%3Cg fill="%239CA3AF"%3E%3Ccircle cx="100" cy="120" r="30"/%3E%3Cpath d="M60 160 Q60 140 80 140 L120 140 Q140 140 140 160 L140 200 Q140 220 120 220 L80 220 Q60 220 60 200 Z"/%3E%3C/g%3E%3Ctext x="100" y="260" font-family="Arial" font-size="14" fill="%239CA3AF" text-anchor="middle"%3E直播频道%3C/text%3E%3C/svg%3E';
+                setImageLoaded(true);
+              } else if (!img.dataset.retried) {
+                // 非直播内容重试一次
                 img.dataset.retried = 'true';
                 setTimeout(() => {
                   img.src = processImageUrl(actualPoster);
                 }, 2000);
+              } else {
+                // 重试失败，使用通用占位图
+                setImageLoaded(true);
               }
             }}
             style={{

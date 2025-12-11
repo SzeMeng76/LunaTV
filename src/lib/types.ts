@@ -26,6 +26,7 @@ export interface Favorite {
   save_time: number; // 记录保存时间（时间戳）
   search_title: string; // 搜索时使用的标题
   origin?: 'vod' | 'live' | 'shortdrama';
+  type?: string; // 内容类型（movie/tv/variety/shortdrama等）
   releaseDate?: string; // 上映日期 (YYYY-MM-DD)，用于即将上映内容
   remarks?: string; // 备注信息（如"X天后上映"、"已上映"等）
 }
@@ -45,6 +46,10 @@ export interface ShortDramaItem {
   score: number;
   episode_count: number;
   description?: string;
+  author?: string;        // 演员/导演信息
+  backdrop?: string;      // 高清背景图
+  vote_average?: number;  // 用户评分 (0-10)
+  tmdb_id?: number;       // TMDB ID
 }
 
 // 短剧解析结果数据结构
@@ -64,7 +69,15 @@ export interface ShortDramaParseResult {
       index: number;
       label: string;
       parsedUrl: string;
+      proxyUrl?: string;
+      title?: string;
     };
+  };
+  metadata?: {
+    author?: string;
+    backdrop?: string;
+    vote_average?: number;
+    tmdb_id?: number;
   };
 }
 
@@ -173,6 +186,14 @@ export interface SearchResult {
   type_name?: string;
   douban_id?: number;
   remarks?: string; // 备注信息（如"已完结"、"更新至20集"等）
+  drama_name?: string; // 短剧名称（用于备用API fallback）
+  metadata?: {
+    // 备用API提供的额外元数据
+    author?: string;
+    backdrop?: string;
+    vote_average?: number;
+    tmdb_id?: number;
+  };
 }
 
 // 豆瓣数据结构
