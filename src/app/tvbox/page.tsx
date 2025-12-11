@@ -234,13 +234,39 @@ export default function TVBoxConfigPage() {
     return `${baseUrl}/api/tvbox?${params.toString()}`;
   }, [format, configMode, securityConfig, userToken, enableAdultFilter, enableSmartProxy, enableStrictMode]);
 
-  const handleCopy = async () => {
+  // 通用复制函数，支持 HTTP 和 HTTPS
+  const copyToClipboard = async (text: string) => {
     try {
-      await navigator.clipboard.writeText(getConfigUrl());
+      // 尝试使用现代 Clipboard API（仅在 HTTPS 或 localhost 下可用）
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        // 备用方案：使用传统方法支持 HTTP
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        try {
+          document.execCommand('copy');
+        } finally {
+          textArea.remove();
+        }
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const handleCopy = async () => {
+    const success = await copyToClipboard(getConfigUrl());
+    if (success) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Copy failed silently
     }
   };
 
@@ -678,12 +704,10 @@ export default function TVBoxConfigPage() {
                     }
                     const url = `${baseUrl}/api/tvbox?${params.toString()}`;
 
-                    try {
-                      await navigator.clipboard.writeText(url);
+                    const success = await copyToClipboard(url);
+                    if (success) {
                       setCopied(true);
                       setTimeout(() => setCopied(false), 2000);
-                    } catch (err) {
-                      console.error('Copy failed:', err);
                     }
                   }}
                   className="group flex items-center justify-between px-3 py-2.5 bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-700 rounded-lg hover:border-green-400 dark:hover:border-green-500 hover:shadow-md transition-all"
@@ -723,12 +747,10 @@ export default function TVBoxConfigPage() {
                     params.append('filter', 'off'); // 关闭过滤
                     const url = `${baseUrl}/api/tvbox?${params.toString()}`;
 
-                    try {
-                      await navigator.clipboard.writeText(url);
+                    const success = await copyToClipboard(url);
+                    if (success) {
                       setCopied(true);
                       setTimeout(() => setCopied(false), 2000);
-                    } catch (err) {
-                      console.error('Copy failed:', err);
                     }
                   }}
                   className="group flex items-center justify-between px-3 py-2.5 bg-orange-50 dark:bg-orange-900/20 border-2 border-orange-200 dark:border-orange-700 rounded-lg hover:border-orange-400 dark:hover:border-orange-500 hover:shadow-md transition-all"
@@ -768,12 +790,10 @@ export default function TVBoxConfigPage() {
                     // 使用 /adult/ 路径前缀
                     const url = `${baseUrl}/adult/api/tvbox?${params.toString()}`;
 
-                    try {
-                      await navigator.clipboard.writeText(url);
+                    const success = await copyToClipboard(url);
+                    if (success) {
                       setCopied(true);
                       setTimeout(() => setCopied(false), 2000);
-                    } catch (err) {
-                      console.error('Copy failed:', err);
                     }
                   }}
                   className="group flex items-center justify-between px-3 py-2.5 bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-700 rounded-lg hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-md transition-all"

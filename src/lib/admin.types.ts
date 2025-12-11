@@ -108,6 +108,11 @@ export interface AdminConfig {
     showAvatar: boolean;                 // 是否显示用户头像
     requestWriteAccess: boolean;         // 是否请求发送消息权限
   };
+  ShortDramaConfig?: {
+    primaryApiUrl: string;               // 主API地址
+    alternativeApiUrl: string;           // 备用API地址（私密）
+    enableAlternative: boolean;          // 是否启用备用API
+  };
 }
 
 export interface AdminConfigResult {
