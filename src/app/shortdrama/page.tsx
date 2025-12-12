@@ -150,12 +150,11 @@ export default function ShortDramaPage() {
         const result = await searchShortDramas(query, 1, 20);
         setDramas(result.list);
         setHasMore(result.hasMore);
-      } else {
-        // 退出搜索模式，重新加载分类数据
-        loadDramas(1, true);
       }
+      // 如果清空搜索，不需要手动调用 loadDramas
+      // useEffect 会自动监听 isSearchMode 的变化并重新加载
     },
-    [loadDramas]
+    []
   );
 
   // 返回顶部功能

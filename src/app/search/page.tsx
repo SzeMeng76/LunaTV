@@ -25,6 +25,22 @@ import DirectYouTubePlayer from '@/components/DirectYouTubePlayer';
 import TMDBFilterPanel, { TMDBFilterState } from '@/components/TMDBFilterPanel';
 
 function SearchPageClient() {
+  // 根据 type_name 推断内容类型的辅助函数
+  const inferTypeFromName = (typeName?: string, episodeCount?: number): string => {
+    if (!typeName) {
+      // 如果没有 type_name，使用集数判断（向后兼容）
+      return episodeCount && episodeCount > 1 ? 'tv' : 'movie';
+    }
+    const lowerType = typeName.toLowerCase();
+    if (lowerType.includes('综艺') || lowerType.includes('variety')) return 'variety';
+    if (lowerType.includes('电影') || lowerType.includes('movie')) return 'movie';
+    if (lowerType.includes('电视剧') || lowerType.includes('剧集') || lowerType.includes('tv') || lowerType.includes('series')) return 'tv';
+    if (lowerType.includes('动漫') || lowerType.includes('动画') || lowerType.includes('anime')) return 'anime';
+    if (lowerType.includes('纪录片') || lowerType.includes('documentary')) return 'documentary';
+    // 默认根据集数判断
+    return episodeCount && episodeCount > 1 ? 'tv' : 'movie';
+  };
+
   // 搜索历史
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
   // 返回顶部按钮显示状态
@@ -1533,7 +1549,7 @@ function SearchPageClient() {
                             }
                             year={item.year}
                             from='search'
-                            type={item.episodes.length > 1 ? 'tv' : 'movie'}
+                            type={inferTypeFromName(item.type_name, item.episodes.length)}
                           />
                         </div>
                       ))}

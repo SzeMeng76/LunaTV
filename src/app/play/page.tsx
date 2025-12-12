@@ -2632,6 +2632,18 @@ function PlayPageClient() {
         await deleteFavorite(currentSourceRef.current, currentIdRef.current);
         setFavorited(false);
       } else {
+        // 根据 type_name 推断内容类型
+        const inferType = (typeName?: string): string | undefined => {
+          if (!typeName) return undefined;
+          const lowerType = typeName.toLowerCase();
+          if (lowerType.includes('综艺') || lowerType.includes('variety')) return 'variety';
+          if (lowerType.includes('电影') || lowerType.includes('movie')) return 'movie';
+          if (lowerType.includes('电视剧') || lowerType.includes('剧集') || lowerType.includes('tv') || lowerType.includes('series')) return 'tv';
+          if (lowerType.includes('动漫') || lowerType.includes('动画') || lowerType.includes('anime')) return 'anime';
+          if (lowerType.includes('纪录片') || lowerType.includes('documentary')) return 'documentary';
+          return undefined;
+        };
+
         // 如果未收藏，添加收藏
         await saveFavorite(currentSourceRef.current, currentIdRef.current, {
           title: videoTitleRef.current,
@@ -2641,6 +2653,7 @@ function PlayPageClient() {
           total_episodes: detailRef.current?.episodes.length || 1,
           save_time: Date.now(),
           search_title: searchTitle,
+          type: inferType(detailRef.current?.type_name),
         });
         setFavorited(true);
       }
