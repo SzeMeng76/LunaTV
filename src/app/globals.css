@@ -202,16 +202,19 @@ div[data-media-provider] video {
   background-color: #000 !important; /* 其余区域填充为黑色 */
 }
 
-/* 隐藏移动端竖屏时的 pip 按钮 */
-@media (max-width: 1024px) {
-  .art-control-pip {
-    display: none !important;
-  }
+/* 移动端控制按钮优化 */
+/* 使用liquid-glass插件 + 按钮自动缩小方案，所有按钮都能显示 */
+/* 调整媒体查询从1024px到768px，让平板设备可以使用更多功能 */
+@media (max-width: 768px) {
+  /* PiP按钮保留 - 移动端用户需要画中画功能 */
+  /* 通过flex-shrink: 1让按钮自动缩小，避免溢出 */
 
+  /* 网页全屏在移动端意义不大，继续隐藏节省空间 */
   .art-control-fullscreenWeb {
     display: none !important;
   }
 
+  /* 音量控制在移动端有物理按键，隐藏以节省空间 */
   .art-control-volume {
     display: none !important;
   }
@@ -338,7 +341,8 @@ div[data-media-provider] video {
   transition: all 0.3s ease-in-out;
 }
 
-/* 移动端隐藏弹幕配置按钮 */
+/* 移动端隐藏弹幕配置按钮 - 使用设置面板简化配置 */
+/* 桌面端保留完整配置按钮 - 提供更多高级选项 */
 @media (max-width: 1080px), (hover: none) {
   .artplayer-plugin-danmuku .apd-config {
     display: none !important;
