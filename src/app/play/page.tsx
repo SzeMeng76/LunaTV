@@ -26,7 +26,7 @@ import {
   savePlayRecord,
   subscribeToDataUpdates,
 } from '@/lib/db.client';
-import { getDoubanDetails, getDoubanComments } from '@/lib/douban.client';
+import { getDoubanDetails, getDoubanComments, getDoubanActorMovies } from '@/lib/douban.client';
 import { SearchResult } from '@/lib/types';
 import { getVideoResolutionFromM3u8, processImageUrl } from '@/lib/utils';
 
@@ -88,6 +88,11 @@ function PlayPageClient() {
   const [netdiskLoading, setNetdiskLoading] = useState(false);
   const [netdiskError, setNetdiskError] = useState<string | null>(null);
   const [netdiskTotal, setNetdiskTotal] = useState(0);
+
+  // 演员作品状态
+  const [selectedCelebrityName, setSelectedCelebrityName] = useState<string | null>(null);
+  const [celebrityWorks, setCelebrityWorks] = useState<any[]>([]);
+  const [loadingCelebrityWorks, setLoadingCelebrityWorks] = useState(false);
 
   // SkipController 相关状态
   const [isSkipSettingOpen, setIsSkipSettingOpen] = useState(false);
@@ -743,6 +748,82 @@ function PlayPageClient() {
       setNetdiskError('网盘搜索请求失败，请稍后重试');
     } finally {
       setNetdiskLoading(false);
+    }
+  };
+
+  // 处理演员点击事件
+  const handleCelebrityClick = async (celebrityName: string) => {
+    // 如果点击的是已选中的演员，则收起
+    if (selectedCelebrityName === celebrityName) {
+      setSelectedCelebrityName(null);
+      setCelebrityWorks([]);
+      return;
+    }
+
+    setSelectedCelebrityName(celebrityName);
+    setLoadingCelebrityWorks(true);
+    setCelebrityWorks([]);
+
+    try {
+      // 检查缓存
+      const cacheKey = `douban-celebrity-${celebrityName}`;
+      const cached = await ClientCache.get(cacheKey);
+
+      if (cached) {
+        console.log(`演员作品缓存命中: ${celebrityName}`);
+        setCelebrityWorks(cached);
+        setLoadingCelebrityWorks(false);
+        return;
+      }
+
+      console.log('搜索演员作品:', celebrityName);
+
+      // 使用豆瓣搜索API（通过cmliussss CDN）
+      const searchUrl = `https://movie.douban.cmliussss.net/j/search_subjects?type=movie&tag=${encodeURIComponent(celebrityName)}&sort=recommend&page_limit=20&page_start=0`;
+
+      const response = await fetch(searchUrl);
+      const data = await response.json();
+
+      if (data.subjects && data.subjects.length > 0) {
+        const works = data.subjects.map((item: any) => ({
+          id: item.id,
+          title: item.title,
+          poster: item.cover,
+          rate: item.rate,
+          year: item.url?.match(/\/subject\/(\d+)\//)?.[1] || ''
+        }));
+
+        // 保存到缓存（2小时）
+        await ClientCache.set(cacheKey, works, 2 * 60 * 60);
+
+        setCelebrityWorks(works);
+        console.log(`找到 ${works.length} 部 ${celebrityName} 的作品（豆瓣，已缓存）`);
+      } else {
+        // 豆瓣没有结果，尝试TMDB fallback
+        console.log('豆瓣未找到相关作品，尝试TMDB...');
+        try {
+          const tmdbResponse = await fetch(`/api/tmdb/actor?actor=${encodeURIComponent(celebrityName)}&type=movie&limit=20`);
+          const tmdbResult = await tmdbResponse.json();
+
+          if (tmdbResult.code === 200 && tmdbResult.list && tmdbResult.list.length > 0) {
+            // 保存到缓存（2小时）
+            await ClientCache.set(cacheKey, tmdbResult.list, 2 * 60 * 60);
+            setCelebrityWorks(tmdbResult.list);
+            console.log(`找到 ${tmdbResult.list.length} 部 ${celebrityName} 的作品（TMDB，已缓存）`);
+          } else {
+            console.log('TMDB也未找到相关作品');
+            setCelebrityWorks([]);
+          }
+        } catch (tmdbError) {
+          console.error('TMDB搜索失败:', tmdbError);
+          setCelebrityWorks([]);
+        }
+      }
+    } catch (error) {
+      console.error('获取演员作品出错:', error);
+      setCelebrityWorks([]);
+    } finally {
+      setLoadingCelebrityWorks(false);
     }
   };
 
@@ -4991,11 +5072,9 @@ function PlayPageClient() {
                   </h3>
                   <div className='flex gap-4 overflow-x-auto pb-4 scrollbar-hide'>
                     {movieDetails.celebrities.slice(0, 15).map((celebrity: any) => (
-                      <a
+                      <div
                         key={celebrity.id}
-                        href={`https://www.douban.com/personage/${celebrity.id}/`}
-                        target='_blank'
-                        rel='noopener noreferrer'
+                        onClick={() => handleCelebrityClick(celebrity.name)}
                         className='flex-shrink-0 text-center group cursor-pointer'
                       >
                         <div className='w-20 h-20 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 mb-2 ring-2 ring-transparent group-hover:ring-blue-500 transition-all duration-300 group-hover:scale-110 shadow-md group-hover:shadow-xl'>
@@ -5018,9 +5097,138 @@ function PlayPageClient() {
                             {celebrity.role}
                           </p>
                         )}
-                      </a>
+                      </div>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {/* 演员作品展示 */}
+              {selectedCelebrityName && (
+                <div className='mt-6 border-t border-gray-200 dark:border-gray-700 pt-6'>
+                  <div className='flex justify-between items-center mb-4'>
+                    <h3 className='text-lg font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-2'>
+                      <span>🎬</span>
+                      <span>{selectedCelebrityName} 的作品</span>
+                    </h3>
+                    <button
+                      onClick={() => {
+                        setSelectedCelebrityName(null);
+                        setCelebrityWorks([]);
+                      }}
+                      className='text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                    >
+                      收起 ✕
+                    </button>
+                  </div>
+
+                  {loadingCelebrityWorks ? (
+                    <div className='flex flex-col items-center justify-center py-12'>
+                      <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4'></div>
+                      <p className='text-gray-600 dark:text-gray-400'>正在加载作品...</p>
+                    </div>
+                  ) : celebrityWorks.length > 0 ? (
+                    <>
+                      <p className='text-sm text-gray-600 dark:text-gray-400 mb-4'>
+                        找到 {celebrityWorks.length} 部相关作品
+                      </p>
+                      <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4'>
+                        {celebrityWorks.map((work: any) => {
+                          const playUrl = `/play?title=${encodeURIComponent(work.title)}&douban_id=${work.id}&prefer=true`;
+                          return (
+                            <div
+                              key={work.id}
+                              ref={(node) => {
+                                if (node) {
+                                  // 移除旧的监听器
+                                  const oldClick = (node as any)._clickHandler;
+                                  const oldTouchStart = (node as any)._touchStartHandler;
+                                  const oldTouchEnd = (node as any)._touchEndHandler;
+                                  if (oldClick) node.removeEventListener('click', oldClick, true);
+                                  if (oldTouchStart) node.removeEventListener('touchstart', oldTouchStart, true);
+                                  if (oldTouchEnd) node.removeEventListener('touchend', oldTouchEnd, true);
+
+                                  // 长按检测
+                                  let touchStartTime = 0;
+                                  let isLongPress = false;
+                                  let longPressTimer: NodeJS.Timeout | null = null;
+
+                                  const touchStartHandler = (e: Event) => {
+                                    touchStartTime = Date.now();
+                                    isLongPress = false;
+
+                                    // 设置长按定时器（500ms）
+                                    longPressTimer = setTimeout(() => {
+                                      isLongPress = true;
+                                    }, 500);
+                                  };
+
+                                  const touchEndHandler = (e: Event) => {
+                                    // 清除长按定时器
+                                    if (longPressTimer) {
+                                      clearTimeout(longPressTimer);
+                                      longPressTimer = null;
+                                    }
+
+                                    const touchDuration = Date.now() - touchStartTime;
+
+                                    // 如果是长按（超过500ms）或已标记为长按，不跳转
+                                    if (isLongPress || touchDuration >= 500) {
+                                      // 让 VideoCard 的长按菜单正常工作
+                                      return;
+                                    }
+
+                                    // 否则是短按，执行跳转
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    e.stopImmediatePropagation();
+                                    window.location.href = playUrl;
+                                  };
+
+                                  const clickHandler = (e: Event) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    e.stopImmediatePropagation();
+                                    window.location.href = playUrl;
+                                  };
+
+                                  node.addEventListener('touchstart', touchStartHandler, true);
+                                  node.addEventListener('touchend', touchEndHandler, true);
+                                  node.addEventListener('click', clickHandler, true);
+
+                                  // 保存引用以便清理
+                                  (node as any)._touchStartHandler = touchStartHandler;
+                                  (node as any)._touchEndHandler = touchEndHandler;
+                                  (node as any)._clickHandler = clickHandler;
+                                }
+                              }}
+                              style={{
+                                WebkitTapHighlightColor: 'transparent',
+                                touchAction: 'manipulation'
+                              }}
+                            >
+                              <VideoCard
+                                id={work.id}
+                                title={work.title}
+                                poster={work.poster}
+                                rate={work.rate}
+                                year={work.year}
+                                from='douban'
+                                douban_id={parseInt(work.id)}
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
+                  ) : (
+                    <div className='text-center py-12'>
+                      <p className='text-gray-500 dark:text-gray-400 mb-2'>暂无相关作品</p>
+                      <p className='text-sm text-gray-400 dark:text-gray-500'>
+                        可能该演员的作品暂未收录
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
 
