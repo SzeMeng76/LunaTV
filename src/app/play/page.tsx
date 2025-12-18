@@ -790,7 +790,8 @@ function PlayPageClient() {
           title: item.title,
           poster: item.cover,
           rate: item.rate,
-          year: item.url?.match(/\/subject\/(\d+)\//)?.[1] || ''
+          year: item.url?.match(/\/subject\/(\d+)\//)?.[1] || '',
+          source: 'douban'
         }));
 
         // 保存到缓存（2小时）
@@ -806,9 +807,14 @@ function PlayPageClient() {
           const tmdbResult = await tmdbResponse.json();
 
           if (tmdbResult.code === 200 && tmdbResult.list && tmdbResult.list.length > 0) {
+            // 给TMDB作品添加source标记
+            const worksWithSource = tmdbResult.list.map((work: any) => ({
+              ...work,
+              source: 'tmdb'
+            }));
             // 保存到缓存（2小时）
-            await ClientCache.set(cacheKey, tmdbResult.list, 2 * 60 * 60);
-            setCelebrityWorks(tmdbResult.list);
+            await ClientCache.set(cacheKey, worksWithSource, 2 * 60 * 60);
+            setCelebrityWorks(worksWithSource);
             console.log(`找到 ${tmdbResult.list.length} 部 ${celebrityName} 的作品（TMDB，已缓存）`);
           } else {
             console.log('TMDB也未找到相关作品');
@@ -5134,7 +5140,10 @@ function PlayPageClient() {
                       </p>
                       <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4'>
                         {celebrityWorks.map((work: any) => {
-                          const playUrl = `/play?title=${encodeURIComponent(work.title)}&douban_id=${work.id}&prefer=true`;
+                          // TMDB作品不传douban_id，仅传title搜索
+                          const playUrl = work.source === 'tmdb'
+                            ? `/play?title=${encodeURIComponent(work.title)}&prefer=true`
+                            : `/play?title=${encodeURIComponent(work.title)}&douban_id=${work.id}&prefer=true`;
                           return (
                             <div
                               key={work.id}
