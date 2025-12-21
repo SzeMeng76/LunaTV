@@ -10,6 +10,7 @@ import React, {
   useEffect,
   useImperativeHandle,
   useMemo,
+  useOptimistic,
   useState,
 } from 'react';
 
@@ -92,6 +93,16 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
   const [showMobileActions, setShowMobileActions] = useState(false);
   const [searchFavorited, setSearchFavorited] = useState<boolean | null>(null); // 搜索结果的收藏状态
 
+  // 🚀 React 19 useOptimistic - 乐观更新收藏状态，提供即时UI反馈
+  const [optimisticFavorited, setOptimisticFavorited] = useOptimistic(
+    favorited,
+    (_state, newValue: boolean) => newValue
+  );
+  const [optimisticSearchFavorited, setOptimisticSearchFavorited] = useOptimistic(
+    searchFavorited,
+    (_state, newValue: boolean | null) => newValue
+  );
+
   // 可外部修改的可控字段
   const [dynamicEpisodes, setDynamicEpisodes] = useState<number | undefined>(
     episodes
@@ -103,17 +114,12 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
     douban_id
   );
 
+  // ✅ 合并重复的 useEffect - 减少不必要的渲染
   useEffect(() => {
     setDynamicEpisodes(episodes);
-  }, [episodes]);
-
-  useEffect(() => {
     setDynamicSourceNames(source_names);
-  }, [source_names]);
-
-  useEffect(() => {
     setDynamicDoubanId(douban_id);
-  }, [douban_id]);
+  }, [episodes, source_names, douban_id]);
 
   useImperativeHandle(ref, () => ({
     setEpisodes: (eps?: number) => setDynamicEpisodes(eps),
@@ -183,6 +189,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
     return unsubscribe;
   }, [from, actualSource, actualId, isUpcoming]);
 
+  // 🚀 使用 useOptimistic 优化收藏功能 - React 19 新特性
   const handleToggleFavorite = useCallback(
     async (e: React.MouseEvent) => {
       e.preventDefault();
@@ -194,10 +201,20 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
       try {
         // 确定当前收藏状态
         const currentFavorited = from === 'search' ? searchFavorited : favorited;
+        const newFavoritedState = !currentFavorited;
 
+        // 🎯 立即更新 UI（乐观更新）- 用户感知零延迟
+        if (from === 'search') {
+          setOptimisticSearchFavorited(newFavoritedState);
+        } else {
+          setOptimisticFavorited(newFavoritedState);
+        }
+
+        // 🔄 后台异步执行数据库操作
         if (currentFavorited) {
           // 如果已收藏，删除收藏
           await deleteFavorite(actualSource, actualId);
+          // 操作成功后更新真实状态
           if (from === 'search') {
             setSearchFavorited(false);
           } else {
@@ -217,6 +234,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
             releaseDate: releaseDate, // 保存上映日期
             remarks: remarks, // 保存备注信息
           });
+          // 操作成功后更新真实状态
           if (from === 'search') {
             setSearchFavorited(true);
           } else {
@@ -224,6 +242,8 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
           }
         }
       } catch (err) {
+        // ⚠️ 如果操作失败，恢复原状态（useOptimistic会自动回滚）
+        console.error('切换收藏状态失败:', err);
         throw new Error('切换收藏状态失败');
       }
     },
@@ -240,6 +260,8 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
       actualQuery,
       favorited,
       searchFavorited,
+      setOptimisticFavorited,
+      setOptimisticSearchFavorited,
     ]
   );
 
@@ -504,7 +526,8 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
 
     // 收藏/取消收藏操作
     if (config.showHeart && actualSource && actualId) {
-      const currentFavorited = from === 'search' ? searchFavorited : favorited;
+      // 🚀 使用乐观状态显示，提供即时UI反馈
+      const currentFavorited = from === 'search' ? optimisticSearchFavorited : optimisticFavorited;
 
       if (from === 'search') {
         // 搜索结果：根据加载状态显示不同的选项
@@ -598,8 +621,8 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
     from,
     actualSource,
     actualId,
-    favorited,
-    searchFavorited,
+    optimisticFavorited,
+    optimisticSearchFavorited,
     actualDoubanId,
     isBangumi,
     isAggregate,
@@ -615,7 +638,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
   return (
     <>
       <div
-        className='group relative w-full rounded-lg bg-transparent cursor-pointer transition-all duration-300 ease-in-out hover:scale-[1.05] hover:z-30 hover:drop-shadow-2xl'
+        className='@container group relative w-full rounded-lg bg-transparent cursor-pointer transition-all duration-300 ease-in-out hover:scale-[1.05] hover:z-30 hover:drop-shadow-2xl'
         onClick={handleClick}
         {...longPressProps}
         style={{
@@ -817,7 +840,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
                 <Heart
                   onClick={handleToggleFavorite}
                   size={20}
-                  className={`transition-all duration-300 ease-out ${favorited
+                  className={`transition-all duration-300 ease-out ${optimisticFavorited
                     ? 'fill-red-600 stroke-red-600'
                     : 'fill-transparent stroke-white hover:stroke-red-400'
                     } hover:scale-[1.1]`}
@@ -1006,10 +1029,10 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
             );
           })()}
 
-          {/* 评分徽章 - 动态颜色 */}
+          {/* 评分徽章 - 动态颜色 - 🎯 使用容器查询替代媒体查询 */}
           {config.showRating && rate && ratingBadgeStyle && (
               <div
-                className={`absolute top-2 right-2 ${ratingBadgeStyle.bgColor} ${ratingBadgeStyle.ringColor} ${ratingBadgeStyle.shadowColor} ${ratingBadgeStyle.textColor} ${ratingBadgeStyle.glowClass} text-xs font-bold rounded-full flex flex-col items-center justify-center transition-all duration-300 ease-out group-hover:scale-110 backdrop-blur-sm w-9 h-9 sm:w-10 sm:h-10`}
+                className={`absolute top-2 right-2 ${ratingBadgeStyle.bgColor} ${ratingBadgeStyle.ringColor} ${ratingBadgeStyle.shadowColor} ${ratingBadgeStyle.textColor} ${ratingBadgeStyle.glowClass} text-xs font-bold rounded-full flex flex-col items-center justify-center transition-all duration-300 ease-out group-hover:scale-110 backdrop-blur-sm w-9 h-9 @[180px]:w-10 @[180px]:h-10`}
                 style={{
                   WebkitUserSelect: 'none',
                   userSelect: 'none',
@@ -1021,7 +1044,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
                 }}
               >
                 <Star size={10} className="fill-current mb-0.5" />
-                <span className="text-[10px] sm:text-xs font-extrabold leading-none">{rate}</span>
+                <span className="text-[10px] @[180px]:text-xs font-extrabold leading-none">{rate}</span>
               </div>
           )}
 
@@ -1111,8 +1134,8 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
                     }}
                   >
                     <span className="flex flex-col items-center justify-center leading-none">
-                      <span className="text-[9px] sm:text-[10px] font-normal">源</span>
-                      <span className="text-xs sm:text-sm font-extrabold">{sourceCount}</span>
+                      <span className="text-[9px] @[180px]:text-[10px] font-normal">源</span>
+                      <span className="text-xs @[180px]:text-sm font-extrabold">{sourceCount}</span>
                     </span>
                   </div>
 
@@ -1249,7 +1272,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
             <div className='absolute inset-0 bg-gradient-to-r from-transparent via-green-50/0 to-transparent dark:via-green-900/0 group-hover:via-green-50/50 dark:group-hover:via-green-900/30 transition-all duration-300 rounded-md'></div>
 
             <span
-              className='block text-sm font-bold line-clamp-2 text-gray-900 dark:text-gray-100 transition-all duration-300 ease-in-out group-hover:scale-[1.02] peer relative z-10 group-hover:bg-gradient-to-r group-hover:from-green-600 group-hover:via-emerald-600 group-hover:to-teal-600 dark:group-hover:from-green-400 dark:group-hover:via-emerald-400 dark:group-hover:to-teal-400 group-hover:bg-clip-text group-hover:text-transparent group-hover:drop-shadow-[0_2px_8px_rgba(16,185,129,0.3)]'
+              className='block text-xs @[140px]:text-sm font-bold line-clamp-2 text-gray-900 dark:text-gray-100 transition-all duration-300 ease-in-out group-hover:scale-[1.02] peer relative z-10 group-hover:bg-gradient-to-r group-hover:from-green-600 group-hover:via-emerald-600 group-hover:to-teal-600 dark:group-hover:from-green-400 dark:group-hover:via-emerald-400 dark:group-hover:to-teal-400 group-hover:bg-clip-text group-hover:text-transparent group-hover:drop-shadow-[0_2px_8px_rgba(16,185,129,0.3)]'
               style={{
                 WebkitUserSelect: 'none',
                 userSelect: 'none',

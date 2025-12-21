@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import React, { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, useTransition } from 'react';
 import dynamic from 'next/dynamic';
 
 const Grid = dynamic(
@@ -65,6 +65,9 @@ export const VirtualSearchGrid = React.forwardRef<VirtualSearchGridRef, VirtualS
   const containerRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<any>(null); // Grid ref for imperative scroll
   const { columnCount, itemWidth, itemHeight, containerWidth } = useResponsiveGrid(containerRef);
+
+  // 🚀 React 19 useTransition - 将渐进式加载标记为非紧急更新，避免阻塞用户交互
+  const [isPending, startTransition] = useTransition();
 
   // 渐进式加载状态
   const [visibleItemCount, setVisibleItemCount] = useState(INITIAL_BATCH_SIZE);
@@ -143,18 +146,19 @@ export const VirtualSearchGrid = React.forwardRef<VirtualSearchGridRef, VirtualS
   // 检查是否还有更多项目可以加载
   const hasNextPage = displayItemCount < totalItemCount;
 
-  // 加载更多项目
+  // 🚀 使用 useTransition 优化加载更多 - React 19 新特性
   const loadMoreItems = useCallback(() => {
     if (isLoadingMore || !hasNextPage) return;
 
     setIsLoadingMore(true);
 
-    // 模拟异步加载
-    setTimeout(() => {
+    // 🎯 将状态更新标记为 transition，让滚动和交互保持流畅
+    startTransition(() => {
+      // 立即更新可见项目数量，但不阻塞用户交互
       setVisibleItemCount(prev => Math.min(prev + LOAD_MORE_BATCH_SIZE, totalItemCount));
       setIsLoadingMore(false);
-    }, 100);
-  }, [isLoadingMore, hasNextPage, totalItemCount]);
+    });
+  }, [isLoadingMore, hasNextPage, totalItemCount, startTransition]);
 
   // 暴露 scrollToTop 方法给父组件
   useImperativeHandle(ref, () => ({
@@ -208,6 +212,9 @@ export const VirtualSearchGrid = React.forwardRef<VirtualSearchGridRef, VirtualS
       return <div style={{ ...style, visibility: 'hidden' }} />;
     }
 
+    // 🎯 图片加载优化：首屏12张卡片使用 priority 预加载
+    const isPriorityImage = index < INITIAL_BATCH_SIZE;
+
     // 根据视图模式渲染不同内容
     if (cellViewMode === 'agg') {
       const [mapKey, group] = item as [string, SearchResult[]];
@@ -237,6 +244,7 @@ export const VirtualSearchGrid = React.forwardRef<VirtualSearchGridRef, VirtualS
             query={cellSearchQuery.trim() !== title ? cellSearchQuery.trim() : ''}
             type={type}
             remarks={group[0]?.remarks}
+            priority={isPriorityImage}
           />
         </div>
       );
@@ -257,6 +265,7 @@ export const VirtualSearchGrid = React.forwardRef<VirtualSearchGridRef, VirtualS
             from='search'
             type={searchItem.episodes.length > 1 ? 'tv' : 'movie'}
             remarks={searchItem.remarks}
+            priority={isPriorityImage}
           />
         </div>
       );
@@ -333,8 +342,8 @@ export const VirtualSearchGrid = React.forwardRef<VirtualSearchGridRef, VirtualS
         />
       )}
       
-      {/* 加载更多指示器 */}
-      {containerWidth > 100 && isLoadingMore && (
+      {/* 加载更多指示器 - 显示 transition 状态 */}
+      {containerWidth > 100 && (isLoadingMore || isPending) && (
         <div className='flex justify-center items-center py-4'>
           <div className='animate-spin rounded-full h-6 w-6 border-b-2 border-green-500'></div>
           <span className='ml-2 text-sm text-gray-500 dark:text-gray-400'>

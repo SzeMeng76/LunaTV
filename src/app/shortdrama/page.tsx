@@ -30,7 +30,7 @@ export default function ShortDramaPage() {
   // 用于防止分类切换时的闪烁
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 
-  const observer = useRef<IntersectionObserver>();
+  const observer = useRef<IntersectionObserver | undefined>(undefined);
   const lastDramaElementRef = useCallback(
     (node: HTMLDivElement) => {
       if (loading) return;
