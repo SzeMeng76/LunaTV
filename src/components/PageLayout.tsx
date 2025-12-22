@@ -1,3 +1,9 @@
+'use client';
+
+import { Sparkles } from 'lucide-react';
+import { useEffect, useState } from 'react';
+
+import AIRecommendModal from './AIRecommendModal';
 import { BackButton } from './BackButton';
 import MobileBottomNav from './MobileBottomNav';
 import MobileHeader from './MobileHeader';
@@ -13,15 +19,52 @@ interface PageLayoutProps {
   useModernNav?: boolean; // 新增：是否使用2025现代化导航
 }
 
-const PageLayout = ({ children, activePath = '/', useModernNav = true }: PageLayoutProps) => {
+const PageLayout = ({
+  children,
+  activePath = '/',
+  useModernNav = true,
+}: PageLayoutProps) => {
   const { siteName } = useSite();
+
+  // ✨ AI 推荐功能 - 全局管理
+  const [showAIRecommendModal, setShowAIRecommendModal] = useState(false);
+  const [aiEnabled, setAiEnabled] = useState<boolean | null>(true);
+
+  // 检查 AI 功能是否开启
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const response = await fetch('/api/ai-recommend', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            messages: [{ role: 'user', content: 'ping' }],
+          }),
+        });
+        if (!cancelled) {
+          setAiEnabled(response.status !== 403);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setAiEnabled(true);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   if (useModernNav) {
     // 2025 Modern Navigation Layout
     return (
-      <div className='w-full min-h-screen'>
-        {/* Modern Navigation - Top (Desktop) & Bottom (Mobile) */}
-        <ModernNav />
+      <>
+        <div className='w-full min-h-screen'>
+          {/* Modern Navigation - Top (Desktop) & Bottom (Mobile) */}
+          <ModernNav showAIButton={aiEnabled ?? false} onAIButtonClick={() => setShowAIRecommendModal(true)} />
 
         {/* 移动端头部 - Logo和用户菜单 */}
         <div className='md:hidden fixed top-0 left-0 right-0 z-40 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl shadow-sm'>
@@ -31,8 +74,17 @@ const PageLayout = ({ children, activePath = '/', useModernNav = true }: PageLay
               {siteName}
             </div>
 
-            {/* User Menu & Theme Toggle */}
-            <div className='flex items-center gap-2'>
+            {/* ✨ AI Button, Theme Toggle & User Menu */}
+            <div className='flex items-center gap-1.5'>
+              {aiEnabled && (
+                <button
+                  onClick={() => setShowAIRecommendModal(true)}
+                  className='relative p-1.5 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700 active:scale-95 transition-all duration-200 shadow-lg shadow-blue-500/30 group'
+                  aria-label='AI 推荐'
+                >
+                  <Sparkles className='h-4 w-4 group-hover:scale-110 transition-transform duration-300' />
+                </button>
+              )}
               <ThemeToggle />
               <UserMenu />
             </div>
@@ -46,6 +98,13 @@ const PageLayout = ({ children, activePath = '/', useModernNav = true }: PageLay
           </div>
         </main>
       </div>
+
+      {/* ✨ AI 推荐弹窗 */}
+      <AIRecommendModal
+        isOpen={showAIRecommendModal}
+        onClose={() => setShowAIRecommendModal(false)}
+      />
+    </>
     );
   }
 
@@ -71,8 +130,17 @@ const PageLayout = ({ children, activePath = '/', useModernNav = true }: PageLay
             </div>
           )}
 
-          {/* 桌面端顶部按钮 */}
+          {/* ✨ 桌面端顶部按钮 - AI, Theme Toggle & User Menu */}
           <div className='absolute top-2 right-4 z-20 hidden md:flex items-center gap-2'>
+            {aiEnabled && (
+              <button
+                onClick={() => setShowAIRecommendModal(true)}
+                className='relative p-2 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700 active:scale-95 transition-all duration-200 shadow-lg shadow-blue-500/30 group'
+                aria-label='AI 推荐'
+              >
+                <Sparkles className='h-5 w-5 group-hover:scale-110 transition-transform duration-300' />
+              </button>
+            )}
             <ThemeToggle />
             <UserMenu />
           </div>
@@ -93,6 +161,12 @@ const PageLayout = ({ children, activePath = '/', useModernNav = true }: PageLay
       <div className='md:hidden'>
         <MobileBottomNav activePath={activePath} />
       </div>
+
+      {/* ✨ AI 推荐弹窗 */}
+      <AIRecommendModal
+        isOpen={showAIRecommendModal}
+        onClose={() => setShowAIRecommendModal(false)}
+      />
     </div>
   );
 };

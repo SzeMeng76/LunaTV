@@ -2,7 +2,7 @@
 
 'use client';
 
-import { Brain, ChevronRight, Film, Tv, Calendar, Sparkles, Play } from 'lucide-react';
+import { ChevronRight, Film, Tv, Calendar, Sparkles, Play } from 'lucide-react';
 import Link from 'next/link';
 import { Suspense, useEffect, useState } from 'react';
 
@@ -24,7 +24,6 @@ import { getDoubanCategories, getDoubanDetails } from '@/lib/douban.client';
 import { DoubanItem } from '@/lib/types';
 import { getAuthInfoFromBrowserCookie } from '@/lib/auth';
 
-import AIRecommendModal from '@/components/AIRecommendModal';
 import CapsuleSwitch from '@/components/CapsuleSwitch';
 import ContinueWatching from '@/components/ContinueWatching';
 import HeroBanner from '@/components/HeroBanner';
@@ -52,9 +51,6 @@ function HomeClient() {
   const [username, setUsername] = useState<string>('');
 
   const [showAnnouncement, setShowAnnouncement] = useState(false);
-  const [showAIRecommendModal, setShowAIRecommendModal] = useState(false);
-  const [aiEnabled, setAiEnabled] = useState<boolean | null>(true); // 默认显示，检查后再决定
-  const [aiCheckTriggered, setAiCheckTriggered] = useState(false); // 标记是否已检查AI状态
 
   // 合并初始化逻辑 - 优化性能，减少重渲染
   useEffect(() => {
@@ -74,68 +70,6 @@ function HomeClient() {
       }
     }
   }, [announcement]);
-
-  // 延迟检查AI功能状态，避免阻塞页面初始渲染
-  useEffect(() => {
-    if (aiCheckTriggered || typeof window === 'undefined') return;
-
-    let idleCallbackId: number | undefined;
-    let timeoutId: number | undefined;
-    let cancelled = false;
-
-    const checkAIStatus = async () => {
-      if (cancelled) return;
-      try {
-        const response = await fetch('/api/ai-recommend', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            messages: [{ role: 'user', content: 'test' }],
-          }),
-        });
-        if (!cancelled) {
-          setAiEnabled(response.status !== 403);
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setAiEnabled(true);
-        }
-      } finally {
-        if (!cancelled) {
-          setAiCheckTriggered(true);
-        }
-      }
-    };
-
-    const win = window as typeof window & {
-      requestIdleCallback?: (callback: IdleRequestCallback, options?: IdleRequestOptions) => number;
-      cancelIdleCallback?: (handle: number) => void;
-    };
-
-    if (typeof win.requestIdleCallback === 'function') {
-      idleCallbackId = win.requestIdleCallback(() => {
-        checkAIStatus().catch(() => {
-          // 错误已在内部处理
-        });
-      }, { timeout: 1500 });
-    } else {
-      timeoutId = window.setTimeout(() => {
-        checkAIStatus().catch(() => {
-          // 错误已在内部处理
-        });
-      }, 800);
-    }
-
-    return () => {
-      cancelled = true;
-      if (idleCallbackId !== undefined && typeof win.cancelIdleCallback === 'function') {
-        win.cancelIdleCallback(idleCallbackId);
-      }
-      if (timeoutId !== undefined) {
-        window.clearTimeout(timeoutId);
-      }
-    };
-  }, [aiCheckTriggered]);
 
   // 收藏夹数据
   type FavoriteItem = {
@@ -702,8 +636,8 @@ function HomeClient() {
           </div>
         </div>
 
-        {/* 顶部 Tab 切换 */}
-        <div className='mb-8 flex flex-col sm:flex-row items-center justify-center gap-4'>
+        {/* 顶部 Tab 切换 - AI 按钮已移至右上角导航栏 */}
+        <div className='mb-8 flex items-center justify-center'>
           <CapsuleSwitch
             options={[
               { label: '首页', value: 'home' },
@@ -712,24 +646,6 @@ function HomeClient() {
             active={activeTab}
             onChange={(value) => setActiveTab(value as 'home' | 'favorites')}
           />
-
-          {/* AI推荐按钮 - 只在功能启用时显示，添加脉冲动画 */}
-          {aiEnabled && (
-            <button
-              onClick={() => setShowAIRecommendModal(true)}
-              className='relative flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-full font-medium transition-all transform hover:scale-105 shadow-lg hover:shadow-xl group overflow-hidden'
-              title='AI影视推荐'
-            >
-              {/* 脉冲光环 */}
-              <div className='absolute inset-0 rounded-full bg-gradient-to-r from-blue-400 to-purple-400 opacity-0 group-hover:opacity-100 animate-ping'></div>
-
-              {/* 闪烁背景 */}
-              <div className='absolute inset-0 rounded-full bg-gradient-to-r from-blue-400 to-purple-400 opacity-20 animate-pulse'></div>
-
-              <Brain className='h-4 w-4 relative z-10 group-hover:rotate-12 transition-transform duration-300' />
-              <span className='relative z-10'>AI推荐</span>
-            </button>
-          )}
         </div>
 
         <div className='w-full mx-auto'>
@@ -1444,12 +1360,6 @@ function HomeClient() {
           </div>
         </div>
       )}
-
-      {/* AI推荐模态框 */}
-      <AIRecommendModal
-        isOpen={showAIRecommendModal}
-        onClose={() => setShowAIRecommendModal(false)}
-      />
     </PageLayout>
   );
 }
