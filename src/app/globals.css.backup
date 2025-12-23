@@ -3,16 +3,6 @@
 /* Tailwind 4 Dark Mode Configuration - 使用 class 选择器而非媒体查询 */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* ============================================
-   @property - 注册自定义属性支持动画
-   这是 Tailwind CSS 4.0 的新特性，提升性能
-   ============================================ */
-@property --shimmer-position {
-  syntax: '<percentage>';
-  initial-value: -200%;
-  inherits: false;
-}
-
 /* Tailwind 4 Theme Configuration */
 @theme {
   /* Font Family */
@@ -190,10 +180,7 @@ html:not(.dark) body {
   display: none; /* Chrome, Safari, Opera */
 }
 
-/* ============================================
-   View Transitions API 动画
-   优化：0.8s → 0.6s (更流畅的过渡体验)
-   ============================================ */
+/* View Transitions API 动画 */
 @keyframes slide-from-top {
   from {
     clip-path: polygon(0 0, 100% 0, 100% 0, 0 0);
@@ -214,7 +201,7 @@ html:not(.dark) body {
 
 ::view-transition-old(root),
 ::view-transition-new(root) {
-  animation-duration: 0.6s; /* 优化：从 0.8s 减少到 0.6s */
+  animation-duration: 0.8s;
   animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   animation-fill-mode: both;
 }
@@ -250,10 +237,7 @@ div[data-media-provider] video {
   background-color: #000 !important; /* 其余区域填充为黑色 */
 }
 
-/* ============================================
-   移动端控制按钮优化
-   ⚠️ 重要：这些规则使用 !important 覆盖 ArtPlayer 内联样式
-   ============================================ */
+/* 移动端控制按钮优化 */
 /* 使用liquid-glass插件 + 按钮自动缩小方案，所有按钮都能显示 */
 /* 调整媒体查询从1024px到768px，让平板设备可以使用更多功能 */
 @media (max-width: 768px) {
@@ -338,10 +322,6 @@ div[data-media-provider] video {
   }
 }
 
-/* ============================================
-   弹幕系统移动端优化
-   ⚠️ 重要：完全保留所有 !important 确保正确覆盖
-   ============================================ */
 /* 修复移动端弹幕面板定位问题 - 根据不同挂载位置处理 */
 @media (max-width: 768px) {
   /* 当弹幕插件挂载到控制栏中心时（横屏，宽度>=512px） */
@@ -365,10 +345,13 @@ div[data-media-provider] video {
   }
 }
 
-/* VideoCard 光泽扫过动画 - 使用 @property 优化 */
+/* VideoCard 光泽扫过动画 */
 @keyframes card-shimmer {
-  to {
-    --shimmer-position: 200%;
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
   }
 }
 
