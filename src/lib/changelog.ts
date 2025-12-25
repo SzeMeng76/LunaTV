@@ -11,6 +11,43 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "5.8.0",
+    date: "2025-12-24",
+    added: [
+    "🎯 AI推荐按钮：在ModernNav导航栏添加AI智能推荐按钮，全局可用",
+    "🎬 短剧自动跳集：备用API集数不可用时自动跳到下一集",
+    "⚡ 升级到Next.js 16.1 + Tailwind CSS 4.1 + React 19：享受最新框架性能提升",
+    "🎭 TMDB演员作品备用：添加TMDB作为演员作品搜索的备用数据源",
+    "💾 演员作品缓存：缓存演员作品信息2小时，减少API请求",
+    "🎬 演员作品内联显示：使用搜索API在播放页面内联显示演员作品",
+    "🎨 交互式演员作品查看器：在播放页面添加交互式演员作品浏览功能",
+    "⚙️ 弹幕综合设置：添加完整的弹幕设置面板，支持速度、透明度、字体等配置",
+    "🎨 弹幕设置集成：将弹幕配置集成到全局设置面板"
+    ],
+    changed: [
+    "⚡ AI聊天性能优化：优化聊天弹窗性能，消除输入延迟",
+    "添加100ms防抖滚动，减少过度滚动动画",
+    "使用requestIdleCallback实现300ms防抖的异步localStorage写入",
+    "使用useCallback记忆化所有事件处理函数",
+    "创建记忆化MessageItem组件，使用useMemo缓存格式化内容",
+    "输入延迟减少85-90%，消息重渲染减少70-85%",
+    "🎨 VideoCard容器查询：为VideoCard添加Tailwind 4容器查询支持",
+    "⚡ React 19性能优化：使用useTransition优化非紧急更新，添加图片优先级",
+    "⚡ 收藏乐观更新：使用React 19的useOptimistic优化收藏功能，合并重复useEffect",
+    "🖱️ 用户菜单悬停优化：优化用户菜单悬停过渡性能",
+    "🎨 Tailwind CSS 4.1优化：优化globals.css以适配Tailwind CSS 4.1",
+    "🔧 Telegram用户自动清理：为Telegram用户添加createdAt字段以启用自动清理"
+    ],
+    fixed: [
+    "🐛 短剧错误信息显示：在短剧播放器中显示实际的API错误信息",
+    "🔧 备用API错误处理：改进备用API字符串响应的错误处理",
+    "🎯 AI模态框居中：修复AI模态框居中问题，确保AI按钮全局可用",
+    "🖼️ TMDB API白屏修复：使用TMDB API路由替代客户端导入，解决白屏错误",
+    "🔑 演员缓存键格式：修正演员缓存键格式问题",
+    "🎮 弹幕速度设置：修复弹幕速度设置以匹配原生插件数值"
+    ]
+  },
+  {
     version: "5.7.1",
     date: "2025-12-13",
     added: [

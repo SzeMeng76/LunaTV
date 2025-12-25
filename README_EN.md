@@ -25,7 +25,7 @@
 ![HLS.js](https://img.shields.io/badge/HLS.js-1.6.15-ec407a)
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Docker Ready](https://img.shields.io/badge/Docker-ready-blue?logo=docker)
-![Version](https://img.shields.io/badge/Version-5.7.1-orange)
+![Version](https://img.shields.io/badge/Version-5.8.0-orange)
 
 </div>
 
@@ -33,27 +33,28 @@
 
 ## 📢 Project Overview
 
-This project is a deeply customized version based on **MoonTV**, continuously developed from **v4.3.1** to the current **v5.7.1**, with **50+ major feature modules** and **300+ detailed optimizations** added. See [CHANGELOG](CHANGELOG) for all new features.
+This project is a deeply customized version based on **MoonTV**, continuously developed from **v4.3.1** to the current **v5.8.0**, with **50+ major feature modules** and **300+ detailed optimizations** added. See [CHANGELOG](CHANGELOG) for all new features.
 
 ### 💡 Core Enhancement Highlights
 
 #### 🎥 Content Ecosystem Expansion
 - **YouTube Integration**: Complete YouTube search, playback, live streaming with cookieless domain support
 - **Cloud Drive Search (PanSou)**: Integrated advanced filtering and cache management
-- **Short Drama Features**: Search, playback, dedicated detail pages, mobile API proxy
+- **Short Drama Features**: Search, playback, dedicated detail pages, mobile API proxy, auto-skip to next episode when backup API unavailable
 - **IPTV Live TV**: m3u/m3u8 subscriptions, EPG program guide (multi-source & url-tvg support), source aggregation, logo proxy, channel search within current source, live source tab quick search
 - **Bangumi Anime**: Intelligent anime detection, API integration, caching mechanism
 
 #### 🤖 AI Recommendation System
-- **AI Content Recommendations**: Support for GPT-5/o series models, dynamic prompt management
+- **AI Smart Assistant**: Global AI recommendation button (ModernNav header), GPT-5/o series support, dynamic prompts, 85-90% input latency optimization
 - **Multiple Card Types**: Video recommendations, YouTube videos, video link parsing
 - **TMDB Actor Search**: Complete actor search, filtering, and caching
+- **Interactive Actor Works Viewer**: Inline actor works display in play page, 2-hour cache, TMDB fallback source
 - **Release Calendar & Upcoming Releases**: Upcoming content preview and tracking, support favoriting upcoming releases, automatically becomes playable after release
 
 #### 💬 Danmaku Ecosystem
 - **Third-party Danmaku API**: Integrated Tencent Video, iQiyi, Youku, Bilibili platforms, smart content matching prevents trailers
 - **Smart Performance Optimization**: Device-based tiered rendering, Web Worker acceleration, hardware acceleration
-- **Complete Configuration System**: Font size, speed, opacity, display area, anti-overlap adjustments
+- **Comprehensive Settings Panel**: Integrated danmaku settings panel in global settings, supporting font size, speed, opacity, display area, anti-overlap adjustments
 - **Smart Caching**: localStorage persistence, 30-minute cache, auto cleanup of expired data
 - **Web-exclusive Input**: Simple "Danmu" button for quick sending (auto-hidden on mobile)
 
@@ -899,34 +900,35 @@ This project works with [OrionTV](https://github.com/zimplexing/OrionTV) on Andr
 
 For complete feature updates and bug fixes, see [CHANGELOG](CHANGELOG).
 
-### Latest Version: v5.7.1 (2025-12-13)
+### Latest Version: v5.8.0 (2025-12-24)
 
 #### Added
-- 🎨 Liquid-glass Frosted Glass Player Control Bar: Modern frosted glass effect control bar enhancing visual experience
-- 💬 Douban Reviews Integration: Display Douban user reviews on play page for richer film information
-- ❤️ Global Favorites: Cross-device synchronized favorites with database storage
-- 📋 Favorites Category Management: Filter favorites by type (movies, series, variety shows, short dramas, anime)
-- 🎬 Fallback API Support: Search and homepage data loading support fallback APIs for improved system stability
-- 🔢 Completed Series Episode Count: Display total episode count on search and category pages
-- 📱 Mobile Danmaku Control Bar Optimization: Optimized danmaku control bar display and interaction on mobile
+- 🎯 AI Recommendation Button: Added AI recommendation button in ModernNav header, globally available
+- 🎬 Auto-Skip to Next Episode: Automatically skip to next episode when backup API episode unavailable
+- ⚡ Upgrade to Next.js 16.1 + Tailwind CSS 4.1 + React 19: Enjoy latest framework performance improvements
+- 🎭 TMDB Actor Works Fallback: Added TMDB as fallback for actor works search
+- 💾 Actor Works Caching: Cache actor works info for 2 hours, reduce API requests
+- 🎨 Interactive Actor Works Viewer: Interactive actor works browser in play page
+- ⚙️ Comprehensive Danmaku Settings: Complete danmaku settings panel supporting speed, opacity, font, etc.
 
-#### Improved
-- ⚡ Performance Optimization: Optimized search and homepage data loading performance, reduced unnecessary API requests
-- 📊 Category Display Optimization: Improved category and type information display
-- 🎯 API Error Handling: Enhanced API error handling and fallback mechanisms
-- 🖼️ Poster Display Improvements: Optimized poster image display effects
-- 🔄 Data Loading Optimization: Improved data caching and loading mechanisms
+#### Performance Optimizations
+- ⚡ Major AI Chat Performance Boost: 85-90% input latency reduction, 70-85% message re-render reduction
+  - Added 100ms debounced scrolling and 300ms debounced async localStorage writes
+  - Memoized all event handlers with useCallback
+  - Created memoized MessageItem component with useMemo for formatted content
+- 🎨 VideoCard Container Queries: Added Tailwind 4 container query support to VideoCard
+- ⚡ React 19 Features: Applied useTransition and useOptimistic for better UX
 
 #### Fixed
-- 🎮 Fix Player Control Bar Button Overflow: Solved mobile button overflow with flex-shrink and adaptive width
-- 🎮 Fix Control Bar Drift When Dragging Progress: Removed control bar event listeners, fully CSS-controlled width
-- 📂 Fix Category Filtering Issues: Fixed category filter display errors
-- 🏷️ Fix Type Display Errors: Corrected video type information display logic
-- 🔢 Fix Episode Count Statistics: Fixed accuracy of completed series episode count
-- 🔧 Fix Fallback API Logic: Improved fallback API switching and error handling
+- 🐛 Short Drama Error Messages: Display actual API error messages in short drama player
+- 🔧 Backup API Error Handling: Improved error handling for backup API string responses
+- 🎯 AI Modal Centering: Fixed AI modal centering issue
+- 🖼️ TMDB API White Screen Fix: Use TMDB API route instead of client import
+- 🎮 Danmaku Speed Settings: Fixed danmaku speed settings to match native plugin values
 
 ### Major Milestone Versions
 
+- **v5.8.0**: Next.js 16.1 + React 19 + Tailwind CSS 4.1, AI Chat Performance Optimization, Actor Works Viewer, Danmaku Settings Panel
 - **v5.7.1**: Liquid-glass Frosted Glass Control Bar, Douban Reviews, Global Favorites, Fallback API, Completed Series Episode Count
 - **v5.7.0**: Celebrity Avatars & Recommendations, Live Source Search, Image Proxy Optimization, Mobile Navigation Fixes
 - **v5.6.3**: Short Drama Multi-source Search, Smart Source Filtering, Upcoming Smart Distribution, Comprehensive z-index Conflict Fixes

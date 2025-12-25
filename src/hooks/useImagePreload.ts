@@ -16,14 +16,19 @@ export function useImagePreload(imageUrls: string[], enabled = true) {
     urlsToPreload.forEach((url) => {
       if (!url) return;
 
-      // Check if already preloaded
-      const existing = document.querySelector(`link[rel="preload"][href="${url}"]`);
+      // Clean and validate URL
+      const cleanUrl = url.trim().replace(/["'>]/g, '');
+      if (!cleanUrl) return;
+
+      // Check if already preloaded using a safer method
+      const links = Array.from(document.head.querySelectorAll('link[rel="preload"]'));
+      const existing = links.find(link => (link as HTMLLinkElement).href === cleanUrl);
       if (existing) return;
 
       const link = document.createElement('link');
       link.rel = 'preload';
       link.as = 'image';
-      link.href = url;
+      link.href = cleanUrl;
       // Set fetch priority to low (not blocking visible content)
       (link as any).fetchPriority = 'low';
 
