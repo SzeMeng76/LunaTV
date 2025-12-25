@@ -21,6 +21,9 @@ export interface AdminConfig {
     TMDBApiKey?: string;
     TMDBLanguage?: string;
     EnableTMDBActorSearch?: boolean;
+    // 自定义去广告代码
+    CustomAdFilterCode?: string;
+    CustomAdFilterVersion?: number;
   };
   UserConfig: {
     AllowRegister?: boolean; // 是否允许用户注册，默认 true
@@ -112,6 +115,14 @@ export interface AdminConfig {
     primaryApiUrl: string;               // 主API地址
     alternativeApiUrl: string;           // 备用API地址（私密）
     enableAlternative: boolean;          // 是否启用备用API
+  };
+  DownloadConfig?: {
+    enabled: boolean;                    // 是否启用下载功能（全局开关）
+  };
+  WatchRoomConfig?: {
+    enabled: boolean;                    // 是否启用观影室功能
+    serverUrl: string;                   // 外部观影室服务器地址
+    authKey: string;                     // 观影室服务器认证密钥
   };
 }
 

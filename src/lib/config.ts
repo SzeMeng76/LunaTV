@@ -439,6 +439,13 @@ export async function configSelfCheck(adminConfig: AdminConfig): Promise<AdminCo
     };
   }
 
+  // 确保下载配置有默认值
+  if (!adminConfig.DownloadConfig) {
+    adminConfig.DownloadConfig = {
+      enabled: true,                                    // 默认启用下载功能
+    };
+  }
+
   // 站长变更自检
   const ownerUser = process.env.USERNAME;
 

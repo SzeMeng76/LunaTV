@@ -17,6 +17,7 @@ import {
   Shield,
   Tv,
   User,
+  Users,
   X,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -70,6 +71,7 @@ export const UserMenu: React.FC = () => {
   const [playRecords, setPlayRecords] = useState<(PlayRecord & { key: string })[]>([]);
   const [favorites, setFavorites] = useState<(Favorite & { key: string })[]>([]);
   const [hasUnreadUpdates, setHasUnreadUpdates] = useState(false);
+  const [showWatchRoom, setShowWatchRoom] = useState(false);
 
   // Body 滚动锁定 - 使用 overflow 方式避免布局问题
   useEffect(() => {
@@ -115,6 +117,9 @@ export const UserMenu: React.FC = () => {
   // 跳过片头片尾相关设置
   const [enableAutoSkip, setEnableAutoSkip] = useState(true);
   const [enableAutoNextEpisode, setEnableAutoNextEpisode] = useState(true);
+
+  // 下载相关设置
+  const [downloadFormat, setDownloadFormat] = useState<'TS' | 'MP4'>('TS');
 
   // 豆瓣数据源选项
   const doubanDataSourceOptions = [
@@ -187,6 +192,22 @@ export const UserMenu: React.FC = () => {
       const auth = getAuthInfoFromBrowserCookie();
       setAuthInfo(auth);
     }
+  }, []);
+
+  // 检查观影室功能是否启用
+  useEffect(() => {
+    const checkWatchRoomConfig = async () => {
+      try {
+        const response = await fetch('/api/watch-room/config');
+        const config = await response.json();
+        setShowWatchRoom(config.enabled === true);
+      } catch (error) {
+        console.error('Failed to check watch room config:', error);
+        setShowWatchRoom(false);
+      }
+    };
+
+    checkWatchRoomConfig();
   }, []);
 
   // 从 localStorage 读取设置
@@ -293,6 +314,12 @@ export const UserMenu: React.FC = () => {
       const savedEnableAutoNextEpisode = localStorage.getItem('enableAutoNextEpisode');
       if (savedEnableAutoNextEpisode !== null) {
         setEnableAutoNextEpisode(JSON.parse(savedEnableAutoNextEpisode));
+      }
+
+      // 读取下载格式设置
+      const savedDownloadFormat = localStorage.getItem('downloadFormat');
+      if (savedDownloadFormat === 'TS' || savedDownloadFormat === 'MP4') {
+        setDownloadFormat(savedDownloadFormat);
       }
     }
   }, []);
@@ -609,6 +636,11 @@ export const UserMenu: React.FC = () => {
     router.push('/tvbox');
   };
 
+  const handleWatchRoom = () => {
+    setIsOpen(false);
+    router.push('/watch-room');
+  };
+
   const handleReleaseCalendar = () => {
     setIsOpen(false);
     router.push('/release-calendar');
@@ -844,6 +876,13 @@ export const UserMenu: React.FC = () => {
     }
   };
 
+  const handleDownloadFormatChange = (value: 'TS' | 'MP4') => {
+    setDownloadFormat(value);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('downloadFormat', value);
+    }
+  };
+
   // 获取感谢信息
   const getThanksInfo = (dataSource: string) => {
     switch (dataSource) {
@@ -889,6 +928,7 @@ export const UserMenu: React.FC = () => {
     setEnableAutoSkip(true);
     setEnableAutoNextEpisode(true);
     setPlayerBufferMode('standard');
+    setDownloadFormat('TS');
 
     if (typeof window !== 'undefined') {
       localStorage.setItem('defaultAggregateSearch', JSON.stringify(true));
@@ -905,6 +945,7 @@ export const UserMenu: React.FC = () => {
       localStorage.setItem('enableAutoSkip', JSON.stringify(true));
       localStorage.setItem('enableAutoNextEpisode', JSON.stringify(true));
       localStorage.setItem('playerBufferMode', 'standard');
+      localStorage.setItem('downloadFormat', 'TS');
     }
   };
 
@@ -1091,6 +1132,17 @@ export const UserMenu: React.FC = () => {
             <Tv className='w-4 h-4 text-gray-500 dark:text-gray-400' />
             <span className='font-medium'>TVBox 配置</span>
           </button>
+
+          {/* 观影室按钮 */}
+          {showWatchRoom && (
+            <button
+              onClick={handleWatchRoom}
+              className='w-full px-3 py-2 text-left flex items-center gap-2.5 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-[background-color] duration-150 ease-in-out text-sm'
+            >
+              <Users className='w-4 h-4 text-gray-500 dark:text-gray-400' />
+              <span className='font-medium'>观影室</span>
+            </button>
+          )}
 
           {/* 修改密码按钮 */}
           {showChangePassword && (
@@ -1778,6 +1830,91 @@ export const UserMenu: React.FC = () => {
                   筛选已关闭：将显示所有播放时间超过2分钟的内容
                 </div>
               )}
+            </div>
+
+            {/* 分割线 */}
+            <div className='border-t border-gray-200 dark:border-gray-700'></div>
+
+            {/* 下载格式设置 */}
+            <div className='space-y-3'>
+              <div>
+                <h4 className='text-sm font-medium text-gray-700 dark:text-gray-300'>
+                  下载格式
+                </h4>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mt-1'>
+                  选择视频下载时的默认格式
+                </p>
+              </div>
+
+              {/* 格式选择 */}
+              <div className='grid grid-cols-2 gap-3'>
+                <button
+                  type='button'
+                  onClick={() => handleDownloadFormatChange('TS')}
+                  className={`p-4 rounded-lg border-2 transition-all duration-200 ${
+                    downloadFormat === 'TS'
+                      ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
+                      : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
+                  }`}
+                >
+                  <div className='flex flex-col items-center gap-2'>
+                    <div className={`text-2xl ${downloadFormat === 'TS' ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                      📦
+                    </div>
+                    <div className='text-center'>
+                      <div className={`text-sm font-semibold ${downloadFormat === 'TS' ? 'text-green-700 dark:text-green-300' : 'text-gray-900 dark:text-gray-100'}`}>
+                        TS格式
+                      </div>
+                      <div className='text-xs text-gray-500 dark:text-gray-400 mt-1'>
+                        推荐，兼容性好
+                      </div>
+                    </div>
+                    {downloadFormat === 'TS' && (
+                      <div className='w-5 h-5 rounded-full bg-green-500 text-white flex items-center justify-center'>
+                        <svg className='w-3 h-3' fill='currentColor' viewBox='0 0 20 20'>
+                          <path fillRule='evenodd' d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z' clipRule='evenodd' />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                </button>
+
+                <button
+                  type='button'
+                  onClick={() => handleDownloadFormatChange('MP4')}
+                  className={`p-4 rounded-lg border-2 transition-all duration-200 ${
+                    downloadFormat === 'MP4'
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                      : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
+                  }`}
+                >
+                  <div className='flex flex-col items-center gap-2'>
+                    <div className={`text-2xl ${downloadFormat === 'MP4' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                      🎬
+                    </div>
+                    <div className='text-center'>
+                      <div className={`text-sm font-semibold ${downloadFormat === 'MP4' ? 'text-blue-700 dark:text-blue-300' : 'text-gray-900 dark:text-gray-100'}`}>
+                        MP4格式
+                      </div>
+                      <div className='text-xs text-gray-500 dark:text-gray-400 mt-1'>
+                        通用格式
+                      </div>
+                    </div>
+                    {downloadFormat === 'MP4' && (
+                      <div className='w-5 h-5 rounded-full bg-blue-500 text-white flex items-center justify-center'>
+                        <svg className='w-3 h-3' fill='currentColor' viewBox='0 0 20 20'>
+                          <path fillRule='evenodd' d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z' clipRule='evenodd' />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                </button>
+              </div>
+
+              {/* 格式说明 */}
+              <div className='text-xs text-gray-500 dark:text-gray-400 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800'>
+                💡 TS格式下载速度快，兼容性好；MP4格式经过转码，体积略小，兼容性更广
+              </div>
             </div>
           </div>
 
