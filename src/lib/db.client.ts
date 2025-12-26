@@ -595,7 +595,7 @@ if (typeof window !== 'undefined') {
 function fetchWithTimeout(
   url: string,
   options: RequestInit = {},
-  timeout = 15000 // 默认15秒超时
+  timeout = 30000 // 默认30秒超时（优化收藏同步性能）
 ): Promise<Response> {
   return new Promise((resolve, reject) => {
     const controller = new AbortController();
@@ -1327,8 +1327,8 @@ export async function getAllFavorites(): Promise<Record<string, Favorite>> {
           }
         })
         .catch((err) => {
-          console.warn('后台同步收藏失败:', err);
-          triggerGlobalError('后台同步收藏失败');
+          // 后台同步失败不影响用户使用，静默处理
+          console.warn('[后台同步] 收藏数据同步失败（不影响使用，已使用缓存数据）:', err);
         });
 
       return cachedData;
@@ -1513,8 +1513,8 @@ export async function isFavorited(
           }
         })
         .catch((err) => {
-          console.warn('后台同步收藏失败:', err);
-          triggerGlobalError('后台同步收藏失败');
+          // 后台同步失败不影响用户使用，静默处理
+          console.warn('[后台同步] 收藏数据同步失败（不影响使用，已使用缓存数据）:', err);
         });
 
       return !!cachedFavorites[key];

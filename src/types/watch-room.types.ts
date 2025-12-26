@@ -48,6 +48,8 @@ export interface PlayState {
   searchTitle?: string;
   episode?: number;
   source: string;
+  poster?: string;  // 海报图片
+  totalEpisodes?: number;  // 总集数（用于判断是否显示集数信息）
 }
 
 // 直播状态
