@@ -1012,11 +1012,11 @@ function HomeClient() {
               <ContinueWatching />
 
               {/* 即将上映 */}
-              {(() => {
+              {/* (() => {
                 console.log('🔍 即将上映 section 渲染检查:', { loading, upcomingReleasesCount: upcomingReleases.length });
                 return null;
-              })()}
-              {!loading && upcomingReleases.length > 0 && (
+              })()*/}
+              {/* !loading && upcomingReleases.length > 0 && (
                 <section className='mb-8'>
                   <div className='mb-4 flex items-center justify-between'>
                     <SectionTitle title="即将上映" icon={Calendar} iconColor="text-orange-500" />
@@ -1069,7 +1069,7 @@ function HomeClient() {
                     })}
                   </ScrollableRow>
                 </section>
-              )}
+              )*/}
 
               {/* 热门电影 */}
               <section className='mb-8'>
