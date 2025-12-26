@@ -131,11 +131,6 @@ const Sidebar = ({ onToggle, activePath = '/' }: SidebarProps) => {
 
   const [menuItems, setMenuItems] = useState([
     {
-      icon: Globe,
-      label: '源浏览器',
-      href: '/source-browser',
-    },
-    {
       icon: Film,
       label: '电影',
       href: '/douban?type=movie',
