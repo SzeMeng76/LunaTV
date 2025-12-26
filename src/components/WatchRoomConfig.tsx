@@ -12,11 +12,27 @@ interface WatchRoomConfigProps {
   refreshConfig: () => Promise<void>;
 }
 
+interface ServerStats {
+  totalRooms: number;
+  totalMembers: number;
+  rooms: Array<{
+    id: string;
+    name: string;
+    memberCount: number;
+    isPublic: boolean;
+    hasPassword: boolean;
+    createdAt: number;
+  }>;
+}
+
 const WatchRoomConfig = ({ config, refreshConfig }: WatchRoomConfigProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [stats, setStats] = useState<ServerStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(false);
+  const [statsError, setStatsError] = useState<string | null>(null);
 
   const [settings, setSettings] = useState({
     enabled: false,
@@ -52,23 +68,25 @@ const WatchRoomConfig = ({ config, refreshConfig }: WatchRoomConfigProps) => {
     setTestResult(null);
 
     try {
-      // 测试健康检查端点
-      const healthUrl = `${settings.serverUrl}/health`;
-      const response = await fetch(healthUrl);
-
-      if (!response.ok) {
-        throw new Error(`服务器返回错误: ${response.status}`);
-      }
+      // 通过后端API测试连接，避免CORS问题
+      const response = await fetch('/api/watch-room/test-connection', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          serverUrl: settings.serverUrl.trim(),
+          authKey: settings.authKey.trim(),
+        }),
+      });
 
       const data = await response.json();
 
-      if (data.status === 'ok') {
+      if (data.success) {
         setTestResult({
           success: true,
-          message: `连接成功！服务器运行时间: ${Math.floor(data.uptime / 60)} 分钟`,
+          message: data.message || '连接成功！',
         });
       } else {
-        throw new Error('服务器状态异常');
+        throw new Error(data.error || '连接失败');
       }
     } catch (error: any) {
       setTestResult({
@@ -94,33 +112,96 @@ const WatchRoomConfig = ({ config, refreshConfig }: WatchRoomConfigProps) => {
       }
     }
 
+    if (!config) {
+      showMessage('error', '配置未加载');
+      return;
+    }
+
     setIsLoading(true);
     try {
+      // 更新完整配置
+      const updatedConfig = {
+        ...config,
+        WatchRoomConfig: {
+          enabled: settings.enabled,
+          serverUrl: settings.serverUrl.trim(),
+          authKey: settings.authKey.trim(),
+        }
+      };
+
       const response = await fetch('/api/admin/config', {
-        method: 'PUT',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          WatchRoomConfig: {
-            enabled: settings.enabled,
-            serverUrl: settings.serverUrl.trim(),
-            authKey: settings.authKey.trim(),
-          }
-        })
+        body: JSON.stringify(updatedConfig)
       });
 
+      // 检查响应是否有内容
+      const contentType = response.headers.get('content-type');
+      let data;
+
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        throw new Error(text || '服务器返回了非JSON响应');
+      }
+
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || '保存失败');
+        throw new Error(data.error || '保存失败');
       }
 
       showMessage('success', '观影室配置已保存');
       await refreshConfig();
     } catch (error: any) {
+      console.error('保存配置失败:', error);
       showMessage('error', error.message || '保存失败');
     } finally {
       setIsLoading(false);
     }
   };
+
+  // 获取服务器统计信息
+  const fetchStats = async () => {
+    if (!settings.enabled || !settings.serverUrl) {
+      return;
+    }
+
+    setStatsLoading(true);
+    setStatsError(null);
+
+    try {
+      const response = await fetch('/api/watch-room/stats', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          serverUrl: settings.serverUrl.trim(),
+          authKey: settings.authKey.trim(),
+        }),
+      });
+      const result = await response.json();
+
+      if (result.success && result.data) {
+        setStats(result.data);
+      } else {
+        setStatsError(result.error || '获取统计信息失败');
+      }
+    } catch (error: any) {
+      console.error('获取统计信息失败:', error);
+      setStatsError(error.message || '获取统计信息失败');
+    } finally {
+      setStatsLoading(false);
+    }
+  };
+
+  // 启用状态改变时自动获取统计信息
+  useEffect(() => {
+    if (settings.enabled && settings.serverUrl && settings.authKey) {
+      fetchStats();
+      // 每30秒自动刷新
+      const interval = setInterval(fetchStats, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [settings.enabled, settings.serverUrl, settings.authKey]);
 
   return (
     <div className='space-y-6'>
@@ -158,6 +239,22 @@ const WatchRoomConfig = ({ config, refreshConfig }: WatchRoomConfigProps) => {
             >
               查看部署教程 <ExternalLink className='w-4 h-4' />
             </a>
+          </div>
+        </div>
+      </div>
+
+      {/* 多站点共享警告 */}
+      <div className='bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4'>
+        <div className='flex items-start gap-3'>
+          <AlertCircle className='w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5' />
+          <div className='text-sm text-yellow-800 dark:text-yellow-200'>
+            <p className='font-medium mb-2'>⚠️ 重要提示：多站点共享</p>
+            <ul className='space-y-1 list-disc list-inside'>
+              <li><strong>如果多个 LunaTV 站点使用同一个观影室服务器，所有站点将共享房间列表</strong></li>
+              <li>站点A创建的房间，站点B的用户也能看到和加入</li>
+              <li>这可能导致用户困惑，建议每个站点使用独立的观影室服务器</li>
+              <li>如果需要跨站点观影，可以有意共用服务器（但需在房间名称中注明站点）</li>
+            </ul>
           </div>
         </div>
       </div>
@@ -266,7 +363,137 @@ const WatchRoomConfig = ({ config, refreshConfig }: WatchRoomConfigProps) => {
         >
           {isLoading ? '保存中...' : '保存配置'}
         </button>
+        {settings.enabled && (
+          <button
+            onClick={fetchStats}
+            disabled={statsLoading}
+            className='px-4 py-2 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors'
+          >
+            {statsLoading ? '刷新中...' : '刷新统计'}
+          </button>
+        )}
       </div>
+
+      {/* 服务器统计信息 */}
+      {settings.enabled && (
+        <div className='pt-6 border-t border-gray-200 dark:border-gray-700'>
+          <h4 className='text-md font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2'>
+            <Users className='w-5 h-5 text-indigo-500' />
+            服务器统计信息
+            <span className='text-xs font-normal text-gray-500 dark:text-gray-400'>(每30秒自动刷新)</span>
+          </h4>
+
+          {statsLoading && !stats && (
+            <div className='flex items-center justify-center py-8'>
+              <div className='text-sm text-gray-500 dark:text-gray-400'>加载统计信息...</div>
+            </div>
+          )}
+
+          {statsError && (
+            <div className='p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg'>
+              <div className='flex items-start gap-2 text-red-800 dark:text-red-200'>
+                <AlertCircle className='w-5 h-5 flex-shrink-0' />
+                <div className='text-sm'>
+                  <p className='font-medium'>无法获取统计信息</p>
+                  <p className='mt-1'>{statsError}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {stats && (
+            <div className='space-y-4'>
+              {/* 总览卡片 */}
+              <div className='grid grid-cols-2 gap-4'>
+                <div className='bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg p-4'>
+                  <div className='text-sm font-medium text-indigo-700 dark:text-indigo-300 mb-1'>
+                    活跃房间数
+                  </div>
+                  <div className='text-3xl font-bold text-indigo-900 dark:text-indigo-100'>
+                    {stats.totalRooms}
+                  </div>
+                </div>
+                <div className='bg-gradient-to-br from-green-50 to-teal-50 dark:from-green-900/20 dark:to-teal-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4'>
+                  <div className='text-sm font-medium text-green-700 dark:text-green-300 mb-1'>
+                    在线用户数
+                  </div>
+                  <div className='text-3xl font-bold text-green-900 dark:text-green-100'>
+                    {stats.totalMembers}
+                  </div>
+                </div>
+              </div>
+
+              {/* 房间列表 */}
+              {stats.rooms && stats.rooms.length > 0 && (
+                <div>
+                  <div className='text-sm font-medium text-gray-700 dark:text-gray-300 mb-3'>
+                    房间详情 ({stats.rooms.length})
+                  </div>
+                  <div className='space-y-2 max-h-96 overflow-y-auto'>
+                    {stats.rooms.map((room) => {
+                      const createdTime = new Date(room.createdAt);
+                      const now = new Date();
+                      const diffMinutes = Math.floor((now.getTime() - createdTime.getTime()) / 60000);
+                      const timeText = diffMinutes < 60
+                        ? `${diffMinutes}分钟前`
+                        : diffMinutes < 1440
+                        ? `${Math.floor(diffMinutes / 60)}小时前`
+                        : `${Math.floor(diffMinutes / 1440)}天前`;
+
+                      return (
+                        <div
+                          key={room.id}
+                          className='bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 hover:shadow-md transition-shadow'
+                        >
+                          <div className='flex items-start justify-between mb-2'>
+                            <div className='flex-1 min-w-0'>
+                              <h5 className='font-medium text-gray-900 dark:text-gray-100 truncate'>
+                                {room.name}
+                              </h5>
+                              <div className='flex items-center gap-2 mt-1'>
+                                <span className='text-xs font-mono text-gray-500 dark:text-gray-400'>
+                                  {room.id}
+                                </span>
+                                {!room.isPublic && (
+                                  <span className='text-xs px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded'>
+                                    私密
+                                  </span>
+                                )}
+                                {room.hasPassword && (
+                                  <span className='text-xs px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded'>
+                                    有密码
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className='flex items-center gap-2 ml-3'>
+                              <div className='text-right'>
+                                <div className='text-sm font-semibold text-gray-900 dark:text-gray-100'>
+                                  {room.memberCount} 人
+                                </div>
+                                <div className='text-xs text-gray-500 dark:text-gray-400'>
+                                  {timeText}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {stats.totalRooms === 0 && (
+                <div className='text-center py-8 text-gray-500 dark:text-gray-400'>
+                  <Users className='w-12 h-12 mx-auto mb-3 opacity-50' />
+                  <p className='text-sm'>当前没有活跃的房间</p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

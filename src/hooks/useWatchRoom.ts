@@ -26,6 +26,7 @@ export interface UseWatchRoomReturn {
   currentRoom: Room | null;
   members: Member[];
   messages: ChatMessage[];
+  isOwner: boolean;
 
   // 房间操作
   createRoom: (data: {
@@ -232,6 +233,17 @@ export function useWatchRoom(options: UseWatchRoomOptions): UseWatchRoomReturn {
 
     return new Promise<{ success: boolean; room?: Room; error?: string }>((resolve) => {
       socket.emit('room:create', { ...data, userName }, (response) => {
+        if (response.success && response.room) {
+          // 立即更新状态
+          setCurrentRoom(response.room);
+          setMembers([{
+            id: socket.id!,
+            name: userName,
+            isOwner: true,
+            lastHeartbeat: Date.now(),
+          }]);
+          setMessages([]);
+        }
         resolve(response);
       });
     });
@@ -245,6 +257,12 @@ export function useWatchRoom(options: UseWatchRoomOptions): UseWatchRoomReturn {
 
     return new Promise<{ success: boolean; room?: Room; members?: Member[]; error?: string }>((resolve) => {
       socket.emit('room:join', { roomId, password, userName }, (response) => {
+        if (response.success && response.room && response.members) {
+          // 立即更新状态
+          setCurrentRoom(response.room);
+          setMembers(response.members);
+          setMessages([]);
+        }
         resolve(response);
       });
     });
@@ -254,6 +272,10 @@ export function useWatchRoom(options: UseWatchRoomOptions): UseWatchRoomReturn {
   const leaveRoom = useCallback(() => {
     if (socket && connected) {
       socket.emit('room:leave');
+      // 立即清空本地状态，不等服务器响应
+      setCurrentRoom(null);
+      setMembers([]);
+      setMessages([]);
     }
   }, [socket, connected]);
 
@@ -336,12 +358,18 @@ export function useWatchRoom(options: UseWatchRoomOptions): UseWatchRoomReturn {
     };
   }, [socket]);
 
+  // 计算当前用户是否为房主
+  const isOwner = currentRoom
+    ? members.find(m => m.name === userName)?.isOwner || false
+    : false;
+
   return {
     socket,
     connected,
     currentRoom,
     members,
     messages,
+    isOwner,
     createRoom,
     joinRoom,
     leaveRoom,
