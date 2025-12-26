@@ -932,7 +932,7 @@ function HomeClient() {
             // 首页视图
             <>
               {/* Hero Banner 轮播 */}
-              {!loading && (hotMovies.length > 0 || hotTvShows.length > 0 || hotVarietyShows.length > 0 || hotShortDramas.length > 0) && (
+              {/* !loading && (hotMovies.length > 0 || hotTvShows.length > 0 || hotVarietyShows.length > 0 || hotShortDramas.length > 0) && (
                 <section className='mb-8'>
                   <HeroBanner
                     items={[
@@ -1006,7 +1006,7 @@ function HomeClient() {
                     showIndicators={true}
                   />
                 </section>
-              )}
+              )*/}
 
               {/* 继续观看 */}
               <ContinueWatching />
