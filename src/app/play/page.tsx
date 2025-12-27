@@ -8,6 +8,7 @@ import { Heart, ChevronUp, Download } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import { useDownload } from '@/contexts/DownloadContext';
+import DownloadEpisodeSelector from '@/components/download/DownloadEpisodeSelector';
 import EpisodeSelector from '@/components/EpisodeSelector';
 import NetDiskSearchResults from '@/components/NetDiskSearchResults';
 import PageLayout from '@/components/PageLayout';
@@ -103,6 +104,9 @@ function PlayPageClient() {
   const [isSkipSettingOpen, setIsSkipSettingOpen] = useState(false);
   const [currentPlayTime, setCurrentPlayTime] = useState(0);
   const [videoDuration, setVideoDuration] = useState(0);
+
+  // 下载选集面板状态
+  const [showDownloadEpisodeSelector, setShowDownloadEpisodeSelector] = useState(false);
 
   // 进度条拖拽状态管理
   const isDraggingProgressRef = useRef(false);
@@ -5035,7 +5039,8 @@ function PlayPageClient() {
   }
 
   return (
-    <PageLayout activePath='/play'>
+    <>
+      <PageLayout activePath='/play'>
       <div className='flex flex-col gap-3 py-4 px-5 lg:px-[3rem] 2xl:px-20'>
         {/* 第一行：影片标题 */}
         <div className='py-1'>
@@ -5300,34 +5305,9 @@ function PlayPageClient() {
 
                     {/* 下载按钮 */}
                     <button
-                      onClick={async (e) => {
+                      onClick={(e) => {
                         e.stopPropagation();
-                        // 获取当前播放URL
-                        const currentUrl = videoUrl;
-                        if (!currentUrl) {
-                          alert('无法获取视频地址');
-                          return;
-                        }
-
-                        // 检查是否是M3U8
-                        if (!currentUrl.includes('.m3u8')) {
-                          alert('仅支持M3U8格式视频下载');
-                          return;
-                        }
-
-                        try {
-                          // 生成下载标题：视频名_第X集
-                          const episodeName = detail?.episodes && detail.episodes.length > 0
-                            ? `第${currentEpisodeIndex + 1}集`
-                            : '';
-                          const downloadTitle = `${videoTitle || '视频'}${episodeName ? `_${episodeName}` : ''}`;
-
-                          // 创建下载任务
-                          await createTask(currentUrl, downloadTitle, 'TS');
-                        } catch (error) {
-                          console.error('创建下载任务失败:', error);
-                          alert('创建下载任务失败: ' + (error as Error).message);
-                        }
+                        setShowDownloadEpisodeSelector(true);
                       }}
                       className='group relative flex-shrink-0 transition-all duration-300 hover:scale-105'
                     >
@@ -6202,7 +6182,59 @@ function PlayPageClient() {
           </div>
         </div>
       )}
-    </PageLayout>
+      </PageLayout>
+
+      {/* 下载选集面板 */}
+      <DownloadEpisodeSelector
+      isOpen={showDownloadEpisodeSelector}
+      onClose={() => setShowDownloadEpisodeSelector(false)}
+      totalEpisodes={detail?.episodes?.length || 1}
+      episodesTitles={detail?.episodes_titles || []}
+      videoTitle={videoTitle || '视频'}
+      currentEpisodeIndex={currentEpisodeIndex}
+      onDownload={async (episodeIndexes) => {
+        if (!detail?.episodes || detail.episodes.length === 0) {
+          // 单集视频，直接下载当前
+          const currentUrl = videoUrl;
+          if (!currentUrl) {
+            alert('无法获取视频地址');
+            return;
+          }
+          if (!currentUrl.includes('.m3u8')) {
+            alert('仅支持M3U8格式视频下载');
+            return;
+          }
+          try {
+            await createTask(currentUrl, videoTitle || '视频', 'TS');
+          } catch (error) {
+            console.error('创建下载任务失败:', error);
+            alert('创建下载任务失败: ' + (error as Error).message);
+          }
+          return;
+        }
+
+        // 批量下载多集
+        for (const episodeIndex of episodeIndexes) {
+          try {
+            const episodeUrl = detail.episodes[episodeIndex];
+            if (!episodeUrl) continue;
+
+            // 检查是否是M3U8
+            if (!episodeUrl.includes('.m3u8')) {
+              console.warn(`第${episodeIndex + 1}集不是M3U8格式，跳过`);
+              continue;
+            }
+
+            const episodeName = `第${episodeIndex + 1}集`;
+            const downloadTitle = `${videoTitle || '视频'}_${episodeName}`;
+            await createTask(episodeUrl, downloadTitle, 'TS');
+          } catch (error) {
+            console.error(`创建第${episodeIndex + 1}集下载任务失败:`, error);
+          }
+        }
+      }}
+      />
+    </>
   );
 }
 

@@ -41,19 +41,28 @@ const CustomAdFilterConfig = ({ config, refreshConfig }: CustomAdFilterConfigPro
   const handleSave = async () => {
     setIsLoading(true);
     try {
+      if (!config) {
+        throw new Error('配置未加载');
+      }
+
+      // 合并完整的 AdminConfig（参考 MoonTVPlus）
+      const updatedConfig = {
+        ...config,
+        SiteConfig: {
+          ...config.SiteConfig,
+          CustomAdFilterCode: filterSettings.customAdFilterCode,
+          CustomAdFilterVersion: filterSettings.customAdFilterVersion,
+        }
+      };
+
       const response = await fetch('/api/admin/config', {
-        method: 'PUT',
+        method: 'POST',  // 改为 POST
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          SiteConfig: {
-            CustomAdFilterCode: filterSettings.customAdFilterCode,
-            CustomAdFilterVersion: filterSettings.customAdFilterVersion,
-          }
-        })
+        body: JSON.stringify(updatedConfig)  // 发送完整配置
       });
 
       if (!response.ok) {
-        const error = await response.json();
+        const error = await response.json().catch(() => ({}));
         throw new Error(error.error || '保存失败');
       }
 
@@ -66,12 +75,55 @@ const CustomAdFilterConfig = ({ config, refreshConfig }: CustomAdFilterConfigPro
     }
   };
 
-  // 重置为默认
+  // 重置输入框（不保存）
   const handleReset = () => {
     setFilterSettings({
       customAdFilterCode: '',
       customAdFilterVersion: 1,
     });
+  };
+
+  // 恢复默认并保存到数据库
+  const handleRestoreDefault = async () => {
+    setIsLoading(true);
+    try {
+      if (!config) {
+        throw new Error('配置未加载');
+      }
+
+      // 合并完整的 AdminConfig，重置自定义去广告配置
+      const updatedConfig = {
+        ...config,
+        SiteConfig: {
+          ...config.SiteConfig,
+          CustomAdFilterCode: '',
+          CustomAdFilterVersion: 1,
+        }
+      };
+
+      const response = await fetch('/api/admin/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedConfig)
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.error || '恢复默认失败');
+      }
+
+      setFilterSettings({
+        customAdFilterCode: '',
+        customAdFilterVersion: 1,
+      });
+
+      showMessage('success', '已恢复为默认配置');
+      await refreshConfig();
+    } catch (error: any) {
+      showMessage('error', error.message || '恢复默认失败');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // 默认示例代码
@@ -230,6 +282,13 @@ function filterAdsFromM3U8(type, m3u8Content) {
           className='px-4 py-2 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors'
         >
           重置
+        </button>
+        <button
+          onClick={handleRestoreDefault}
+          disabled={isLoading}
+          className='px-4 py-2 bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400 text-white rounded-lg font-medium transition-colors'
+        >
+          {isLoading ? '恢复中...' : '恢复默认'}
         </button>
       </div>
     </div>

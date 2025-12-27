@@ -89,8 +89,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 更新缓存中的站点设置
+    // 更新缓存中的站点设置，保留现有的自定义去广告配置
     adminConfig.SiteConfig = {
+      ...adminConfig.SiteConfig, // 保留所有现有字段
       SiteName,
       Announcement,
       SearchDownstreamMaxPage,
