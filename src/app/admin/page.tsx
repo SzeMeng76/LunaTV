@@ -6197,6 +6197,7 @@ function AdminPageClient() {
                       minTrustLevel: 0,
                     }
                   }
+                  providers={config?.OIDCProviders || []}
                   onSave={async (newConfig) => {
                     if (!config) return;
                     await fetch('/api/admin/config', {
@@ -6206,6 +6207,23 @@ function AdminPageClient() {
                         ...config,
                         OIDCAuthConfig: newConfig,
                       }),
+                    });
+                    await fetchConfig();
+                  }}
+                  onSaveProviders={async (newProviders) => {
+                    if (!config) return;
+                    const updatedConfig = {
+                      ...config,
+                      OIDCProviders: newProviders,
+                    };
+                    // 如果切换到多provider模式，删除旧的单provider配置
+                    if (newProviders.length > 0) {
+                      delete updatedConfig.OIDCAuthConfig;
+                    }
+                    await fetch('/api/admin/config', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify(updatedConfig),
                     });
                     await fetchConfig();
                   }}

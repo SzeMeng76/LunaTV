@@ -76,16 +76,49 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 验证state
-    const storedState = request.cookies.get('oidc_state')?.value;
-    if (!storedState || storedState !== state) {
+    // 验证state并获取 provider ID
+    const storedStateData = request.cookies.get('oidc_state')?.value;
+    if (!storedStateData) {
+      return NextResponse.redirect(
+        new URL('/login?error=' + encodeURIComponent('状态验证失败'), origin)
+      );
+    }
+
+    let storedState: string;
+    let providerId = 'default';
+
+    try {
+      // 尝试解析为 JSON（新格式）
+      const parsed = JSON.parse(storedStateData);
+      storedState = parsed.state;
+      providerId = parsed.providerId || 'default';
+    } catch {
+      // 向后兼容：旧格式直接是 state 字符串
+      storedState = storedStateData;
+    }
+
+    if (storedState !== state) {
       return NextResponse.redirect(
         new URL('/login?error=' + encodeURIComponent('状态验证失败'), origin)
       );
     }
 
     const config = await getConfig();
-    const oidcConfig = config.OIDCAuthConfig;
+
+    // 优先使用新的多 Provider 配置
+    let oidcConfig = null;
+
+    if (config.OIDCProviders && config.OIDCProviders.length > 0) {
+      // 查找指定的 Provider
+      if (providerId === 'default') {
+        oidcConfig = config.OIDCProviders.find(p => p.enabled);
+      } else {
+        oidcConfig = config.OIDCProviders.find(p => p.id === providerId);
+      }
+    } else if (config.OIDCAuthConfig) {
+      // 向后兼容：使用旧的单 Provider 配置
+      oidcConfig = config.OIDCAuthConfig;
+    }
 
     // 检查OIDC配置
     if (!oidcConfig || !oidcConfig.tokenEndpoint || !oidcConfig.userInfoEndpoint || !oidcConfig.clientId || !oidcConfig.clientSecret) {
@@ -218,6 +251,7 @@ export async function GET(request: NextRequest) {
       email: userInfo.email,
       name: userInfo.name,
       trust_level: userInfo.trust_level, // 提取trust_level字段
+      providerId: providerId, // 存储 provider ID 用于注册时验证
       timestamp: Date.now(),
     };
 

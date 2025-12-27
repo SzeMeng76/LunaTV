@@ -473,6 +473,44 @@ export async function configSelfCheck(adminConfig: AdminConfig): Promise<AdminCo
     };
   }
 
+  // 🔥 OIDC 配置迁移：从单 Provider 迁移到多 Provider
+  if (adminConfig.OIDCAuthConfig && !adminConfig.OIDCProviders) {
+    // 自动识别 Provider ID
+    let providerId = 'custom';
+    const issuer = adminConfig.OIDCAuthConfig.issuer?.toLowerCase() || '';
+
+    if (issuer.includes('google') || issuer.includes('accounts.google.com')) {
+      providerId = 'google';
+    } else if (issuer.includes('github')) {
+      providerId = 'github';
+    } else if (issuer.includes('microsoft') || issuer.includes('login.microsoftonline.com')) {
+      providerId = 'microsoft';
+    } else if (issuer.includes('linux.do') || issuer.includes('connect.linux.do')) {
+      providerId = 'linuxdo';
+    }
+
+    // 迁移到新格式
+    adminConfig.OIDCProviders = [{
+      id: providerId,
+      name: adminConfig.OIDCAuthConfig.buttonText || providerId.toUpperCase(),
+      enabled: adminConfig.OIDCAuthConfig.enabled,
+      enableRegistration: adminConfig.OIDCAuthConfig.enableRegistration,
+      issuer: adminConfig.OIDCAuthConfig.issuer,
+      authorizationEndpoint: adminConfig.OIDCAuthConfig.authorizationEndpoint,
+      tokenEndpoint: adminConfig.OIDCAuthConfig.tokenEndpoint,
+      userInfoEndpoint: adminConfig.OIDCAuthConfig.userInfoEndpoint,
+      clientId: adminConfig.OIDCAuthConfig.clientId,
+      clientSecret: adminConfig.OIDCAuthConfig.clientSecret,
+      buttonText: adminConfig.OIDCAuthConfig.buttonText,
+      minTrustLevel: adminConfig.OIDCAuthConfig.minTrustLevel || 0,
+    }];
+
+    console.log(`[Config Migration] Migrated OIDCAuthConfig to OIDCProviders with provider: ${providerId}`);
+
+    // 保留旧配置一段时间以防回滚需要
+    // delete adminConfig.OIDCAuthConfig;
+  }
+
   // 站长变更自检
   const ownerUser = process.env.USERNAME;
 

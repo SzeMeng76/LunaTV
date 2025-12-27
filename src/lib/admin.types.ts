@@ -114,6 +114,7 @@ export interface AdminConfig {
     showAvatar: boolean;                 // 是否显示用户头像
     requestWriteAccess: boolean;         // 是否请求发送消息权限
   };
+  // 旧的单 Provider 配置（保留用于向后兼容）
   OIDCAuthConfig?: {
     enabled: boolean;                    // 是否启用OIDC登录
     enableRegistration: boolean;         // 是否启用OIDC注册
@@ -126,6 +127,21 @@ export interface AdminConfig {
     buttonText: string;                  // OIDC登录按钮文字
     minTrustLevel: number;               // 最低信任等级（仅LinuxDo网站有效，为0时不判断）
   };
+  // 新的多 Provider 配置
+  OIDCProviders?: {
+    id: string;                          // Provider ID (google, github, microsoft, linuxdo, custom)
+    name: string;                        // 显示名称
+    enabled: boolean;                    // 是否启用此Provider
+    enableRegistration: boolean;         // 是否启用注册
+    issuer: string;                      // OIDC Issuer URL
+    authorizationEndpoint: string;       // 授权端点
+    tokenEndpoint: string;               // Token端点
+    userInfoEndpoint: string;            // 用户信息端点
+    clientId: string;                    // Client ID
+    clientSecret: string;                // Client Secret
+    buttonText: string;                  // 按钮文字
+    minTrustLevel: number;               // 最低信任等级
+  }[];
   ShortDramaConfig?: {
     primaryApiUrl: string;               // 主API地址
     alternativeApiUrl: string;           // 备用API地址（私密）

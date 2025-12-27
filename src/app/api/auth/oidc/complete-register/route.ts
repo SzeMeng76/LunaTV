@@ -93,7 +93,24 @@ export async function POST(request: NextRequest) {
     }
 
     const config = await getConfig();
-    const oidcConfig = config.OIDCAuthConfig;
+
+    // 从 OIDC session 中获取 provider ID（如果有）
+    const providerId = oidcSession.providerId || 'default';
+
+    // 优先使用新的多 Provider 配置
+    let oidcConfig = null;
+
+    if (config.OIDCProviders && config.OIDCProviders.length > 0) {
+      // 查找指定的 Provider
+      if (providerId === 'default') {
+        oidcConfig = config.OIDCProviders.find(p => p.enabled);
+      } else {
+        oidcConfig = config.OIDCProviders.find(p => p.id === providerId);
+      }
+    } else if (config.OIDCAuthConfig) {
+      // 向后兼容：使用旧的单 Provider 配置
+      oidcConfig = config.OIDCAuthConfig;
+    }
 
     // 检查是否启用OIDC注册
     if (!oidcConfig || !oidcConfig.enableRegistration) {

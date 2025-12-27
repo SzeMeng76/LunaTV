@@ -1,7 +1,22 @@
 'use client';
 
-import { AlertCircle, CheckCircle2, Save, KeyRound, Globe } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Save, KeyRound, Globe, Plus, Trash2, Edit2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+
+interface OIDCProvider {
+  id: string;
+  name: string;
+  enabled: boolean;
+  enableRegistration: boolean;
+  issuer: string;
+  authorizationEndpoint: string;
+  tokenEndpoint: string;
+  userInfoEndpoint: string;
+  clientId: string;
+  clientSecret: string;
+  buttonText: string;
+  minTrustLevel: number;
+}
 
 interface OIDCAuthConfigProps {
   config: {
@@ -16,11 +31,16 @@ interface OIDCAuthConfigProps {
     buttonText: string;
     minTrustLevel: number;
   };
+  providers?: OIDCProvider[];
   onSave: (config: OIDCAuthConfigProps['config']) => Promise<void>;
+  onSaveProviders?: (providers: OIDCProvider[]) => Promise<void>;
 }
 
-export function OIDCAuthConfig({ config, onSave }: OIDCAuthConfigProps) {
+export function OIDCAuthConfig({ config, providers = [], onSave, onSaveProviders }: OIDCAuthConfigProps) {
+  const [mode, setMode] = useState<'legacy' | 'multi'>(providers.length > 0 ? 'multi' : 'legacy');
   const [localConfig, setLocalConfig] = useState(config);
+  const [localProviders, setLocalProviders] = useState<OIDCProvider[]>(providers);
+  const [editingProvider, setEditingProvider] = useState<OIDCProvider | null>(null);
   const [saving, setSaving] = useState(false);
   const [discovering, setDiscovering] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -28,12 +48,19 @@ export function OIDCAuthConfig({ config, onSave }: OIDCAuthConfigProps) {
 
   useEffect(() => {
     setLocalConfig(config);
-  }, [config]);
+    setLocalProviders(providers);
+    setMode(providers.length > 0 ? 'multi' : 'legacy');
+  }, [config, providers]);
 
   useEffect(() => {
-    const changed = JSON.stringify(localConfig) !== JSON.stringify(config);
-    setHasChanges(changed);
-  }, [localConfig, config]);
+    if (mode === 'multi') {
+      const changed = JSON.stringify(localProviders) !== JSON.stringify(providers);
+      setHasChanges(changed);
+    } else {
+      const changed = JSON.stringify(localConfig) !== JSON.stringify(config);
+      setHasChanges(changed);
+    }
+  }, [localConfig, config, localProviders, providers, mode]);
 
   const handleDiscover = async () => {
     if (!localConfig.issuer) {
@@ -79,7 +106,11 @@ export function OIDCAuthConfig({ config, onSave }: OIDCAuthConfigProps) {
     setSaving(true);
     setMessage(null);
     try {
-      await onSave(localConfig);
+      if (mode === 'multi' && onSaveProviders) {
+        await onSaveProviders(localProviders);
+      } else {
+        await onSave(localConfig);
+      }
       setMessage({ type: 'success', text: '保存成功' });
       setHasChanges(false);
       setTimeout(() => setMessage(null), 3000);
@@ -91,6 +122,76 @@ export function OIDCAuthConfig({ config, onSave }: OIDCAuthConfigProps) {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleAddProvider = () => {
+    const newProvider: OIDCProvider = {
+      id: `provider-${Date.now()}`,
+      name: '新 Provider',
+      enabled: false,
+      enableRegistration: false,
+      issuer: '',
+      authorizationEndpoint: '',
+      tokenEndpoint: '',
+      userInfoEndpoint: '',
+      clientId: '',
+      clientSecret: '',
+      buttonText: '',
+      minTrustLevel: 0,
+    };
+    setEditingProvider(newProvider);
+  };
+
+  const handleSaveProvider = (provider: OIDCProvider) => {
+    const existingIndex = localProviders.findIndex(p => p.id === provider.id);
+    if (existingIndex >= 0) {
+      const updated = [...localProviders];
+      updated[existingIndex] = provider;
+      setLocalProviders(updated);
+    } else {
+      setLocalProviders([...localProviders, provider]);
+    }
+    setEditingProvider(null);
+    setHasChanges(true);
+  };
+
+  const handleDeleteProvider = (id: string) => {
+    if (confirm('确定要删除这个 Provider 吗？')) {
+      setLocalProviders(localProviders.filter(p => p.id !== id));
+      setHasChanges(true);
+    }
+  };
+
+  const handleMigrateToMulti = () => {
+    if (confirm('确定要迁移到多 Provider 模式吗？这将使用当前单 Provider 配置创建第一个 Provider。')) {
+      const providerId = detectProviderId(localConfig.issuer);
+      const newProvider: OIDCProvider = {
+        id: providerId,
+        name: localConfig.buttonText || providerId.toUpperCase(),
+        enabled: localConfig.enabled,
+        enableRegistration: localConfig.enableRegistration,
+        issuer: localConfig.issuer,
+        authorizationEndpoint: localConfig.authorizationEndpoint,
+        tokenEndpoint: localConfig.tokenEndpoint,
+        userInfoEndpoint: localConfig.userInfoEndpoint,
+        clientId: localConfig.clientId,
+        clientSecret: localConfig.clientSecret,
+        buttonText: localConfig.buttonText,
+        minTrustLevel: localConfig.minTrustLevel,
+      };
+      setLocalProviders([newProvider]);
+      setMode('multi');
+      setHasChanges(true);
+    }
+  };
+
+  const detectProviderId = (issuer: string): string => {
+    const lowerIssuer = issuer.toLowerCase();
+    if (lowerIssuer.includes('google') || lowerIssuer.includes('accounts.google.com')) return 'google';
+    if (lowerIssuer.includes('github')) return 'github';
+    if (lowerIssuer.includes('microsoft') || lowerIssuer.includes('login.microsoftonline.com')) return 'microsoft';
+    if (lowerIssuer.includes('linux.do') || lowerIssuer.includes('connect.linux.do')) return 'linuxdo';
+    return 'custom';
   };
 
   return (
@@ -105,6 +206,109 @@ export function OIDCAuthConfig({ config, onSave }: OIDCAuthConfigProps) {
           配置 OpenID Connect 登录，支持 Google、Microsoft、GitHub、LinuxDo 等提供商
         </p>
       </div>
+
+      {/* 模式切换 */}
+      <div className='flex gap-2 p-1 bg-gray-100 dark:bg-gray-800 rounded-lg'>
+        <button
+          onClick={() => setMode('legacy')}
+          className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            mode === 'legacy'
+              ? 'bg-white dark:bg-gray-700 text-purple-600 dark:text-purple-400 shadow-sm'
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+          }`}
+        >
+          单 Provider 模式（旧版）
+        </button>
+        <button
+          onClick={() => setMode('multi')}
+          className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            mode === 'multi'
+              ? 'bg-white dark:bg-gray-700 text-purple-600 dark:text-purple-400 shadow-sm'
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+          }`}
+        >
+          多 Provider 模式（推荐）
+        </button>
+      </div>
+
+      {/* 多 Provider 模式 UI */}
+      {mode === 'multi' ? (
+        <div className='space-y-4'>
+          {/* 迁移提示 */}
+          {localProviders.length === 0 && localConfig.enabled && (
+            <div className='bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4'>
+              <div className='flex gap-3'>
+                <AlertCircle className='w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5' />
+                <div className='flex-1'>
+                  <p className='text-sm text-yellow-800 dark:text-yellow-200 font-semibold'>检测到旧版单 Provider 配置</p>
+                  <p className='text-sm text-yellow-700 dark:text-yellow-300 mt-1'>
+                    您可以将现有配置迁移到多 Provider 模式，这样可以同时配置多个登录提供商。
+                  </p>
+                  <button
+                    onClick={handleMigrateToMulti}
+                    className='mt-3 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg text-sm font-medium transition-colors'
+                  >
+                    立即迁移
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Provider 列表 */}
+          <div className='space-y-3'>
+            {localProviders.map((provider) => (
+              <div
+                key={provider.id}
+                className='flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700'
+              >
+                <div className='flex-1'>
+                  <div className='flex items-center gap-2'>
+                    <h3 className='font-medium text-gray-900 dark:text-gray-100'>{provider.name}</h3>
+                    <span className={`px-2 py-0.5 text-xs rounded-full ${
+                      provider.enabled
+                        ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                    }`}>
+                      {provider.enabled ? '已启用' : '已禁用'}
+                    </span>
+                  </div>
+                  <p className='text-sm text-gray-600 dark:text-gray-400 mt-1'>
+                    ID: {provider.id} | {provider.issuer || '未配置 Issuer'}
+                  </p>
+                </div>
+                <div className='flex gap-2'>
+                  <button
+                    onClick={() => setEditingProvider(provider)}
+                    className='p-2 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-colors'
+                    title='编辑'
+                  >
+                    <Edit2 className='w-4 h-4' />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteProvider(provider.id)}
+                    className='p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors'
+                    title='删除'
+                  >
+                    <Trash2 className='w-4 h-4' />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* 添加 Provider 按钮 */}
+          <button
+            onClick={handleAddProvider}
+            className='w-full py-3 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:border-purple-500 dark:hover:border-purple-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors flex items-center justify-center gap-2 font-medium'
+          >
+            <Plus className='w-5 h-5' />
+            添加新 Provider
+          </button>
+        </div>
+      ) : (
+        /* 单 Provider 模式 UI（原有代码） */
+        <div className='space-y-6'>
 
       {/* 配置提示 */}
       <div className='bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4'>
@@ -348,6 +552,8 @@ export function OIDCAuthConfig({ config, onSave }: OIDCAuthConfigProps) {
           仅对 LinuxDo 有效，0 表示不限制。其他提供商请保持为 0
         </p>
       </div>
+        </div>
+      )}
 
       {/* 消息提示 */}
       {message && (
@@ -386,6 +592,333 @@ export function OIDCAuthConfig({ config, onSave }: OIDCAuthConfigProps) {
           {saving ? '保存中...' : '保存配置'}
         </button>
       </div>
+
+      {/* Provider 编辑模态框 */}
+      {editingProvider && (
+        <ProviderEditModal
+          provider={editingProvider}
+          onSave={handleSaveProvider}
+          onCancel={() => setEditingProvider(null)}
+        />
+      )}
     </div>
+  );
+}
+
+// Provider 编辑模态框组件
+function ProviderEditModal({
+  provider,
+  onSave,
+  onCancel,
+}: {
+  provider: OIDCProvider;
+  onSave: (provider: OIDCProvider) => void;
+  onCancel: () => void;
+}) {
+  const [localProvider, setLocalProvider] = useState(provider);
+  const [discovering, setDiscovering] = useState(false);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const handleDiscover = async () => {
+    if (!localProvider.issuer) {
+      setMessage({ type: 'error', text: '请先输入 Issuer URL' });
+      return;
+    }
+
+    setDiscovering(true);
+    setMessage(null);
+
+    try {
+      const response = await fetch('/api/admin/oidc-discover', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ issuerUrl: localProvider.issuer }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || '自动发现失败');
+      }
+
+      const data = await response.json();
+      setLocalProvider({
+        ...localProvider,
+        authorizationEndpoint: data.authorization_endpoint || '',
+        tokenEndpoint: data.token_endpoint || '',
+        userInfoEndpoint: data.userinfo_endpoint || '',
+      });
+      setMessage({ type: 'success', text: '自动发现成功' });
+      setTimeout(() => setMessage(null), 3000);
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: `自动发现失败: ${(error as Error).message}`,
+      });
+    } finally {
+      setDiscovering(false);
+    }
+  };
+
+  return (
+    <div className='fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-sm' onClick={onCancel}>
+      <div className='flex min-h-screen items-center justify-center p-4'>
+        <div className='bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl p-6 my-8' onClick={(e) => e.stopPropagation()}>
+        <h3 className='text-xl font-semibold text-gray-900 dark:text-gray-100 mb-6'>
+          {provider.name === '新 Provider' ? '添加 Provider' : '编辑 Provider'}
+        </h3>
+
+        <div className='space-y-4'>
+          {/* Provider ID */}
+          <div>
+            <label className='block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2'>
+              Provider ID *
+            </label>
+            <input
+              type='text'
+              value={localProvider.id}
+              onChange={(e) => setLocalProvider({ ...localProvider, id: e.target.value })}
+              className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent'
+              placeholder='google, github, linuxdo, custom, etc.'
+            />
+            <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
+              唯一标识符，建议使用小写英文（如：google, github, linuxdo）
+            </p>
+          </div>
+
+          {/* Provider Name */}
+          <div>
+            <label className='block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2'>
+              显示名称 *
+            </label>
+            <input
+              type='text'
+              value={localProvider.name}
+              onChange={(e) => setLocalProvider({ ...localProvider, name: e.target.value })}
+              className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent'
+              placeholder='Google'
+            />
+          </div>
+
+          {/* Enabled Toggle */}
+          <div className='flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg'>
+            <div>
+              <label className='text-sm font-medium text-gray-900 dark:text-gray-100'>启用此 Provider</label>
+              <p className='text-xs text-gray-500 dark:text-gray-400 mt-1'>开启后，登录页面将显示此 Provider</p>
+            </div>
+            <button
+              type='button'
+              onClick={() => setLocalProvider({ ...localProvider, enabled: !localProvider.enabled })}
+              className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
+                localProvider.enabled ? 'bg-purple-600' : 'bg-gray-200 dark:bg-gray-700'
+              }`}
+            >
+              <span
+                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                  localProvider.enabled ? 'translate-x-5' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div>
+
+          {/* Enable Registration Toggle */}
+          <div className='flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg'>
+            <div>
+              <label className='text-sm font-medium text-gray-900 dark:text-gray-100'>允许注册</label>
+              <p className='text-xs text-gray-500 dark:text-gray-400 mt-1'>允许通过此 Provider 自动注册新用户</p>
+            </div>
+            <button
+              type='button'
+              onClick={() => setLocalProvider({ ...localProvider, enableRegistration: !localProvider.enableRegistration })}
+              className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
+                localProvider.enableRegistration ? 'bg-purple-600' : 'bg-gray-200 dark:bg-gray-700'
+              }`}
+            >
+              <span
+                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                  localProvider.enableRegistration ? 'translate-x-5' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div>
+
+          {/* Issuer */}
+          <div>
+            <label className='block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2'>
+              Issuer URL（可选）
+            </label>
+            <div className='flex gap-2'>
+              <input
+                type='text'
+                value={localProvider.issuer}
+                onChange={(e) => setLocalProvider({ ...localProvider, issuer: e.target.value })}
+                className='flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent'
+                placeholder='https://accounts.google.com'
+              />
+              <button
+                type='button'
+                onClick={handleDiscover}
+                disabled={discovering || !localProvider.issuer}
+                className='px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors flex items-center gap-2'
+              >
+                <Globe className='w-4 h-4' />
+                {discovering ? '发现中...' : '自动发现'}
+              </button>
+            </div>
+            <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
+              填写后可点击"自动发现"按钮自动获取端点配置
+            </p>
+          </div>
+
+          {/* Authorization Endpoint */}
+          <div>
+            <label className='block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2'>
+              Authorization Endpoint *
+            </label>
+            <input
+              type='text'
+              value={localProvider.authorizationEndpoint}
+              onChange={(e) => setLocalProvider({ ...localProvider, authorizationEndpoint: e.target.value })}
+              className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent'
+              placeholder='https://accounts.google.com/o/oauth2/v2/auth'
+            />
+          </div>
+
+          {/* Token Endpoint */}
+          <div>
+            <label className='block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2'>
+              Token Endpoint *
+            </label>
+            <input
+              type='text'
+              value={localProvider.tokenEndpoint}
+              onChange={(e) => setLocalProvider({ ...localProvider, tokenEndpoint: e.target.value })}
+              className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent'
+              placeholder='https://oauth2.googleapis.com/token'
+            />
+          </div>
+
+          {/* UserInfo Endpoint */}
+          <div>
+            <label className='block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2'>
+              UserInfo Endpoint *
+            </label>
+            <input
+              type='text'
+              value={localProvider.userInfoEndpoint}
+              onChange={(e) => setLocalProvider({ ...localProvider, userInfoEndpoint: e.target.value })}
+              className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent'
+              placeholder='https://openidconnect.googleapis.com/v1/userinfo'
+            />
+          </div>
+
+          {/* Client ID */}
+          <div>
+            <label className='block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2'>
+              Client ID *
+            </label>
+            <input
+              type='text'
+              value={localProvider.clientId}
+              onChange={(e) => setLocalProvider({ ...localProvider, clientId: e.target.value })}
+              className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent'
+              placeholder='your-client-id.apps.googleusercontent.com'
+            />
+          </div>
+
+          {/* Client Secret */}
+          <div>
+            <label className='block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2'>
+              Client Secret *
+            </label>
+            <input
+              type='password'
+              value={localProvider.clientSecret}
+              onChange={(e) => setLocalProvider({ ...localProvider, clientSecret: e.target.value })}
+              className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent'
+              placeholder='••••••••••••••••'
+            />
+          </div>
+
+          {/* Button Text */}
+          <div>
+            <label className='block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2'>
+              登录按钮文字
+            </label>
+            <input
+              type='text'
+              value={localProvider.buttonText}
+              onChange={(e) => setLocalProvider({ ...localProvider, buttonText: e.target.value })}
+              className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent'
+              placeholder='使用 Google 登录'
+            />
+            <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
+              自定义登录按钮显示的文字，留空则根据提供商自动识别
+            </p>
+          </div>
+
+          {/* Min Trust Level */}
+          <div>
+            <label className='block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2'>
+              最低信任等级（LinuxDo 专用）
+            </label>
+            <input
+              type='number'
+              min='0'
+              value={localProvider.minTrustLevel}
+              onChange={(e) => setLocalProvider({ ...localProvider, minTrustLevel: parseInt(e.target.value) || 0 })}
+              className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent'
+              placeholder='0'
+            />
+            <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
+              仅对 LinuxDo 有效，0 表示不限制。其他提供商请保持为 0
+            </p>
+          </div>
+
+          {/* Message */}
+          {message && (
+            <div
+              className={`flex items-center gap-2 p-4 rounded-lg ${
+                message.type === 'success'
+                  ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
+                  : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
+              }`}
+            >
+              {message.type === 'success' ? (
+                <CheckCircle2 className='w-5 h-5 text-green-600 dark:text-green-400' />
+              ) : (
+                <AlertCircle className='w-5 h-5 text-red-600 dark:text-red-400' />
+              )}
+              <span
+                className={`text-sm ${
+                  message.type === 'success'
+                    ? 'text-green-800 dark:text-green-200'
+                    : 'text-red-800 dark:text-red-200'
+                }`}
+              >
+                {message.text}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Action Buttons */}
+        <div className='flex justify-end gap-3 mt-6 pt-6 border-t border-gray-200 dark:border-gray-700'>
+          <button
+            onClick={onCancel}
+            className='px-6 py-2.5 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 rounded-lg font-medium transition-colors'
+          >
+            取消
+          </button>
+          <button
+            onClick={() => onSave(localProvider)}
+            className='px-6 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2'
+          >
+            <Save className='w-4 h-4' />
+            保存
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
   );
 }

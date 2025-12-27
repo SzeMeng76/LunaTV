@@ -82,6 +82,12 @@ function LoginPageClient() {
   const [telegramUsername, setTelegramUsername] = useState('');
 
   // OIDC 登录状态
+  const [oidcProviders, setOidcProviders] = useState<Array<{
+    id: string;
+    name: string;
+    buttonText: string;
+    issuer: string;
+  }>>([]);
   const [oidcEnabled, setOidcEnabled] = useState(false);
   const [oidcButtonText, setOidcButtonText] = useState('使用OIDC登录');
   const [oidcIssuer, setOidcIssuer] = useState<string>('');
@@ -131,7 +137,15 @@ function LoginPageClient() {
 
         // 检查 OIDC 配置
         console.log('[Login] OIDCConfig:', data.OIDCConfig);
-        if (data.OIDCConfig?.enabled) {
+        console.log('[Login] OIDCProviders:', data.OIDCProviders);
+
+        // 优先使用新的多 Provider 配置
+        if (data.OIDCProviders && data.OIDCProviders.length > 0) {
+          console.log('[Login] Multiple OIDC providers enabled!');
+          setOidcProviders(data.OIDCProviders);
+          setOidcEnabled(true);
+        } else if (data.OIDCConfig?.enabled) {
+          // 向后兼容：旧的单 Provider 配置
           console.log('[Login] OIDC is enabled!');
           setOidcEnabled(true);
           setOidcButtonText(data.OIDCConfig.buttonText || '使用OIDC登录');
@@ -425,24 +439,48 @@ function LoginPageClient() {
               </div>
             </div>
 
-            {(() => {
-              const provider = detectProvider(oidcIssuer || oidcButtonText);
-              const buttonStyle = getProviderButtonStyle(provider);
-              // 只有当 buttonText 不是默认值时才作为自定义文字传递
-              const customText = oidcButtonText && oidcButtonText !== '使用OIDC登录' ? oidcButtonText : undefined;
-              const buttonText = getProviderButtonText(provider, customText);
+            {/* 多 Provider 按钮 */}
+            {oidcProviders.length > 0 ? (
+              <div className='mt-4 space-y-3'>
+                {oidcProviders.map((provider) => {
+                  const detectedProvider = detectProvider(provider.issuer || provider.buttonText);
+                  const buttonStyle = getProviderButtonStyle(detectedProvider);
+                  const customText = provider.buttonText && provider.buttonText !== '使用OIDC登录' ? provider.buttonText : undefined;
+                  const buttonText = getProviderButtonText(detectedProvider, customText);
 
-              return (
-                <button
-                  type='button'
-                  onClick={() => window.location.href = '/api/auth/oidc/login'}
-                  className={`mt-4 w-full inline-flex justify-center items-center rounded-lg py-3 text-base font-semibold shadow-sm transition-all duration-200 ${buttonStyle}`}
-                >
-                  <OIDCProviderLogo provider={provider} />
-                  <span className='ml-2'>{buttonText}</span>
-                </button>
-              );
-            })()}
+                  return (
+                    <button
+                      key={provider.id}
+                      type='button'
+                      onClick={() => window.location.href = `/api/auth/oidc/login?provider=${provider.id}`}
+                      className={`w-full inline-flex justify-center items-center rounded-lg py-3 text-base font-semibold shadow-sm transition-all duration-200 ${buttonStyle}`}
+                    >
+                      <OIDCProviderLogo provider={detectedProvider} />
+                      <span className='ml-2'>{buttonText}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              /* 单 Provider 按钮（向后兼容） */
+              (() => {
+                const provider = detectProvider(oidcIssuer || oidcButtonText);
+                const buttonStyle = getProviderButtonStyle(provider);
+                const customText = oidcButtonText && oidcButtonText !== '使用OIDC登录' ? oidcButtonText : undefined;
+                const buttonText = getProviderButtonText(provider, customText);
+
+                return (
+                  <button
+                    type='button'
+                    onClick={() => window.location.href = '/api/auth/oidc/login'}
+                    className={`mt-4 w-full inline-flex justify-center items-center rounded-lg py-3 text-base font-semibold shadow-sm transition-all duration-200 ${buttonStyle}`}
+                  >
+                    <OIDCProviderLogo provider={provider} />
+                    <span className='ml-2'>{buttonText}</span>
+                  </button>
+                );
+              })()
+            )}
           </div>
         )}
       </div>

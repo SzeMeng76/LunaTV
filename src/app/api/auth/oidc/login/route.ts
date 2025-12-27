@@ -7,13 +7,40 @@ export const runtime = 'nodejs';
 
 export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const providerId = searchParams.get('provider') || 'default'; // 从 URL 获取 provider ID
+
     const config = await getConfig();
-    const oidcConfig = config.OIDCAuthConfig;
+
+    console.log('[OIDC Login] Provider ID requested:', providerId);
+    console.log('[OIDC Login] OIDCProviders config:', config.OIDCProviders);
+    console.log('[OIDC Login] OIDCAuthConfig config:', config.OIDCAuthConfig);
+
+    // 优先使用新的多 Provider 配置
+    let oidcConfig = null;
+
+    if (config.OIDCProviders && config.OIDCProviders.length > 0) {
+      // 查找指定的 Provider
+      if (providerId === 'default') {
+        // 如果没有指定，使用第一个启用的 Provider
+        oidcConfig = config.OIDCProviders.find(p => p.enabled);
+      } else {
+        // 查找指定 ID 的 Provider
+        oidcConfig = config.OIDCProviders.find(p => p.id === providerId && p.enabled);
+      }
+      console.log('[OIDC Login] Found provider from OIDCProviders:', oidcConfig);
+    } else if (config.OIDCAuthConfig) {
+      // 向后兼容：使用旧的单 Provider 配置
+      oidcConfig = config.OIDCAuthConfig;
+      console.log('[OIDC Login] Using legacy OIDCAuthConfig:', oidcConfig);
+    }
 
     // 检查是否启用OIDC登录
     if (!oidcConfig || !oidcConfig.enabled) {
+      console.log('[OIDC Login] ERROR: Provider not found or not enabled. oidcConfig:', oidcConfig);
+
       return NextResponse.json(
-        { error: 'OIDC登录未启用' },
+        { error: 'OIDC登录未启用或找不到指定的 Provider' },
         { status: 403 }
       );
     }
@@ -44,10 +71,16 @@ export async function GET(request: NextRequest) {
     authUrl.searchParams.set('scope', 'openid profile email');
     authUrl.searchParams.set('state', state);
 
-    // 将state存储到cookie中
+    // 将state和provider ID存储到cookie中
     const response = NextResponse.redirect(authUrl);
 
-    response.cookies.set('oidc_state', state, {
+    // 存储 state 和 provider ID
+    const sessionData = JSON.stringify({
+      state,
+      providerId: (oidcConfig as any).id || providerId, // 存储 provider ID 用于 callback
+    });
+
+    response.cookies.set('oidc_state', sessionData, {
       path: '/',
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
