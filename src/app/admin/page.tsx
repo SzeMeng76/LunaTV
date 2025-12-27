@@ -41,7 +41,7 @@ import {
   Users,
   Video,
 } from 'lucide-react';
-import { GripVertical } from 'lucide-react';
+import { GripVertical, KeyRound } from 'lucide-react';
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -54,6 +54,7 @@ import DataMigration from '@/components/DataMigration';
 import ImportExportModal from '@/components/ImportExportModal';
 import SourceTestModule from '@/components/SourceTestModule';
 import { TelegramAuthConfig } from '@/components/TelegramAuthConfig';
+import { OIDCAuthConfig } from '@/components/OIDCAuthConfig';
 import TVBoxSecurityConfig from '@/components/TVBoxSecurityConfig';
 import { TVBoxTokenCell, TVBoxTokenModal } from '@/components/TVBoxTokenManager';
 import YouTubeConfig from '@/components/YouTubeConfig';
@@ -5784,6 +5785,7 @@ function AdminPageClient() {
     watchRoomConfig: false,
     tvboxSecurityConfig: false,
     telegramAuthConfig: false,
+    oidcAuthConfig: false,
     configFile: false,
     cacheManager: false,
     dataMigration: false,
@@ -6159,6 +6161,50 @@ function AdminPageClient() {
                       body: JSON.stringify({
                         ...config,
                         TelegramAuthConfig: newConfig,
+                      }),
+                    });
+                    await fetchConfig();
+                  }}
+                />
+              </CollapsibleTab>
+            )}
+
+            {/* OIDC 登录配置 - 仅站长可见 */}
+            {role === 'owner' && (
+              <CollapsibleTab
+                title='OIDC 登录配置'
+                icon={
+                  <KeyRound
+                    size={20}
+                    className='text-purple-500 dark:text-purple-400'
+                  />
+                }
+                isExpanded={expandedTabs.oidcAuthConfig}
+                onToggle={() => toggleTab('oidcAuthConfig')}
+              >
+                <OIDCAuthConfig
+                  config={
+                    config?.OIDCAuthConfig || {
+                      enabled: false,
+                      enableRegistration: false,
+                      issuer: '',
+                      authorizationEndpoint: '',
+                      tokenEndpoint: '',
+                      userInfoEndpoint: '',
+                      clientId: '',
+                      clientSecret: '',
+                      buttonText: '',
+                      minTrustLevel: 0,
+                    }
+                  }
+                  onSave={async (newConfig) => {
+                    if (!config) return;
+                    await fetch('/api/admin/config', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        ...config,
+                        OIDCAuthConfig: newConfig,
                       }),
                     });
                     await fetchConfig();

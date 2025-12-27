@@ -132,15 +132,18 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: '该用户名已被注册' }, { status: 400 });
       }
 
-      // 注册用户
+      // 清除缓存（在注册前清除，避免读到旧缓存）
+      clearConfigCache();
+
+      // 注册用户（V1）
       await db.registerUser(username, password);
 
-      // 重新获取配置来添加用户
+      // 重新获取配置来添加用户（此时会调用 configSelfCheck 从数据库获取最新用户列表）
       const config = await getConfig();
       const newUser = {
         username: username,
         role: 'user' as const,
-        createdAt: Date.now(), // 设置注册时间戳
+        createdAt: Date.now(),
       };
 
       config.UserConfig.Users.push(newUser);
@@ -148,13 +151,15 @@ export async function POST(req: NextRequest) {
       // 保存更新后的配置
       await db.saveAdminConfig(config);
 
-      // 清除缓存，确保下次获取配置时是最新的
+      // 再次清除缓存（确保其他API读取到最新配置）
       clearConfigCache();
 
       // 注册成功后自动登录
-      const response = NextResponse.json({ 
-        ok: true, 
-        message: '注册成功，已自动登录' 
+      const storageType = process.env.NEXT_PUBLIC_STORAGE_TYPE || 'localstorage';
+      const response = NextResponse.json({
+        ok: true,
+        message: '注册成功，已自动登录',
+        needDelay: storageType === 'upstash' // Upstash 需要延迟等待数据同步
       });
       
       const cookieValue = await generateAuthCookie(
@@ -166,7 +171,7 @@ export async function POST(req: NextRequest) {
       const expires = new Date();
       expires.setDate(expires.getDate() + 7); // 7天过期
 
-      response.cookies.set('auth', cookieValue, {
+      response.cookies.set('user_auth', cookieValue, {
         path: '/',
         expires,
         sameSite: 'lax',

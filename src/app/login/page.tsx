@@ -11,6 +11,7 @@ import { checkForUpdates, UpdateStatus } from '@/lib/version_check';
 
 import { useSite } from '@/components/SiteProvider';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { OIDCProviderLogo, detectProvider, getProviderButtonStyle, getProviderButtonText } from '@/components/OIDCProviderLogos';
 
 // 版本显示组件
 function VersionDisplay() {
@@ -80,6 +81,11 @@ function LoginPageClient() {
   const [telegramEnabled, setTelegramEnabled] = useState(false);
   const [telegramUsername, setTelegramUsername] = useState('');
 
+  // OIDC 登录状态
+  const [oidcEnabled, setOidcEnabled] = useState(false);
+  const [oidcButtonText, setOidcButtonText] = useState('使用OIDC登录');
+  const [oidcIssuer, setOidcIssuer] = useState<string>('');
+
   const { siteName } = useSite();
 
   // 获取 Bing 每日壁纸（通过代理 API）
@@ -122,8 +128,19 @@ function LoginPageClient() {
         } else {
           console.log('[Login] Telegram is NOT enabled');
         }
+
+        // 检查 OIDC 配置
+        console.log('[Login] OIDCConfig:', data.OIDCConfig);
+        if (data.OIDCConfig?.enabled) {
+          console.log('[Login] OIDC is enabled!');
+          setOidcEnabled(true);
+          setOidcButtonText(data.OIDCConfig.buttonText || '使用OIDC登录');
+          setOidcIssuer(data.OIDCConfig.issuer || '');
+        } else {
+          console.log('[Login] OIDC is NOT enabled');
+        }
       } catch (error) {
-        console.log('Failed to fetch Telegram config:', error);
+        console.log('Failed to fetch server config:', error);
       }
     };
 
@@ -391,6 +408,41 @@ function LoginPageClient() {
                 </p>
               </div>
             )}
+          </div>
+        )}
+
+        {/* OIDC 登录 */}
+        {oidcEnabled && shouldAskUsername && (
+          <div className='mt-6 pt-6 border-t border-gray-200 dark:border-gray-700'>
+            <div className='relative'>
+              <div className='absolute inset-0 flex items-center'>
+                <div className='w-full border-t border-gray-300 dark:border-gray-600'></div>
+              </div>
+              <div className='relative flex justify-center text-sm'>
+                <span className='px-2 bg-white/60 dark:bg-zinc-900/60 text-gray-500 dark:text-gray-400'>
+                  或
+                </span>
+              </div>
+            </div>
+
+            {(() => {
+              const provider = detectProvider(oidcIssuer || oidcButtonText);
+              const buttonStyle = getProviderButtonStyle(provider);
+              // 只有当 buttonText 不是默认值时才作为自定义文字传递
+              const customText = oidcButtonText && oidcButtonText !== '使用OIDC登录' ? oidcButtonText : undefined;
+              const buttonText = getProviderButtonText(provider, customText);
+
+              return (
+                <button
+                  type='button'
+                  onClick={() => window.location.href = '/api/auth/oidc/login'}
+                  className={`mt-4 w-full inline-flex justify-center items-center rounded-lg py-3 text-base font-semibold shadow-sm transition-all duration-200 ${buttonStyle}`}
+                >
+                  <OIDCProviderLogo provider={provider} />
+                  <span className='ml-2'>{buttonText}</span>
+                </button>
+              );
+            })()}
           </div>
         )}
       </div>

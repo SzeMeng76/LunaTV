@@ -331,6 +331,130 @@ export abstract class BaseRedisStorage implements IStorage {
     await this.withRetry(() => this.client.del(loginStatsKey));
   }
 
+  // ---------- 用户相关（新版本 V2，支持 OIDC） ----------
+  private userInfoKey(user: string) {
+    return `u:${user}:info`;
+  }
+
+  private userListKey() {
+    return 'users:list';
+  }
+
+  private oidcSubKey(oidcSub: string) {
+    return `oidc:sub:${oidcSub}`;
+  }
+
+  // SHA256加密密码
+  private async hashPassword(password: string): Promise<string> {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(password);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  // 创建新用户（新版本）
+  async createUserV2(
+    userName: string,
+    password: string,
+    role: 'owner' | 'admin' | 'user' = 'user',
+    tags?: string[],
+    oidcSub?: string,
+    enabledApis?: string[]
+  ): Promise<void> {
+    const hashedPassword = await this.hashPassword(password);
+    const createdAt = Date.now();
+
+    // 存储用户信息到Hash
+    const userInfo: Record<string, string> = {
+      role,
+      banned: 'false',
+      password: hashedPassword,
+      created_at: createdAt.toString(),
+    };
+
+    if (tags && tags.length > 0) {
+      userInfo.tags = JSON.stringify(tags);
+    }
+
+    if (enabledApis && enabledApis.length > 0) {
+      userInfo.enabledApis = JSON.stringify(enabledApis);
+    }
+
+    if (oidcSub) {
+      userInfo.oidcSub = oidcSub;
+      // 创建OIDC映射
+      await this.withRetry(() => this.client.set(this.oidcSubKey(oidcSub), userName));
+    }
+
+    await this.withRetry(() => this.client.hSet(this.userInfoKey(userName), userInfo));
+
+    // 添加到用户列表（Sorted Set，按注册时间排序）
+    await this.withRetry(() => this.client.zAdd(this.userListKey(), {
+      score: createdAt,
+      value: userName,
+    }));
+  }
+
+  // 验证用户密码（新版本）
+  async verifyUserV2(userName: string, password: string): Promise<boolean> {
+    const userInfo = await this.withRetry(() =>
+      this.client.hGetAll(this.userInfoKey(userName))
+    );
+
+    if (!userInfo || !userInfo.password) {
+      return false;
+    }
+
+    const hashedPassword = await this.hashPassword(password);
+    return userInfo.password === hashedPassword;
+  }
+
+  // 获取用户信息（新版本）
+  async getUserInfoV2(userName: string): Promise<{
+    username: string;
+    role: 'owner' | 'admin' | 'user';
+    banned: boolean;
+    tags?: string[];
+    oidcSub?: string;
+    enabledApis?: string[];
+    createdAt?: number;
+  } | null> {
+    const userInfo = await this.withRetry(() =>
+      this.client.hGetAll(this.userInfoKey(userName))
+    );
+
+    if (!userInfo || Object.keys(userInfo).length === 0) {
+      return null;
+    }
+
+    return {
+      username: userName,
+      role: (userInfo.role as 'owner' | 'admin' | 'user') || 'user',
+      banned: userInfo.banned === 'true',
+      tags: userInfo.tags ? JSON.parse(userInfo.tags) : undefined,
+      oidcSub: userInfo.oidcSub,
+      enabledApis: userInfo.enabledApis ? JSON.parse(userInfo.enabledApis) : undefined,
+      createdAt: userInfo.created_at ? parseInt(userInfo.created_at, 10) : undefined,
+    };
+  }
+
+  // 检查用户是否存在（新版本）
+  async checkUserExistV2(userName: string): Promise<boolean> {
+    const exists = await this.withRetry(() =>
+      this.client.exists(this.userInfoKey(userName))
+    );
+    return exists === 1;
+  }
+
+  // 通过OIDC Sub查找用户名
+  async getUserByOidcSub(oidcSub: string): Promise<string | null> {
+    const userName = await this.withRetry(() =>
+      this.client.get(this.oidcSubKey(oidcSub))
+    );
+    return userName ? ensureString(userName) : null;
+  }
+
   // ---------- 搜索历史 ----------
   private shKey(user: string) {
     return `u:${user}:sh`; // u:username:sh
@@ -365,13 +489,27 @@ export abstract class BaseRedisStorage implements IStorage {
 
   // ---------- 获取全部用户 ----------
   async getAllUsers(): Promise<string[]> {
-    const keys = await this.withRetry(() => this.client.keys('u:*:pwd'));
-    return keys
+    // 获取 V1 用户（u:*:pwd）
+    const v1Keys = await this.withRetry(() => this.client.keys('u:*:pwd'));
+    const v1Users = v1Keys
       .map((k) => {
         const match = k.match(/^u:(.+?):pwd$/);
         return match ? ensureString(match[1]) : undefined;
       })
       .filter((u): u is string => typeof u === 'string');
+
+    // 获取 V2 用户（u:*:info）
+    const v2Keys = await this.withRetry(() => this.client.keys('u:*:info'));
+    const v2Users = v2Keys
+      .map((k) => {
+        const match = k.match(/^u:(.+?):info$/);
+        return match ? ensureString(match[1]) : undefined;
+      })
+      .filter((u): u is string => typeof u === 'string');
+
+    // 合并并去重（V2 优先，因为可能同时存在 V1 和 V2）
+    const allUsers = new Set([...v2Users, ...v1Users]);
+    return Array.from(allUsers);
   }
 
   // ---------- 管理员配置 ----------

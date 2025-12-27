@@ -348,31 +348,58 @@ export async function configSelfCheck(adminConfig: AdminConfig): Promise<AdminCo
         return existingUserConfig;
       } else {
         // 新用户，创建默认配置
-        // 🔧 修复：尝试从数据库获取用户的首次登录时间作为 createdAt
+        // 🔧 修复：优先从数据库获取真实注册时间，避免OIDC/Telegram用户被错误清理
         let createdAt = Date.now(); // 默认使用当前时间
+        let oidcSub: string | undefined;
+        let tags: string[] | undefined;
+        let role: 'owner' | 'admin' | 'user' = username === ownerUser ? 'owner' : 'user';
+        let banned = false;
+        let enabledApis: string[] | undefined;
+
         try {
-          const userStats = await db.getUserPlayStat(username);
-          // 使用首次登录时间作为注册时间
-          if (userStats.firstLoginTime) {
-            createdAt = userStats.firstLoginTime;
-          } else if (userStats.lastLoginTime) {
-            // 如果没有首次登录时间，使用最后登录时间作为后备
-            createdAt = userStats.lastLoginTime;
-          } else if (userStats.lastLoginDate) {
-            // 兼容旧字段
-            createdAt = userStats.lastLoginDate;
+          // 1️⃣ 优先：从数据库V2获取真实注册时间（OIDC/新版用户）
+          const userInfoV2 = await db.getUserInfoV2(username);
+          if (userInfoV2) {
+            createdAt = userInfoV2.createdAt || Date.now();
+            oidcSub = userInfoV2.oidcSub;
+            tags = userInfoV2.tags;
+            role = userInfoV2.role || role;
+            banned = userInfoV2.banned || false;
+            enabledApis = userInfoV2.enabledApis;
+          } else {
+            // 2️⃣ 次选：从登录统计推断注册时间（旧版用户）
+            const userStats = await db.getUserPlayStat(username);
+            if (userStats.firstLoginTime) {
+              createdAt = userStats.firstLoginTime;
+            } else if (userStats.lastLoginTime) {
+              createdAt = userStats.lastLoginTime;
+            } else if (userStats.lastLoginDate) {
+              createdAt = userStats.lastLoginDate;
+            }
           }
         } catch (err) {
-          // 获取失败时使用当前时间
-          console.warn(`获取用户 ${username} 登录统计失败，使用当前时间作为 createdAt:`, err);
+          // 3️⃣ 最后：获取失败时使用当前时间
+          console.warn(`获取用户 ${username} 注册时间失败，使用当前时间作为 createdAt:`, err);
         }
 
-        return {
+        const newUserConfig: any = {
           username,
-          role: username === ownerUser ? ('owner' as const) : ('user' as const),
-          banned: false,
-          createdAt, // 🔑 设置 createdAt 字段
+          role,
+          banned,
+          createdAt,
         };
+
+        if (oidcSub) {
+          newUserConfig.oidcSub = oidcSub;
+        }
+        if (tags && tags.length > 0) {
+          newUserConfig.tags = tags;
+        }
+        if (enabledApis && enabledApis.length > 0) {
+          newUserConfig.enabledApis = enabledApis;
+        }
+
+        return newUserConfig;
       }
     }));
 

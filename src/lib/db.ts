@@ -162,6 +162,56 @@ export class DbManager {
     await this.storage.deleteUser(userName);
   }
 
+  // ---------- 用户相关（新版本 V2，支持 OIDC） ----------
+  async createUserV2(
+    userName: string,
+    password: string,
+    role: 'owner' | 'admin' | 'user' = 'user',
+    tags?: string[],
+    oidcSub?: string,
+    enabledApis?: string[]
+  ): Promise<void> {
+    if (typeof (this.storage as any).createUserV2 === 'function') {
+      await (this.storage as any).createUserV2(userName, password, role, tags, oidcSub, enabledApis);
+    }
+  }
+
+  async verifyUserV2(userName: string, password: string): Promise<boolean> {
+    if (typeof (this.storage as any).verifyUserV2 === 'function') {
+      return (this.storage as any).verifyUserV2(userName, password);
+    }
+    return false;
+  }
+
+  async checkUserExistV2(userName: string): Promise<boolean> {
+    if (typeof (this.storage as any).checkUserExistV2 === 'function') {
+      return (this.storage as any).checkUserExistV2(userName);
+    }
+    return false;
+  }
+
+  async getUserByOidcSub(oidcSub: string): Promise<string | null> {
+    if (typeof (this.storage as any).getUserByOidcSub === 'function') {
+      return (this.storage as any).getUserByOidcSub(oidcSub);
+    }
+    return null;
+  }
+
+  async getUserInfoV2(userName: string): Promise<{
+    username: string;
+    role: 'owner' | 'admin' | 'user';
+    tags?: string[];
+    enabledApis?: string[];
+    banned?: boolean;
+    createdAt?: number;
+    oidcSub?: string;
+  } | null> {
+    if (typeof (this.storage as any).getUserInfoV2 === 'function') {
+      return (this.storage as any).getUserInfoV2(userName);
+    }
+    return null;
+  }
+
   // ---------- 搜索历史 ----------
   async getSearchHistory(userName: string): Promise<string[]> {
     return this.storage.getSearchHistory(userName);
@@ -391,6 +441,13 @@ export class DbManager {
   ): Promise<void> {
     if (typeof (this.storage as any).updateUserLoginStats === 'function') {
       await (this.storage as any).updateUserLoginStats(userName, loginTime, isFirstLogin);
+    }
+  }
+
+  // 删除 V1 用户密码数据（用于 V1→V2 迁移）
+  async deleteV1Password(userName: string): Promise<void> {
+    if (typeof (this.storage as any).client !== 'undefined') {
+      await (this.storage as any).client.del(`u:${userName}:pwd`);
     }
   }
 

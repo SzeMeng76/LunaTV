@@ -163,15 +163,18 @@ function RegisterPageClient() {
       });
 
       if (res.ok) {
-        await res.json(); // 读取响应但不使用
+        const data = await res.json();
         // 显示成功消息，稍等一下再跳转
         setError(null);
         setSuccess('注册成功！正在跳转...');
-        // 给用户一个成功提示，然后再跳转
+
+        // Upstash 需要额外延迟等待数据同步
+        const delay = data.needDelay ? 2500 : 1500;
+
         setTimeout(() => {
           const redirect = searchParams.get('redirect') || '/';
           router.replace(redirect);
-        }, 1500); // 1.5秒后跳转，让用户看到成功消息
+        }, delay);
       } else {
         const data = await res.json();
         setError(data.error ?? '注册失败');
