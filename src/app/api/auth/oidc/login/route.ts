@@ -65,11 +65,37 @@ export async function GET(request: NextRequest) {
 
     // 构建授权URL
     const authUrl = new URL(oidcConfig.authorizationEndpoint);
-    authUrl.searchParams.set('client_id', oidcConfig.clientId);
-    authUrl.searchParams.set('redirect_uri', redirectUri);
-    authUrl.searchParams.set('response_type', 'code');
-    authUrl.searchParams.set('scope', 'openid profile email');
-    authUrl.searchParams.set('state', state);
+
+    // 微信使用 appid 而不是 client_id
+    if (providerId === 'wechat') {
+      authUrl.searchParams.set('appid', oidcConfig.clientId);
+      authUrl.searchParams.set('redirect_uri', redirectUri);
+      authUrl.searchParams.set('response_type', 'code');
+      authUrl.searchParams.set('scope', 'snsapi_login'); // 微信网站应用使用 snsapi_login
+      authUrl.searchParams.set('state', state);
+    } else if (providerId === 'apple') {
+      // Apple Sign In 参数
+      authUrl.searchParams.set('client_id', oidcConfig.clientId);
+      authUrl.searchParams.set('redirect_uri', redirectUri);
+      authUrl.searchParams.set('response_type', 'code');
+      authUrl.searchParams.set('scope', 'name email'); // Apple 使用 name email
+      authUrl.searchParams.set('response_mode', 'form_post'); // Apple 推荐使用 form_post
+      authUrl.searchParams.set('state', state);
+    } else if (providerId === 'facebook') {
+      // Facebook OAuth 参数
+      authUrl.searchParams.set('client_id', oidcConfig.clientId);
+      authUrl.searchParams.set('redirect_uri', redirectUri);
+      authUrl.searchParams.set('response_type', 'code');
+      authUrl.searchParams.set('scope', 'public_profile email'); // Facebook 使用 public_profile email
+      authUrl.searchParams.set('state', state);
+    } else {
+      // 标准 OIDC 参数
+      authUrl.searchParams.set('client_id', oidcConfig.clientId);
+      authUrl.searchParams.set('redirect_uri', redirectUri);
+      authUrl.searchParams.set('response_type', 'code');
+      authUrl.searchParams.set('scope', 'openid profile email');
+      authUrl.searchParams.set('state', state);
+    }
 
     // 将state和provider ID存储到cookie中
     const response = NextResponse.redirect(authUrl);

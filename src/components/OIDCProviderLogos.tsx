@@ -28,10 +28,32 @@ export const GitHubLogo = () => (
   </svg>
 );
 
+// Facebook Logo SVG
+export const FacebookLogo = () => (
+  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+    <path fill="#1877F2" d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+    <path fill="#FFFFFF" d="M16.671 15.543l.532-3.47h-3.328v-2.25c0-.949.465-1.874 1.956-1.874h1.514V4.996s-1.374-.235-2.686-.235c-2.741 0-4.533 1.662-4.533 4.669v2.632H7.078v3.47h3.047v8.385a12.118 12.118 0 003.75 0v-8.385h2.796z"/>
+  </svg>
+);
+
 // LinuxDo Logo SVG (using a Linux penguin icon as placeholder)
 export const LinuxDoLogo = () => (
   <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
     <path d="M12.504 0c-.155 0-.315.008-.480.021-4.226.333-3.105 4.807-3.17 6.298-.076 1.092-.3 1.953-1.05 3.02-.885 1.051-2.127 2.75-2.716 4.521-.278.84-.41 1.938-.232 2.541.214.728.796.862 1.395 1.033.775.222 1.56.459 2.43.459.599 0 1.19-.133 1.75-.36.336-.135.64-.33.915-.57.293-.254.54-.568.73-.928.38-.72.415-1.697.415-2.553 0-.84.03-1.68.45-2.39.21-.36.465-.675.765-.945.3-.27.645-.495 1.02-.675.75-.36 1.605-.51 2.46-.51.855 0 1.71.15 2.46.51.375.18.72.405 1.02.675.3.27.555.585.765.945.42.71.45 1.55.45 2.39 0 .856.035 1.833.415 2.553.19.36.437.674.73.928.275.24.579.435.915.57.56.227 1.151.36 1.75.36.87 0 1.655-.237 2.43-.459.599-.171 1.181-.305 1.395-1.033.178-.603.046-1.701-.232-2.541-.589-1.771-1.831-3.47-2.716-4.521-.75-1.067-.974-1.928-1.05-3.02-.065-1.491 1.056-5.965-3.17-6.298-.165-.013-.325-.021-.48-.021z"/>
+  </svg>
+);
+
+// WeChat Logo SVG
+export const WeChatLogo = () => (
+  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+    <path fill="#09BB07" d="M8.691 2.188C3.891 2.188 0 5.476 0 9.53c0 2.212 1.17 4.203 3.002 5.55a.59.59 0 0 1 .213.665l-.39 1.48c-.019.07-.048.141-.048.213 0 .163.13.295.29.295a.326.326 0 0 0 .167-.054l1.903-1.114a.864.864 0 0 1 .717-.098 10.16 10.16 0 0 0 2.837.403c.276 0 .543-.027.811-.05-.857-2.578.157-4.972 1.932-6.446 1.703-1.415 3.882-1.98 5.853-1.838-.576-3.583-4.196-6.348-8.596-6.348zM5.785 5.991c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178A1.17 1.17 0 0 1 4.623 7.17c0-.651.52-1.18 1.162-1.18zm5.813 0c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178 1.17 1.17 0 0 1-1.162-1.178c0-.651.52-1.18 1.162-1.18zm5.34 2.867c-1.797-.052-3.746.512-5.28 1.786-1.72 1.428-2.687 3.72-1.78 6.22.942 2.453 3.666 4.229 6.884 4.229.826 0 1.622-.12 2.361-.336a.722.722 0 0 1 .598.082l1.584.926a.272.272 0 0 0 .14.047c.134 0 .24-.111.24-.247 0-.06-.023-.12-.038-.177l-.327-1.233a.582.582 0 0 1-.023-.156.49.49 0 0 1 .201-.398C23.024 18.48 24 16.82 24 14.98c0-3.21-2.931-5.837-6.656-6.088V8.89c-.135-.01-.27-.027-.407-.03zm-2.53 3.274c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.969-.982zm4.844 0c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.969-.982z"/>
+  </svg>
+);
+
+// Apple Logo SVG
+export const AppleLogo = () => (
+  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+    <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
   </svg>
 );
 
@@ -43,7 +65,7 @@ export const GenericOIDCLogo = () => (
 );
 
 // Helper function to detect provider from issuer URL
-export function detectProvider(issuer?: string): 'google' | 'microsoft' | 'github' | 'linuxdo' | 'generic' {
+export function detectProvider(issuer?: string): 'google' | 'microsoft' | 'github' | 'facebook' | 'wechat' | 'apple' | 'linuxdo' | 'generic' {
   if (!issuer) return 'generic';
 
   const lowerIssuer = issuer.toLowerCase();
@@ -56,6 +78,15 @@ export function detectProvider(issuer?: string): 'google' | 'microsoft' | 'githu
   }
   if (lowerIssuer.includes('github')) {
     return 'github';
+  }
+  if (lowerIssuer.includes('facebook') || lowerIssuer.includes('graph.facebook.com')) {
+    return 'facebook';
+  }
+  if (lowerIssuer.includes('wechat') || lowerIssuer.includes('weixin.qq.com') || lowerIssuer.includes('open.weixin.qq.com')) {
+    return 'wechat';
+  }
+  if (lowerIssuer.includes('apple') || lowerIssuer.includes('appleid.apple.com')) {
+    return 'apple';
   }
   if (lowerIssuer.includes('linux.do') || lowerIssuer.includes('connect.linux.do')) {
     return 'linuxdo';
@@ -73,6 +104,12 @@ export function getProviderButtonStyle(provider: ReturnType<typeof detectProvide
       return 'bg-white hover:bg-gray-50 text-gray-700 border-2 border-gray-300 dark:bg-gray-100 dark:hover:bg-white';
     case 'github':
       return 'bg-gray-900 hover:bg-gray-800 text-white border-2 border-gray-900 dark:bg-gray-800 dark:hover:bg-gray-700';
+    case 'facebook':
+      return 'bg-[#1877F2] hover:bg-[#166FE5] text-white border-2 border-[#1877F2]';
+    case 'wechat':
+      return 'bg-[#09BB07] hover:bg-[#08A006] text-white border-2 border-[#09BB07]';
+    case 'apple':
+      return 'bg-black hover:bg-gray-900 text-white border-2 border-black dark:bg-gray-900 dark:hover:bg-gray-800';
     case 'linuxdo':
       return 'bg-blue-600 hover:bg-blue-700 text-white border-2 border-blue-600';
     default:
@@ -91,6 +128,12 @@ export function getProviderButtonText(provider: ReturnType<typeof detectProvider
       return '使用 Microsoft 登录';
     case 'github':
       return '使用 GitHub 登录';
+    case 'facebook':
+      return '使用 Facebook 登录';
+    case 'wechat':
+      return '使用微信登录';
+    case 'apple':
+      return '使用 Apple 登录';
     case 'linuxdo':
       return '使用 LinuxDo 登录';
     default:
@@ -107,6 +150,12 @@ export const OIDCProviderLogo: React.FC<{ provider: ReturnType<typeof detectProv
       return <MicrosoftLogo />;
     case 'github':
       return <GitHubLogo />;
+    case 'facebook':
+      return <FacebookLogo />;
+    case 'wechat':
+      return <WeChatLogo />;
+    case 'apple':
+      return <AppleLogo />;
     case 'linuxdo':
       return <LinuxDoLogo />;
     default:

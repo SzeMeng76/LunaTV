@@ -445,8 +445,8 @@ function LoginPageClient() {
                 {oidcProviders.map((provider) => {
                   // 优先使用 provider.id，如果是自定义provider则从issuer推断
                   const providerId = provider.id.toLowerCase();
-                  const detectedProvider = ['google', 'github', 'microsoft', 'linuxdo'].includes(providerId)
-                    ? (providerId as 'google' | 'github' | 'microsoft' | 'linuxdo')
+                  const detectedProvider = ['google', 'github', 'microsoft', 'facebook', 'wechat', 'apple', 'linuxdo'].includes(providerId)
+                    ? (providerId as 'google' | 'github' | 'microsoft' | 'facebook' | 'wechat' | 'apple' | 'linuxdo')
                     : detectProvider(provider.issuer || provider.buttonText);
                   const buttonStyle = getProviderButtonStyle(detectedProvider);
                   const customText = provider.buttonText && provider.buttonText !== '使用OIDC登录' ? provider.buttonText : undefined;

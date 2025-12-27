@@ -9,6 +9,9 @@
 - [Google OAuth 2.0 配置](#google-oauth-20-配置)
 - [Microsoft Entra ID 配置](#microsoft-entra-id-配置)
 - [GitHub OAuth 配置](#github-oauth-配置)
+- [Facebook OAuth 配置](#facebook-oauth-配置)
+- [微信开放平台配置](#微信开放平台配置)
+- [Apple Sign In 配置](#apple-sign-in-配置)
 - [LinuxDo 配置](#linuxdo-配置)
 - [LunaTV 管理后台配置](#lunatv-管理后台配置)
 - [常见问题](#常见问题)
@@ -257,6 +260,675 @@ UserInfo Endpoint:      https://api.github.com/user
 - [Creating an OAuth app - GitHub Docs](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/creating-an-oauth-app)
 - [Authorizing OAuth apps - GitHub Docs](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps)
 - [Setting up Github OAuth 2.0](https://apidog.com/blog/set-up-github-oauth2/)
+
+---
+
+## Facebook OAuth 配置
+
+Facebook 提供 OAuth 2.0 认证服务，拥有全球最大的用户基数。LunaTV 已针对 Facebook 的特殊实现进行了适配。
+
+### 步骤 1：创建 Facebook 应用
+
+#### 1.1 注册为开发者
+
+1. 访问 [Facebook for Developers](https://developers.facebook.com/)
+2. 使用您的 Facebook 账号登录
+3. 如果是首次使用，需要注册成为开发者（同意条款并验证账号）
+
+#### 1.2 创建新应用
+
+1. 登录后，点击右上角的 **"My Apps"**（我的应用）
+2. 点击 **"Create App"**（创建应用）按钮
+3. 选择应用类型：
+   - 推荐选择 **"Consumer"**（消费者）或 **"None"**（无）
+4. 填写应用信息：
+   - **App Name**（应用名称）：输入您的应用名称（例如：LunaTV）
+   - **App Contact Email**（联系邮箱）：输入有效的邮箱地址
+   - **App Purpose**（应用用途）：选择 **"Yourself or your own business"**
+5. 点击 **"Create App"**（创建应用）
+
+### 步骤 2：获取应用凭据
+
+#### 2.1 查看 App ID 和 App Secret
+
+1. 创建完成后，进入应用面板
+2. 在左侧菜单中点击 **"Settings"** → **"Basic"**（设置 → 基本）
+3. 您将看到：
+   - **App ID**（应用编号）- 这就是您的 **Client ID**
+   - **App Secret**（应用密钥）- 点击 **"Show"**（显示）按钮查看，这就是您的 **Client Secret**
+
+> ⚠️ **重要提示**：
+> - App Secret 类似于密码，切勿公开或提交到代码仓库
+> - 创建后请立即复制并妥善保管
+> - 如果泄露，请立即在 Facebook 后台重新生成新密钥
+
+### 步骤 3：添加 Facebook Login 产品
+
+1. 在应用面板左侧菜单中，点击 **"Add Product"**（添加产品）
+2. 找到 **"Facebook Login"**（Facebook 登录）
+3. 点击 **"Set Up"**（设置）按钮
+
+### 步骤 4：配置 OAuth 重定向 URI
+
+1. 在左侧菜单中点击 **"Facebook Login"** → **"Settings"**（设置）
+2. 找到 **"Valid OAuth Redirect URIs"**（有效的 OAuth 重定向 URI）
+3. 添加您的回调地址：
+   ```
+   https://your-domain.com/api/auth/oidc/callback
+   ```
+
+   **示例**：
+   - 生产环境：`https://lunatv.example.com/api/auth/oidc/callback`
+   - 本地测试（使用 ngrok）：`https://abc123.ngrok.io/api/auth/oidc/callback`
+
+4. 点击 **"Save Changes"**（保存更改）
+
+> ⚠️ **注意**：Facebook 要求重定向 URI 必须使用 **HTTPS** 协议（本地开发需要使用 ngrok 等工具）
+
+### 步骤 5：上线应用
+
+Facebook 应用默认处于 **"开发模式"**（Development），只有应用管理员和测试用户可以登录。
+
+#### 切换到生产模式
+
+1. 在 Facebook 应用面板顶部，找到模式切换开关
+2. 当前应该显示 **"In development"**（开发中）
+3. 点击切换开关，选择 **"Live"**（上线）
+4. 确认上线操作
+
+> 💡 **提示**：上线前建议配置应用图标和隐私政策 URL，虽然不是强制要求，但能提升用户信任度。
+
+### Facebook OAuth 端点信息
+
+Facebook 使用 OAuth 2.0 协议，端点配置如下：
+
+```
+Authorization Endpoint: https://www.facebook.com/v19.0/dialog/oauth
+Token Endpoint:         https://graph.facebook.com/v19.0/oauth/access_token
+UserInfo Endpoint:      https://graph.facebook.com/v19.0/me
+```
+
+**版本说明**：
+- 当前示例使用 `v19.0`（2025 年推荐版本）
+- Facebook 会定期发布新版本，可访问 [Graph API 版本文档](https://developers.facebook.com/docs/graph-api/changelog) 查看最新版本
+- 旧版本会在发布后至少 2 年内保持可用
+
+### LunaTV 后台配置（Facebook）
+
+在 LunaTV 管理后台 → **系统设置** → **OIDC 认证配置** 中：
+
+#### 点击 **"添加 Provider"**，填写以下信息：
+
+| 字段 | 值 | 说明 |
+|------|-----|------|
+| **Provider ID** | `facebook` | ⚠️ **必须**填写 `facebook`（全部小写）才能显示 Facebook logo |
+| **启用** | ✅ 勾选 | 启用此 Provider |
+| **按钮文字** | `使用 Facebook 登录` | 可选，留空则使用默认文字 |
+| **允许注册** | ✅ 勾选（可选） | 是否允许新用户通过 Facebook 注册 |
+| **Issuer URL** | `https://www.facebook.com` | Facebook 的 Issuer |
+| **Authorization Endpoint** | `https://www.facebook.com/v19.0/dialog/oauth` | 授权端点 |
+| **Token Endpoint** | `https://graph.facebook.com/v19.0/oauth/access_token` | Token 端点 |
+| **UserInfo Endpoint** | `https://graph.facebook.com/v19.0/me` | 用户信息端点 |
+| **Client ID** | `您的 App ID` | 从 Facebook 应用设置中获取 |
+| **Client Secret** | `您的 App Secret` | 从 Facebook 应用设置中获取 |
+
+#### 完整配置示例
+
+```json
+{
+  "id": "facebook",
+  "enabled": true,
+  "buttonText": "使用 Facebook 登录",
+  "enableRegistration": true,
+  "issuer": "https://www.facebook.com",
+  "authorizationEndpoint": "https://www.facebook.com/v19.0/dialog/oauth",
+  "tokenEndpoint": "https://graph.facebook.com/v19.0/oauth/access_token",
+  "userInfoEndpoint": "https://graph.facebook.com/v19.0/me",
+  "clientId": "1234567890123456",
+  "clientSecret": "abcdef1234567890abcdef1234567890"
+}
+```
+
+保存配置后，登录页面将显示蓝色的 **"使用 Facebook 登录"** 按钮（带 Facebook logo）。
+
+### 技术实现说明
+
+#### Facebook OAuth 与标准 OIDC 的差异
+
+Facebook 使用 OAuth 2.0 协议，与标准 OIDC 有以下差异（LunaTV 已自动处理）：
+
+| 差异项 | 标准 OIDC | Facebook OAuth | LunaTV 处理 |
+|--------|-----------|----------------|-------------|
+| **用户唯一标识** | `sub` 字段 | `id` 字段 | ✅ 自动兼容 |
+| **ID Token** | 返回 `id_token` | 不一定返回 | ✅ 已适配 |
+| **UserInfo 字段** | 自动返回基础字段 | 需要 `fields` 参数指定 | ✅ 自动添加 |
+
+#### 获取的用户信息
+
+LunaTV 从 Facebook 获取以下字段：
+- `id`：用户唯一标识符（用于关联账号）
+- `name`：用户姓名
+- `email`：邮箱地址（如果用户授权分享）
+- `picture`：头像图片（640×640 像素）
+
+> 📝 **说明**：Facebook 用户可以选择不分享邮箱，LunaTV 使用 `id` 字段作为唯一标识，不强制要求邮箱。
+
+### 常见问题（Facebook）
+
+#### Q1: 点击登录后提示 "redirect_uri_mismatch" 错误
+
+**原因**：重定向 URI 配置不匹配
+
+**解决方法**：
+1. 检查 Facebook 应用中配置的 **"Valid OAuth Redirect URIs"** 是否与您的实际域名一致
+2. 确保使用 `https://` 协议
+3. 确保路径为 `/api/auth/oidc/callback`（无额外斜杠）
+4. 域名大小写必须完全匹配
+
+#### Q2: 提示 "App Not Set Up" 错误
+
+**原因**：Facebook 应用未正确配置 Facebook Login 产品
+
+**解决方法**：
+1. 确保已在 Facebook 应用中添加 **"Facebook Login"** 产品
+2. 检查 OAuth 重定向 URI 是否已保存
+3. 确认应用已切换到 **"Live"** 模式（如果要给其他用户使用）
+
+#### Q3: 登录按钮显示 "使用 OIDC 登录" 而不是 Facebook logo
+
+**原因**：Provider ID 配置错误
+
+**解决方法**：
+1. 检查 LunaTV 配置中的 **"Provider ID"** 字段
+2. **必须**填写 `facebook`（全部小写，不能是 `Facebook` 或 `fb`）
+3. 保存配置后刷新登录页面
+
+#### Q4: 提示 "获取用户信息失败" 错误
+
+**原因**：UserInfo Endpoint 配置错误或权限问题
+
+**解决方法**：
+1. 确认 **"UserInfo Endpoint"** 配置为 `https://graph.facebook.com/v19.0/me`
+2. 查看服务器日志获取详细错误信息
+3. 检查 App ID 和 App Secret 是否正确
+
+#### Q5: 如何在本地开发环境测试？
+
+**方法 1：使用 ngrok（推荐）**
+
+```bash
+ngrok http 3000
+```
+
+使用 ngrok 提供的 HTTPS 地址（如 `https://abc123.ngrok.io`）作为重定向 URI。
+
+**方法 2：添加测试用户**
+
+1. 在 Facebook 应用面板中，进入 **"Roles"** → **"Test Users"**
+2. 创建测试用户
+3. 应用保持在 **"Development"** 模式，使用测试账号登录
+
+#### Q6: Facebook 登录后获取不到邮箱？
+
+**说明**：
+- Facebook 用户可以选择不分享邮箱
+- LunaTV 使用 Facebook 的唯一 ID（`id` 字段）作为用户标识，不强制要求邮箱
+- 如果需要邮箱，可以在首次注册时要求用户补充
+
+#### Q7: 如何更新到新版本的 Facebook Graph API？
+
+1. 访问 [Facebook Graph API Changelog](https://developers.facebook.com/docs/graph-api/changelog)
+2. 查看最新版本号（例如 `v20.0`）
+3. 在 LunaTV 配置中更新端点 URL 的版本号：
+   ```
+   https://www.facebook.com/v20.0/dialog/oauth
+   https://graph.facebook.com/v20.0/oauth/access_token
+   https://graph.facebook.com/v20.0/me
+   ```
+
+### 参考资料
+- [Facebook for Developers 官方文档](https://developers.facebook.com/docs/)
+- [Facebook Login 文档](https://developers.facebook.com/docs/facebook-login/)
+- [Facebook Graph API 文档](https://developers.facebook.com/docs/graph-api/)
+- [Set up Facebook login with OAuth 2](https://baserow.io/user-docs/configure-facebook-for-oauth-2-sso)
+- [Facebook OAuth 2.0 Access for Website](https://apidog.com/blog/facebook-oauth-2-0-access-for-website/)
+
+---
+
+## 微信开放平台配置
+
+微信开放平台提供网站应用微信登录功能，用户可通过扫描二维码使用微信账号登录你的网站。
+
+### 步骤 1：注册微信开放平台账号
+
+1. 访问 [微信开放平台](https://open.weixin.qq.com/)
+2. 使用微信扫码登录
+3. 完成开发者资质认证（需要企业资质或个人开发者认证）
+
+> ⚠️ **注意**：微信开放平台需要认证才能创建网站应用，认证费用为 300 元人民币/年
+
+### 步骤 2：创建网站应用
+
+1. 登录微信开放平台后，进入 **管理中心**
+2. 点击 **网站应用** → **创建网站应用**
+3. 填写应用信息：
+   - **应用名称**：`LunaTV`
+   - **应用简介**：简要描述你的应用
+   - **应用官网**：`https://your-domain.com`
+   - **应用图标**：上传应用图标（108×108 像素）
+4. 填写 **授权回调域**：
+   ```
+   your-domain.com
+   ```
+   ⚠️ **重要**：只填写域名，不要加 `https://` 或路径
+
+5. 提交审核，等待微信团队审核（通常 1-7 个工作日）
+
+### 步骤 3：获取 AppID 和 AppSecret
+
+审核通过后：
+
+1. 进入 **管理中心** → **网站应用**
+2. 点击你创建的应用
+3. 查看应用详情，获取：
+   - **AppID**（应用唯一标识）
+   - **AppSecret**（应用密钥，点击查看）
+
+> ⚠️ **安全提示**：AppSecret 非常重要，请妥善保管，不要泄露！
+
+### 微信 OAuth 2.0 端点信息
+
+微信网站应用使用以下端点：
+
+```
+Authorization Endpoint: https://open.weixin.qq.com/connect/qrconnect
+Token Endpoint:         https://api.weixin.qq.com/sns/oauth2/access_token
+UserInfo Endpoint:      https://api.weixin.qq.com/sns/userinfo
+```
+
+**特殊说明**：
+- 微信使用 `appid` 和 `secret` 参数，而不是标准的 `client_id` 和 `client_secret`
+- Scope 使用 `snsapi_login`（网站应用扫码登录）
+- LunaTV 已自动处理这些差异
+
+### LunaTV 后台配置（微信）
+
+在 LunaTV 管理后台 → **系统设置** → **OIDC 认证配置** 中：
+
+#### 点击 **"添加 Provider"**，填写以下信息：
+
+| 字段 | 值 | 说明 |
+|------|-----|------|
+| **Provider ID** | `wechat` | ⚠️ **必须**填写 `wechat`（全部小写）才能显示微信 logo |
+| **启用** | ✅ 勾选 | 启用此 Provider |
+| **按钮文字** | `使用微信登录` | 可选，留空则使用默认文字 |
+| **允许注册** | ✅ 勾选（可选） | 是否允许新用户通过微信注册 |
+| **Issuer URL** | `https://open.weixin.qq.com` | 微信开放平台地址 |
+| **Authorization Endpoint** | `https://open.weixin.qq.com/connect/qrconnect` | 扫码授权端点 |
+| **Token Endpoint** | `https://api.weixin.qq.com/sns/oauth2/access_token` | Token 端点 |
+| **UserInfo Endpoint** | `https://api.weixin.qq.com/sns/userinfo` | 用户信息端点 |
+| **Client ID** | `您的 AppID` | 从微信开放平台获取 |
+| **Client Secret** | `您的 AppSecret` | 从微信开放平台获取 |
+
+#### 完整配置示例
+
+```json
+{
+  "id": "wechat",
+  "enabled": true,
+  "buttonText": "使用微信登录",
+  "enableRegistration": true,
+  "issuer": "https://open.weixin.qq.com",
+  "authorizationEndpoint": "https://open.weixin.qq.com/connect/qrconnect",
+  "tokenEndpoint": "https://api.weixin.qq.com/sns/oauth2/access_token",
+  "userInfoEndpoint": "https://api.weixin.qq.com/sns/userinfo",
+  "clientId": "wx1234567890abcdef",
+  "clientSecret": "abcdef1234567890abcdef1234567890"
+}
+```
+
+保存配置后，登录页面将显示绿色的 **"使用微信登录"** 按钮（带微信 logo）。
+
+### 技术实现说明
+
+#### 微信 OAuth 2.0 与标准 OIDC 的差异
+
+微信使用 OAuth 2.0 协议，与标准 OIDC 有以下差异（LunaTV 已自动处理）：
+
+| 差异项 | 标准 OIDC | 微信 OAuth | LunaTV 处理 |
+|--------|-----------|------------|-------------|
+| **Client ID 参数名** | `client_id` | `appid` | ✅ 自动转换 |
+| **Client Secret 参数名** | `client_secret` | `secret` | ✅ 自动转换 |
+| **Scope** | `openid profile email` | `snsapi_login` | ✅ 自动设置 |
+| **用户唯一标识** | `sub` 字段 | `openid` 字段 | ✅ 自动兼容 |
+| **UserInfo 参数** | Bearer Token | URL 参数 `access_token` + `openid` | ✅ 自动添加 |
+
+#### 获取的用户信息
+
+LunaTV 从微信获取以下字段：
+- `openid`：用户唯一标识符（用于关联账号）
+- `nickname`：用户昵称
+- `headimgurl`：用户头像 URL
+- `sex`：用户性别（1=男性，2=女性，0=未知）
+- `province`、`city`、`country`：用户地区信息
+
+> 📝 **说明**：微信不一定返回邮箱，LunaTV 使用 `openid` 作为唯一标识。
+
+### 常见问题（微信）
+
+#### Q1: 提示 "redirect_uri 参数错误"
+
+**原因**：授权回调域配置不正确
+
+**解决方法**：
+1. 检查微信开放平台应用设置中的 **授权回调域**
+2. 只填写域名（如 `lunatv.example.com`），不要加协议或路径
+3. 确保域名与实际访问域名完全一致
+
+#### Q2: 扫码后提示 "应用未上线"
+
+**原因**：应用处于开发模式
+
+**解决方法**：
+1. 进入微信开放平台 → 管理中心 → 网站应用
+2. 找到你的应用，确认审核状态为 **"审核通过"**
+3. 开发阶段可以使用微信开放平台的测试账号功能
+
+#### Q3: 登录按钮显示 "使用OIDC登录" 而不是微信 logo
+
+**原因**：Provider ID 配置错误
+
+**解决方法**：
+1. 检查 LunaTV 配置中的 **"Provider ID"** 字段
+2. **必须**填写 `wechat`（全部小写，不能是 `WeChat` 或 `weixin`）
+3. 保存配置后刷新登录页面
+
+#### Q4: 如何在本地开发环境测试？
+
+**问题**：微信要求回调域名，不支持 `localhost`
+
+**推荐方案：使用 ngrok（简单易用）**
+
+1. 安装 ngrok：访问 [ngrok.com](https://ngrok.com/) 下载
+2. 启动 ngrok：
+   ```bash
+   ngrok http 3000
+   ```
+3. ngrok 会生成一个临时 HTTPS 域名，例如：
+   ```
+   https://abc123.ngrok.io -> http://localhost:3000
+   ```
+4. 使用这个 ngrok 域名配置到微信开放平台：
+   - **授权回调域**：`abc123.ngrok.io`（不要加 https://）
+5. 用浏览器访问 `https://abc123.ngrok.io` 即可测试
+
+> 💡 **注意**：免费版 ngrok 每次重启域名会变化，需要重新配置到微信开放平台
+
+#### Q5: 微信认证费用是否必须？
+
+**回答**：
+- 个人开发者：可以申请个人开发者认证（免费），但功能受限
+- 企业应用：需要企业认证（300元/年），功能完整
+- 测试阶段：可以使用微信提供的测试号进行开发调试
+
+#### Q6: 用户取消授权后如何重新授权？
+
+用户可以在微信中进入 **"我"** → **"设置"** → **"隐私"** → **"授权管理"**，找到你的应用并重新授权。
+
+### 参考资料
+
+- [微信开放平台官方文档](https://developers.weixin.qq.com/doc/oplatform/Website_App/WeChat_Login/Wechat_Login)
+- [微信网页授权说明](https://developers.weixin.qq.com/doc/offiaccount/OA_Web_Apps/Wechat_webpage_authorization.html)
+- [微信开放平台扫码登录](https://www.cnblogs.com/0201zcr/p/5133062.html)
+
+---
+
+## Apple Sign In 配置
+
+Apple Sign In 提供安全、隐私友好的登录方式，支持所有苹果设备用户。Apple 使用标准的 OpenID Connect (OIDC) 协议。
+
+### 步骤 1：注册 Apple Developer 账号
+
+1. 访问 [Apple Developer](https://developer.apple.com/)
+2. 使用 Apple ID 登录
+3. 注册成为开发者（个人：$99/年，企业：$299/年）
+
+> 💡 **提示**：Apple Developer Program 需要付费订阅才能使用 Sign in with Apple
+
+### 步骤 2：创建 App ID
+
+1. 登录 [Apple Developer Portal](https://developer.apple.com/account/)
+2. 进入 **Certificates, Identifiers & Profiles**
+3. 选择 **Identifiers** → 点击 **+** 创建新 ID
+4. 选择 **App IDs** → **Continue**
+5. 选择类型：**App**
+6. 填写信息：
+   - **Description**：`LunaTV App`
+   - **Bundle ID**：`com.yourcompany.lunatv`
+7. 在 **Capabilities** 中勾选 **Sign in with Apple**
+8. 点击 **Continue** → **Register**
+
+### 步骤 3：创建 Services ID
+
+1. 返回 **Identifiers**，点击 **+** 创建
+2. 选择 **Services IDs** → **Continue**
+3. 填写信息：
+   - **Description**：`LunaTV Web Login`
+   - **Identifier**：`com.yourcompany.lunatv.web`（不同于 App ID）
+4. 勾选 **Sign in with Apple**
+5. 点击 **Configure** 配置：
+   - **Primary App ID**：选择刚才创建的 App ID
+   - **Web Domain**：`your-domain.com`（不要加 https://）
+   - **Return URLs**：`https://your-domain.com/api/auth/oidc/callback`
+6. 点击 **Save** → **Continue** → **Register**
+
+> 📝 **记录**：Services ID 的 Identifier 就是你的 **Client ID**
+
+### 步骤 4：创建私钥（用于生成 Client Secret）
+
+1. 进入 **Keys** → 点击 **+** 创建
+2. **Key Name**：`LunaTV Sign in with Apple Key`
+3. 勾选 **Sign in with Apple**
+4. 点击 **Configure**，选择刚才创建的 **Primary App ID**
+5. 点击 **Save** → **Continue** → **Register**
+6. **下载 .p8 私钥文件**（⚠️ 只能下载一次！）
+7. 记录 **Key ID**（10 位字符）
+
+> ⚠️ **重要**：
+> - .p8 私钥文件只能下载一次，请妥善保管
+> - 记录你的 **Team ID**（在账号页面右上角）
+
+### 步骤 5：生成 Client Secret（JWT）
+
+Apple 的 Client Secret 是动态生成的 JWT，有效期最长 6 个月。你需要使用私钥生成 JWT。
+
+#### 使用在线工具生成（推荐）
+
+1. 访问 [Apple Client Secret Generator](https://github.com/LoginRadius/apple-client-secret-generator)
+2. 或使用其他 JWT 生成工具
+3. 填写参数：
+   - **Team ID**：你的 Team ID（10 位字符）
+   - **Client ID**：Services ID 的 Identifier
+   - **Key ID**：私钥的 Key ID
+   - **Private Key**：上传或粘贴 .p8 文件内容
+   - **Expiration**：最长 15777000 秒（6 个月）
+
+#### 使用 Node.js 生成（开发者）
+
+```javascript
+const jwt = require('jsonwebtoken');
+const fs = require('fs');
+
+const privateKey = fs.readFileSync('AuthKey_XXXXXXXXXX.p8', 'utf8');
+
+const token = jwt.sign({}, privateKey, {
+  algorithm: 'ES256',
+  expiresIn: '180d', // 6 个月
+  audience: 'https://appleid.apple.com',
+  issuer: 'YOUR_TEAM_ID', // 你的 Team ID
+  subject: 'com.yourcompany.lunatv.web', // 你的 Services ID
+  keyid: 'YOUR_KEY_ID' // 你的 Key ID
+});
+
+console.log(token);
+```
+
+> ⏰ **提醒**：Client Secret 有效期最长 6 个月，到期前需要重新生成并更新配置。
+
+### Apple Sign In 端点信息
+
+Apple 支持 OIDC 自动发现：
+
+```
+OIDC Discovery: https://appleid.apple.com/.well-known/openid-configuration
+```
+
+或手动配置各端点：
+
+```
+Authorization Endpoint: https://appleid.apple.com/auth/authorize
+Token Endpoint:         https://appleid.apple.com/auth/token
+JWKS Endpoint:          https://appleid.apple.com/auth/keys
+```
+
+**特殊说明**：
+- Apple **没有 UserInfo Endpoint**
+- 用户信息在 `id_token`（JWT）中返回
+- 用户信息（姓名、邮箱）**只在首次授权时**返回
+- LunaTV 会自动解析 id_token 获取用户信息
+
+### LunaTV 后台配置（Apple）
+
+在 LunaTV 管理后台 → **系统设置** → **OIDC 认证配置** 中：
+
+#### 点击 **"添加 Provider"**，填写以下信息：
+
+| 字段 | 值 | 说明 |
+|------|-----|------|
+| **Provider ID** | `apple` | ⚠️ **必须**填写 `apple`（全部小写）才能显示 Apple logo |
+| **启用** | ✅ 勾选 | 启用此 Provider |
+| **按钮文字** | `使用 Apple 登录` | 可选，留空则使用默认文字 |
+| **允许注册** | ✅ 勾选（可选） | 是否允许新用户通过 Apple 注册 |
+| **Issuer URL** | `https://appleid.apple.com` | Apple 的 Issuer（支持自动发现） |
+| **Authorization Endpoint** | `https://appleid.apple.com/auth/authorize` | 授权端点 |
+| **Token Endpoint** | `https://appleid.apple.com/auth/token` | Token 端点 |
+| **UserInfo Endpoint** | 留空或随意填写 | Apple 不使用此端点 |
+| **Client ID** | `com.yourcompany.lunatv.web` | 你的 Services ID |
+| **Client Secret** | `eyJhbGc...` | 生成的 JWT（很长的字符串） |
+
+#### 完整配置示例
+
+```json
+{
+  "id": "apple",
+  "enabled": true,
+  "buttonText": "使用 Apple 登录",
+  "enableRegistration": true,
+  "issuer": "https://appleid.apple.com",
+  "authorizationEndpoint": "https://appleid.apple.com/auth/authorize",
+  "tokenEndpoint": "https://appleid.apple.com/auth/token",
+  "userInfoEndpoint": "https://appleid.apple.com/auth/keys",
+  "clientId": "com.yourcompany.lunatv.web",
+  "clientSecret": "eyJhbGciOiJFUzI1NiIsImtpZCI6IkFCQ0RFRjEyMzQifQ.eyJpc3MiOiJBQkMxMjM0NTY3IiwiaWF0IjoxNjQwOTk1MjAwLCJleHAiOjE2NTY1NDcyMDAsImF1ZCI6Imh0dHBzOi8vYXBwbGVpZC5hcHBsZS5jb20iLCJzdWIiOiJjb20ueW91cmNvbXBhbnkubHVuYXR2LndlYiJ9.abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
+}
+```
+
+保存配置后，登录页面将显示黑色的 **"使用 Apple 登录"** 按钮（带 Apple logo）。
+
+### 技术实现说明
+
+#### Apple Sign In 的特殊性
+
+| 特性 | 标准 OIDC | Apple Sign In | LunaTV 处理 |
+|------|-----------|---------------|-------------|
+| **Client Secret** | 静态字符串 | 动态生成的 JWT（6个月有效期） | ✅ 支持 JWT |
+| **UserInfo Endpoint** | 提供 | ❌ 不提供 | ✅ 从 id_token 解析 |
+| **用户信息返回** | 每次都返回 | 只在首次授权时返回 | ✅ 自动处理 |
+| **Email 隐藏** | 真实邮箱 | 可选择隐藏（relay邮箱） | ✅ 支持 |
+
+#### 获取的用户信息
+
+LunaTV 从 Apple id_token 中获取：
+- `sub`：用户唯一标识符（用于关联账号）
+- `email`：邮箱地址（可能是中继邮箱）
+- `email_verified`：邮箱是否已验证（通常为 true）
+
+> 📝 **隐私中继邮箱**：用户可选择隐藏真实邮箱，Apple 会生成形如 `abc123@privaterelay.appleid.com` 的中继邮箱，转发邮件到用户真实邮箱。
+
+### 常见问题（Apple）
+
+#### Q1: Client Secret 过期怎么办？
+
+**回答**：
+- Client Secret（JWT）最长有效期 6 个月
+- 到期前，使用相同的私钥重新生成 JWT
+- 在 LunaTV 管理后台更新 Client Secret
+- 建议设置日历提醒，提前 1-2 周更新
+
+#### Q2: 本地开发如何测试？
+
+**问题**：Apple 要求 HTTPS 和真实域名，不支持 `localhost`
+
+**推荐方案：使用 ngrok（简单易用）**
+
+1. 安装 ngrok：访问 [ngrok.com](https://ngrok.com/) 下载
+2. 启动 ngrok：
+   ```bash
+   ngrok http 3000
+   ```
+3. ngrok 会生成一个临时 HTTPS 域名，例如：
+   ```
+   https://abc123.ngrok.io -> http://localhost:3000
+   ```
+4. 在 Apple Developer Portal 中配置：
+   - **Web Domain**: `abc123.ngrok.io`（不要加 https://）
+   - **Return URLs**: `https://abc123.ngrok.io/api/auth/oidc/callback`
+5. 用浏览器访问 `https://abc123.ngrok.io` 即可测试
+
+> 💡 **注意**：免费版 ngrok 每次重启域名会变化，需要重新配置到 Apple Developer Portal
+
+#### Q3: 提示 "invalid_client" 错误
+
+**原因**：Client Secret（JWT）无效或过期
+
+**解决方法**：
+1. 检查 JWT 是否正确生成（Team ID、Client ID、Key ID 是否正确）
+2. 检查 JWT 是否过期
+3. 重新生成 Client Secret 并更新配置
+
+#### Q4: 登录后获取不到邮箱？
+
+**原因**：
+- 用户首次登录时选择了隐藏邮箱
+- 或者用户使用的是中继邮箱
+
+**说明**：
+- Apple 允许用户隐藏真实邮箱
+- LunaTV 使用 `sub` 字段作为唯一标识，不强制要求邮箱
+- 如果需要邮箱，可以在首次注册时要求用户补充
+
+#### Q5: 如何测试首次登录流程？
+
+**方法**：
+1. 在 Apple ID 账户页面 [appleid.apple.com](https://appleid.apple.com/)
+2. 进入 **"安全"** → **"使用您 Apple ID 登录的 App"**
+3. 找到你的应用，点击 **"停止使用 Apple ID"**
+4. 再次登录将被视为首次登录
+
+#### Q6: 私钥文件丢失怎么办？
+
+**解决方案**：
+- 私钥只能下载一次，丢失后无法恢复
+- 需要在 Apple Developer Portal 创建新的私钥
+- 使用新私钥重新生成 Client Secret
+- 更新 LunaTV 配置
+
+### 参考资料
+
+- [Apple Sign In 官方文档](https://developer.apple.com/sign-in-with-apple/)
+- [Configure Sign in with Apple for the web](https://developer.apple.com/help/account/capabilities/configure-sign-in-with-apple-for-the-web)
+- [Creating a Client Secret](https://developer.apple.com/documentation/accountorganizationaldatasharing/creating-a-client-secret)
+- [Apple OAuth & OIDC endpoints](https://logto.io/oauth-providers-explorer/apple)
 
 ---
 
@@ -541,6 +1213,25 @@ Authorization Endpoint: https://github.com/login/oauth/authorize
 Token Endpoint: https://github.com/login/oauth/access_token
 UserInfo Endpoint: https://api.github.com/user
 ```
+
+#### Facebook 配置示例
+
+```
+Provider ID: facebook
+启用: ✅
+允许注册: ✅
+按钮文字: 使用 Facebook 登录
+
+Issuer URL: https://www.facebook.com
+Client ID: 1234567890123456
+Client Secret: abcdef1234567890abcdef1234567890
+
+Authorization Endpoint: https://www.facebook.com/v19.0/dialog/oauth
+Token Endpoint: https://graph.facebook.com/v19.0/oauth/access_token
+UserInfo Endpoint: https://graph.facebook.com/v19.0/me
+```
+
+> ⚠️ **重要**：Provider ID 必须填写 `facebook`（全部小写）才能正确显示 Facebook logo 和品牌色按钮。
 
 #### LinuxDo 配置示例
 

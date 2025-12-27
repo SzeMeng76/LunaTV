@@ -59,7 +59,8 @@ export async function POST(request: NextRequest) {
     const data = await response.json();
 
     // 验证返回的数据包含必需的端点
-    if (!data.authorization_endpoint || !data.token_endpoint || !data.userinfo_endpoint) {
+    // 注意：userinfo_endpoint 对某些提供商（如 Apple）是可选的
+    if (!data.authorization_endpoint || !data.token_endpoint) {
       return NextResponse.json(
         {
           error: 'OIDC配置不完整，缺少必需的端点',
@@ -72,7 +73,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       authorization_endpoint: data.authorization_endpoint,
       token_endpoint: data.token_endpoint,
-      userinfo_endpoint: data.userinfo_endpoint,
+      userinfo_endpoint: data.userinfo_endpoint || '', // Apple 等提供商可能没有此端点
       issuer: data.issuer,
     });
   } catch (error) {
