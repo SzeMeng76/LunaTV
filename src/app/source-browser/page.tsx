@@ -124,7 +124,17 @@ export default function SourceBrowserPage() {
       );
       if (!res.ok) throw new Error('获取分类失败');
       const data = await res.json();
-      const list: Category[] = data.categories || [];
+      let list: Category[] = data.categories || [];
+
+      // ===== 新增：隐藏指定的分类（如伦理片、里番动画）=====
+      const hiddenCategoryNames = ['伦理片', '里番动画'];
+      // 如果有更多需要隐藏的分类，直接在这里添加名称即可
+      // const hiddenCategoryNames = ['伦理片', '里番动画', '成人', '伦理', '里番'];
+      list = list.filter(
+        (category) => !hiddenCategoryNames.includes(category.type_name.trim())
+      );
+      // =========================================================
+
       setCategories(list);
       if (list.length > 0) {
         setActiveCategory(list[0].type_id);
