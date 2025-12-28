@@ -404,7 +404,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
     if (rateNum >= 8.5) {
       // 高分：金色 + 发光
       return {
-        bgColor: 'bg-gradient-to-br from-yellow-400 via-amber-500 to-yellow-600',
+        bgColor: 'bg-linear-to-br from-yellow-400 via-amber-500 to-yellow-600',
         ringColor: 'ring-2 ring-yellow-400/50',
         shadowColor: 'shadow-lg shadow-yellow-500/50',
         textColor: 'text-white',
@@ -413,7 +413,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
     } else if (rateNum >= 7.0) {
       // 中高分：蓝色
       return {
-        bgColor: 'bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700',
+        bgColor: 'bg-linear-to-br from-blue-500 via-blue-600 to-blue-700',
         ringColor: 'ring-2 ring-blue-400/40',
         shadowColor: 'shadow-md shadow-blue-500/30',
         textColor: 'text-white',
@@ -422,7 +422,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
     } else if (rateNum >= 6.0) {
       // 中分：绿色
       return {
-        bgColor: 'bg-gradient-to-br from-green-500 via-green-600 to-green-700',
+        bgColor: 'bg-linear-to-br from-green-500 via-green-600 to-green-700',
         ringColor: 'ring-2 ring-green-400/40',
         shadowColor: 'shadow-md shadow-green-500/30',
         textColor: 'text-white',
@@ -431,7 +431,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
     } else {
       // 低分：灰色
       return {
-        bgColor: 'bg-gradient-to-br from-gray-500 via-gray-600 to-gray-700',
+        bgColor: 'bg-linear-to-br from-gray-500 via-gray-600 to-gray-700',
         ringColor: 'ring-2 ring-gray-400/40',
         shadowColor: 'shadow-md shadow-gray-500/30',
         textColor: 'text-white',
@@ -753,7 +753,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
 
           {/* 悬浮遮罩 - 玻璃态效果 */}
           <div
-            className='absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent transition-all duration-300 ease-in-out opacity-0 group-hover:opacity-100 backdrop-blur-[2px]'
+            className='absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-transparent transition-all duration-300 ease-in-out opacity-0 group-hover:opacity-100 backdrop-blur-[2px]'
             style={{
               WebkitUserSelect: 'none',
               userSelect: 'none',
@@ -887,8 +887,8 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
             <div
               className={`absolute top-2 left-2 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg ring-2 ring-white/30 transition-all duration-300 ease-out group-hover:scale-105 z-30 ${
                 type === 'movie'
-                  ? 'bg-gradient-to-br from-red-500/95 via-rose-500/95 to-pink-600/95 group-hover:shadow-red-500/60 group-hover:ring-red-300/50'
-                  : 'bg-gradient-to-br from-blue-500/95 via-indigo-500/95 to-purple-600/95 group-hover:shadow-blue-500/60 group-hover:ring-blue-300/50'
+                  ? 'bg-linear-to-br from-red-500/95 via-rose-500/95 to-pink-600/95 group-hover:shadow-red-500/60 group-hover:ring-red-300/50'
+                  : 'bg-linear-to-br from-blue-500/95 via-indigo-500/95 to-purple-600/95 group-hover:shadow-blue-500/60 group-hover:ring-blue-300/50'
               }`}
               style={{
                 WebkitUserSelect: 'none',
@@ -912,7 +912,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
           {/* 收藏页面：过滤掉99集的占位符显示，只显示真实集数 */}
           {actualEpisodes && actualEpisodes > 1 && !isUpcoming && !(from === 'favorite' && actualEpisodes === 99) && (
             <div
-              className={`absolute left-2 bg-gradient-to-br from-emerald-500/95 via-teal-500/95 to-cyan-600/95 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg ring-2 ring-white/30 transition-all duration-300 ease-out group-hover:scale-105 group-hover:shadow-emerald-500/60 group-hover:ring-emerald-300/50 z-30 ${
+              className={`absolute left-2 bg-linear-to-br from-emerald-500/95 via-teal-500/95 to-cyan-600/95 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg ring-2 ring-white/30 transition-all duration-300 ease-out group-hover:scale-105 group-hover:shadow-emerald-500/60 group-hover:ring-emerald-300/50 z-30 ${
                 hasReleaseTag && type ? 'top-[48px]' : 'top-2'
               }`}
               style={{
@@ -937,7 +937,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
           {/* 年份徽章 - 左上角（根据前面的徽章数量动态调整位置）*/}
           {config.showYear && actualYear && actualYear !== 'unknown' && actualYear.trim() !== '' && (
             <div
-              className={`absolute left-2 bg-gradient-to-br from-indigo-500/90 via-purple-500/90 to-pink-500/90 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg ring-2 ring-white/30 transition-all duration-300 ease-out group-hover:scale-105 group-hover:shadow-purple-500/50 group-hover:ring-purple-300/50 ${
+              className={`absolute left-2 bg-linear-to-br from-indigo-500/90 via-purple-500/90 to-pink-500/90 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg ring-2 ring-white/30 transition-all duration-300 ease-out group-hover:scale-105 group-hover:shadow-purple-500/50 group-hover:ring-purple-300/50 ${
                 (() => {
                   let offset = 2; // 默认 top-2
                   // 如果有上映相关的类型徽章
@@ -971,7 +971,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
           {/* 已完结徽章 - 美化版，放在底部左侧 */}
           {remarks && isSeriesCompleted(remarks) && (
             <div
-              className="absolute bottom-2 left-2 bg-gradient-to-br from-blue-500/95 via-indigo-500/95 to-purple-600/95 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg ring-2 ring-white/30 transition-all duration-300 ease-out group-hover:scale-105 group-hover:shadow-blue-500/60 group-hover:ring-blue-300/50"
+              className="absolute bottom-2 left-2 bg-linear-to-br from-blue-500/95 via-indigo-500/95 to-purple-600/95 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg ring-2 ring-white/30 transition-all duration-300 ease-out group-hover:scale-105 group-hover:shadow-blue-500/60 group-hover:ring-blue-300/50"
               style={{
                 WebkitUserSelect: 'none',
                 userSelect: 'none',
@@ -1011,7 +1011,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
 
             return (
               <div
-                className={`absolute bottom-2 left-2 bg-gradient-to-br ${bgColors} backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg ring-2 ring-white/30 transition-all duration-300 ease-out group-hover:scale-105 ${shadowColor} ${ringColor} animate-pulse`}
+                className={`absolute bottom-2 left-2 bg-linear-to-br ${bgColors} backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg ring-2 ring-white/30 transition-all duration-300 ease-out group-hover:scale-105 ${shadowColor} ${ringColor} animate-pulse`}
                 style={{
                   WebkitUserSelect: 'none',
                   userSelect: 'none',
@@ -1123,7 +1123,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
                   } as React.CSSProperties}
                 >
                   <div
-                    className='bg-gradient-to-br from-orange-500/95 via-amber-500/95 to-yellow-500/95 backdrop-blur-md text-white text-xs font-bold w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center shadow-lg ring-2 ring-white/30 hover:scale-[1.15] transition-all duration-300 ease-out cursor-pointer hover:shadow-orange-500/50'
+                    className='bg-linear-to-br from-orange-500/95 via-amber-500/95 to-yellow-500/95 backdrop-blur-md text-white text-xs font-bold w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center shadow-lg ring-2 ring-white/30 hover:scale-[1.15] transition-all duration-300 ease-out cursor-pointer hover:shadow-orange-500/50'
                     style={{
                       WebkitUserSelect: 'none',
                       userSelect: 'none',
@@ -1189,7 +1189,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
                           <div className='space-y-0.5 sm:space-y-1'>
                             {displaySources.map((sourceName, index) => (
                               <div key={index} className='flex items-center gap-1 sm:gap-1.5'>
-                                <div className='w-0.5 h-0.5 sm:w-1 sm:h-1 bg-blue-400 rounded-full flex-shrink-0'></div>
+                                <div className='w-0.5 h-0.5 sm:w-1 sm:h-1 bg-blue-400 rounded-full shrink-0'></div>
                                 <span className='truncate text-[10px] sm:text-xs leading-tight' title={sourceName}>
                                   {sourceName}
                                 </span>
@@ -1270,10 +1270,10 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
             } as React.CSSProperties}
           >
             {/* 背景高亮效果 */}
-            <div className='absolute inset-0 bg-gradient-to-r from-transparent via-green-50/0 to-transparent dark:via-green-900/0 group-hover:via-green-50/50 dark:group-hover:via-green-900/30 transition-all duration-300 rounded-md'></div>
+            <div className='absolute inset-0 bg-linear-to-r from-transparent via-green-50/0 to-transparent dark:via-green-900/0 group-hover:via-green-50/50 dark:group-hover:via-green-900/30 transition-all duration-300 rounded-md'></div>
 
             <span
-              className='block text-xs @[140px]:text-sm font-bold line-clamp-2 text-gray-900 dark:text-gray-100 transition-all duration-300 ease-in-out group-hover:scale-[1.02] peer relative z-10 group-hover:bg-gradient-to-r group-hover:from-green-600 group-hover:via-emerald-600 group-hover:to-teal-600 dark:group-hover:from-green-400 dark:group-hover:via-emerald-400 dark:group-hover:to-teal-400 group-hover:bg-clip-text group-hover:text-transparent group-hover:drop-shadow-[0_2px_8px_rgba(16,185,129,0.3)]'
+              className='block text-xs @[140px]:text-sm font-bold line-clamp-2 text-gray-900 dark:text-gray-100 transition-all duration-300 ease-in-out group-hover:scale-[1.02] peer relative z-10 group-hover:bg-linear-to-r group-hover:from-green-600 group-hover:via-emerald-600 group-hover:to-teal-600 dark:group-hover:from-green-400 dark:group-hover:via-emerald-400 dark:group-hover:to-teal-400 group-hover:bg-clip-text group-hover:text-transparent group-hover:drop-shadow-[0_2px_8px_rgba(16,185,129,0.3)]'
               style={{
                 WebkitUserSelect: 'none',
                 userSelect: 'none',
@@ -1293,7 +1293,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
             </span>
             {/* 增强的 tooltip */}
             <div
-              className='absolute bottom-full left-0 mb-2 px-3 py-2 bg-gradient-to-br from-gray-800 to-gray-900 text-white text-xs rounded-lg shadow-xl border border-white/10 opacity-0 invisible peer-hover:opacity-100 peer-hover:visible transition-all duration-200 ease-out delay-100 pointer-events-none z-40 backdrop-blur-sm'
+              className='absolute bottom-full left-0 mb-2 px-3 py-2 bg-linear-to-br from-gray-800 to-gray-900 text-white text-xs rounded-lg shadow-xl border border-white/10 opacity-0 invisible peer-hover:opacity-100 peer-hover:visible transition-all duration-200 ease-out delay-100 pointer-events-none z-40 backdrop-blur-sm'
               style={{
                 WebkitUserSelect: 'none',
                 userSelect: 'none',
@@ -1321,6 +1321,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
               ></div>
             </div>
           </div>
+
           {config.showSourceName && source_name && (() => {
             // 智能显示source_name：如果有上映状态标记，优先显示状态；否则显示来源
             let displayText = source_name;
@@ -1391,7 +1392,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
                   }}
                 >
                   {/* 背景渐变效果 */}
-                  <span className={`absolute inset-0 bg-gradient-to-r from-transparent via-green-50/0 to-transparent dark:via-green-500/0 transition-all duration-300 ${bgGradient}`}></span>
+                  <span className={`absolute inset-0 bg-linear-to-r from-transparent via-green-50/0 to-transparent dark:via-green-500/0 transition-all duration-300 ${bgGradient}`}></span>
 
                   {/* 左侧装饰点 */}
                   <span className={`relative w-1.5 h-1.5 rounded-full bg-gray-400 dark:bg-gray-500 transition-all duration-300 ${dotColor}`}></span>

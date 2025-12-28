@@ -813,7 +813,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
   if (!config) {
     return (
       <div className='flex justify-center items-center py-8'>
-        <div className='flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200/50 dark:border-blue-700/50 shadow-md'>
+        <div className='flex items-center gap-3 px-6 py-3 bg-linear-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200/50 dark:border-blue-700/50 shadow-md'>
           <div className='animate-spin rounded-full h-5 w-5 border-2 border-blue-300 border-t-blue-600 dark:border-blue-700 dark:border-t-blue-400'></div>
           <span className='text-sm font-medium text-gray-700 dark:text-gray-300'>加载配置中...</span>
         </div>
@@ -842,7 +842,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
               <div className='flex items-center'>
                 <button
                   type="button"
-                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 ${
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 ${
                     config.UserConfig.AllowRegister ? buttonStyles.toggleOn : buttonStyles.toggleOff
                   }`}
                   role="switch"
@@ -906,7 +906,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                 <div className='flex items-center'>
                   <button
                     type="button"
-                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 ${
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 ${
                       config.UserConfig.AutoCleanupInactiveUsers ? buttonStyles.toggleOn : buttonStyles.toggleOff
                     }`}
                     role="switch"
@@ -1111,7 +1111,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                   <td colSpan={3} className='px-6 py-12'>
                     <div className='flex flex-col items-center justify-center'>
                       <div className='relative mb-4'>
-                        <div className='w-16 h-16 bg-gradient-to-br from-blue-100 to-indigo-200 dark:from-blue-900/40 dark:to-indigo-900/40 rounded-2xl flex items-center justify-center shadow-lg'>
+                        <div className='w-16 h-16 bg-linear-to-br from-blue-100 to-indigo-200 dark:from-blue-900/40 dark:to-indigo-900/40 rounded-2xl flex items-center justify-center shadow-lg'>
                           <svg className='w-8 h-8 text-blue-500 dark:text-blue-400' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
                             <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z'></path>
                           </svg>
@@ -1678,7 +1678,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
               </div>
 
               {/* 成人内容控制 */}
-              <div className='mb-6 p-4 bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20 rounded-lg border border-red-200 dark:border-red-800'>
+              <div className='mb-6 p-4 bg-linear-to-r from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20 rounded-lg border border-red-200 dark:border-red-800'>
                 <label className='flex items-center justify-between cursor-pointer'>
                   <div className='flex-1'>
                     <div className='flex items-center space-x-2'>
@@ -1698,7 +1698,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                       onChange={(e) => setSelectedShowAdultContent(e.target.checked)}
                       className='sr-only peer'
                     />
-                    <div className='w-14 h-7 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-red-300 dark:peer-focus:ring-red-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[""] after:absolute after:top-0.5 after:start-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all dark:border-gray-600 peer-checked:bg-gradient-to-r peer-checked:from-red-600 peer-checked:to-pink-600'></div>
+                    <div className='w-14 h-7 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-red-300 dark:peer-focus:ring-red-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[""] after:absolute after:top-0.5 after:start-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all dark:border-gray-600 peer-checked:bg-linear-to-r peer-checked:from-red-600 peer-checked:to-pink-600'></div>
                   </div>
                 </label>
               </div>
@@ -1902,7 +1902,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                 </div>
 
                 {/* 成人内容控制 */}
-                <div className='p-4 bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20 rounded-lg border border-red-200 dark:border-red-800'>
+                <div className='p-4 bg-linear-to-r from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20 rounded-lg border border-red-200 dark:border-red-800'>
                   <label className='flex items-center justify-between cursor-pointer'>
                     <div className='flex-1'>
                       <div className='flex items-center space-x-2'>
@@ -1927,7 +1927,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                         }
                         className='sr-only peer'
                       />
-                      <div className='w-14 h-7 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-red-300 dark:peer-focus:ring-red-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[""] after:absolute after:top-0.5 after:start-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all dark:border-gray-600 peer-checked:bg-gradient-to-r peer-checked:from-red-600 peer-checked:to-pink-600'></div>
+                      <div className='w-14 h-7 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-red-300 dark:peer-focus:ring-red-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[""] after:absolute after:top-0.5 after:start-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all dark:border-gray-600 peer-checked:bg-linear-to-r peer-checked:from-red-600 peer-checked:to-pink-600'></div>
                     </div>
                   </label>
                 </div>
@@ -2114,7 +2114,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                 </div>
 
                 {/* 成人内容控制 */}
-                <div className='p-4 bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20 rounded-lg border border-red-200 dark:border-red-800'>
+                <div className='p-4 bg-linear-to-r from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20 rounded-lg border border-red-200 dark:border-red-800'>
                   <label className='flex items-center justify-between cursor-pointer'>
                     <div className='flex-1'>
                       <div className='flex items-center space-x-2'>
@@ -2139,7 +2139,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                         }
                         className='sr-only peer'
                       />
-                      <div className='w-14 h-7 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-red-300 dark:peer-focus:ring-red-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[""] after:absolute after:top-0.5 after:start-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all dark:border-gray-600 peer-checked:bg-gradient-to-r peer-checked:from-red-600 peer-checked:to-pink-600'></div>
+                      <div className='w-14 h-7 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-red-300 dark:peer-focus:ring-red-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[""] after:absolute after:top-0.5 after:start-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all dark:border-gray-600 peer-checked:bg-linear-to-r peer-checked:from-red-600 peer-checked:to-pink-600'></div>
                     </div>
                   </label>
                 </div>
@@ -2976,7 +2976,7 @@ const VideoSourceConfig = ({
             onClick={() => handleToggleAdult(source.key, !source.is_adult)}
             disabled={isLoading(`toggleAdult_${source.key}`)}
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${source.is_adult
-              ? 'bg-gradient-to-r from-red-600 to-pink-600 focus:ring-red-500'
+              ? 'bg-linear-to-r from-red-600 to-pink-600 focus:ring-red-500'
               : 'bg-gray-200 dark:bg-gray-700 focus:ring-gray-500'
             } ${isLoading(`toggleAdult_${source.key}`) ? 'opacity-50 cursor-not-allowed' : ''}`}
             title={source.is_adult ? '点击取消成人资源标记' : '点击标记为成人资源'}
@@ -3305,7 +3305,7 @@ const VideoSourceConfig = ({
   if (!config) {
     return (
       <div className='flex justify-center items-center py-8'>
-        <div className='flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200/50 dark:border-blue-700/50 shadow-md'>
+        <div className='flex items-center gap-3 px-6 py-3 bg-linear-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200/50 dark:border-blue-700/50 shadow-md'>
           <div className='animate-spin rounded-full h-5 w-5 border-2 border-blue-300 border-t-blue-600 dark:border-blue-700 dark:border-t-blue-400'></div>
           <span className='text-sm font-medium text-gray-700 dark:text-gray-300'>加载配置中...</span>
         </div>
@@ -3353,7 +3353,7 @@ const VideoSourceConfig = ({
                 <button
                   onClick={() => handleBatchMarkAdult(true)}
                   disabled={isLoading('batchSource_batch_mark_adult')}
-                  className={`px-3 py-1 text-sm ${isLoading('batchSource_batch_mark_adult') ? buttonStyles.disabled : 'bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white rounded-lg transition-colors'}`}
+                  className={`px-3 py-1 text-sm ${isLoading('batchSource_batch_mark_adult') ? buttonStyles.disabled : 'bg-linear-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white rounded-lg transition-colors'}`}
                   title='将选中的视频源标记为成人资源'
                 >
                   {isLoading('batchSource_batch_mark_adult') ? '标记中...' : '标记成人'}
@@ -3373,7 +3373,7 @@ const VideoSourceConfig = ({
           <div className='flex items-center gap-2 order-1 sm:order-2'>
             <button
               onClick={() => setImportExportModal({ isOpen: true, mode: 'import' })}
-              className='px-3 py-1 text-sm rounded-lg transition-colors flex items-center space-x-1 bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 text-white'
+              className='px-3 py-1 text-sm rounded-lg transition-colors flex items-center space-x-1 bg-linear-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 text-white'
               title='从 JSON 文件导入视频源'
             >
               <Upload className='w-4 h-4' />
@@ -3382,7 +3382,7 @@ const VideoSourceConfig = ({
             </button>
             <button
               onClick={() => setImportExportModal({ isOpen: true, mode: 'export' })}
-              className='px-3 py-1 text-sm rounded-lg transition-colors flex items-center space-x-1 bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-700 hover:to-emerald-600 text-white'
+              className='px-3 py-1 text-sm rounded-lg transition-colors flex items-center space-x-1 bg-linear-to-r from-green-600 to-emerald-500 hover:from-green-700 hover:to-emerald-600 text-white'
               title={
                 selectedSources.size > 0
                   ? `导出选中的 ${selectedSources.size} 个视频源`
@@ -3896,7 +3896,7 @@ const CategoryConfig = ({
   if (!config) {
     return (
       <div className='flex justify-center items-center py-8'>
-        <div className='flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200/50 dark:border-blue-700/50 shadow-md'>
+        <div className='flex items-center gap-3 px-6 py-3 bg-linear-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200/50 dark:border-blue-700/50 shadow-md'>
           <div className='animate-spin rounded-full h-5 w-5 border-2 border-blue-300 border-t-blue-600 dark:border-blue-700 dark:border-t-blue-400'></div>
           <span className='text-sm font-medium text-gray-700 dark:text-gray-300'>加载配置中...</span>
         </div>
@@ -4135,7 +4135,7 @@ const ConfigFileComponent = ({ config, refreshConfig }: { config: AdminConfig | 
   if (!config) {
     return (
       <div className='flex justify-center items-center py-8'>
-        <div className='flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200/50 dark:border-blue-700/50 shadow-md'>
+        <div className='flex items-center gap-3 px-6 py-3 bg-linear-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200/50 dark:border-blue-700/50 shadow-md'>
           <div className='animate-spin rounded-full h-5 w-5 border-2 border-blue-300 border-t-blue-600 dark:border-blue-700 dark:border-t-blue-400'></div>
           <span className='text-sm font-medium text-gray-700 dark:text-gray-300'>加载配置中...</span>
         </div>
@@ -4444,7 +4444,7 @@ const SiteConfigComponent = ({ config, refreshConfig }: { config: AdminConfig | 
   if (!config) {
     return (
       <div className='flex justify-center items-center py-8'>
-        <div className='flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200/50 dark:border-blue-700/50 shadow-md'>
+        <div className='flex items-center gap-3 px-6 py-3 bg-linear-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200/50 dark:border-blue-700/50 shadow-md'>
           <div className='animate-spin rounded-full h-5 w-5 border-2 border-blue-300 border-t-blue-600 dark:border-blue-700 dark:border-t-blue-400'></div>
           <span className='text-sm font-medium text-gray-700 dark:text-gray-300'>加载配置中...</span>
         </div>
@@ -4539,7 +4539,7 @@ const SiteConfigComponent = ({ config, refreshConfig }: { config: AdminConfig | 
                   >
                     <span className='truncate'>{option.label}</span>
                     {siteSettings.DoubanProxyType === option.value && (
-                      <Check className='w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0 ml-2' />
+                      <Check className='w-4 h-4 text-green-600 dark:text-green-400 shrink-0 ml-2' />
                     )}
                   </button>
                 ))}
@@ -4651,7 +4651,7 @@ const SiteConfigComponent = ({ config, refreshConfig }: { config: AdminConfig | 
                   >
                     <span className='truncate'>{option.label}</span>
                     {siteSettings.DoubanImageProxyType === option.value && (
-                      <Check className='w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0 ml-2' />
+                      <Check className='w-4 h-4 text-green-600 dark:text-green-400 shrink-0 ml-2' />
                     )}
                   </button>
                 ))}
@@ -4800,7 +4800,7 @@ const SiteConfigComponent = ({ config, refreshConfig }: { config: AdminConfig | 
               }))
             }
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${siteSettings.ShowAdultContent
-              ? 'bg-gradient-to-r from-red-600 to-pink-600 focus:ring-red-500'
+              ? 'bg-linear-to-r from-red-600 to-pink-600 focus:ring-red-500'
               : buttonStyles.toggleOff + ' focus:ring-gray-500'
               }`}
           >
@@ -5237,7 +5237,7 @@ const LiveSourceConfig = ({
   if (!config) {
     return (
       <div className='flex justify-center items-center py-8'>
-        <div className='flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200/50 dark:border-blue-700/50 shadow-md'>
+        <div className='flex items-center gap-3 px-6 py-3 bg-linear-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200/50 dark:border-blue-700/50 shadow-md'>
           <div className='animate-spin rounded-full h-5 w-5 border-2 border-blue-300 border-t-blue-600 dark:border-blue-700 dark:border-t-blue-400'></div>
           <span className='text-sm font-medium text-gray-700 dark:text-gray-300'>加载配置中...</span>
         </div>
@@ -5725,7 +5725,7 @@ const NetDiskConfig = ({
 
         <div className='mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg'>
           <div className='flex items-start space-x-2'>
-            <CheckCircle size={16} className='text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0' />
+            <CheckCircle size={16} className='text-blue-600 dark:text-blue-400 mt-0.5 shrink-0' />
             <div className='text-sm text-blue-700 dark:text-blue-300'>
               <p className='font-medium mb-1'>配置说明</p>
               <p>选择要在搜索结果中显示的网盘类型。取消选择的类型不会出现在搜索结果中。</p>
@@ -5867,9 +5867,9 @@ function AdminPageClient() {
               {Array.from({ length: 3 }).map((_, index) => (
                 <div
                   key={index}
-                  className='relative h-24 bg-gradient-to-r from-gray-100 via-gray-200 to-gray-100 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 rounded-xl overflow-hidden'
+                  className='relative h-24 bg-linear-to-r from-gray-100 via-gray-200 to-gray-100 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 rounded-xl overflow-hidden'
                 >
-                  <div className='absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/20 to-transparent'></div>
+                  <div className='absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-linear-to-r from-transparent via-white/20 to-transparent'></div>
                 </div>
               ))}
             </div>

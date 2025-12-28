@@ -70,7 +70,7 @@ const PageLayout = ({
         <div className='md:hidden fixed top-0 left-0 right-0 z-40 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl shadow-sm'>
           <div className='flex items-center justify-between h-11 px-4'>
             {/* Logo */}
-            <div className='text-base font-bold bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 dark:from-green-400 dark:via-emerald-400 dark:to-teal-400 bg-clip-text text-transparent'>
+            <div className='text-base font-bold bg-linear-to-r from-green-600 via-emerald-600 to-teal-600 dark:from-green-400 dark:via-emerald-400 dark:to-teal-400 bg-clip-text text-transparent'>
               {siteName}
             </div>
 
@@ -79,7 +79,7 @@ const PageLayout = ({
               {aiEnabled && (
                 <button
                   onClick={() => setShowAIRecommendModal(true)}
-                  className='relative p-1.5 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700 active:scale-95 transition-all duration-200 shadow-lg shadow-blue-500/30 group'
+                  className='relative p-1.5 rounded-lg bg-linear-to-br from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700 active:scale-95 transition-all duration-200 shadow-lg shadow-blue-500/30 group'
                   aria-label='AI 推荐'
                 >
                   <Sparkles className='h-4 w-4 group-hover:scale-110 transition-transform duration-300' />
@@ -135,7 +135,7 @@ const PageLayout = ({
             {aiEnabled && (
               <button
                 onClick={() => setShowAIRecommendModal(true)}
-                className='relative p-2 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700 active:scale-95 transition-all duration-200 shadow-lg shadow-blue-500/30 group'
+                className='relative p-2 rounded-lg bg-linear-to-br from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700 active:scale-95 transition-all duration-200 shadow-lg shadow-blue-500/30 group'
                 aria-label='AI 推荐'
               >
                 <Sparkles className='h-5 w-5 group-hover:scale-110 transition-transform duration-300' />

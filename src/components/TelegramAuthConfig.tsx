@@ -65,7 +65,7 @@ export function TelegramAuthConfig({ config, onSave }: TelegramAuthConfigProps) 
       {/* 配置提示 */}
       <div className='bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4'>
         <div className='flex gap-3'>
-          <AlertCircle className='w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5' />
+          <AlertCircle className='w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5' />
           <div className='text-sm text-blue-800 dark:text-blue-200 space-y-2'>
             <p className='font-semibold'>配置步骤：</p>
             <ol className='list-decimal list-inside space-y-1 ml-2'>
@@ -84,7 +84,7 @@ export function TelegramAuthConfig({ config, onSave }: TelegramAuthConfigProps) 
       {/* 重要提示：一个 Bot 只能绑定一个域名 */}
       <div className='bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4'>
         <div className='flex gap-3'>
-          <AlertCircle className='w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5' />
+          <AlertCircle className='w-5 h-5 text-yellow-600 dark:text-yellow-400 shrink-0 mt-0.5' />
           <div className='text-sm text-yellow-800 dark:text-yellow-200 space-y-2'>
             <p className='font-semibold'>⚠️ 重要提示：Webhook 绑定限制</p>
             <ul className='list-disc list-inside space-y-1 ml-2'>
@@ -110,7 +110,7 @@ export function TelegramAuthConfig({ config, onSave }: TelegramAuthConfigProps) 
         <button
           type='button'
           onClick={() => setLocalConfig({ ...localConfig, enabled: !localConfig.enabled })}
-          className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
             localConfig.enabled ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'
           }`}
         >
@@ -175,7 +175,7 @@ export function TelegramAuthConfig({ config, onSave }: TelegramAuthConfigProps) 
           <button
             type='button'
             onClick={() => setLocalConfig({ ...localConfig, autoRegister: !localConfig.autoRegister })}
-            className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
               localConfig.autoRegister ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'
             }`}
           >
@@ -199,9 +199,9 @@ export function TelegramAuthConfig({ config, onSave }: TelegramAuthConfigProps) 
           }`}
         >
           {message.type === 'success' ? (
-            <CheckCircle2 className='w-5 h-5 flex-shrink-0' />
+            <CheckCircle2 className='w-5 h-5 shrink-0' />
           ) : (
-            <AlertCircle className='w-5 h-5 flex-shrink-0' />
+            <AlertCircle className='w-5 h-5 shrink-0' />
           )}
           <span className='text-sm'>{message.text}</span>
         </div>

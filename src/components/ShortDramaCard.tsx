@@ -221,7 +221,7 @@ function ShortDramaCard({
           />
 
           {/* 悬浮播放按钮 - 玻璃态效果 */}
-          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-t from-black/80 via-black/20 to-transparent backdrop-blur-[2px] opacity-0 transition-all duration-300 group-hover:opacity-100">
+          <div className="absolute inset-0 flex items-center justify-center bg-linear-to-t from-black/80 via-black/20 to-transparent backdrop-blur-[2px] opacity-0 transition-all duration-300 group-hover:opacity-100">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/90 text-black shadow-lg transition-transform group-hover:scale-110">
               <Play className="h-5 w-5 ml-0.5" fill="currentColor" />
             </div>
@@ -229,7 +229,7 @@ function ShortDramaCard({
 
           {/* 集数标识 - 玻璃态美化 - 只在集数>1时显示 */}
           {showEpisodeCount && (
-            <div className="absolute top-2 left-2 rounded-full bg-gradient-to-br from-purple-500/90 via-pink-500/90 to-rose-500/90 backdrop-blur-md px-3 py-1.5 text-xs font-bold text-white shadow-lg ring-2 ring-white/30 transition-all duration-300 group-hover:scale-110 group-hover:shadow-purple-500/50">
+            <div className="absolute top-2 left-2 rounded-full bg-linear-to-br from-purple-500/90 via-pink-500/90 to-rose-500/90 backdrop-blur-md px-3 py-1.5 text-xs font-bold text-white shadow-lg ring-2 ring-white/30 transition-all duration-300 group-hover:scale-110 group-hover:shadow-purple-500/50">
               <span className="flex items-center gap-1">
                 <Play size={10} className="fill-current" />
                 {realEpisodeCount}集
@@ -239,7 +239,7 @@ function ShortDramaCard({
 
           {/* 评分 - 使用vote_average字段 */}
           {drama.vote_average && drama.vote_average > 0 && (
-            <div className="absolute top-2 right-2 flex items-center rounded-lg bg-gradient-to-br from-yellow-400 to-orange-500 px-2.5 py-1.5 text-xs font-bold text-white shadow-lg backdrop-blur-sm ring-2 ring-white/30 transition-all duration-300 group-hover:scale-110">
+            <div className="absolute top-2 right-2 flex items-center rounded-lg bg-linear-to-br from-yellow-400 to-orange-500 px-2.5 py-1.5 text-xs font-bold text-white shadow-lg backdrop-blur-sm ring-2 ring-white/30 transition-all duration-300 group-hover:scale-110">
               <Star className="h-3 w-3 mr-1 fill-current" />
               {drama.vote_average.toFixed(1)}
             </div>
@@ -263,14 +263,14 @@ function ShortDramaCard({
 
         {/* 信息区域 */}
         <div className="mt-2 space-y-1.5">
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-blue-600 group-hover:to-purple-600 dark:group-hover:from-blue-400 dark:group-hover:to-purple-400 transition-all duration-300">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-linear-to-r group-hover:from-blue-600 group-hover:to-purple-600 dark:group-hover:from-blue-400 dark:group-hover:to-purple-400 transition-all duration-300">
             {drama.name}
           </h3>
 
           {/* 演员信息 */}
           {drama.author && (
             <div className="flex items-center gap-1.5 text-xs">
-              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200/50 dark:border-blue-700/50">
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-linear-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200/50 dark:border-blue-700/50">
                 <svg className="w-3 h-3 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
                 </svg>
@@ -280,7 +280,7 @@ function ShortDramaCard({
           )}
 
           <div className="flex items-center gap-1.5 text-xs">
-            <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200/50 dark:border-green-700/50">
+            <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-linear-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200/50 dark:border-green-700/50">
               <svg className="w-3 h-3 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
               </svg>

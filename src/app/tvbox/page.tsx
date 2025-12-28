@@ -389,9 +389,9 @@ export default function TVBoxConfigPage() {
 
         {/* 🎯 新功能提示 */}
         <div className="mb-6">
-          <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
+          <div className="bg-linear-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
             <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
+              <div className="shrink-0 w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
                 <Search className="w-5 h-5 text-white" />
               </div>
               <div className="flex-1">
@@ -677,7 +677,7 @@ export default function TVBoxConfigPage() {
 
           {/* ⚡ 快捷复制配置链接 */}
           <div className="mb-4">
-            <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border border-purple-200 dark:border-purple-700 rounded-lg p-4">
+            <div className="bg-linear-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border border-purple-200 dark:border-purple-700 rounded-lg p-4">
               <div className="mb-3">
                 <h3 className="text-sm font-semibold text-purple-900 dark:text-purple-100 mb-1">
                   ⚡ 快捷复制配置
@@ -1018,7 +1018,7 @@ export default function TVBoxConfigPage() {
                   </div>
 
                   {/* Spider Jar 状态 */}
-                  <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
+                  <div className="p-4 bg-linear-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
                     <h3 className="font-semibold text-blue-900 dark:text-blue-300 mb-3 flex items-center gap-2">
                       <Shield className="w-4 h-4" />
                       Spider JAR 状态
@@ -1194,7 +1194,7 @@ export default function TVBoxConfigPage() {
                     ) : (
                       <>
                         {/* 网络环境卡片 */}
-                        <div className="p-4 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
+                        <div className="p-4 bg-linear-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
                           <div className="flex items-center gap-2 mb-3">
                             <Globe className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                             <h3 className="font-semibold text-blue-900 dark:text-blue-300">网络环境</h3>
@@ -1228,7 +1228,7 @@ export default function TVBoxConfigPage() {
                         </div>
 
                         {/* 健康分数卡片 */}
-                        <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg border border-green-200 dark:border-green-700">
+                        <div className="p-4 bg-linear-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg border border-green-200 dark:border-green-700">
                           <div className="flex items-center justify-between">
                             <div>
                               <div className="flex items-center gap-2 mb-2">
@@ -1268,9 +1268,9 @@ export default function TVBoxConfigPage() {
                               <div key={idx} className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-600">
                                 <div className="flex items-center gap-2 flex-1">
                                   {test.success ? (
-                                    <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" />
+                                    <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400 shrink-0" />
                                   ) : (
-                                    <XCircle className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0" />
+                                    <XCircle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" />
                                   )}
                                   <div className="flex-1 min-w-0">
                                     <div className="text-xs font-mono text-gray-600 dark:text-gray-300 truncate">
@@ -1300,12 +1300,12 @@ export default function TVBoxConfigPage() {
                         </div>
 
                         {/* 智能建议 */}
-                        <div className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg border border-purple-200 dark:border-purple-700">
+                        <div className="p-4 bg-linear-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg border border-purple-200 dark:border-purple-700">
                           <h3 className="font-semibold text-purple-900 dark:text-purple-300 mb-3">💡 智能建议</h3>
                           <ul className="space-y-2">
                             {smartHealthResult.recommendations.map((rec, idx) => (
                               <li key={idx} className="text-sm text-purple-700 dark:text-purple-300 flex items-start gap-2">
-                                <span className="flex-shrink-0 mt-1">•</span>
+                                <span className="shrink-0 mt-1">•</span>
                                 <span>{rec}</span>
                               </li>
                             ))}
@@ -1433,7 +1433,7 @@ export default function TVBoxConfigPage() {
 
                         {/* 推荐源 */}
                         {jarFixResult.recommended_sources.length > 0 && (
-                          <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg border border-green-200 dark:border-green-700">
+                          <div className="p-4 bg-linear-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg border border-green-200 dark:border-green-700">
                             <h3 className="font-semibold text-green-900 dark:text-green-300 mb-3">✅ 推荐源 (Top 3)</h3>
                             <div className="space-y-2">
                               {jarFixResult.recommended_sources.map((source, idx) => (
@@ -1472,9 +1472,9 @@ export default function TVBoxConfigPage() {
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center gap-2 flex-1">
                                     {test.success ? (
-                                      <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" />
+                                      <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400 shrink-0" />
                                     ) : (
-                                      <XCircle className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0" />
+                                      <XCircle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" />
                                     )}
                                     <div className="flex-1 min-w-0">
                                       <div className="text-sm font-medium text-gray-900 dark:text-white">
@@ -1509,7 +1509,7 @@ export default function TVBoxConfigPage() {
                               <ul className="space-y-1">
                                 {jarFixResult.recommendations.immediate.map((rec, idx) => (
                                   <li key={idx} className="text-sm text-blue-700 dark:text-blue-300 flex items-start gap-2">
-                                    <span className="flex-shrink-0 mt-1">•</span>
+                                    <span className="shrink-0 mt-1">•</span>
                                     <span>{rec}</span>
                                   </li>
                                 ))}
@@ -1524,7 +1524,7 @@ export default function TVBoxConfigPage() {
                               <ul className="space-y-1">
                                 {jarFixResult.recommendations.configuration.map((rec, idx) => (
                                   <li key={idx} className="text-sm text-purple-700 dark:text-purple-300 flex items-start gap-2">
-                                    <span className="flex-shrink-0 mt-1">•</span>
+                                    <span className="shrink-0 mt-1">•</span>
                                     <span>{rec}</span>
                                   </li>
                                 ))}
@@ -1539,7 +1539,7 @@ export default function TVBoxConfigPage() {
                               <ul className="space-y-1">
                                 {jarFixResult.recommendations.troubleshooting.map((rec, idx) => (
                                   <li key={idx} className="text-sm text-yellow-700 dark:text-yellow-300 flex items-start gap-2">
-                                    <span className="flex-shrink-0 mt-1">•</span>
+                                    <span className="shrink-0 mt-1">•</span>
                                     <span>{rec}</span>
                                   </li>
                                 ))}
@@ -1550,7 +1550,7 @@ export default function TVBoxConfigPage() {
 
                         {/* 修复后的配置URL */}
                         {jarFixResult.fixed_config_urls.length > 0 && (
-                          <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg border border-green-200 dark:border-green-700">
+                          <div className="p-4 bg-linear-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg border border-green-200 dark:border-green-700">
                             <h3 className="font-semibold text-green-900 dark:text-green-300 mb-2">🔗 优化配置链接</h3>
                             <div className="space-y-2">
                               {jarFixResult.fixed_config_urls.map((url, idx) => (
@@ -1624,25 +1624,25 @@ export default function TVBoxConfigPage() {
 
                         {/* 测试统计 */}
                         <div className="grid grid-cols-4 gap-3">
-                          <div className="p-3 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-lg text-center">
+                          <div className="p-3 bg-linear-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-lg text-center">
                             <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                               {deepDiagnosticResult.summary.totalTested}
                             </div>
                             <div className="text-xs text-blue-700 dark:text-blue-300 mt-1">总测试源</div>
                           </div>
-                          <div className="p-3 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-lg text-center">
+                          <div className="p-3 bg-linear-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-lg text-center">
                             <div className="text-2xl font-bold text-green-600 dark:text-green-400">
                               {deepDiagnosticResult.summary.successCount}
                             </div>
                             <div className="text-xs text-green-700 dark:text-green-300 mt-1">可用源</div>
                           </div>
-                          <div className="p-3 bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 rounded-lg text-center">
+                          <div className="p-3 bg-linear-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 rounded-lg text-center">
                             <div className="text-2xl font-bold text-red-600 dark:text-red-400">
                               {deepDiagnosticResult.summary.failedCount}
                             </div>
                             <div className="text-xs text-red-700 dark:text-red-300 mt-1">失败源</div>
                           </div>
-                          <div className="p-3 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-lg text-center">
+                          <div className="p-3 bg-linear-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-lg text-center">
                             <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
                               {Math.round(deepDiagnosticResult.summary.averageResponseTime)}ms
                             </div>
@@ -1796,7 +1796,7 @@ export default function TVBoxConfigPage() {
         </div>
 
         {/* 核心特性 */}
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-6 mb-6 border border-blue-200 dark:border-blue-700">
+        <div className="bg-linear-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-6 mb-6 border border-blue-200 dark:border-blue-700">
           <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
             ✨ 核心特性
           </h2>

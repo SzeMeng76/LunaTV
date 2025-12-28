@@ -224,7 +224,7 @@ export default function EpgScrollableRow({
             return (
               <div
                 key={index}
-                className={`flex-shrink-0 w-36 sm:w-48 p-2 sm:p-3 rounded-lg border transition-all duration-200 flex flex-col min-h-[100px] sm:min-h-[120px] ${isPlaying
+                className={`shrink-0 w-36 sm:w-48 p-2 sm:p-3 rounded-lg border transition-all duration-200 flex flex-col min-h-[100px] sm:min-h-[120px] ${isPlaying
                   ? 'bg-green-500/10 dark:bg-green-500/20 border-green-500/30'
                   : isFinishedProgram
                     ? 'bg-gray-300/50 dark:bg-gray-800 border-gray-300 dark:border-gray-700'
@@ -234,7 +234,7 @@ export default function EpgScrollableRow({
                   }`}
               >
                 {/* 时间显示在顶部 */}
-                <div className="flex items-center justify-between mb-2 sm:mb-3 flex-shrink-0">
+                <div className="flex items-center justify-between mb-2 sm:mb-3 shrink-0">
                   <span className={`text-xs font-medium ${isPlaying
                     ? 'text-green-600 dark:text-green-400'
                     : isFinishedProgram
@@ -276,7 +276,7 @@ export default function EpgScrollableRow({
 
                 {/* 正在播放状态在底部 */}
                 {isPlaying && (
-                  <div className="mt-auto pt-1 sm:pt-2 flex items-center gap-1 sm:gap-1.5 flex-shrink-0">
+                  <div className="mt-auto pt-1 sm:pt-2 flex items-center gap-1 sm:gap-1.5 shrink-0">
                     <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full animate-pulse"></div>
                     <span className="text-xs text-green-600 dark:text-green-400 font-medium">
                       正在播放

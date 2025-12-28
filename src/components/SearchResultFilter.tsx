@@ -208,7 +208,7 @@ const SearchResultFilter: React.FC<SearchResultFilterProps> = ({ categories, val
       {activeCategory && createPortal(
         <div
           ref={dropdownRef}
-          className='fixed z-[9999] bg-white/95 dark:bg-gray-800/95 rounded-xl border border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm max-h-[50vh] flex flex-col'
+          className='fixed z-9999 bg-white/95 dark:bg-gray-800/95 rounded-xl border border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm max-h-[50vh] flex flex-col'
           style={{
             left: `${dropdownPosition.x}px`,
             top: `${dropdownPosition.y}px`,

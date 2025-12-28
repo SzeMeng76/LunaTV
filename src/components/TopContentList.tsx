@@ -40,7 +40,7 @@ export default function TopContentList({ topSources, className = '' }: TopConten
 
           return (
             <div key={index} className="flex items-center space-x-3">
-              <div className="flex-shrink-0 w-6 text-center">
+              <div className="shrink-0 w-6 text-center">
                 <span className={`text-sm font-medium ${
                   index === 0 ? 'text-yellow-600' :
                   index === 1 ? 'text-gray-500' :

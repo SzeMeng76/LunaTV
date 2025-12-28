@@ -221,12 +221,12 @@ export default function WatchRoomPage() {
       <div className="flex flex-col gap-4 py-4 px-5 lg:px-[3rem] 2xl:px-20">
         {/* 页面标题 */}
         <div className="py-1">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-              <Users className="w-6 h-6 text-indigo-500" />
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+              <Users className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-500" />
               观影室
               {currentRoom && (
-                <span className="text-sm font-normal text-gray-500 dark:text-gray-400">
+                <span className="text-xs sm:text-sm font-normal text-gray-500 dark:text-gray-400">
                   ({isOwner ? '房主' : '房员'})
                 </span>
               )}
@@ -234,25 +234,25 @@ export default function WatchRoomPage() {
             {/* 连接状态指示器 */}
             <div className="flex items-center gap-2">
               <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
-              <span className="text-sm text-gray-600 dark:text-gray-400">
+              <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                 {isConnected ? '已连接' : '未连接'}
               </span>
             </div>
           </div>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">
             与好友一起看视频，实时同步播放
           </p>
         </div>
 
         {/* 选项卡 */}
-        <div className="flex border-b border-gray-200 dark:border-gray-700">
+        <div className="flex border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors relative
+                className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-6 py-2.5 sm:py-3 text-xs sm:text-sm font-medium transition-colors relative whitespace-nowrap
                   ${
                     activeTab === tab.id
                       ? 'text-indigo-600 dark:text-indigo-400'
@@ -260,7 +260,7 @@ export default function WatchRoomPage() {
                   }
                 `}
               >
-                <Icon className="w-4 h-4" />
+                <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 {tab.label}
                 {activeTab === tab.id && (
                   <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 dark:bg-indigo-400" />
@@ -284,7 +284,7 @@ export default function WatchRoomPage() {
                 {currentRoom ? (
                   <div className="space-y-4">
                     {/* 房间信息卡片 */}
-                    <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl p-6 text-white">
+                    <div className="bg-linear-to-r from-indigo-500 to-purple-600 rounded-xl p-6 text-white">
                       <div className="flex items-start justify-between mb-4">
                         <div>
                           <h3 className="text-2xl font-bold mb-1">{currentRoom.name}</h3>
@@ -297,14 +297,14 @@ export default function WatchRoomPage() {
                         )}
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4 mt-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mt-4">
                         <div className="bg-white/10 backdrop-blur rounded-lg p-3">
                           <p className="text-indigo-100 text-xs mb-1">房间号</p>
-                          <p className="text-xl font-mono font-bold">{currentRoom.id}</p>
+                          <p className="text-lg sm:text-xl font-mono font-bold">{currentRoom.id}</p>
                         </div>
                         <div className="bg-white/10 backdrop-blur rounded-lg p-3">
                           <p className="text-indigo-100 text-xs mb-1">成员数</p>
-                          <p className="text-xl font-bold">{members.length} 人</p>
+                          <p className="text-lg sm:text-xl font-bold">{members.length} 人</p>
                         </div>
                       </div>
                     </div>
@@ -353,7 +353,7 @@ export default function WatchRoomPage() {
                             className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-lg p-3"
                           >
                             <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-full bg-gradient-to-r from-indigo-400 to-purple-500 flex items-center justify-center text-white font-bold">
+                              <div className="w-10 h-10 rounded-full bg-linear-to-r from-indigo-400 to-purple-500 flex items-center justify-center text-white font-bold">
                                 {member.name.charAt(0).toUpperCase()}
                               </div>
                               <span className="font-medium text-gray-900 dark:text-gray-100">
@@ -487,7 +487,7 @@ export default function WatchRoomPage() {
                 {currentRoom ? (
                   <div className="space-y-4">
                     {/* 房间信息卡片 */}
-                    <div className="bg-gradient-to-r from-green-500 to-teal-600 rounded-xl p-6 text-white">
+                    <div className="bg-linear-to-r from-green-500 to-teal-600 rounded-xl p-6 text-white">
                       <div className="flex items-start justify-between mb-4">
                         <div>
                           <h3 className="text-2xl font-bold mb-1">{currentRoom.name}</h3>
@@ -556,7 +556,7 @@ export default function WatchRoomPage() {
                             className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-lg p-3"
                           >
                             <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-full bg-gradient-to-r from-green-400 to-teal-500 flex items-center justify-center text-white font-bold">
+                              <div className="w-10 h-10 rounded-full bg-linear-to-r from-green-400 to-teal-500 flex items-center justify-center text-white font-bold">
                                 {member.name.charAt(0).toUpperCase()}
                               </div>
                               <span className="font-medium text-gray-900 dark:text-gray-100">
@@ -655,16 +655,16 @@ export default function WatchRoomPage() {
 
           {/* 房间列表 */}
           {activeTab === 'list' && (
-            <div className="py-4">
+            <div className="py-2 sm:py-4">
               {/* 顶部操作栏 */}
-              <div className="flex items-center justify-between mb-6">
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 sm:mb-6">
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                   找到 <span className="font-medium text-gray-900 dark:text-gray-100">{rooms.length}</span> 个公开房间
                 </p>
                 <button
                   onClick={loadRooms}
                   disabled={loading}
-                  className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-gray-700 dark:text-gray-300 transition-colors disabled:opacity-50"
+                  className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 transition-colors disabled:opacity-50"
                 >
                   <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                   刷新
@@ -696,15 +696,15 @@ export default function WatchRoomPage() {
 
               {/* 房间卡片列表 */}
               {rooms.length > 0 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                   {rooms.map((room) => (
                     <div
                       key={room.id}
-                      className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow"
+                      className="bg-white dark:bg-gray-800 rounded-lg p-3 sm:p-4 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow"
                     >
                       <div className="flex items-start justify-between mb-2.5">
                         <div className="flex-1 min-w-0">
-                          <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 truncate">
+                          <h3 className="text-sm sm:text-base font-bold text-gray-900 dark:text-gray-100 truncate">
                             {room.name}
                           </h3>
                           {room.description && (
@@ -714,28 +714,28 @@ export default function WatchRoomPage() {
                           )}
                         </div>
                         {room.password && (
-                          <Lock className="w-4 h-4 text-yellow-500 flex-shrink-0 ml-2" />
+                          <Lock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-yellow-500 shrink-0 ml-2" />
                         )}
                       </div>
 
-                      <div className="space-y-1.5 text-sm mb-3">
+                      <div className="space-y-1.5 text-xs sm:text-sm mb-3">
                         <div className="flex items-center justify-between">
                           <span className="text-gray-500 dark:text-gray-400">房间号</span>
-                          <span className="font-mono text-lg font-bold text-gray-900 dark:text-gray-100">
+                          <span className="font-mono text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100">
                             {room.id}
                           </span>
                         </div>
                         <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                          <Users className="w-4 h-4" />
+                          <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                           <span>{room.memberCount} 人在线</span>
                         </div>
                         <div className="flex items-center justify-between text-gray-600 dark:text-gray-400">
                           <span>房主</span>
-                          <span className="font-medium">{room.ownerName}</span>
+                          <span className="font-medium truncate ml-2">{room.ownerName}</span>
                         </div>
                         <div className="flex items-center justify-between text-gray-600 dark:text-gray-400">
                           <span>创建时间</span>
-                          <span>{formatTime(room.createdAt)}</span>
+                          <span className="whitespace-nowrap">{formatTime(room.createdAt)}</span>
                         </div>
                       </div>
 

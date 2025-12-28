@@ -1,5 +1,19 @@
+import { clsx, type ClassValue } from 'clsx';
 import he from 'he';
 import Hls from 'hls.js';
+import { twMerge } from 'tailwind-merge';
+
+/**
+ * Utility function for merging Tailwind CSS classes
+ * Combines clsx and tailwind-merge for optimal class handling
+ *
+ * @example
+ * cn('px-2 py-1', condition && 'bg-blue-500')
+ * cn('px-2', 'px-4') // => 'px-4' (tailwind-merge handles conflicts)
+ */
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
 
 // 增强的设备检测逻辑，参考最新的设备特征
 const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent : '';

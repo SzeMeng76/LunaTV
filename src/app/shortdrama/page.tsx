@@ -203,7 +203,7 @@ export default function ShortDramaPage() {
           {!isSearchMode && categories.length > 0 && (
             <div className="mb-6">
               <div className="flex items-center space-x-2.5 mb-4">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-500 via-purple-600 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-500/30">
+                <div className="w-9 h-9 rounded-xl bg-linear-to-br from-purple-500 via-purple-600 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-500/30">
                   <Filter className="h-4 w-4 text-white" />
                 </div>
                 <span className="text-base font-bold text-gray-900 dark:text-gray-100">
@@ -221,7 +221,7 @@ export default function ShortDramaPage() {
                     onClick={() => setSelectedCategory(category.type_id)}
                     className={`group relative overflow-hidden rounded-xl px-5 py-2.5 text-sm font-medium transition-all duration-300 transform hover:scale-105 ${
                       selectedCategory === category.type_id
-                        ? 'bg-gradient-to-r from-purple-500 via-purple-600 to-pink-500 text-white shadow-lg shadow-purple-500/40'
+                        ? 'bg-linear-to-r from-purple-500 via-purple-600 to-pink-500 text-white shadow-lg shadow-purple-500/40'
                         : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-2 border-gray-200 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-600 hover:shadow-md'
                     }`}
                     style={{
@@ -230,12 +230,12 @@ export default function ShortDramaPage() {
                   >
                     {/* 激活状态的光泽效果 */}
                     {selectedCategory === category.type_id && (
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
+                      <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
                     )}
 
                     {/* 未激活状态的悬停背景 */}
                     {selectedCategory !== category.type_id && (
-                      <div className="absolute inset-0 bg-gradient-to-r from-purple-50 via-pink-50 to-purple-50 dark:from-purple-900/20 dark:via-pink-900/20 dark:to-purple-900/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                      <div className="absolute inset-0 bg-linear-to-r from-purple-50 via-pink-50 to-purple-50 dark:from-purple-900/20 dark:via-pink-900/20 dark:to-purple-900/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                     )}
 
                     <span className="relative z-10">{category.type_name}</span>
@@ -261,7 +261,7 @@ export default function ShortDramaPage() {
           {loading && (isInitialLoad || page > 1) && (
             <div className="mt-8">
               <div className="flex justify-center mb-6">
-                <div className='flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl border border-purple-200/50 dark:border-purple-700/50 shadow-md'>
+                <div className='flex items-center gap-3 px-6 py-3 bg-linear-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl border border-purple-200/50 dark:border-purple-700/50 shadow-md'>
                   <div className='animate-spin rounded-full h-5 w-5 border-2 border-purple-300 border-t-purple-600 dark:border-purple-700 dark:border-t-purple-400'></div>
                   <span className='text-sm font-medium text-gray-700 dark:text-gray-300'>加载更多短剧...</span>
                 </div>
@@ -269,14 +269,14 @@ export default function ShortDramaPage() {
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
                 {Array.from({ length: 12 }).map((_, index) => (
                   <div key={index} className="relative overflow-hidden">
-                    <div className="aspect-[2/3] w-full rounded-lg bg-gradient-to-br from-gray-100 via-gray-200 to-gray-100 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800">
-                      <div className='absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/20 to-transparent'></div>
+                    <div className="aspect-[2/3] w-full rounded-lg bg-linear-to-br from-gray-100 via-gray-200 to-gray-100 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800">
+                      <div className='absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-linear-to-r from-transparent via-white/20 to-transparent'></div>
                     </div>
-                    <div className="mt-2 h-4 rounded bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 relative overflow-hidden">
-                      <div className='absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/20 to-transparent'></div>
+                    <div className="mt-2 h-4 rounded bg-linear-to-r from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 relative overflow-hidden">
+                      <div className='absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-linear-to-r from-transparent via-white/20 to-transparent'></div>
                     </div>
-                    <div className="mt-1 h-3 w-2/3 rounded bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 relative overflow-hidden">
-                      <div className='absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/20 to-transparent'></div>
+                    <div className="mt-1 h-3 w-2/3 rounded bg-linear-to-r from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 relative overflow-hidden">
+                      <div className='absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-linear-to-r from-transparent via-white/20 to-transparent'></div>
                     </div>
                   </div>
                 ))}
@@ -287,15 +287,15 @@ export default function ShortDramaPage() {
           {/* 无更多数据提示 */}
           {!loading && !hasMore && dramas.length > 0 && (
             <div className='flex justify-center mt-12 py-8'>
-              <div className='relative px-8 py-5 rounded-2xl bg-gradient-to-r from-purple-50 via-pink-50 to-rose-50 dark:from-purple-900/20 dark:via-pink-900/20 dark:to-rose-900/20 border border-purple-200/50 dark:border-purple-700/50 shadow-lg backdrop-blur-sm overflow-hidden'>
+              <div className='relative px-8 py-5 rounded-2xl bg-linear-to-r from-purple-50 via-pink-50 to-rose-50 dark:from-purple-900/20 dark:via-pink-900/20 dark:to-rose-900/20 border border-purple-200/50 dark:border-purple-700/50 shadow-lg backdrop-blur-sm overflow-hidden'>
                 {/* 装饰性背景 */}
-                <div className='absolute inset-0 bg-gradient-to-br from-purple-100/20 to-pink-100/20 dark:from-purple-800/10 dark:to-pink-800/10'></div>
+                <div className='absolute inset-0 bg-linear-to-br from-purple-100/20 to-pink-100/20 dark:from-purple-800/10 dark:to-pink-800/10'></div>
 
                 {/* 内容 */}
                 <div className='relative flex flex-col items-center gap-2'>
                   {/* 完成图标 */}
                   <div className='relative'>
-                    <div className='w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg'>
+                    <div className='w-12 h-12 rounded-full bg-linear-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg'>
                       <svg className='w-7 h-7 text-white' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
                         <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2.5' d='M5 13l4 4L19 7'></path>
                       </svg>
@@ -321,16 +321,16 @@ export default function ShortDramaPage() {
           {/* 无搜索结果 */}
           {!loading && dramas.length === 0 && isSearchMode && (
             <div className='flex justify-center py-16'>
-              <div className='relative px-12 py-10 rounded-3xl bg-gradient-to-br from-gray-50 via-slate-50 to-gray-100 dark:from-gray-800/40 dark:via-slate-800/40 dark:to-gray-800/50 border border-gray-200/50 dark:border-gray-700/50 shadow-xl backdrop-blur-sm overflow-hidden max-w-md'>
+              <div className='relative px-12 py-10 rounded-3xl bg-linear-to-br from-gray-50 via-slate-50 to-gray-100 dark:from-gray-800/40 dark:via-slate-800/40 dark:to-gray-800/50 border border-gray-200/50 dark:border-gray-700/50 shadow-xl backdrop-blur-sm overflow-hidden max-w-md'>
                 {/* 装饰性元素 */}
-                <div className='absolute top-0 left-0 w-32 h-32 bg-gradient-to-br from-purple-200/20 to-pink-200/20 rounded-full blur-3xl'></div>
-                <div className='absolute bottom-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-200/20 to-teal-200/20 rounded-full blur-3xl'></div>
+                <div className='absolute top-0 left-0 w-32 h-32 bg-linear-to-br from-purple-200/20 to-pink-200/20 rounded-full blur-3xl'></div>
+                <div className='absolute bottom-0 right-0 w-32 h-32 bg-linear-to-br from-blue-200/20 to-teal-200/20 rounded-full blur-3xl'></div>
 
                 {/* 内容 */}
                 <div className='relative flex flex-col items-center gap-4'>
                   {/* 搜索图标 */}
                   <div className='relative'>
-                    <div className='w-24 h-24 rounded-full bg-gradient-to-br from-gray-100 to-slate-200 dark:from-gray-700 dark:to-slate-700 flex items-center justify-center shadow-lg'>
+                    <div className='w-24 h-24 rounded-full bg-linear-to-br from-gray-100 to-slate-200 dark:from-gray-700 dark:to-slate-700 flex items-center justify-center shadow-lg'>
                       <svg className='w-12 h-12 text-gray-400 dark:text-gray-500' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
                         <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='1.5' d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'></path>
                       </svg>
@@ -353,13 +353,13 @@ export default function ShortDramaPage() {
                   {/* 按钮 */}
                   <button
                     onClick={() => handleSearch('')}
-                    className='mt-2 px-6 py-2.5 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105'
+                    className='mt-2 px-6 py-2.5 bg-linear-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105'
                   >
                     清除搜索条件
                   </button>
 
                   {/* 装饰线 */}
-                  <div className='w-16 h-1 bg-gradient-to-r from-transparent via-gray-300 to-transparent dark:via-gray-600 rounded-full'></div>
+                  <div className='w-16 h-1 bg-linear-to-r from-transparent via-gray-300 to-transparent dark:via-gray-600 rounded-full'></div>
                 </div>
               </div>
             </div>
@@ -370,7 +370,7 @@ export default function ShortDramaPage() {
       {/* 返回顶部悬浮按钮 */}
       <button
         onClick={scrollToTop}
-        className={`fixed bottom-20 md:bottom-6 right-6 z-[500] w-12 h-12 bg-purple-500/90 hover:bg-purple-500 text-white rounded-full shadow-lg backdrop-blur-sm transition-all duration-300 ease-in-out flex items-center justify-center group ${showBackToTop
+        className={`fixed bottom-20 md:bottom-6 right-6 z-500 w-12 h-12 bg-purple-500/90 hover:bg-purple-500 text-white rounded-full shadow-lg backdrop-blur-sm transition-all duration-300 ease-in-out flex items-center justify-center group ${showBackToTop
           ? 'opacity-100 translate-y-0 pointer-events-auto'
           : 'opacity-0 translate-y-4 pointer-events-none'
           }`}

@@ -46,23 +46,31 @@ export function DownloadPanel() {
   };
 
   return (
-    <div className='fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm'>
-      <div className='bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-full max-w-4xl max-h-[80vh] flex flex-col'>
+    <div className='fixed inset-0 z-9999 overflow-y-auto'>
+      <div className='flex items-end md:items-center justify-center min-h-screen md:min-h-full p-0 md:p-4'>
+        {/* 背景遮罩 */}
+        <div
+          className='fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity'
+          onClick={() => setShowDownloadPanel(false)}
+        />
+
+        {/* 模态框内容 */}
+        <div className='relative bg-white dark:bg-gray-800 rounded-t-2xl md:rounded-lg shadow-2xl w-full md:max-w-4xl h-fit max-h-[80vh] md:max-h-[85vh] flex flex-col border-t md:border border-gray-200 dark:border-gray-700 overflow-hidden'>
         {/* 标题栏 */}
-        <div className='flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700'>
-          <h2 className='text-xl font-bold text-gray-900 dark:text-white'>下载任务列表</h2>
+        <div className='flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700 shrink-0'>
+          <h2 className='text-lg sm:text-xl font-bold text-gray-900 dark:text-white'>下载任务列表</h2>
           <button
             onClick={() => setShowDownloadPanel(false)}
-            className='text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors'
+            className='text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors active:scale-95'
           >
-            <svg className='w-6 h-6' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+            <svg className='w-5 h-5 sm:w-6 sm:h-6' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
               <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M6 18L18 6M6 6l12 12' />
             </svg>
           </button>
-        </div>
+          </div>
 
         {/* 任务列表 */}
-        <div className='flex-1 overflow-y-auto p-4 space-y-3'>
+        <div className='flex-1 overflow-y-auto p-4 sm:p-6 space-y-3'>
           {tasks.length === 0 ? (
             <div className='flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400'>
               <svg className='w-16 h-16 mb-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
@@ -113,7 +121,7 @@ export function DownloadPanel() {
                       <div
                         className={`h-full rounded-full transition-all duration-300 ${
                           task.status === 'downloading'
-                            ? 'bg-gradient-to-r from-blue-500 to-purple-600 animate-pulse'
+                            ? 'bg-linear-to-r from-blue-500 to-purple-600 animate-pulse'
                             : task.status === 'done'
                             ? 'bg-green-500'
                             : task.status === 'error'
@@ -185,8 +193,8 @@ export function DownloadPanel() {
 
         {/* 底部统计 */}
         {tasks.length > 0 && (
-          <div className='p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/30'>
-            <div className='flex items-center justify-between text-sm text-gray-600 dark:text-gray-300'>
+          <div className='p-4 sm:p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/30 shrink-0'>
+            <div className='flex flex-wrap items-center justify-between gap-2 text-xs sm:text-sm text-gray-600 dark:text-gray-300'>
               <span>总任务数: {tasks.length}</span>
               <span>下载中: {tasks.filter(t => t.status === 'downloading').length}</span>
               <span>已完成: {tasks.filter(t => t.status === 'done').length}</span>
@@ -194,6 +202,7 @@ export function DownloadPanel() {
             </div>
           </div>
         )}
+        </div>
       </div>
     </div>
   );

@@ -178,7 +178,7 @@ function filterAdsFromM3U8(type, m3u8Content) {
     <div className='space-y-6'>
       {/* 标题和说明 */}
       <div className='flex items-start gap-3'>
-        <Code className='w-6 h-6 text-purple-500 flex-shrink-0 mt-1' />
+        <Code className='w-6 h-6 text-purple-500 shrink-0 mt-1' />
         <div className='flex-1'>
           <h3 className='text-lg font-semibold text-gray-900 dark:text-gray-100'>
             自定义去广告代码
@@ -192,7 +192,7 @@ function filterAdsFromM3U8(type, m3u8Content) {
       {/* 信息提示 */}
       <div className='bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4'>
         <div className='flex items-start gap-3'>
-          <Info className='w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5' />
+          <Info className='w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5' />
           <div className='text-sm text-blue-800 dark:text-blue-200'>
             <p className='font-medium mb-2'>使用说明：</p>
             <ul className='space-y-1 list-disc list-inside'>
@@ -259,9 +259,9 @@ function filterAdsFromM3U8(type, m3u8Content) {
             : 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200 border border-red-200 dark:border-red-800'
         }`}>
           {message.type === 'success' ? (
-            <CheckCircle className='w-5 h-5 flex-shrink-0' />
+            <CheckCircle className='w-5 h-5 shrink-0' />
           ) : (
-            <AlertCircle className='w-5 h-5 flex-shrink-0' />
+            <AlertCircle className='w-5 h-5 shrink-0' />
           )}
           <span className='text-sm'>{message.text}</span>
         </div>

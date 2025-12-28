@@ -148,7 +148,7 @@ export default function HeroBanner({
           return (
             <div
               key={item.id}
-              className={`absolute inset-0 bg-gradient-to-r ${gradient} transition-opacity duration-700 ease-in-out ${
+              className={`absolute inset-0 bg-linear-to-r ${gradient} transition-opacity duration-700 ease-in-out ${
                 index === currentIndex ? 'opacity-100' : 'opacity-0'
               }`}
             >
@@ -164,7 +164,7 @@ export default function HeroBanner({
       {/* 主要内容区域 - 移动端竖版，桌面端横版 */}
       <div className='relative h-full flex flex-col md:flex-row items-center justify-center md:justify-start gap-4 md:gap-8 lg:gap-12 px-4 sm:px-6 md:px-8 lg:px-12 py-6 md:py-0'>
         {/* 海报图片 - 移动端居中大图，桌面端左侧 */}
-        <div className='flex-shrink-0 relative'>
+        <div className='shrink-0 relative'>
           {items.map((item, index) => (
             <div
               key={item.id}
@@ -189,12 +189,12 @@ export default function HeroBanner({
         {/* 内容信息 - 移动端居中，桌面端左对齐 */}
         <div className='flex-1 min-w-0 flex flex-col items-center md:items-start justify-center gap-2 md:gap-2.5 max-h-full text-center md:text-left'>
           {/* 标题 */}
-          <h1 className='text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-white drop-shadow-lg leading-tight line-clamp-2 flex-shrink-0'>
+          <h1 className='text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-white drop-shadow-lg leading-tight line-clamp-2 shrink-0'>
             {currentItem.title}
           </h1>
 
           {/* 元数据 */}
-          <div className='flex items-center justify-center md:justify-start gap-2 sm:gap-3 text-xs sm:text-sm flex-shrink-0 flex-wrap'>
+          <div className='flex items-center justify-center md:justify-start gap-2 sm:gap-3 text-xs sm:text-sm shrink-0 flex-wrap'>
             {currentItem.year && (
               <span className='text-white/90 font-medium'>{currentItem.year}</span>
             )}
@@ -223,7 +223,7 @@ export default function HeroBanner({
           )}
 
           {/* 操作按钮 */}
-          <div className='flex flex-wrap justify-center md:justify-start gap-2 sm:gap-3 flex-shrink-0'>
+          <div className='flex flex-wrap justify-center md:justify-start gap-2 sm:gap-3 shrink-0'>
             <Link
               href={
                 currentItem.type === 'shortdrama'

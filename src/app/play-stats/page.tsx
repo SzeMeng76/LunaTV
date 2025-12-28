@@ -921,7 +921,7 @@ const PlayStatsPage: React.FC = () => {
                       >
                         <div className='flex items-center justify-between'>
                           <div className='flex items-center space-x-4'>
-                            <div className='flex-shrink-0'>
+                            <div className='shrink-0'>
                               <div className='w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center'>
                                 <span className='text-sm font-medium text-blue-600 dark:text-blue-400'>
                                   {userStat.username.charAt(0).toUpperCase()}
@@ -955,7 +955,7 @@ const PlayStatsPage: React.FC = () => {
                                   return (
                                     <div className="space-y-1">
                                       <div className="flex items-center gap-1.5">
-                                        <span className="text-base flex-shrink-0">{loginDisplay.level.icon}</span>
+                                        <span className="text-base shrink-0">{loginDisplay.level.icon}</span>
                                         <span className="font-medium text-gray-700 dark:text-gray-300 text-xs leading-tight">
                                           {loginDisplay.level.name}
                                         </span>
@@ -999,7 +999,7 @@ const PlayStatsPage: React.FC = () => {
                                 平均时长
                               </div>
                             </div>
-                            <div className='flex-shrink-0'>
+                            <div className='shrink-0'>
                               <svg
                                 className={`w-5 h-5 text-gray-400 transition-transform ${
                                   expandedUsers.has(userStat.username)
@@ -1037,7 +1037,7 @@ const PlayStatsPage: React.FC = () => {
                                     className='flex items-center space-x-4 p-3 bg-white dark:bg-gray-800 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors'
                                     onClick={() => handlePlayRecord(record)}
                                   >
-                                    <div className='flex-shrink-0 w-12 h-16 bg-gray-200 dark:bg-gray-700 rounded overflow-hidden'>
+                                    <div className='shrink-0 w-12 h-16 bg-gray-200 dark:bg-gray-700 rounded overflow-hidden'>
                                       {record.cover ? (
                                         <Image
                                           src={record.cover}
@@ -1107,7 +1107,7 @@ const PlayStatsPage: React.FC = () => {
                                         </div>
                                       </div>
                                     </div>
-                                    <div className='flex-shrink-0 text-right'>
+                                    <div className='shrink-0 text-right'>
                                       <div className='text-xs text-gray-500 dark:text-gray-400'>
                                         {formatDateTime(record.save_time)}
                                       </div>
@@ -1202,7 +1202,7 @@ const PlayStatsPage: React.FC = () => {
                     return (
                       <div className="space-y-2">
                         <div className='flex items-center gap-2'>
-                          <span className="text-2xl flex-shrink-0">{loginDisplay.level.icon}</span>
+                          <span className="text-2xl shrink-0">{loginDisplay.level.icon}</span>
                           <div className="flex-1 min-w-0">
                             <div className="text-base font-bold text-red-800 dark:text-red-300 leading-tight">
                               {loginDisplay.level.name}
@@ -1289,7 +1289,7 @@ const PlayStatsPage: React.FC = () => {
               {/* 即将上映卡片 */}
               {(upcomingInitialized || upcomingLoading) && (
                 <div className="mb-8">
-                  <div className="bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg p-6 text-white shadow-lg">
+                  <div className="bg-linear-to-r from-purple-500 to-pink-500 rounded-lg p-6 text-white shadow-lg">
                     <div className="flex items-center justify-between mb-4">
                       <div>
                         <h3 className="text-lg font-bold flex items-center gap-2">
@@ -1332,7 +1332,7 @@ const PlayStatsPage: React.FC = () => {
                               </div>
                               <div className="flex space-x-3 overflow-x-auto pb-1 w-full">
                                 {upcomingReleases.filter(item => item.type === 'movie').slice(0, 7).map(item => (
-                                  <div key={item.id} className="min-w-[140px] bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20 flex-shrink-0">
+                                  <div key={item.id} className="min-w-[140px] bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20 shrink-0">
                                     <div className="text-sm font-medium mb-1 line-clamp-2" title={item.title}>
                                       {item.title}
                                     </div>
@@ -1356,7 +1356,7 @@ const PlayStatsPage: React.FC = () => {
                               </div>
                               <div className="flex space-x-3 overflow-x-auto pb-1 w-full">
                                 {upcomingReleases.filter(item => item.type === 'tv').slice(0, 7).map(item => (
-                                  <div key={item.id} className="min-w-[140px] bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20 flex-shrink-0">
+                                  <div key={item.id} className="min-w-[140px] bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20 shrink-0">
                                     <div className="text-sm font-medium mb-1 line-clamp-2" title={item.title}>
                                       {item.title}
                                     </div>
@@ -1413,7 +1413,7 @@ const PlayStatsPage: React.FC = () => {
                         .filter(series => series.hasNewEpisode)
                         .map((series, index) => (
                           <div key={`new-${series.title}_${series.year}_${index}`} className="relative w-full group/card">
-                            <div className="relative group-hover/card:z-[5] transition-all duration-300 ease-in-out">
+                            <div className="relative group-hover/card:z-5 transition-all duration-300 ease-in-out">
                               <VideoCard
                                 title={series.title}
                                 poster={series.cover || ''}
@@ -1428,10 +1428,10 @@ const PlayStatsPage: React.FC = () => {
                                 remarks={series.remarks}
                               />
                               {/* 新集数提示光环效果 */}
-                              <div className="absolute inset-0 rounded-lg ring-2 ring-red-400 ring-opacity-50 animate-pulse pointer-events-none z-[9] transition-transform duration-300 ease-in-out group-hover/card:scale-[1.05]"></div>
+                              <div className="absolute inset-0 rounded-lg ring-2 ring-red-400 ring-opacity-50 animate-pulse pointer-events-none z-9 transition-transform duration-300 ease-in-out group-hover/card:scale-[1.05]"></div>
                             </div>
                             {/* 新集数徽章 */}
-                            <div className="absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full shadow-lg animate-bounce z-10">
+                            <div className="absolute -top-2 -right-2 bg-linear-to-r from-red-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full shadow-lg animate-bounce z-10">
                               +{series.newEpisodes}集
                             </div>
                           </div>
@@ -1446,7 +1446,7 @@ const PlayStatsPage: React.FC = () => {
                         .filter(series => series.hasNewEpisode)
                         .map((series, index) => (
                           <div key={`new-${series.title}_${series.year}_${index}`} className="relative w-full group/card">
-                            <div className="relative group-hover/card:z-[5] transition-all duration-300 ease-in-out">
+                            <div className="relative group-hover/card:z-5 transition-all duration-300 ease-in-out">
                               <VideoCard
                                 title={series.title}
                                 poster={series.cover || ''}
@@ -1461,10 +1461,10 @@ const PlayStatsPage: React.FC = () => {
                                 remarks={series.remarks}
                               />
                               {/* 新集数提示光环效果 */}
-                              <div className="absolute inset-0 rounded-lg ring-2 ring-red-400 ring-opacity-50 animate-pulse pointer-events-none z-[9] transition-transform duration-300 ease-in-out group-hover/card:scale-[1.05]"></div>
+                              <div className="absolute inset-0 rounded-lg ring-2 ring-red-400 ring-opacity-50 animate-pulse pointer-events-none z-9 transition-transform duration-300 ease-in-out group-hover/card:scale-[1.05]"></div>
                             </div>
                             {/* 新集数徽章 */}
-                            <div className="absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full shadow-lg animate-bounce z-10">
+                            <div className="absolute -top-2 -right-2 bg-linear-to-r from-red-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full shadow-lg animate-bounce z-10">
                               +{series.newEpisodes}集
                             </div>
                           </div>
@@ -1496,7 +1496,7 @@ const PlayStatsPage: React.FC = () => {
                         .filter(series => series.hasContinueWatching && !series.hasNewEpisode)
                         .map((series, index) => (
                           <div key={`continue-${series.title}_${series.year}_${index}`} className="relative w-full group/card">
-                            <div className="relative group-hover/card:z-[5] transition-all duration-300 ease-in-out">
+                            <div className="relative group-hover/card:z-5 transition-all duration-300 ease-in-out">
                               <VideoCard
                                 title={series.title}
                                 poster={series.cover || ''}
@@ -1511,10 +1511,10 @@ const PlayStatsPage: React.FC = () => {
                                 remarks={series.remarks}
                               />
                               {/* 继续观看提示光环效果 */}
-                              <div className="absolute inset-0 rounded-lg ring-2 ring-blue-400 ring-opacity-50 animate-pulse pointer-events-none z-[9] transition-transform duration-300 ease-in-out group-hover/card:scale-[1.05]"></div>
+                              <div className="absolute inset-0 rounded-lg ring-2 ring-blue-400 ring-opacity-50 animate-pulse pointer-events-none z-9 transition-transform duration-300 ease-in-out group-hover/card:scale-[1.05]"></div>
                             </div>
                             {/* 继续观看徽章 */}
-                            <div className="absolute -top-2 -right-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-xs px-2 py-1 rounded-full shadow-lg animate-pulse z-10">
+                            <div className="absolute -top-2 -right-2 bg-linear-to-r from-blue-500 to-cyan-500 text-white text-xs px-2 py-1 rounded-full shadow-lg animate-pulse z-10">
                               继续看
                             </div>
                           </div>
@@ -1529,7 +1529,7 @@ const PlayStatsPage: React.FC = () => {
                         .filter(series => series.hasContinueWatching && !series.hasNewEpisode)
                         .map((series, index) => (
                           <div key={`continue-${series.title}_${series.year}_${index}`} className="relative w-full group/card">
-                            <div className="relative group-hover/card:z-[5] transition-all duration-300 ease-in-out">
+                            <div className="relative group-hover/card:z-5 transition-all duration-300 ease-in-out">
                               <VideoCard
                                 title={series.title}
                                 poster={series.cover || ''}
@@ -1544,10 +1544,10 @@ const PlayStatsPage: React.FC = () => {
                                 remarks={series.remarks}
                               />
                               {/* 继续观看提示光环效果 */}
-                              <div className="absolute inset-0 rounded-lg ring-2 ring-blue-400 ring-opacity-50 animate-pulse pointer-events-none z-[9] transition-transform duration-300 ease-in-out group-hover/card:scale-[1.05]"></div>
+                              <div className="absolute inset-0 rounded-lg ring-2 ring-blue-400 ring-opacity-50 animate-pulse pointer-events-none z-9 transition-transform duration-300 ease-in-out group-hover/card:scale-[1.05]"></div>
                             </div>
                             {/* 继续观看徽章 */}
-                            <div className="absolute -top-2 -right-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-xs px-2 py-1 rounded-full shadow-lg animate-pulse z-10">
+                            <div className="absolute -top-2 -right-2 bg-linear-to-r from-blue-500 to-cyan-500 text-white text-xs px-2 py-1 rounded-full shadow-lg animate-pulse z-10">
                               继续看
                             </div>
                           </div>
@@ -1570,7 +1570,7 @@ const PlayStatsPage: React.FC = () => {
                         className='flex items-center space-x-4 p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors'
                         onClick={() => handlePlayRecord(record)}
                       >
-                        <div className='flex-shrink-0 w-16 h-20 bg-gray-200 dark:bg-gray-700 rounded overflow-hidden'>
+                        <div className='shrink-0 w-16 h-20 bg-gray-200 dark:bg-gray-700 rounded overflow-hidden'>
                           {record.cover ? (
                             <Image
                               src={record.cover}
@@ -1661,7 +1661,7 @@ const PlayStatsPage: React.FC = () => {
         </div>
         <button
           onClick={scrollToTop}
-          className={`fixed bottom-20 md:bottom-6 right-6 z-[500] w-12 h-12 bg-green-500/90 hover:bg-green-500 text-white rounded-full shadow-lg backdrop-blur-sm transition-all duration-300 ease-in-out flex items-center justify-center group ${showBackToTop
+          className={`fixed bottom-20 md:bottom-6 right-6 z-500 w-12 h-12 bg-green-500/90 hover:bg-green-500 text-white rounded-full shadow-lg backdrop-blur-sm transition-all duration-300 ease-in-out flex items-center justify-center group ${showBackToTop
             ? 'opacity-100 translate-y-0 pointer-events-auto'
             : 'opacity-0 translate-y-4 pointer-events-none'
             }`}
@@ -1802,7 +1802,7 @@ const PlayStatsPage: React.FC = () => {
                 return (
                   <div className="space-y-2">
                     <div className='flex items-center gap-2'>
-                      <span className="text-2xl flex-shrink-0">{loginDisplay.level.icon}</span>
+                      <span className="text-2xl shrink-0">{loginDisplay.level.icon}</span>
                       <div className="flex-1 min-w-0">
                         <div className="text-base font-bold text-red-800 dark:text-red-300 leading-tight">
                           {loginDisplay.level.name}
@@ -1889,7 +1889,7 @@ const PlayStatsPage: React.FC = () => {
           {/* 即将上映卡片 */}
           {(upcomingInitialized || upcomingLoading) && (
             <div className="mb-8">
-              <div className="bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg p-6 text-white shadow-lg">
+              <div className="bg-linear-to-r from-purple-500 to-pink-500 rounded-lg p-6 text-white shadow-lg">
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <h3 className="text-lg font-bold flex items-center gap-2">
@@ -1931,7 +1931,7 @@ const PlayStatsPage: React.FC = () => {
                           </div>
                           <div className="flex space-x-3 overflow-x-auto pb-1 w-full">
                             {upcomingReleases.filter(item => item.type === 'movie').slice(0, 7).map(item => (
-                              <div key={item.id} className="min-w-[140px] bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20 flex-shrink-0">
+                              <div key={item.id} className="min-w-[140px] bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20 shrink-0">
                                 <div className="text-sm font-medium mb-1 line-clamp-2" title={item.title}>
                                   {item.title}
                                 </div>
@@ -1955,7 +1955,7 @@ const PlayStatsPage: React.FC = () => {
                           </div>
                           <div className="flex space-x-3 overflow-x-auto pb-1 w-full">
                             {upcomingReleases.filter(item => item.type === 'tv').slice(0, 7).map(item => (
-                              <div key={item.id} className="min-w-[140px] bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20 flex-shrink-0">
+                              <div key={item.id} className="min-w-[140px] bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20 shrink-0">
                                 <div className="text-sm font-medium mb-1 line-clamp-2" title={item.title}>
                                   {item.title}
                                 </div>
@@ -2028,10 +2028,10 @@ const PlayStatsPage: React.FC = () => {
                             remarks={series.remarks}
                           />
                           {/* 新集数提示光环效果 */}
-                          <div className="absolute inset-0 rounded-lg ring-2 ring-red-400 ring-opacity-50 animate-pulse pointer-events-none z-[9]"></div>
+                          <div className="absolute inset-0 rounded-lg ring-2 ring-red-400 ring-opacity-50 animate-pulse pointer-events-none z-9"></div>
                         </div>
                         {/* 新集数徽章 */}
-                        <div className="absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full shadow-lg animate-bounce z-10">
+                        <div className="absolute -top-2 -right-2 bg-linear-to-r from-red-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full shadow-lg animate-bounce z-10">
                           +{series.newEpisodes}集
                         </div>
                       </div>
@@ -2062,10 +2062,10 @@ const PlayStatsPage: React.FC = () => {
                             remarks={series.remarks}
                           />
                           {/* 新集数提示光环效果 */}
-                          <div className="absolute inset-0 rounded-lg ring-2 ring-red-400 ring-opacity-50 animate-pulse pointer-events-none z-[9]"></div>
+                          <div className="absolute inset-0 rounded-lg ring-2 ring-red-400 ring-opacity-50 animate-pulse pointer-events-none z-9"></div>
                         </div>
                         {/* 新集数徽章 */}
-                        <div className="absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full shadow-lg animate-bounce z-10">
+                        <div className="absolute -top-2 -right-2 bg-linear-to-r from-red-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full shadow-lg animate-bounce z-10">
                           +{series.newEpisodes}集
                         </div>
                       </div>
@@ -2113,10 +2113,10 @@ const PlayStatsPage: React.FC = () => {
                             remarks={series.remarks}
                           />
                           {/* 继续观看提示光环效果 */}
-                          <div className="absolute inset-0 rounded-lg ring-2 ring-blue-400 ring-opacity-50 animate-pulse pointer-events-none z-[9]"></div>
+                          <div className="absolute inset-0 rounded-lg ring-2 ring-blue-400 ring-opacity-50 animate-pulse pointer-events-none z-9"></div>
                         </div>
                         {/* 继续观看标识 */}
-                        <div className="absolute -top-2 -right-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-xs px-2 py-1 rounded-full shadow-lg z-10">
+                        <div className="absolute -top-2 -right-2 bg-linear-to-r from-blue-500 to-cyan-500 text-white text-xs px-2 py-1 rounded-full shadow-lg z-10">
                           继续观看
                         </div>
                       </div>
@@ -2147,10 +2147,10 @@ const PlayStatsPage: React.FC = () => {
                             remarks={series.remarks}
                           />
                           {/* 继续观看提示光环效果 */}
-                          <div className="absolute inset-0 rounded-lg ring-2 ring-blue-400 ring-opacity-50 animate-pulse pointer-events-none z-[9]"></div>
+                          <div className="absolute inset-0 rounded-lg ring-2 ring-blue-400 ring-opacity-50 animate-pulse pointer-events-none z-9"></div>
                         </div>
                         {/* 继续观看标识 */}
-                        <div className="absolute -top-2 -right-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-xs px-2 py-1 rounded-full shadow-lg z-10">
+                        <div className="absolute -top-2 -right-2 bg-linear-to-r from-blue-500 to-cyan-500 text-white text-xs px-2 py-1 rounded-full shadow-lg z-10">
                           继续观看
                         </div>
                       </div>
@@ -2173,7 +2173,7 @@ const PlayStatsPage: React.FC = () => {
                     className='flex items-center space-x-4 p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors'
                     onClick={() => handlePlayRecord(record)}
                   >
-                    <div className='flex-shrink-0 w-16 h-20 bg-gray-200 dark:bg-gray-700 rounded overflow-hidden'>
+                    <div className='shrink-0 w-16 h-20 bg-gray-200 dark:bg-gray-700 rounded overflow-hidden'>
                       {record.cover ? (
                         <Image
                           src={record.cover}
@@ -2264,7 +2264,7 @@ const PlayStatsPage: React.FC = () => {
         {/* 返回顶部悬浮按钮 */}
         <button
           onClick={scrollToTop}
-          className={`fixed bottom-20 md:bottom-6 right-6 z-[500] w-12 h-12 bg-green-500/90 hover:bg-green-500 text-white rounded-full shadow-lg backdrop-blur-sm transition-all duration-300 ease-in-out flex items-center justify-center group ${showBackToTop
+          className={`fixed bottom-20 md:bottom-6 right-6 z-500 w-12 h-12 bg-green-500/90 hover:bg-green-500 text-white rounded-full shadow-lg backdrop-blur-sm transition-all duration-300 ease-in-out flex items-center justify-center group ${showBackToTop
             ? 'opacity-100 translate-y-0 pointer-events-auto'
             : 'opacity-0 translate-y-4 pointer-events-none'
             }`}
@@ -2295,7 +2295,7 @@ const PlayStatsPage: React.FC = () => {
       {/* 返回顶部悬浮按钮 */}
       <button
         onClick={scrollToTop}
-        className={`fixed bottom-20 md:bottom-6 right-6 z-[500] w-12 h-12 bg-green-500/90 hover:bg-green-500 text-white rounded-full shadow-lg backdrop-blur-sm transition-all duration-300 ease-in-out flex items-center justify-center group ${showBackToTop
+        className={`fixed bottom-20 md:bottom-6 right-6 z-500 w-12 h-12 bg-green-500/90 hover:bg-green-500 text-white rounded-full shadow-lg backdrop-blur-sm transition-all duration-300 ease-in-out flex items-center justify-center group ${showBackToTop
           ? 'opacity-100 translate-y-0 pointer-events-auto'
           : 'opacity-0 translate-y-4 pointer-events-none'
           }`}

@@ -67,7 +67,7 @@ const MessageItem = memo(({
       <div
         className={`max-w-[80%] p-3 rounded-xl shadow-sm ${
           message.role === 'user'
-            ? 'bg-gradient-to-br from-blue-600 to-blue-700 text-white shadow-blue-500/20'
+            ? 'bg-linear-to-br from-blue-600 to-blue-700 text-white shadow-blue-500/20'
             : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border border-gray-200/50 dark:border-gray-600/50 shadow-gray-200/50 dark:shadow-gray-900/50'
         } ${message.content === '思考中...' ? 'opacity-70 animate-pulse' : ''}`}
       >
@@ -86,7 +86,7 @@ const MessageItem = memo(({
         <div className="mt-3 space-y-2 max-w-[80%]">
           <div className="text-xs text-gray-500 dark:text-gray-400 mb-2 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-900 dark:to-blue-950 text-blue-700 dark:text-blue-300 px-2.5 py-1 rounded-full text-xs font-semibold shadow-sm ring-1 ring-blue-200/50 dark:ring-blue-800/50">
+              <span className="bg-linear-to-br from-blue-100 to-blue-50 dark:from-blue-900 dark:to-blue-950 text-blue-700 dark:text-blue-300 px-2.5 py-1 rounded-full text-xs font-semibold shadow-sm ring-1 ring-blue-200/50 dark:ring-blue-800/50">
                 🎬 点击搜索
               </span>
               <span className="font-medium">推荐影片</span>
@@ -109,7 +109,7 @@ const MessageItem = memo(({
                   <img
                     src={movie.poster}
                     alt={movie.title}
-                    className="w-12 h-16 object-cover rounded-lg flex-shrink-0 shadow-md ring-1 ring-gray-200 dark:ring-gray-600"
+                    className="w-12 h-16 object-cover rounded-lg shrink-0 shadow-md ring-1 ring-gray-200 dark:ring-gray-600"
                   />
                 )}
                 <div className="flex-1 min-w-0">
@@ -177,7 +177,7 @@ const MessageItem = memo(({
                 <div onClick={() => handleYouTubeVideoSelect(video)} className="p-3 cursor-pointer hover:shadow-md hover:border-red-300 dark:hover:border-red-600 transition-all">
                   <div className="flex items-start gap-3">
                     <div className="relative">
-                      <img src={video.thumbnail} alt={video.title} className="w-16 h-12 object-cover rounded flex-shrink-0" />
+                      <img src={video.thumbnail} alt={video.title} className="w-16 h-12 object-cover rounded shrink-0" />
                       <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 rounded">
                         <div className="bg-red-600 text-white rounded-full p-1">
                           <Play className="w-3 h-3" />
@@ -593,7 +593,7 @@ export default function AIRecommendModal({ isOpen, onClose }: AIRecommendModalPr
       {/* 对话框内容容器 - 使用 @container 查询 */}
       <div className="@container relative w-full h-full bg-white dark:bg-gray-900 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
         {/* 头部 - 使用 Tailwind 4.0 改进的渐变 */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200/50 dark:border-gray-700/50 bg-gradient-to-br from-blue-600 via-purple-600 to-blue-700 shadow-lg">
+        <div className="flex items-center justify-between p-4 border-b border-gray-200/50 dark:border-gray-700/50 bg-linear-to-br from-blue-600 via-purple-600 to-blue-700 shadow-lg">
           <div className="flex items-center space-x-3">
             <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm ring-1 ring-white/30 shadow-inner">
               <Brain className="h-6 w-6 text-white drop-shadow-md" />
@@ -624,11 +624,11 @@ export default function AIRecommendModal({ isOpen, onClose }: AIRecommendModalPr
         {/* 消息区域 - 使用 optimisticMessages */}
         <div
           ref={messagesContainerRef}
-          className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-gray-50 to-gray-100/50 dark:from-gray-800 dark:to-gray-900/50"
+          className="flex-1 overflow-y-auto p-4 space-y-4 bg-linear-to-b from-gray-50 to-gray-100/50 dark:from-gray-800 dark:to-gray-900/50"
         >
           {optimisticMessages.length <= 1 && optimisticMessages.every(msg => msg.role === 'assistant' && msg.content.includes('AI智能助手')) && (
             <div className="text-center py-8">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full mb-4">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-linear-to-br from-blue-500 to-purple-600 rounded-full mb-4">
                 <Sparkles className="h-8 w-8 text-white" />
               </div>
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
@@ -676,9 +676,9 @@ export default function AIRecommendModal({ isOpen, onClose }: AIRecommendModalPr
             <div className="flex justify-start animate-in fade-in slide-in-from-bottom-2 duration-300">
               <div className="bg-white dark:bg-gray-700 p-3 rounded-xl border border-gray-200/50 dark:border-gray-600/50 shadow-sm">
                 <div className="flex space-x-1.5">
-                  <div className="w-2 h-2 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full animate-bounce shadow-sm"></div>
-                  <div className="w-2 h-2 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full animate-bounce shadow-sm" style={{ animationDelay: '0.15s' }}></div>
-                  <div className="w-2 h-2 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full animate-bounce shadow-sm" style={{ animationDelay: '0.3s' }}></div>
+                  <div className="w-2 h-2 bg-linear-to-br from-blue-500 to-purple-500 rounded-full animate-bounce shadow-sm"></div>
+                  <div className="w-2 h-2 bg-linear-to-br from-blue-500 to-purple-500 rounded-full animate-bounce shadow-sm" style={{ animationDelay: '0.15s' }}></div>
+                  <div className="w-2 h-2 bg-linear-to-br from-blue-500 to-purple-500 rounded-full animate-bounce shadow-sm" style={{ animationDelay: '0.3s' }}></div>
                 </div>
               </div>
             </div>
@@ -686,9 +686,9 @@ export default function AIRecommendModal({ isOpen, onClose }: AIRecommendModalPr
 
           {/* 错误提示 - 优化样式 */}
           {error && (
-            <div className="bg-gradient-to-br from-red-50 to-red-100/50 dark:from-red-900/20 dark:to-red-950/30 border border-red-200/50 dark:border-red-800/50 text-red-700 dark:text-red-400 p-4 rounded-xl shadow-lg animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="bg-linear-to-br from-red-50 to-red-100/50 dark:from-red-900/20 dark:to-red-950/30 border border-red-200/50 dark:border-red-800/50 text-red-700 dark:text-red-400 p-4 rounded-xl shadow-lg animate-in fade-in slide-in-from-top-2 duration-300">
               <div className="flex items-start space-x-3">
-                <div className="flex-shrink-0 p-1">
+                <div className="shrink-0 p-1">
                   <svg className="h-5 w-5 text-red-500 dark:text-red-400" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                   </svg>
@@ -735,7 +735,7 @@ export default function AIRecommendModal({ isOpen, onClose }: AIRecommendModalPr
             <button
               type="submit"
               disabled={!inputMessage.trim() || isPending}
-              className="px-6 py-3 bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-medium transition-all duration-200 flex items-center space-x-2 shadow-lg shadow-blue-500/30 disabled:shadow-none active:scale-95"
+              className="px-6 py-3 bg-linear-to-br from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-medium transition-all duration-200 flex items-center space-x-2 shadow-lg shadow-blue-500/30 disabled:shadow-none active:scale-95"
             >
               <Send className="h-4 w-4" />
               <span>{isPending ? '发送中' : '发送'}</span>

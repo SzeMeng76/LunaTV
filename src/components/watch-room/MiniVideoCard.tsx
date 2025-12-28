@@ -32,7 +32,7 @@ export default function MiniVideoCard({
       className="flex gap-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer"
     >
       {/* 海报缩略图 */}
-      <div className="relative w-16 h-24 flex-shrink-0 rounded overflow-hidden bg-gray-200 dark:bg-gray-700">
+      <div className="relative w-16 h-24 shrink-0 rounded overflow-hidden bg-gray-200 dark:bg-gray-700">
         <Image
           src={displayPoster}
           alt={title}

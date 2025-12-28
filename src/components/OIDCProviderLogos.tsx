@@ -36,10 +36,14 @@ export const FacebookLogo = () => (
   </svg>
 );
 
-// LinuxDo Logo SVG (using a Linux penguin icon as placeholder)
+// LinuxDo Logo SVG (Official Logo - Three parts darkness, seven parts light)
 export const LinuxDoLogo = () => (
-  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-    <path d="M12.504 0c-.155 0-.315.008-.480.021-4.226.333-3.105 4.807-3.17 6.298-.076 1.092-.3 1.953-1.05 3.02-.885 1.051-2.127 2.75-2.716 4.521-.278.84-.41 1.938-.232 2.541.214.728.796.862 1.395 1.033.775.222 1.56.459 2.43.459.599 0 1.19-.133 1.75-.36.336-.135.64-.33.915-.57.293-.254.54-.568.73-.928.38-.72.415-1.697.415-2.553 0-.84.03-1.68.45-2.39.21-.36.465-.675.765-.945.3-.27.645-.495 1.02-.675.75-.36 1.605-.51 2.46-.51.855 0 1.71.15 2.46.51.375.18.72.405 1.02.675.3.27.555.585.765.945.42.71.45 1.55.45 2.39 0 .856.035 1.833.415 2.553.19.36.437.674.73.928.275.24.579.435.915.57.56.227 1.151.36 1.75.36.87 0 1.655-.237 2.43-.459.599-.171 1.181-.305 1.395-1.033.178-.603.046-1.701-.232-2.541-.589-1.771-1.831-3.47-2.716-4.521-.75-1.067-.974-1.928-1.05-3.02-.065-1.491 1.056-5.965-3.17-6.298-.165-.013-.325-.021-.48-.021z"/>
+  <svg className="w-5 h-5" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+    <clipPath id="linuxdo-clip"><circle cx="60" cy="60" r="47"/></clipPath>
+    <circle fill="#f0f0f0" cx="60" cy="60" r="50"/>
+    <rect fill="#1c1c1e" clipPath="url(#linuxdo-clip)" x="10" y="10" width="100" height="30"/>
+    <rect fill="#f0f0f0" clipPath="url(#linuxdo-clip)" x="10" y="40" width="100" height="40"/>
+    <rect fill="#ffb003" clipPath="url(#linuxdo-clip)" x="10" y="80" width="100" height="30"/>
   </svg>
 );
 
@@ -111,7 +115,7 @@ export function getProviderButtonStyle(provider: ReturnType<typeof detectProvide
     case 'apple':
       return 'bg-black hover:bg-gray-900 text-white border-2 border-black dark:bg-gray-900 dark:hover:bg-gray-800';
     case 'linuxdo':
-      return 'bg-blue-600 hover:bg-blue-700 text-white border-2 border-blue-600';
+      return 'bg-white hover:bg-gray-50 text-gray-700 border-2 border-gray-300 dark:bg-gray-100 dark:hover:bg-white dark:text-gray-800';
     default:
       return 'bg-white hover:bg-gray-50 text-gray-700 border-2 border-gray-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-gray-200 dark:border-gray-600';
   }

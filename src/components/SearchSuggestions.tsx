@@ -148,7 +148,7 @@ export default function SearchSuggestions({
   return (
     <div
       ref={containerRef}
-      className='absolute top-full left-0 right-0 z-[600] mt-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 max-h-80 overflow-y-auto'
+      className='absolute top-full left-0 right-0 z-600 mt-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 max-h-80 overflow-y-auto'
     >
       {suggestions.map((suggestion) => (
         <button

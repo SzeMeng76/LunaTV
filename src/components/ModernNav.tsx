@@ -142,8 +142,8 @@ export default function ModernNav({ showAIButton = false, onAIButtonClick }: Mod
         <div className='max-w-[2560px] mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 2xl:px-20'>
           <div className='flex items-center justify-between h-16 gap-4'>
             {/* Logo */}
-            <Link href='/' className='flex-shrink-0'>
-              <div className='text-xl font-bold bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 dark:from-green-400 dark:via-emerald-400 dark:to-teal-400 bg-clip-text text-transparent'>
+            <Link href='/' className='shrink-0'>
+              <div className='text-xl font-bold bg-linear-to-r from-green-600 via-emerald-600 to-teal-600 dark:from-green-400 dark:via-emerald-400 dark:to-teal-400 bg-clip-text text-transparent'>
                 {siteName}
               </div>
             </Link>
@@ -159,12 +159,12 @@ export default function ModernNav({ showAIButton = false, onAIButtonClick }: Mod
                   key={item.label}
                   href={item.href}
                   onClick={() => setActive(item.href)}
-                  className='group relative flex items-center gap-2 px-3 lg:px-4 py-2 rounded-full transition-all duration-300 hover:bg-gray-100/50 dark:hover:bg-gray-800/50 whitespace-nowrap flex-shrink-0'
+                  className='group relative flex items-center gap-2 px-3 lg:px-4 py-2 rounded-full transition-all duration-300 hover:bg-gray-100/50 dark:hover:bg-gray-800/50 whitespace-nowrap shrink-0'
                 >
                   {/* Active indicator */}
                   {active && (
                     <div
-                      className={`absolute inset-0 bg-gradient-to-r ${item.gradient} opacity-10 rounded-full animate-pulse`}
+                      className={`absolute inset-0 bg-linear-to-r ${item.gradient} opacity-10 rounded-full animate-pulse`}
                     />
                   )}
 
@@ -193,7 +193,7 @@ export default function ModernNav({ showAIButton = false, onAIButtonClick }: Mod
                   {/* Bottom active border */}
                   {active && (
                     <div
-                      className={`absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r ${item.gradient} rounded-full`}
+                      className={`absolute bottom-0 left-0 right-0 h-0.5 bg-linear-to-r ${item.gradient} rounded-full`}
                     />
                   )}
                 </Link>
@@ -202,11 +202,11 @@ export default function ModernNav({ showAIButton = false, onAIButtonClick }: Mod
             </div>
 
             {/* Right Side Actions - ✨ AI Button, Theme Toggle & User Menu */}
-            <div className='flex items-center gap-2 flex-shrink-0'>
+            <div className='flex items-center gap-2 shrink-0'>
               {showAIButton && onAIButtonClick && (
                 <button
                   onClick={onAIButtonClick}
-                  className='relative p-2 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700 active:scale-95 transition-all duration-200 shadow-lg shadow-blue-500/30 group'
+                  className='relative p-2 rounded-lg bg-linear-to-br from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700 active:scale-95 transition-all duration-200 shadow-lg shadow-blue-500/30 group'
                   aria-label='AI 推荐'
                 >
                   <Sparkles className='h-5 w-5 group-hover:scale-110 transition-transform duration-300' />
@@ -260,7 +260,7 @@ export default function ModernNav({ showAIButton = false, onAIButtonClick }: Mod
                     <div
                       className={`flex items-center justify-center w-12 h-12 rounded-2xl ${
                         active
-                          ? `bg-gradient-to-br ${item.gradient}`
+                          ? `bg-linear-to-br ${item.gradient}`
                           : 'bg-gray-100 dark:bg-gray-800'
                       }`}
                     >
@@ -299,7 +299,7 @@ export default function ModernNav({ showAIButton = false, onAIButtonClick }: Mod
         {/* Liquid Glass Container - iOS WWDC25 Style */}
         <div className='mx-2 mb-2 rounded-[28px] bg-white/70 dark:bg-gray-900/70 backdrop-blur-3xl shadow-2xl border border-white/20 dark:border-gray-800/30 overflow-hidden'>
           {/* Floating gradient accent line on top */}
-          <div className='h-[2px] bg-gradient-to-r from-transparent via-green-500/50 to-transparent'></div>
+          <div className='h-[2px] bg-linear-to-r from-transparent via-green-500/50 to-transparent'></div>
 
           <div className='flex items-center justify-around px-2 py-2 h-16'>
             {/* Show first 4 items + More button */}
@@ -318,14 +318,14 @@ export default function ModernNav({ showAIButton = false, onAIButtonClick }: Mod
                   <div className='relative'>
                     {/* Active background pill */}
                     {active && (
-                      <div className={`absolute -inset-2 bg-gradient-to-br ${item.gradient} opacity-15 rounded-2xl blur-sm`}></div>
+                      <div className={`absolute -inset-2 bg-linear-to-br ${item.gradient} opacity-15 rounded-2xl blur-sm`}></div>
                     )}
 
                     {/* Icon container */}
                     <div
                       className={`relative flex items-center justify-center w-11 h-7 rounded-2xl transition-all duration-300 ${
                         active
-                          ? 'bg-gradient-to-br from-gray-100/80 to-gray-200/60 dark:from-gray-800/80 dark:to-gray-700/60 shadow-lg'
+                          ? 'bg-linear-to-br from-gray-100/80 to-gray-200/60 dark:from-gray-800/80 dark:to-gray-700/60 shadow-lg'
                           : 'bg-transparent'
                       }`}
                     >
@@ -352,7 +352,7 @@ export default function ModernNav({ showAIButton = false, onAIButtonClick }: Mod
                   {/* Active indicator dot */}
                   {active && (
                     <div
-                      className={`absolute -bottom-0.5 w-1 h-1 bg-gradient-to-r ${item.gradient} rounded-full shadow-lg`}
+                      className={`absolute -bottom-0.5 w-1 h-1 bg-linear-to-r ${item.gradient} rounded-full shadow-lg`}
                     />
                   )}
                 </Link>

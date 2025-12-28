@@ -163,6 +163,7 @@ export async function GET(request: NextRequest) {
     const mode = (searchParams.get('mode') || '').toLowerCase(); // 支持safe|min模式
     const token = searchParams.get('token'); // 获取token参数
     const forceSpiderRefresh = searchParams.get('forceSpiderRefresh') === '1'; // 强制刷新spider缓存
+    const filterParam = searchParams.get('filter'); // 成人内容过滤控制参数
 
     // 读取当前配置
     const config = await getConfig();
@@ -283,6 +284,8 @@ export async function GET(request: NextRequest) {
     let enabledSources = sourceConfigs.filter(source => !source.disabled && source.api && source.api.trim() !== '');
 
     // 🔑 成人内容过滤：确定成人内容显示权限，优先级：用户 > 用户组 > 全局
+    // 🛡️ 纵深防御第一层：filter 参数控制（默认启用过滤，只有显式传 filter=off 才关闭）
+    const shouldFilterAdult = filterParam !== 'off'; // 默认启用过滤
     let showAdultContent = config.SiteConfig.ShowAdultContent;
 
     if (currentUser) {
@@ -315,10 +318,14 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // 过滤成人内容源
-    if (!showAdultContent) {
+    // 应用过滤逻辑：filter 参数和用户权限都要满足
+    if (shouldFilterAdult && !showAdultContent) {
       enabledSources = enabledSources.filter(source => !source.is_adult);
-      console.log(`[TVBox] 成人内容过滤已启用，剩余源数量: ${enabledSources.length}`);
+      console.log(`[TVBox] 🛡️ 成人内容过滤已启用（filter=${filterParam || 'default'}, showAdultContent=${showAdultContent}），剩余源数量: ${enabledSources.length}`);
+    } else if (!shouldFilterAdult) {
+      console.log(`[TVBox] ⚠️ 成人内容过滤已通过 filter=off 显式关闭`);
+    } else if (showAdultContent) {
+      console.log(`[TVBox] ℹ️ 用户有成人内容访问权限，未过滤成人源`);
     }
 
     // 🔑 新增：应用用户的源限制（如果有）

@@ -73,7 +73,7 @@ const DownloadConfig: React.FC<DownloadConfigProps> = ({
       {/* 功能说明 */}
       <div className='p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800'>
         <div className='flex items-start gap-3'>
-          <Download className='text-blue-600 dark:text-blue-400 flex-shrink-0 mt-1' size={20} />
+          <Download className='text-blue-600 dark:text-blue-400 shrink-0 mt-1' size={20} />
           <div>
             <h3 className='text-sm font-semibold text-gray-900 dark:text-white mb-2'>
               M3U8客户端下载功能

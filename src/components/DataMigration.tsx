@@ -330,7 +330,7 @@ const DataMigration = ({ onRefreshConfig }: DataMigrationProps) => {
       <div className="max-w-6xl mx-auto space-y-6">
         {/* 简洁警告提示 */}
         <div className="flex items-center gap-3 p-4 border border-amber-200 dark:border-amber-700 rounded-lg bg-amber-50/30 dark:bg-amber-900/5">
-          <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+          <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0" />
           <p className="text-sm text-amber-800 dark:text-amber-200">
             数据迁移操作请谨慎，确保已备份重要数据
           </p>

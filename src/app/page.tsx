@@ -599,10 +599,10 @@ function HomeClient() {
 
       <div className='overflow-visible -mt-6 md:mt-0'>
         {/* 欢迎横幅 - 现代化精简设计 */}
-        <div className='mb-6 relative overflow-hidden rounded-xl bg-gradient-to-r from-blue-500/90 via-purple-500/90 to-pink-500/90 backdrop-blur-sm shadow-xl border border-white/20'>
+        <div className='mb-6 relative overflow-hidden rounded-xl bg-linear-to-r from-blue-500/90 via-purple-500/90 to-pink-500/90 backdrop-blur-sm shadow-xl border border-white/20'>
           <div className='relative p-4 sm:p-5'>
             {/* 动态渐变背景 */}
-            <div className='absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-black/5'></div>
+            <div className='absolute inset-0 bg-linear-to-br from-white/5 via-transparent to-black/5'></div>
 
             <div className='relative z-10 flex items-center justify-between gap-4'>
               <div className='flex-1 min-w-0'>
@@ -629,7 +629,7 @@ function HomeClient() {
               </div>
 
               {/* 装饰图标 - 更小更精致 */}
-              <div className='hidden md:flex items-center justify-center flex-shrink-0 w-12 h-12 rounded-full bg-white/10 backdrop-blur-sm border border-white/20'>
+              <div className='hidden md:flex items-center justify-center shrink-0 w-12 h-12 rounded-full bg-white/10 backdrop-blur-sm border border-white/20'>
                 <Film className='w-6 h-6 text-white' />
               </div>
             </div>
@@ -771,7 +771,7 @@ function HomeClient() {
                       onClick={() => setFavoriteFilter(key)}
                       className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                         favoriteFilter === key
-                          ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg scale-105'
+                          ? 'bg-linear-to-r from-blue-500 to-purple-500 text-white shadow-lg scale-105'
                           : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
                       }`}
                     >
@@ -899,7 +899,7 @@ function HomeClient() {
                   <div className='col-span-full flex flex-col items-center justify-center py-16 px-4'>
                     {/* SVG 插画 - 空收藏夹 */}
                     <div className='mb-6 relative'>
-                      <div className='absolute inset-0 bg-gradient-to-r from-pink-300 to-purple-300 dark:from-pink-600 dark:to-purple-600 opacity-20 blur-3xl rounded-full animate-pulse'></div>
+                      <div className='absolute inset-0 bg-linear-to-r from-pink-300 to-purple-300 dark:from-pink-600 dark:to-purple-600 opacity-20 blur-3xl rounded-full animate-pulse'></div>
                       <svg className='w-32 h-32 relative z-10' viewBox='0 0 200 200' fill='none' xmlns='http://www.w3.org/2000/svg'>
                         {/* 心形主体 */}
                         <path d='M100 170C100 170 30 130 30 80C30 50 50 30 70 30C85 30 95 40 100 50C105 40 115 30 130 30C150 30 170 50 170 80C170 130 100 170 100 170Z'
@@ -1353,7 +1353,7 @@ function HomeClient() {
             </div>
             <button
               onClick={() => handleCloseAnnouncement(announcement)}
-              className='w-full rounded-lg bg-gradient-to-r from-green-600 to-green-700 px-4 py-3 text-white font-medium shadow-md hover:shadow-lg hover:from-green-700 hover:to-green-800 dark:from-green-600 dark:to-green-700 dark:hover:from-green-700 dark:hover:to-green-800 transition-all duration-300 transform hover:-translate-y-0.5'
+              className='w-full rounded-lg bg-linear-to-r from-green-600 to-green-700 px-4 py-3 text-white font-medium shadow-md hover:shadow-lg hover:from-green-700 hover:to-green-800 dark:from-green-600 dark:to-green-700 dark:hover:from-green-700 dark:hover:to-green-800 transition-all duration-300 transform hover:-translate-y-0.5'
             >
               我知道了
             </button>
