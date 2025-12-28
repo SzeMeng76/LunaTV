@@ -102,7 +102,7 @@ async function searchWithCache(
       return {
         id: item.vod_id.toString(),
         title: item.vod_name.trim().replace(/\s+/g, ' '),
-        poster: item.vod_pic,
+        poster: item.vod_pic?.trim() || '', // 确保poster为有效字符串，过滤空白
         episodes,
         episodes_titles: titles,
         source: apiSite.key,
@@ -556,7 +556,7 @@ export async function getDetailFromApi(
   return {
     id: id.toString(),
     title: videoDetail.vod_name,
-    poster: videoDetail.vod_pic,
+    poster: videoDetail.vod_pic?.trim() || '', // 确保poster为有效字符串，过滤空白
     episodes,
     episodes_titles: titles,
     source: apiSite.key,

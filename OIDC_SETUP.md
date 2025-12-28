@@ -1,6 +1,6 @@
 # OpenID Connect (OIDC) 认证配置指南
 
-本文档详细介绍如何在 LunaTV 中配置 OIDC 单点登录（SSO），支持 Google、Microsoft、GitHub 和 LinuxDo 等主流身份提供商。
+本文档详细介绍如何在 LunaTV 中配置 OIDC 单点登录（SSO），支持 Google、Microsoft、GitHub、Facebook、微信、Apple、LinuxDo 等主流身份提供商。
 
 ## 📋 目录
 
@@ -256,6 +256,51 @@ UserInfo Endpoint:      https://api.github.com/user
 - 需要在 LunaTV 后台**手动配置**各端点 URL
 - UserInfo 端点返回的是 GitHub API 用户信息格式
 
+### 技术实现说明
+
+#### GitHub OAuth 的特殊性
+
+| 特性 | 标准 OIDC | GitHub OAuth | LunaTV 处理 |
+|------|-----------|--------------|-------------|
+| **OAuth Scope** | `openid profile email` | `read:user user:email` | ✅ 自动使用 GitHub scope |
+| **Token 响应格式** | JSON | URL编码（默认） | ✅ 添加 Accept header 获取 JSON |
+| **id_token** | 返回 | ❌ 不返回 | ✅ 使用 access_token |
+| **Email 可见性** | 公开 | 可能为 null（私有） | ✅ 自动从 `/user/emails` 获取 |
+| **UserInfo Headers** | 标准 Authorization | 需要 GitHub API headers | ✅ 添加专用 headers |
+
+#### LunaTV 的适配处理
+
+1. **Scope 自动适配**：
+   - 标准 OIDC 使用 `openid profile email`
+   - GitHub 自动使用 `read:user user:email`
+
+2. **Token 请求 Accept Header**：
+   - 添加 `Accept: application/json` header
+   - 确保 Token 端点返回 JSON 格式而非 URL 编码
+
+3. **UserInfo API Headers**：
+   - `Accept: application/vnd.github+json`
+   - `X-GitHub-Api-Version: 2022-11-28`
+
+4. **私有邮箱获取**：
+   - 如果 `/user` 返回的 `email` 为 null
+   - 自动调用 `/user/emails` 端点
+   - 优先使用 primary verified email
+
+5. **用户唯一标识**：
+   - 使用 `id` 字段（而非标准 OIDC 的 `sub`）
+
+#### 获取的用户信息
+
+LunaTV 从 GitHub API 获取：
+- `id`：用户唯一标识符（用于关联账号）
+- `login`：GitHub 用户名
+- `name`：用户显示名称
+- `email`：邮箱地址（自动获取私有邮箱）
+- `avatar_url`：用户头像
+
+> 📝 **隐私说明**：如果用户未公开邮箱，LunaTV 会自动从 `/user/emails` 端点获取 primary verified email（需要 `user:email` scope）。
+
 ### 参考资料
 - [Creating an OAuth app - GitHub Docs](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/creating-an-oauth-app)
 - [Authorizing OAuth apps - GitHub Docs](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps)
@@ -343,13 +388,13 @@ Facebook 应用默认处于 **"开发模式"**（Development），只有应用�
 Facebook 使用 OAuth 2.0 协议，端点配置如下：
 
 ```
-Authorization Endpoint: https://www.facebook.com/v19.0/dialog/oauth
-Token Endpoint:         https://graph.facebook.com/v19.0/oauth/access_token
-UserInfo Endpoint:      https://graph.facebook.com/v19.0/me
+Authorization Endpoint: https://www.facebook.com/v24.0/dialog/oauth
+Token Endpoint:         https://graph.facebook.com/v24.0/oauth/access_token
+UserInfo Endpoint:      https://graph.facebook.com/v24.0/me
 ```
 
 **版本说明**：
-- 当前示例使用 `v19.0`（2025 年推荐版本）
+- 当前示例使用 `v24.0`（2025 年最新版本）
 - Facebook 会定期发布新版本，可访问 [Graph API 版本文档](https://developers.facebook.com/docs/graph-api/changelog) 查看最新版本
 - 旧版本会在发布后至少 2 年内保持可用
 
@@ -366,9 +411,9 @@ UserInfo Endpoint:      https://graph.facebook.com/v19.0/me
 | **按钮文字** | `使用 Facebook 登录` | 可选，留空则使用默认文字 |
 | **允许注册** | ✅ 勾选（可选） | 是否允许新用户通过 Facebook 注册 |
 | **Issuer URL** | `https://www.facebook.com` | Facebook 的 Issuer |
-| **Authorization Endpoint** | `https://www.facebook.com/v19.0/dialog/oauth` | 授权端点 |
-| **Token Endpoint** | `https://graph.facebook.com/v19.0/oauth/access_token` | Token 端点 |
-| **UserInfo Endpoint** | `https://graph.facebook.com/v19.0/me` | 用户信息端点 |
+| **Authorization Endpoint** | `https://www.facebook.com/v24.0/dialog/oauth` | 授权端点 |
+| **Token Endpoint** | `https://graph.facebook.com/v24.0/oauth/access_token` | Token 端点 |
+| **UserInfo Endpoint** | `https://graph.facebook.com/v24.0/me` | 用户信息端点 |
 | **Client ID** | `您的 App ID` | 从 Facebook 应用设置中获取 |
 | **Client Secret** | `您的 App Secret` | 从 Facebook 应用设置中获取 |
 
@@ -381,9 +426,9 @@ UserInfo Endpoint:      https://graph.facebook.com/v19.0/me
   "buttonText": "使用 Facebook 登录",
   "enableRegistration": true,
   "issuer": "https://www.facebook.com",
-  "authorizationEndpoint": "https://www.facebook.com/v19.0/dialog/oauth",
-  "tokenEndpoint": "https://graph.facebook.com/v19.0/oauth/access_token",
-  "userInfoEndpoint": "https://graph.facebook.com/v19.0/me",
+  "authorizationEndpoint": "https://www.facebook.com/v24.0/dialog/oauth",
+  "tokenEndpoint": "https://graph.facebook.com/v24.0/oauth/access_token",
+  "userInfoEndpoint": "https://graph.facebook.com/v24.0/me",
   "clientId": "1234567890123456",
   "clientSecret": "abcdef1234567890abcdef1234567890"
 }
@@ -810,9 +855,9 @@ JWKS Endpoint:          https://appleid.apple.com/auth/keys
 | **按钮文字** | `使用 Apple 登录` | 可选，留空则使用默认文字 |
 | **允许注册** | ✅ 勾选（可选） | 是否允许新用户通过 Apple 注册 |
 | **Issuer URL** | `https://appleid.apple.com` | Apple 的 Issuer（支持自动发现） |
-| **Authorization Endpoint** | `https://appleid.apple.com/auth/authorize` | 授权端点 |
-| **Token Endpoint** | `https://appleid.apple.com/auth/token` | Token 端点 |
-| **UserInfo Endpoint** | 留空或随意填写 | Apple 不使用此端点 |
+| **Authorization Endpoint** | `https://appleid.apple.com/auth/authorize` | 授权端点（自动发现会填充） |
+| **Token Endpoint** | `https://appleid.apple.com/auth/token` | Token 端点（自动发现会填充） |
+| **JWKS URI** | `https://appleid.apple.com/auth/keys` | 用于验证 id_token 签名（自动发现会填充） |
 | **Client ID** | `com.yourcompany.lunatv.web` | 你的 Services ID |
 | **Client Secret** | `eyJhbGc...` | 生成的 JWT（很长的字符串） |
 
@@ -827,7 +872,8 @@ JWKS Endpoint:          https://appleid.apple.com/auth/keys
   "issuer": "https://appleid.apple.com",
   "authorizationEndpoint": "https://appleid.apple.com/auth/authorize",
   "tokenEndpoint": "https://appleid.apple.com/auth/token",
-  "userInfoEndpoint": "https://appleid.apple.com/auth/keys",
+  "userInfoEndpoint": "",
+  "jwksUri": "https://appleid.apple.com/auth/keys",
   "clientId": "com.yourcompany.lunatv.web",
   "clientSecret": "eyJhbGciOiJFUzI1NiIsImtpZCI6IkFCQ0RFRjEyMzQifQ.eyJpc3MiOiJBQkMxMjM0NTY3IiwiaWF0IjoxNjQwOTk1MjAwLCJleHAiOjE2NTY1NDcyMDAsImF1ZCI6Imh0dHBzOi8vYXBwbGVpZC5hcHBsZS5jb20iLCJzdWIiOiJjb20ueW91cmNvbXBhbnkubHVuYXR2LndlYiJ9.abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
 }
@@ -843,8 +889,32 @@ JWKS Endpoint:          https://appleid.apple.com/auth/keys
 |------|-----------|---------------|-------------|
 | **Client Secret** | 静态字符串 | 动态生成的 JWT（6个月有效期） | ✅ 支持 JWT |
 | **UserInfo Endpoint** | 提供 | ❌ 不提供 | ✅ 从 id_token 解析 |
+| **JWKS URI** | 可选 | ✅ 提供（验证签名） | ✅ 支持配置 |
+| **响应模式** | Query params（GET） | form_post（POST） | ✅ 支持 POST handler |
 | **用户信息返回** | 每次都返回 | 只在首次授权时返回 | ✅ 自动处理 |
 | **Email 隐藏** | 真实邮箱 | 可选择隐藏（relay邮箱） | ✅ 支持 |
+
+#### LunaTV 的适配处理
+
+1. **response_mode=form_post**：
+   - Apple 要求使用 `response_mode=form_post`
+   - 授权响应通过 POST 请求发送（而非 GET）
+   - 参数在 form data 中（而非 URL query params）
+   - LunaTV 添加了 POST handler 专门处理 Apple 回调
+
+2. **id_token 解析**：
+   - Apple 不提供 UserInfo Endpoint
+   - 用户信息在 id_token（JWT）中
+   - LunaTV 自动解析 JWT payload 获取用户信息
+
+3. **首次授权数据**：
+   - 用户姓名和邮箱只在首次授权时返回
+   - 后续登录仅返回 `sub`（用户 ID）
+   - LunaTV 在首次注册时保存用户信息
+
+4. **JWKS 签名验证**：
+   - 使用 Apple 的 JWKS URI 验证 id_token 签名
+   - 确保 token 真实性和完整性
 
 #### 获取的用户信息
 
@@ -1326,9 +1396,18 @@ GitHub:     http://localhost:3000/api/auth/oidc/callback ✅
 
 ### Q8: 能否同时配置多个 OIDC 提供商？
 
-**当前版本**：LunaTV 仅支持配置**一个** OIDC 提供商。
+**✅ 已支持**！LunaTV 的多 Provider 模式允许同时配置多个 OIDC 提供商。
 
-**未来计划**：后续版本可能支持同时配置 Google、Microsoft、GitHub 等多个提供商，用户可选择任一方式登录。
+**配置方式**：
+1. 进入管理后台 → **系统设置** → **OIDC 认证配置**
+2. 切换到 **"多 Provider 模式（推荐）"**
+3. 点击 **"添加 Provider"** 可添加多个提供商
+4. 支持同时配置：Google、Microsoft、GitHub、Facebook、微信、Apple、LinuxDo 等
+
+**用户体验**：
+- 登录页面将显示所有已启用 Provider 的登录按钮
+- 用户可选择任一方式登录
+- 每个 Provider 可单独设置是否允许注册
 
 ### Q9: OIDC 用户的密码是什么？
 

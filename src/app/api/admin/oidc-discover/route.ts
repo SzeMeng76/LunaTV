@@ -74,6 +74,7 @@ export async function POST(request: NextRequest) {
       authorization_endpoint: data.authorization_endpoint,
       token_endpoint: data.token_endpoint,
       userinfo_endpoint: data.userinfo_endpoint || '', // Apple 等提供商可能没有此端点
+      jwks_uri: data.jwks_uri || '', // JWKS endpoint，用于验证 JWT 签名
       issuer: data.issuer,
     });
   } catch (error) {

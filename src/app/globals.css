@@ -515,3 +515,61 @@ html:not(.dark) .hover\:bg-slate-100:hover {
 html:not(.dark) .hover\:bg-slate-50:hover {
   background-color: #f8fafc !important;
 }
+
+/* ============================================
+   Backdrop Filter Fallback for Old Browsers
+   修复旧版手机系统（Android <5.0, iOS <9.3）不支持backdrop-filter的问题
+   为不支持的浏览器提供更不透明的纯色背景
+   ============================================ */
+
+/* 检测不支持backdrop-filter的浏览器，提供fallback背景 */
+@supports not (backdrop-filter: blur(1px)) {
+  /* 白色半透明背景的fallback - 提高不透明度确保可读性 */
+  .backdrop-blur,
+  .backdrop-blur-sm,
+  .backdrop-blur-md,
+  .backdrop-blur-lg,
+  .backdrop-blur-xl,
+  .backdrop-blur-2xl,
+  .backdrop-blur-3xl {
+    background-color: rgba(255, 255, 255, 0.95) !important;
+  }
+
+  /* 深色模式下的fallback */
+  .dark .backdrop-blur,
+  .dark .backdrop-blur-sm,
+  .dark .backdrop-blur-md,
+  .dark .backdrop-blur-lg,
+  .dark .backdrop-blur-xl,
+  .dark .backdrop-blur-2xl,
+  .dark .backdrop-blur-3xl {
+    background-color: rgba(24, 24, 27, 0.95) !important; /* zinc-900 */
+  }
+
+  /* 处理带有透明度的背景色 + backdrop-blur组合 */
+  /* 例如: bg-white/80 backdrop-blur */
+  [class*="bg-white/"] {
+    background-color: rgba(255, 255, 255, 0.95) !important;
+  }
+
+  [class*="bg-zinc-"][class*="/"] {
+    background-color: rgba(24, 24, 27, 0.95) !important;
+  }
+
+  [class*="bg-gray-"][class*="/"] {
+    background-color: rgba(31, 41, 55, 0.95) !important;
+  }
+
+  /* 渐变背景的fallback - 登录页面主卡片 */
+  .from-white\/95.backdrop-blur-2xl,
+  .from-white\/85.backdrop-blur-2xl,
+  .from-white\/75.backdrop-blur-2xl {
+    background: rgba(255, 255, 255, 0.98) !important;
+  }
+
+  .dark .from-zinc-900\/95.backdrop-blur-2xl,
+  .dark .from-zinc-900\/85.backdrop-blur-2xl,
+  .dark .from-zinc-900\/75.backdrop-blur-2xl {
+    background: rgba(24, 24, 27, 0.98) !important;
+  }
+}

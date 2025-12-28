@@ -226,6 +226,22 @@ export async function POST(request: NextRequest) {
       // 清除OIDC session
       response.cookies.delete('oidc_session');
 
+      // 异步记录首次登入时间（不阻塞响应）
+      const loginTime = Date.now();
+      const origin = request.headers.get('origin') || request.headers.get('referer')?.split('/').slice(0, 3).join('/') || '';
+      if (origin) {
+        fetch(`${origin}/api/user/my-stats`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Cookie': `user_auth=${cookieValue}`
+          },
+          body: JSON.stringify({ loginTime })
+        }).catch(err => {
+          console.error('OIDC注册记录登入时间失败:', err);
+        });
+      }
+
       return response;
     } catch (err) {
       console.error('创建用户失败', err);

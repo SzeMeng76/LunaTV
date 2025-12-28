@@ -13,7 +13,7 @@
   <img src="public/logo.png" alt="LunaTV Logo" width="120">
 </div>
 
-> 🎬 **LunaTV Enhanced Edition** is a comprehensive video streaming platform deeply customized from MoonTV. Built on top of the original version, it adds **50+ major feature enhancements** including **YouTube Integration**, **Cloud Drive Search**, **AI Recommendations**, **Short Drama**, **IPTV Live TV**, **Bangumi Anime**, **Playback Statistics**, **Danmaku System**, and more, delivering the ultimate online streaming experience.
+> 🎬 **LunaTV Enhanced Edition** is a comprehensive video streaming platform deeply customized from MoonTV. Built on top of the original version, it adds **60+ major feature enhancements** including **Multi-Provider OIDC**, **Watch Room**, **YouTube Integration**, **Cloud Drive Search**, **AI Recommendations**, **Short Drama**, **IPTV Live TV**, **Bangumi Anime**, **Playback Statistics**, **Danmaku System**, and more, delivering the ultimate online streaming experience.
 
 <div align="center">
 
@@ -25,7 +25,7 @@
 ![HLS.js](https://img.shields.io/badge/HLS.js-1.6.15-ec407a)
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Docker Ready](https://img.shields.io/badge/Docker-ready-blue?logo=docker)
-![Version](https://img.shields.io/badge/Version-5.8.0-orange)
+![Version](https://img.shields.io/badge/Version-5.9.0-orange)
 
 </div>
 
@@ -33,7 +33,7 @@
 
 ## 📢 Project Overview
 
-This project is a deeply customized version based on **MoonTV**, continuously developed from **v4.3.1** to the current **v5.8.0**, with **50+ major feature modules** and **300+ detailed optimizations** added. See [CHANGELOG](CHANGELOG) for all new features.
+This project is a deeply customized version based on **MoonTV**, continuously developed from **v4.3.1** to the current **v5.9.0**, with **60+ major feature modules** and **400+ detailed optimizations** added. See [CHANGELOG](CHANGELOG) for all new features.
 
 ### 💡 Core Enhancement Highlights
 
@@ -59,9 +59,16 @@ This project is a deeply customized version based on **MoonTV**, continuously de
 - **Web-exclusive Input**: Simple "Danmu" button for quick sending (auto-hidden on mobile)
 
 #### 📊 User Management Enhancement
+- **Multi-Provider OIDC Authentication**: Support multiple OAuth providers simultaneously (Google, Microsoft, GitHub, Facebook, WeChat, Apple, LinuxDo), users can choose their preferred login method
+  - **GitHub OAuth**: Auto-adapts non-standard OIDC implementation, supports private email retrieval, dedicated API headers
+  - **Apple Sign In**: Complete form_post response mode support, id_token parsing, JWKS signature verification
+  - **Facebook OAuth**: Graph API v24.0 integration, supports avatar and user info retrieval
+  - **WeChat Login**: Web app QR code login, supports openid and user info retrieval
+  - **Backward Compatible**: Supports automatic migration from legacy single-provider configuration
+- **V2 User Storage System**: SHA256 encryption, improved user management and OIDC integration
 - **Telegram Magic Link Authentication**: Secure and convenient Telegram-based login with auto webhook configuration
 - **User Level System**: Replaces large login count numbers with friendly level display
-- **Playback Statistics**: Complete viewing data statistics, analysis, visualization, global/personal stats tab switching
+- **Playback Statistics**: Complete viewing data statistics, analysis, visualization, global/personal stats tab switching, favorites API performance monitoring
 - **Dual Reminder System**: New episodes (red theme) and continue watching (blue theme) with gradient badges and halo effects
 - **Global Favorites**: Cross-device synchronized favorites system, database storage, category filtering (movies, series, variety shows, short dramas, anime)
 - **User Group Permissions**: Fine-grained permission control for AI Assistant, YouTube features
@@ -69,6 +76,17 @@ This project is a deeply customized version based on **MoonTV**, continuously de
 
 #### 🎮 Player Feature Enhancement
 - **Liquid-glass Frosted Glass Control Bar**: Modern frosted glass effect control bar with 12px blur background, responsive button auto-sizing, perfectly solves mobile button overflow issues
+- **Watch Room Feature**: Real-time synchronized viewing experience with external server integration
+  - **Global Buttons**: Watch room buttons integrated into global layout, positioned above back-to-top button
+  - **Room Management**: Create/join/leave/disband rooms, supports host permission control
+  - **Playback Sync**: Auto-sync play, pause, seek, episode switching
+  - **User Status**: Display room members, connection status indicators
+  - **Video Cards**: Show current playing content with poster and info
+  - **Smart Follow**: Members auto-follow when host switches episodes (no confirmation needed)
+- **M3U8 Download**: Client-side M3U8 video download support, batch episode download
+- **Player Buffer Optimization**: Three buffer modes (data-saving, balanced, high-quality), smart network adaptation
+- **Anime4K Super Resolution**: WebGPU-accelerated real-time video super-resolution for quality enhancement
+- **Custom Ad Filter**: Support custom ad filtering rule code, separate reset and restore default buttons
 - **Chromecast Casting**: Smart browser detection, auto-excludes OPPO, Xiaomi, Huawei, Samsung vendor browsers
 - **iPad/iOS Optimization**: HLS.js official source optimization, smart device detection, multi-attempt autoplay strategy
 - **Skip Intro/Outro**: Real-time marking button, draggable floating config window, remaining time mode, position persistence
@@ -900,34 +918,37 @@ This project works with [OrionTV](https://github.com/zimplexing/OrionTV) on Andr
 
 For complete feature updates and bug fixes, see [CHANGELOG](CHANGELOG).
 
-### Latest Version: v5.8.0 (2025-12-24)
+### Latest Version: v5.9.0 (2025-12-27)
 
 #### Added
-- 🎯 AI Recommendation Button: Added AI recommendation button in ModernNav header, globally available
-- 🎬 Auto-Skip to Next Episode: Automatically skip to next episode when backup API episode unavailable
-- ⚡ Upgrade to Next.js 16.1 + Tailwind CSS 4.1 + React 19: Enjoy latest framework performance improvements
-- 🎭 TMDB Actor Works Fallback: Added TMDB as fallback for actor works search
-- 💾 Actor Works Caching: Cache actor works info for 2 hours, reduce API requests
-- 🎨 Interactive Actor Works Viewer: Interactive actor works browser in play page
-- ⚙️ Comprehensive Danmaku Settings: Complete danmaku settings panel supporting speed, opacity, font, etc.
+- 🔐 Multi-Provider OIDC Support: Configure multiple OAuth providers simultaneously (Google, Microsoft, GitHub, Facebook, WeChat, Apple, LinuxDo)
+- 🔐 Complete GitHub OAuth Adaptation: Auto-uses correct scope, Accept header, private email retrieval
+- 🍎 Apple Sign In Support: form_post response mode, id_token parsing, JWKS signature verification
+- 👥 Watch Room Feature: External server integrated real-time synchronized viewing, supports room management, playback sync, member status display
+- 📥 M3U8 Download: Client-side M3U8 video download support, batch episode download
+- 🎬 Player Buffer Optimization: Three buffer modes (data-saving, balanced, high-quality), smart network adaptation
+- 🎨 Anime4K Super Resolution: WebGPU-accelerated real-time video super-resolution for quality enhancement
+- 🎯 Custom Ad Filter: Support custom ad filtering rule code, separate reset and restore default buttons
+- 📊 Favorites API Performance Monitoring: Added performance monitoring for favorites feature
 
 #### Performance Optimizations
-- ⚡ Major AI Chat Performance Boost: 85-90% input latency reduction, 70-85% message re-render reduction
-  - Added 100ms debounced scrolling and 300ms debounced async localStorage writes
-  - Memoized all event handlers with useCallback
-  - Created memoized MessageItem component with useMemo for formatted content
-- 🎨 VideoCard Container Queries: Added Tailwind 4 container query support to VideoCard
-- ⚡ React 19 Features: Applied useTransition and useOptimistic for better UX
+- 🔐 V2 User Storage System: SHA256 encryption, improved user management and OIDC integration
+- 👥 Watch Room Global State Management: Refactored connection and state management, optimized episode display and username loading
+- 📊 Favorites Sync Optimization: Optimized timeout handling, removed excessive error alerts
+- 🍪 Cookie Loading Detection: Improved persistent polling detection mechanism
 
 #### Fixed
-- 🐛 Short Drama Error Messages: Display actual API error messages in short drama player
-- 🔧 Backup API Error Handling: Improved error handling for backup API string responses
-- 🎯 AI Modal Centering: Fixed AI modal centering issue
-- 🖼️ TMDB API White Screen Fix: Use TMDB API route instead of client import
-- 🎮 Danmaku Speed Settings: Fixed danmaku speed settings to match native plugin values
+- 🔐 Fixed OIDC redirect_uri: Support local development (0.0.0.0→localhost) and reverse proxy environments
+- 🔐 Fixed GitHub OAuth Integration: Correct scope, Accept header, id_token validation exclusion
+- 🔐 Fixed Apple OIDC Discovery: Improved Apple OAuth configuration and POST handler
+- 🔐 Fixed OIDC Registration and User Sync: Ensure new users are correctly created and displayed in admin panel
+- 👥 Fixed Watch Room Multiple Issues: Username hardcode, episode switching sync, first-visit 401, SSR default guest, etc. (35+ fixes)
+- 📥 Fixed M3U8 Download and Husky on Windows: Improved Windows compatibility
+- 🖼️ Fixed Image Preload querySelector Error: Handle malformed URLs
 
 ### Major Milestone Versions
 
+- **v5.9.0**: Multi-Provider OIDC (GitHub/Apple/Facebook/WeChat), Watch Room, M3U8 Download, Anime4K Super Resolution, Player Buffer Optimization
 - **v5.8.0**: Next.js 16.1 + React 19 + Tailwind CSS 4.1, AI Chat Performance Optimization, Actor Works Viewer, Danmaku Settings Panel
 - **v5.7.1**: Liquid-glass Frosted Glass Control Bar, Douban Reviews, Global Favorites, Fallback API, Completed Series Episode Count
 - **v5.7.0**: Celebrity Avatars & Recommendations, Live Source Search, Image Proxy Optimization, Mobile Navigation Fixes

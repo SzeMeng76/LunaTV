@@ -51,6 +51,9 @@ const WatchRoomConfig = ({ config, refreshConfig }: WatchRoomConfigProps) => {
     }
   }, [config]);
 
+  // 保存的配置（用于自动刷新统计）
+  const savedConfig = config?.WatchRoomConfig;
+
   // 显示消息
   const showMessage = (type: 'success' | 'error', text: string) => {
     setMessage({ type, text });
@@ -161,8 +164,12 @@ const WatchRoomConfig = ({ config, refreshConfig }: WatchRoomConfigProps) => {
   };
 
   // 获取服务器统计信息
-  const fetchStats = async () => {
-    if (!settings.enabled || !settings.serverUrl) {
+  // useSaved=true: 使用已保存的配置（用于自动刷新）
+  // useSaved=false: 使用当前输入的配置（用于手动刷新测试）
+  const fetchStats = async (useSaved = false) => {
+    const configToUse = useSaved ? savedConfig : settings;
+
+    if (!configToUse || !configToUse.enabled || !configToUse.serverUrl) {
       return;
     }
 
@@ -174,8 +181,8 @@ const WatchRoomConfig = ({ config, refreshConfig }: WatchRoomConfigProps) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          serverUrl: settings.serverUrl.trim(),
-          authKey: settings.authKey.trim(),
+          serverUrl: configToUse.serverUrl.trim(),
+          authKey: configToUse.authKey.trim(),
         }),
       });
       const result = await response.json();
@@ -193,15 +200,15 @@ const WatchRoomConfig = ({ config, refreshConfig }: WatchRoomConfigProps) => {
     }
   };
 
-  // 启用状态改变时自动获取统计信息
+  // 基于已保存的配置自动获取统计信息（不会因为用户输入而触发）
   useEffect(() => {
-    if (settings.enabled && settings.serverUrl && settings.authKey) {
-      fetchStats();
+    if (savedConfig?.enabled && savedConfig.serverUrl && savedConfig.authKey) {
+      fetchStats(true); // 使用已保存的配置
       // 每30秒自动刷新
-      const interval = setInterval(fetchStats, 30000);
+      const interval = setInterval(() => fetchStats(true), 30000);
       return () => clearInterval(interval);
     }
-  }, [settings.enabled, settings.serverUrl, settings.authKey]);
+  }, [savedConfig?.enabled, savedConfig?.serverUrl, savedConfig?.authKey]);
 
   return (
     <div className='space-y-6'>
@@ -365,7 +372,7 @@ const WatchRoomConfig = ({ config, refreshConfig }: WatchRoomConfigProps) => {
         </button>
         {settings.enabled && (
           <button
-            onClick={fetchStats}
+            onClick={() => fetchStats(false)}
             disabled={statsLoading}
             className='px-4 py-2 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors'
           >

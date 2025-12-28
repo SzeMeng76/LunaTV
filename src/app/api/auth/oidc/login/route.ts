@@ -57,10 +57,22 @@ export async function GET(request: NextRequest) {
     const state = crypto.randomUUID();
 
     // 使用环境变量SITE_BASE，或从请求头获取真实的origin
-    const origin = process.env.SITE_BASE ||
-                   request.headers.get('x-forwarded-host')
-                     ? `${request.headers.get('x-forwarded-proto') || 'https'}://${request.headers.get('x-forwarded-host')}`
-                     : request.nextUrl.origin;
+    let origin: string;
+    if (process.env.SITE_BASE) {
+      // 1. 优先使用环境变量
+      origin = process.env.SITE_BASE;
+    } else if (request.headers.get('x-forwarded-host')) {
+      // 2. 使用反向代理的域名（生产环境）
+      const proto = request.headers.get('x-forwarded-proto') || 'https';
+      const host = request.headers.get('x-forwarded-host');
+      origin = `${proto}://${host}`;
+    } else {
+      // 3. 使用请求的 origin（本地开发）
+      origin = request.nextUrl.origin;
+      // 本地开发：将 0.0.0.0 替换为 localhost（OAuth 提供商不接受 0.0.0.0）
+      origin = origin.replace('://0.0.0.0:', '://localhost:');
+    }
+
     const redirectUri = `${origin}/api/auth/oidc/callback`;
 
     // 构建授权URL
@@ -87,6 +99,13 @@ export async function GET(request: NextRequest) {
       authUrl.searchParams.set('redirect_uri', redirectUri);
       authUrl.searchParams.set('response_type', 'code');
       authUrl.searchParams.set('scope', 'public_profile email'); // Facebook 使用 public_profile email
+      authUrl.searchParams.set('state', state);
+    } else if (providerId === 'github') {
+      // GitHub OAuth 参数（不支持 openid scope）
+      authUrl.searchParams.set('client_id', oidcConfig.clientId);
+      authUrl.searchParams.set('redirect_uri', redirectUri);
+      authUrl.searchParams.set('response_type', 'code');
+      authUrl.searchParams.set('scope', 'read:user user:email'); // GitHub 使用 read:user user:email
       authUrl.searchParams.set('state', state);
     } else {
       // 标准 OIDC 参数

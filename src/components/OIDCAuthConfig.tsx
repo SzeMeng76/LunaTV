@@ -12,6 +12,7 @@ interface OIDCProvider {
   authorizationEndpoint: string;
   tokenEndpoint: string;
   userInfoEndpoint: string;
+  jwksUri?: string; // JWKS endpoint for JWT signature verification (optional)
   clientId: string;
   clientSecret: string;
   buttonText: string;
@@ -649,6 +650,7 @@ function ProviderEditModal({
         authorizationEndpoint: data.authorization_endpoint || '',
         tokenEndpoint: data.token_endpoint || '',
         userInfoEndpoint: data.userinfo_endpoint || '',
+        jwksUri: data.jwks_uri || '',
       });
       setMessage({ type: 'success', text: '自动发现成功' });
       setTimeout(() => setMessage(null), 3000);
@@ -834,19 +836,40 @@ function ProviderEditModal({
             />
           </div>
 
-          {/* UserInfo Endpoint */}
-          <div>
-            <label className='block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2'>
-              UserInfo Endpoint *
-            </label>
-            <input
-              type='text'
-              value={localProvider.userInfoEndpoint}
-              onChange={(e) => setLocalProvider({ ...localProvider, userInfoEndpoint: e.target.value })}
-              className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent'
-              placeholder='https://openidconnect.googleapis.com/v1/userinfo'
-            />
-          </div>
+          {/* UserInfo Endpoint - 除了 Apple 外的其他 provider 需要 */}
+          {localProvider.id.toLowerCase() !== 'apple' && (
+            <div>
+              <label className='block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2'>
+                UserInfo Endpoint *
+              </label>
+              <input
+                type='text'
+                value={localProvider.userInfoEndpoint}
+                onChange={(e) => setLocalProvider({ ...localProvider, userInfoEndpoint: e.target.value })}
+                className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent'
+                placeholder='https://openidconnect.googleapis.com/v1/userinfo'
+              />
+            </div>
+          )}
+
+          {/* JWKS URI - 只有 Apple 需要 */}
+          {localProvider.id.toLowerCase() === 'apple' && (
+            <div>
+              <label className='block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2'>
+                JWKS URI *
+              </label>
+              <input
+                type='text'
+                value={localProvider.jwksUri || ''}
+                onChange={(e) => setLocalProvider({ ...localProvider, jwksUri: e.target.value })}
+                className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent'
+                placeholder='https://appleid.apple.com/auth/keys'
+              />
+              <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
+                用于验证 Apple id_token 签名的公钥端点
+              </p>
+            </div>
+          )}
 
           {/* Client ID */}
           <div>
