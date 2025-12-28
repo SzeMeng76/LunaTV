@@ -239,7 +239,7 @@ const WatchRoomConfig = ({ config, refreshConfig }: WatchRoomConfigProps) => {
               <li>建议使用随机生成的强密码作为 AUTH_KEY</li>
             </ul>
             <a
-              href='https://github.com/tgs9915/watch-room-server'
+              href='https://github.com/SzeMeng76/watch-room-server'
               target='_blank'
               rel='noopener noreferrer'
               className='inline-flex items-center gap-1 mt-2 text-blue-600 dark:text-blue-400 hover:underline'

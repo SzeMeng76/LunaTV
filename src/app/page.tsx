@@ -90,6 +90,7 @@ function HomeClient() {
   const [favoriteItems, setFavoriteItems] = useState<FavoriteItem[]>([]);
   const [favoriteFilter, setFavoriteFilter] = useState<'all' | 'movie' | 'tv' | 'anime' | 'shortdrama' | 'live' | 'variety'>('all');
   const [favoriteSortBy, setFavoriteSortBy] = useState<'recent' | 'title' | 'rating'>('recent');
+  const [upcomingFilter, setUpcomingFilter] = useState<'all' | 'movie' | 'tv'>('all');
 
   useEffect(() => {
     // 清理过期缓存
@@ -1028,8 +1029,41 @@ function HomeClient() {
                       <ChevronRight className='w-4 h-4 ml-1' />
                     </Link>
                   </div>
+
+                  {/* Tab 切换 */}
+                  <div className='mb-4 flex gap-2'>
+                    {[
+                      { key: 'all', label: '全部', count: upcomingReleases.length },
+                      { key: 'movie', label: '电影', count: upcomingReleases.filter(r => r.type === 'movie').length },
+                      { key: 'tv', label: '电视剧', count: upcomingReleases.filter(r => r.type === 'tv').length },
+                    ].map(({ key, label, count }) => (
+                      <button
+                        key={key}
+                        onClick={() => setUpcomingFilter(key as 'all' | 'movie' | 'tv')}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                          upcomingFilter === key
+                            ? 'bg-orange-500 text-white shadow-md'
+                            : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                        }`}
+                      >
+                        {label}
+                        {count > 0 && (
+                          <span className={`ml-1.5 text-xs ${
+                            upcomingFilter === key
+                              ? 'text-white/80'
+                              : 'text-gray-500 dark:text-gray-400'
+                          }`}>
+                            ({count})
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+
                   <ScrollableRow>
-                    {upcomingReleases.map((release, index) => {
+                    {upcomingReleases
+                      .filter(release => upcomingFilter === 'all' || release.type === upcomingFilter)
+                      .map((release, index) => {
                       // 计算距离上映还有几天
                       const now = new Date();
                       const releaseDate = new Date(release.releaseDate);

@@ -388,18 +388,7 @@ async function cleanupInactiveUsers() {
           continue;
         }
 
-        const userCreatedAt = user.createdAt || Date.now(); // 如果没有创建时间，使用当前时间（不会被删除）
-
-        // 先基于时间进行预筛选，避免不必要的数据库调用
-        const isOldEnough = userCreatedAt < cutoffTime;
-        console.log(`  ⏰ 时间检查: 注册于 ${new Date(userCreatedAt).toISOString()}, 是否超过${inactiveUserDays}天: ${isOldEnough}`);
-
-        if (!isOldEnough) {
-          console.log(`  ✅ 保留用户 ${user.username}: 注册时间不足${inactiveUserDays}天`);
-          continue;
-        }
-
-        // 只对时间符合的用户进行数据库检查
+        // 检查用户是否存在于数据库
         console.log(`  🔍 检查用户是否存在于数据库: ${user.username}`);
         let userExists = true;
         try {
@@ -436,17 +425,16 @@ async function cleanupInactiveUsers() {
           continue;
         }
 
-        // 检查是否满足删除条件：基于登入时间而不是播放记录
+        // 🔥 简化逻辑：只检查最后登入时间是否超过阈值
+        // 适用于所有用户类型（普通、Telegram、OIDC）
+        // 因为所有用户注册时都会自动记录登入时间，不存在"从未登入"的情况
         const lastLoginTime = userStats.lastLoginTime || userStats.lastLoginDate || userStats.firstLoginTime || 0;
-        const hasNeverLoggedIn = lastLoginTime === 0 || (userStats.loginCount || 0) === 0;
-        const loginTooOld = lastLoginTime > 0 && lastLoginTime < cutoffTime;
 
-        // 删除条件：注册时间够久 且 (从未登入 或 最后登入时间超过阈值)
-        const shouldDelete = isOldEnough && (hasNeverLoggedIn || loginTooOld);
+        // 删除条件：有登入记录且最后登入时间超过阈值
+        const shouldDelete = lastLoginTime > 0 && lastLoginTime < cutoffTime;
 
         if (shouldDelete) {
-          const deleteReason = hasNeverLoggedIn ? '从未登入' : `最后登入时间过久: ${new Date(lastLoginTime).toISOString()}`;
-          console.log(`🗑️ 删除非活跃用户: ${user.username} (注册于: ${new Date(userCreatedAt).toISOString()}, 登入次数: ${userStats.loginCount || 0}, 原因: ${deleteReason}, 阈值: ${inactiveUserDays}天)`);
+          console.log(`🗑️ 删除非活跃用户: ${user.username} (最后登入: ${new Date(lastLoginTime).toISOString()}, 登入次数: ${userStats.loginCount || 0}, 阈值: ${inactiveUserDays}天)`);
 
           // 从数据库删除用户数据
           await db.deleteUser(user.username);
@@ -459,14 +447,9 @@ async function cleanupInactiveUsers() {
 
           deletedCount++;
         } else {
-          let reason;
-          if (!isOldEnough) {
-            reason = `注册时间不足${inactiveUserDays}天`;
-          } else if (!hasNeverLoggedIn && !loginTooOld) {
-            reason = `最近有登入活动 (最后登入: ${lastLoginTime > 0 ? new Date(lastLoginTime).toISOString() : '未知'})`;
-          } else {
-            reason = '其他原因';
-          }
+          const reason = lastLoginTime > 0
+            ? `最近有登入活动 (最后登入: ${new Date(lastLoginTime).toISOString()})`
+            : '无登入记录（数据异常，保留用户）';
           console.log(`✅ 保留用户 ${user.username}: ${reason}`);
         }
 

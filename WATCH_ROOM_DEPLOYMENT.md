@@ -239,6 +239,9 @@ socket.on('play:update', (state: PlayState) => {
 
 观影室服务器开源项目：[watch-room-server](https://github.com/tgs9915/watch-room-server)
 
+**多平台 Docker 镜像**：`ghcr.io/szemeng76/watch-room-server:latest`
+（支持 linux/amd64 和 linux/arm64 架构，可在 x86 和 ARM 设备上原生运行）
+
 ---
 
 ## 部署选项
@@ -349,11 +352,54 @@ Railway 提供简单的部署体验，有一定免费额度。
 
 适合自有服务器或 VPS。
 
-#### 准备工作
+#### 使用预构建镜像（推荐）
 
-确保服务器已安装 Docker 和 Docker Compose。
+使用多平台镜像，无需编译：
 
-#### 部署步骤
+```bash
+# 拉取镜像
+docker pull ghcr.io/szemeng76/watch-room-server:latest
+
+# 运行容器
+docker run -d \
+  --name watch-room-server \
+  --restart unless-stopped \
+  -p 8080:8080 \
+  -e AUTH_KEY=your-secure-random-key-here \
+  -e PORT=8080 \
+  ghcr.io/szemeng76/watch-room-server:latest
+
+# 查看日志
+docker logs -f watch-room-server
+```
+
+或使用 Docker Compose，创建 `docker-compose.yml`：
+
+```yaml
+version: '3.8'
+
+services:
+  watch-room-server:
+    image: ghcr.io/szemeng76/watch-room-server:latest
+    container_name: watch-room-server
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - AUTH_KEY=your-secure-random-key-here
+      - PORT=8080
+```
+
+然后运行：
+
+```bash
+docker-compose up -d
+docker-compose logs -f
+```
+
+#### 从源码构建（可选）
+
+如果需要自定义修改：
 
 1. 克隆服务器代码：
    ```bash

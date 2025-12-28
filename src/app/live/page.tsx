@@ -5,15 +5,16 @@
 import { Suspense, useEffect, useRef, useState } from 'react';
 
 import Hls from 'hls.js';
-import { Heart, Radio, RefreshCw, Search, Tv, X } from 'lucide-react';
+import { Heart, Menu, Radio, RefreshCw, Search, Tv, X } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { Tabs, Tab, Box } from '@mui/material';
 
 import {
   debounce,
 } from '@/lib/channel-search';
 import {
   isMobile,
-  isTablet, 
+  isTablet,
   isSafari,
   devicePerformance
 } from '@/lib/utils';
@@ -136,6 +137,10 @@ function LivePageClient() {
   // 直播源搜索状态
   const [sourceSearchQuery, setSourceSearchQuery] = useState('');
   const [filteredSources, setFilteredSources] = useState<LiveSource[]>([]);
+
+  // 分类选择器状态
+  const [isGroupSelectorOpen, setIsGroupSelectorOpen] = useState(false);
+  const [groupSearchQuery, setGroupSearchQuery] = useState('');
 
   // 节目单信息
   const [epgData, setEpgData] = useState<{
@@ -1830,73 +1835,95 @@ function LivePageClient() {
                     {!searchQuery.trim() ? (
                       // 原有的分组显示模式
                       <>
-                        {/* 分组标签 */}
-                        <div className='flex items-center gap-4 mb-4 border-b border-gray-300 dark:border-gray-700 -mx-6 px-6 shrink-0'>
-                      {/* 切换状态提示 */}
-                      {isSwitchingSource && (
-                        <div className='flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400'>
-                          <div className='w-2 h-2 bg-amber-500 rounded-full animate-pulse'></div>
-                          切换直播源中...
-                        </div>
-                      )}
+                        {/* 分组标签 - DecoTV 风格布局 + Material UI Tabs */}
+                        <div className='mb-4 -mx-6 shrink-0'>
+                          {/* 切换状态提示 */}
+                          {isSwitchingSource && (
+                            <div className='flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400 px-6 mb-2'>
+                              <div className='w-2 h-2 bg-amber-500 rounded-full animate-pulse'></div>
+                              切换直播源中...
+                            </div>
+                          )}
 
-                      <div
-                        className='flex-1 overflow-x-auto'
-                        ref={groupContainerRef}
-                        onMouseEnter={() => {
-                          // 鼠标进入分组标签区域时，添加滚轮事件监听
-                          const container = groupContainerRef.current;
-                          if (container) {
-                            const handleWheel = (e: WheelEvent) => {
-                              if (container.scrollWidth > container.clientWidth) {
-                                e.preventDefault();
-                                container.scrollLeft += e.deltaY;
-                              }
-                            };
-                            container.addEventListener('wheel', handleWheel, { passive: false });
-                            // 将事件处理器存储在容器上，以便后续移除
-                            (container as any)._wheelHandler = handleWheel;
-                          }
-                        }}
-                        onMouseLeave={() => {
-                          // 鼠标离开分组标签区域时，移除滚轮事件监听
-                          const container = groupContainerRef.current;
-                          if (container && (container as any)._wheelHandler) {
-                            container.removeEventListener('wheel', (container as any)._wheelHandler);
-                            delete (container as any)._wheelHandler;
-                          }
-                        }}
-                      >
-                        <div className='flex gap-4 min-w-max'>
-                          {Object.keys(groupedChannels).map((group, index) => (
+                          {/* DecoTV 风格布局：左侧固定按钮 + 右侧滚动标签 */}
+                          <div className='flex items-center gap-3 px-6'>
+                            {/* 全部分类按钮 */}
                             <button
-                              key={group}
-                              data-group={group}
-                              ref={(el) => {
-                                groupButtonRefs.current[index] = el;
-                              }}
-                              onClick={() => handleGroupChange(group)}
+                              onClick={() => setIsGroupSelectorOpen(true)}
+                              className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all shrink-0 ${
+                                isSwitchingSource
+                                  ? 'opacity-50 cursor-not-allowed border-gray-300 dark:border-gray-600'
+                                  : 'border-green-500 dark:border-green-600 hover:bg-green-50 dark:hover:bg-green-900/20'
+                              }`}
                               disabled={isSwitchingSource}
-                              className={`w-20 relative py-2 text-sm font-medium transition-colors shrink-0 text-center overflow-hidden
-                                 ${isSwitchingSource
-                                  ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50'
-                                  : selectedGroup === group
-                                    ? 'text-green-500 dark:text-green-400'
-                                    : 'text-gray-700 hover:text-green-600 dark:text-gray-300 dark:hover:text-green-400'
-                                }
-                               `.trim()}
                             >
-                              <div className='px-1 overflow-hidden whitespace-nowrap' title={group}>
-                                {group}
-                              </div>
-                              {selectedGroup === group && !isSwitchingSource && (
-                                <div className='absolute bottom-0 left-0 right-0 h-0.5 bg-green-500 dark:bg-green-400' />
-                              )}
+                              <Menu className='w-4 h-4 text-green-600 dark:text-green-400' />
+                              <span className='text-sm font-medium text-gray-700 dark:text-gray-300'>
+                                全部分类
+                              </span>
+                              <span className='text-xs text-gray-500 dark:text-gray-400'>
+                                ({Object.keys(groupedChannels).length})
+                              </span>
                             </button>
-                          ))}
+
+                            {/* Material UI Tabs 滚动容器 */}
+                            <div className='flex-1 min-w-0'>
+                              <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+                                <Tabs
+                                  value={selectedGroup}
+                                  onChange={(_event, newValue) => handleGroupChange(newValue)}
+                                  variant="scrollable"
+                                  scrollButtons="auto"
+                                  allowScrollButtonsMobile
+                                  sx={{
+                                    '& .MuiTabs-indicator': {
+                                      backgroundColor: '#22c55e', // green-500
+                                    },
+                                    '& .MuiTab-root': {
+                                      color: 'rgb(var(--tw-text-gray-700))',
+                                      minWidth: 80,
+                                      fontSize: '0.875rem',
+                                      fontWeight: 500,
+                                      textTransform: 'none',
+                                      '&.Mui-selected': {
+                                        color: '#22c55e', // green-500
+                                      },
+                                      '&.Mui-disabled': {
+                                        color: 'rgb(var(--tw-text-gray-400))',
+                                        opacity: 0.5,
+                                      },
+                                      '@media (prefers-color-scheme: dark)': {
+                                        color: 'rgb(var(--tw-text-gray-300))',
+                                        '&.Mui-selected': {
+                                          color: '#4ade80', // green-400
+                                        },
+                                        '&.Mui-disabled': {
+                                          color: 'rgb(var(--tw-text-gray-600))',
+                                        },
+                                      },
+                                    },
+                                    '& .MuiTabScrollButton-root': {
+                                      color: 'rgb(var(--tw-text-gray-600))',
+                                      '@media (prefers-color-scheme: dark)': {
+                                        color: 'rgb(var(--tw-text-gray-400))',
+                                      },
+                                    },
+                                  }}
+                                >
+                                  {Object.keys(groupedChannels).map((group) => (
+                                    <Tab
+                                      key={group}
+                                      label={group}
+                                      value={group}
+                                      disabled={isSwitchingSource}
+                                      data-group={group}
+                                    />
+                                  ))}
+                                </Tabs>
+                              </Box>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
 
                     {/* 频道列表 */}
                     <div ref={channelListRef} className='flex-1 overflow-y-auto space-y-2 pb-4'>
@@ -2270,6 +2297,144 @@ function LivePageClient() {
           </div>
         )}
       </div>
+
+      {/* 分类选择器模态弹窗 - 自适应桌面/移动端 */}
+      {isGroupSelectorOpen && (
+        <div
+          className='fixed inset-0 z-[9999] flex items-end sm:items-center justify-center'
+          onClick={() => {
+            setIsGroupSelectorOpen(false);
+            setGroupSearchQuery('');
+          }}
+        >
+          {/* 背景遮罩 */}
+          <div className='absolute inset-0 bg-black/50 backdrop-blur-sm' />
+
+          {/* 弹窗内容 - 移动端底部抽屉，桌面端居中 */}
+          <div
+            className='relative bg-white dark:bg-gray-800 w-full max-h-[85vh] sm:max-h-[80vh] sm:max-w-md sm:mx-4 flex flex-col
+                       rounded-t-3xl sm:rounded-2xl shadow-2xl
+                       animate-in slide-in-from-bottom sm:fade-in sm:zoom-in-95 duration-300'
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* 移动端顶部把手 */}
+            <div className='sm:hidden flex justify-center pt-3 pb-2'>
+              <div className='w-12 h-1.5 bg-gray-300 dark:bg-gray-600 rounded-full' />
+            </div>
+
+            {/* 标题栏 */}
+            <div className='flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700'>
+              <h3 className='text-lg font-semibold text-gray-900 dark:text-gray-100'>
+                全部分类
+              </h3>
+              <button
+                onClick={() => {
+                  setIsGroupSelectorOpen(false);
+                  setGroupSearchQuery('');
+                }}
+                className='text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700'
+              >
+                <X className='w-6 h-6' />
+              </button>
+            </div>
+
+            {/* 搜索框 */}
+            <div className='px-6 py-3 border-b border-gray-200 dark:border-gray-700'>
+              <div className='relative'>
+                <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400' />
+                <input
+                  type='text'
+                  placeholder='搜索分类...'
+                  value={groupSearchQuery}
+                  onChange={(e) => setGroupSearchQuery(e.target.value)}
+                  className='w-full pl-10 pr-10 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600
+                             bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100
+                             placeholder-gray-400 dark:placeholder-gray-500
+                             focus:outline-none focus:ring-2 focus:ring-green-500 dark:focus:ring-green-400
+                             transition-all'
+                />
+                {groupSearchQuery && (
+                  <button
+                    onClick={() => setGroupSearchQuery('')}
+                    className='absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
+                  >
+                    <X className='w-5 h-5' />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* 分类列表 */}
+            <div className='flex-1 overflow-y-auto px-6 py-3 overscroll-contain'>
+              <div className='space-y-1 pb-4'>
+                {(() => {
+                  const groups = Object.keys(groupedChannels);
+                  const displayGroups = groupSearchQuery
+                    ? groups.filter((group) =>
+                        group.toLowerCase().includes(groupSearchQuery.toLowerCase())
+                      )
+                    : groups;
+
+                  if (displayGroups.length > 0) {
+                    return displayGroups.map((group) => {
+                      const channelCount = groupedChannels[group].length;
+                      const isSelected = selectedGroup === group;
+                      return (
+                        <button
+                          key={group}
+                          onClick={() => {
+                            handleGroupChange(group);
+                            setIsGroupSelectorOpen(false);
+                            setGroupSearchQuery('');
+                          }}
+                          className={`w-full px-4 py-3 rounded-lg text-left transition-all duration-200
+                                      active:scale-[0.98] ${
+                            isSelected
+                              ? 'bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-700'
+                              : 'hover:bg-gray-100 dark:hover:bg-gray-700 active:bg-gray-200 dark:active:bg-gray-600'
+                          }`}
+                        >
+                          <div className='flex items-center justify-between'>
+                            <div className='flex items-center gap-3'>
+                              <div
+                                className={`w-2 h-2 rounded-full transition-colors ${
+                                  isSelected
+                                    ? 'bg-green-500'
+                                    : 'bg-gray-300 dark:bg-gray-600'
+                                }`}
+                              ></div>
+                              <span className='font-medium text-gray-900 dark:text-gray-100'>
+                                {group}
+                              </span>
+                            </div>
+                            <span className='text-sm text-gray-500 dark:text-gray-400'>
+                              {channelCount} 个频道
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    });
+                  } else {
+                    return (
+                      <div className='flex flex-col items-center justify-center py-12 text-center'>
+                        <div className='w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4'>
+                          <Search className='w-8 h-8 text-gray-400 dark:text-gray-500' />
+                        </div>
+                        <p className='text-gray-500 dark:text-gray-400 font-medium'>
+                          未找到匹配的分类
+                        </p>
+                        <p className='text-sm text-gray-400 dark:text-gray-500 mt-1'>
+                          请尝试其他搜索关键词
+                        </p>
+                      </div>
+                    );
+                  }
+                })()}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </PageLayout>
   );
 }

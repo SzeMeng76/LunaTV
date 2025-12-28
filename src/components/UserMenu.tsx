@@ -2151,9 +2151,9 @@ export const UserMenu: React.FC = () => {
                             from="playrecord"
                           />
                         </div>
-                        {/* 新集数徽章 */}
-                        <div className='absolute -top-2 -right-2 bg-linear-to-r from-red-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full shadow-lg z-10'>
-                          +{series.newEpisodes}集
+                        {/* 新集数徽章 - Netflix 统一风格 */}
+                        <div className='absolute -top-2 -right-2 bg-red-600 text-white text-xs px-2 py-0.5 rounded-md shadow-lg animate-pulse z-10 font-bold'>
+                          +{series.newEpisodes}
                         </div>
                       </div>
                     ))}
@@ -2235,10 +2235,10 @@ export const UserMenu: React.FC = () => {
                       remarks={record.remarks}
                     />
                   </div>
-                  {/* 新集数徽章 */}
+                  {/* 新集数徽章 - Netflix 统一风格 */}
                   {newEpisodesCount > 0 && (
-                    <div className='absolute -top-2 -right-2 bg-linear-to-r from-red-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full shadow-lg z-10'>
-                      +{newEpisodesCount}集
+                    <div className='absolute -top-2 -right-2 bg-red-600 text-white text-xs px-2 py-0.5 rounded-md shadow-lg animate-pulse z-10 font-bold'>
+                      +{newEpisodesCount}
                     </div>
                   )}
                   {/* 进度指示器 */}

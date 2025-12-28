@@ -1013,7 +1013,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                   className='w-20 px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
                 />
                 <span className='text-sm text-gray-600 dark:text-gray-400'>
-                  天（注册后超过此天数且从未登入的用户将被自动删除）
+                  天（最后登入超过此天数的用户将被自动删除）
                 </span>
               </div>
             </div>
