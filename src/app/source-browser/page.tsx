@@ -128,7 +128,7 @@ export default function SourceBrowserPage() {
 
       // 隐藏艾旦影视所有分类 + 其他源隐藏敏感分类
       const currentSource = sources.find((s) => s.key === sourceKey);
-      if (currentSource && currentSource.name === '艾旦影视') {
+      if (currentSource && currentSource.name.includes('艾旦影视')) {
         list = []; // 艾旦影视源：完全隐藏所有分类
       } else {
         const hiddenCategoryNames = [
