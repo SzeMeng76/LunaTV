@@ -23,6 +23,7 @@ import NetDiskSearchResults from '@/components/NetDiskSearchResults';
 import YouTubeVideoCard from '@/components/YouTubeVideoCard';
 import DirectYouTubePlayer from '@/components/DirectYouTubePlayer';
 import TMDBFilterPanel, { TMDBFilterState } from '@/components/TMDBFilterPanel';
+import AcgSearch from '@/components/AcgSearch';
 
 function SearchPageClient() {
   // 根据 type_name 推断内容类型的辅助函数
@@ -73,10 +74,15 @@ function SearchPageClient() {
 
   // 网盘搜索相关状态
   const [searchType, setSearchType] = useState<'video' | 'netdisk' | 'youtube' | 'tmdb-actor'>('video');
+  const [netdiskResourceType, setNetdiskResourceType] = useState<'netdisk' | 'acg'>('netdisk'); // 网盘资源类型：普通网盘或动漫磁力
   const [netdiskResults, setNetdiskResults] = useState<{ [key: string]: any[] } | null>(null);
   const [netdiskLoading, setNetdiskLoading] = useState(false);
   const [netdiskError, setNetdiskError] = useState<string | null>(null);
   const [netdiskTotal, setNetdiskTotal] = useState(0);
+
+  // ACG动漫磁力搜索相关状态
+  const [acgTriggerSearch, setAcgTriggerSearch] = useState<boolean>();
+  const [acgError, setAcgError] = useState<string | null>(null);
   
   // YouTube搜索相关状态
   const [youtubeResults, setYoutubeResults] = useState<any[] | null>(null);
@@ -499,8 +505,11 @@ function SearchPageClient() {
     if ((searchType === 'netdisk' || searchType === 'youtube' || searchType === 'tmdb-actor') && showResults) {
       const currentQuery = searchQuery.trim() || searchParams.get('q');
       if (currentQuery) {
-        if (searchType === 'netdisk' && !netdiskLoading && !netdiskResults && !netdiskError) {
+        if (searchType === 'netdisk' && netdiskResourceType === 'netdisk' && !netdiskLoading && !netdiskResults && !netdiskError) {
           handleNetDiskSearch(currentQuery);
+        } else if (searchType === 'netdisk' && netdiskResourceType === 'acg') {
+          // ACG 搜索：触发 AcgSearch 组件搜索
+          setAcgTriggerSearch(prev => !prev);
         } else if (searchType === 'youtube' && !youtubeLoading && !youtubeResults && !youtubeError) {
           handleYouTubeSearch(currentQuery);
         } else if (searchType === 'tmdb-actor' && !tmdbActorLoading && !tmdbActorResults && !tmdbActorError) {
@@ -508,7 +517,7 @@ function SearchPageClient() {
         }
       }
     }
-  }, [searchType, showResults, searchQuery, searchParams, netdiskLoading, netdiskResults, netdiskError, youtubeLoading, youtubeResults, youtubeError, tmdbActorLoading, tmdbActorResults, tmdbActorError]);
+  }, [searchType, netdiskResourceType, showResults, searchQuery, searchParams, netdiskLoading, netdiskResults, netdiskError, youtubeLoading, youtubeResults, youtubeError, tmdbActorLoading, tmdbActorResults, tmdbActorError]);
 
   useEffect(() => {
     // 当搜索参数变化时更新搜索状态
@@ -846,7 +855,12 @@ function SearchPageClient() {
     if (searchType === 'netdisk') {
       // 网盘搜索 - 也更新URL保持一致性
       router.push(`/search?q=${encodeURIComponent(trimmed)}`);
-      handleNetDiskSearch(trimmed);
+      if (netdiskResourceType === 'netdisk') {
+        handleNetDiskSearch(trimmed);
+      } else {
+        // ACG 搜索：触发 AcgSearch 组件搜索
+        setAcgTriggerSearch(prev => !prev);
+      }
     } else if (searchType === 'youtube') {
       // YouTube搜索
       router.push(`/search?q=${encodeURIComponent(trimmed)}`);
@@ -1081,20 +1095,72 @@ function SearchPageClient() {
                 <>
                   <div className='mb-4'>
                     <h2 className='text-xl font-bold text-gray-800 dark:text-gray-200'>
-                      网盘搜索结果
-                      {netdiskLoading && (
+                      资源搜索
+                      {netdiskLoading && netdiskResourceType === 'netdisk' && (
                         <span className='ml-2 inline-block align-middle'>
                           <span className='inline-block h-3 w-3 border-2 border-gray-300 border-t-green-500 rounded-full animate-spin'></span>
                         </span>
                       )}
                     </h2>
+
+                    {/* 资源类型切换器 */}
+                    <div className='mt-3 flex items-center gap-2'>
+                      <span className='text-sm text-gray-600 dark:text-gray-400'>资源类型：</span>
+                      <div className='flex gap-2'>
+                        <button
+                          onClick={() => {
+                            setNetdiskResourceType('netdisk');
+                            setAcgError(null);
+                            const currentQuery = searchQuery.trim() || searchParams?.get('q');
+                            if (currentQuery) {
+                              handleNetDiskSearch(currentQuery);
+                            }
+                          }}
+                          className={`px-3 py-1.5 text-sm font-medium rounded-lg border transition-all ${
+                            netdiskResourceType === 'netdisk'
+                              ? 'bg-blue-500 text-white border-blue-500 shadow-md'
+                              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700'
+                          }`}
+                        >
+                          💾 网盘资源
+                        </button>
+                        <button
+                          onClick={() => {
+                            setNetdiskResourceType('acg');
+                            setNetdiskResults(null);
+                            setNetdiskError(null);
+                            const currentQuery = searchQuery.trim() || searchParams?.get('q');
+                            if (currentQuery) {
+                              setAcgTriggerSearch(prev => !prev);
+                            }
+                          }}
+                          className={`px-3 py-1.5 text-sm font-medium rounded-lg border transition-all ${
+                            netdiskResourceType === 'acg'
+                              ? 'bg-purple-500 text-white border-purple-500 shadow-md'
+                              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700'
+                          }`}
+                        >
+                          🎌 动漫磁力
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                  <NetDiskSearchResults
-                    results={netdiskResults}
-                    loading={netdiskLoading}
-                    error={netdiskError}
-                    total={netdiskTotal}
-                  />
+
+                  {/* 根据资源类型显示不同的搜索结果 */}
+                  {netdiskResourceType === 'netdisk' ? (
+                    <NetDiskSearchResults
+                      results={netdiskResults}
+                      loading={netdiskLoading}
+                      error={netdiskError}
+                      total={netdiskTotal}
+                    />
+                  ) : (
+                    <AcgSearch
+                      keyword={searchQuery.trim() || searchParams?.get('q') || ''}
+                      triggerSearch={acgTriggerSearch}
+                      onError={(error) => setAcgError(error)}
+                    />
+                  )}
                 </>
               ) : searchType === 'tmdb-actor' ? (
                 /* TMDB演员搜索结果 */

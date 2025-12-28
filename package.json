@@ -52,6 +52,7 @@
     "swiper": "^11.2.8",
     "tailwind-merge": "^2.6.0",
     "vidstack": "^0.6.15",
+    "xml2js": "^0.6.2",
     "zod": "^3.24.1"
   },
   "devDependencies": {
@@ -71,6 +72,7 @@
     "@types/react-window": "^1.8.8",
     "@types/react-window-infinite-loader": "^1.0.9",
     "@types/testing-library__jest-dom": "^5.14.9",
+    "@types/xml2js": "^0.4.14",
     "@typescript-eslint/eslint-plugin": "^8.33.0",
     "@typescript-eslint/parser": "^8.33.0",
     "eslint": "^9.28.0",
