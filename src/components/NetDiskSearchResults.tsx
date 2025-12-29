@@ -170,9 +170,9 @@ export default function NetDiskSearchResults({ results, loading, error, total }:
   }
 
   return (
-    <div className="space-y-6 relative">
+    <div className="relative">
       {/* 快速筛选和导航栏 */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 sticky top-4 z-10">
+      <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-md rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 sticky top-0 z-10 mb-6">
         <div className="p-4">
           {/* 筛选模式切换 */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 space-y-3 sm:space-y-0">
@@ -285,7 +285,7 @@ export default function NetDiskSearchResults({ results, loading, error, total }:
         </div>
       </div>
       {/* 搜索结果统计 */}
-      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
         <div className="flex items-center">
           <svg className="h-5 w-5 text-blue-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
             <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
@@ -301,11 +301,12 @@ export default function NetDiskSearchResults({ results, loading, error, total }:
       </div>
 
       {/* 按网盘类型分组展示 */}
-      {Object.entries(filteredResults || {}).map(([type, links]) => {
-        const cloudType = CLOUD_TYPES[type as keyof typeof CLOUD_TYPES] || CLOUD_TYPES.others;
-        
-        return (
-          <div key={type} id={`cloud-type-${type}`} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 scroll-mt-20">
+      <div className="space-y-6">
+        {Object.entries(filteredResults || {}).map(([type, links]) => {
+          const cloudType = CLOUD_TYPES[type as keyof typeof CLOUD_TYPES] || CLOUD_TYPES.others;
+
+          return (
+            <div key={type} id={`cloud-type-${type}`} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 scroll-mt-24">
             {/* 网盘类型头部 */}
             <div className={`${cloudType.color} text-white px-4 py-3 rounded-t-lg`}>
               <div className="flex items-center justify-between">
@@ -493,8 +494,9 @@ export default function NetDiskSearchResults({ results, loading, error, total }:
               })}
             </div>
           </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }
