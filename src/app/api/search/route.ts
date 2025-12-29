@@ -6,7 +6,7 @@ import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getAvailableApiSites, getCacheTime, getConfig } from '@/lib/config';
 import { searchFromApi } from '@/lib/downstream';
 import { yellowWords } from '@/lib/yellow';
-import { blockedWords } from '@/lib/blocked';  // 新增
+import { blockedWords } from '@/lib/blocked'; // 新增
 
 export const runtime = 'nodejs';
 
@@ -57,24 +57,24 @@ export async function GET(request: NextRequest) {
 
     let flattenedResults = successResults.flat();
 
-    // 增强过滤逻辑
-    const shouldFilterYellow = !config.SiteConfig.DisableYellowFilter;
-    flattenedResults = flattenedResults.filter((item) => {
-      const typeName = (item.type_name || '').toLowerCase();
-      const title = (item.title || '').toLowerCase();
+    // 黄名单过滤
+    if (!config.SiteConfig.DisableYellowFilter) {
+      flattenedResults = flattenedResults.filter((result) => {
+        const typeName = result.type_name || '';
+        return !yellowWords.some((word: string) => typeName.includes(word));
+      });
+    }
 
-      // 黄色过滤
-      if (shouldFilterYellow && yellowWords.some((word) => typeName.includes(word))) {
-        return false;
-      }
-
-      // 黑名单关键词过滤
-      if (blockedWords.some((word) => title.includes(word) || typeName.includes(word))) {
-        return false;
-      }
-
-      return true;
-    });
+    // 新增：屏蔽关键词过滤
+    if (blockedWords.length > 0) {
+      flattenedResults = flattenedResults.filter((result) => {
+        const title = result.title || '';
+        const typeName = result.type_name || '';
+        return !blockedWords.some(
+          (word) => title.includes(word) || typeName.includes(word)
+        );
+      });
+    }
 
     const cacheTime = await getCacheTime();
 
