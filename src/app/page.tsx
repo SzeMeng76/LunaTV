@@ -933,7 +933,7 @@ function HomeClient() {
             // 首页视图
             <>
               {/* Hero Banner 轮播 */}
-              {/* !loading && (hotMovies.length > 0 || hotTvShows.length > 0 || hotVarietyShows.length > 0 || hotShortDramas.length > 0) && (
+              {!loading && (hotMovies.length > 0 || hotTvShows.length > 0 || hotVarietyShows.length > 0 || hotShortDramas.length > 0) && (
                 <section className='mb-8'>
                   <HeroBanner
                     items={[
@@ -1007,17 +1007,17 @@ function HomeClient() {
                     showIndicators={true}
                   />
                 </section>
-              )*/}
+              )}
 
               {/* 继续观看 */}
               <ContinueWatching />
 
               {/* 即将上映 */}
-              {/* (() => {
+              {(() => {
                 console.log('🔍 即将上映 section 渲染检查:', { loading, upcomingReleasesCount: upcomingReleases.length });
                 return null;
-              })()*/}
-              {/* !loading && upcomingReleases.length > 0 && (
+              })()}
+              {!loading && upcomingReleases.length > 0 && (
                 <section className='mb-8'>
                   <div className='mb-4 flex items-center justify-between'>
                     <SectionTitle title="即将上映" icon={Calendar} iconColor="text-orange-500" />
@@ -1103,7 +1103,7 @@ function HomeClient() {
                     })}
                   </ScrollableRow>
                 </section>
-              )*/}
+              )}
 
               {/* 热门电影 */}
               <section className='mb-8'>
