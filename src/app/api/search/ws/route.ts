@@ -5,7 +5,7 @@ import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getAvailableApiSites, getConfig } from '@/lib/config';
 import { searchFromApi } from '@/lib/downstream';
 import { rankSearchResults } from '@/lib/search-ranking';
-import { filterSensitiveContent } from '@/lib/filter';
+import { filterSensitiveContent } from '@/lib/blocked';
 
 export const runtime = 'nodejs';
 
