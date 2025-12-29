@@ -37,6 +37,9 @@ RUN pnpm run build
 # ---- 第 3 阶段：生成运行时镜像 ----
 FROM node:20-alpine AS runner
 
+# 安装 CA 证书以支持 HTTPS 请求
+RUN apk add --no-cache ca-certificates
+
 # 创建非 root 用户
 RUN addgroup -g 1001 -S nodejs && adduser -u 1001 -S nextjs -G nodejs
 

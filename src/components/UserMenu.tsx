@@ -2372,13 +2372,10 @@ export const UserMenu: React.FC = () => {
                     releaseDate={favorite.releaseDate}
                   />
                   {/* 收藏心形图标 - 隐藏，使用VideoCard内部的hover爱心 */}
-                  {/* 新上映高亮标记 - 7天内上映的显示 */}
+                  {/* 新上映高亮标记 - Netflix 统一风格 - 7天内上映的显示 */}
                   {isNewRelease && (
-                    <div className='absolute top-2 left-2 bg-linear-to-r from-yellow-400 via-orange-500 to-red-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg ring-2 ring-white/50 animate-pulse z-40'>
-                      <span className='flex items-center gap-1'>
-                        <span className='text-[10px]'>🎉</span>
-                        新上映
-                      </span>
+                    <div className='absolute top-2 left-2 bg-orange-500 text-white text-xs font-bold px-3 py-1 rounded-md shadow-lg animate-pulse z-40'>
+                      新上映
                     </div>
                   )}
                 </div>
