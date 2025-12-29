@@ -6,6 +6,7 @@ import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getAvailableApiSites, getCacheTime, getConfig } from '@/lib/config';
 import { searchFromApi } from '@/lib/downstream';
 import { yellowWords } from '@/lib/yellow';
+import { blockedWords } from '@/lib/blocked';  // 新增
 
 export const runtime = 'nodejs';
 
@@ -36,8 +37,6 @@ export async function GET(request: NextRequest) {
   const config = await getConfig();
   const apiSites = await getAvailableApiSites(authInfo.username);
 
-  // 添加超时控制和错误处理，避免慢接口拖累整体响应
-  // 移除数字变体后，统一使用智能搜索变体
   const searchPromises = apiSites.map((site) =>
     Promise.race([
       searchFromApi(site, query),
@@ -46,7 +45,7 @@ export async function GET(request: NextRequest) {
       ),
     ]).catch((err) => {
       console.warn(`搜索失败 ${site.name}:`, err.message);
-      return []; // 返回空数组而不是抛出错误
+      return [];
     })
   );
 
@@ -55,17 +54,31 @@ export async function GET(request: NextRequest) {
     const successResults = results
       .filter((result) => result.status === 'fulfilled')
       .map((result) => (result as PromiseFulfilledResult<any>).value);
+
     let flattenedResults = successResults.flat();
-    if (!config.SiteConfig.DisableYellowFilter) {
-      flattenedResults = flattenedResults.filter((result) => {
-        const typeName = result.type_name || '';
-        return !yellowWords.some((word: string) => typeName.includes(word));
-      });
-    }
+
+    // 增强过滤逻辑
+    const shouldFilterYellow = !config.SiteConfig.DisableYellowFilter;
+    flattenedResults = flattenedResults.filter((item) => {
+      const typeName = (item.type_name || '').toLowerCase();
+      const title = (item.title || '').toLowerCase();
+
+      // 黄色过滤
+      if (shouldFilterYellow && yellowWords.some((word) => typeName.includes(word))) {
+        return false;
+      }
+
+      // 黑名单关键词过滤
+      if (blockedWords.some((word) => title.includes(word) || typeName.includes(word))) {
+        return false;
+      }
+
+      return true;
+    });
+
     const cacheTime = await getCacheTime();
 
     if (flattenedResults.length === 0) {
-      // no cache if empty
       return NextResponse.json({ results: [] }, { status: 200 });
     }
 
