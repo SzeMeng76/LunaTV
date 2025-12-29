@@ -1,12 +1,11 @@
-// app/api/search/ws/route.ts
+// src/app/api/search/ws/route.ts
 import { NextRequest } from 'next/server';
 
 import { getAuthInfoFromCookie } from '@/lib/auth';
-import { toSimplified } from '@/lib/chinese';
 import { getAvailableApiSites, getConfig } from '@/lib/config';
 import { searchFromApi } from '@/lib/downstream';
 import { rankSearchResults } from '@/lib/search-ranking';
-import { filterSensitiveContent } from '@/lib/blocked';
+import { filterSensitiveContent } from '@/lib/filter';
 
 export const runtime = 'nodejs';
 
@@ -32,19 +31,11 @@ export async function GET(request: NextRequest) {
   const config = await getConfig();
   const apiSites = await getAvailableApiSites(authInfo.username);
 
-  // 黄色过滤是否启用（赌博词始终过滤，不受此影响）
+  // 黄色过滤开关（赌博等违禁词在 filterSensitiveContent 中永久屏蔽，不受此影响）
   const disableYellowFilter = config.SiteConfig.DisableYellowFilter || false;
 
-  // 繁简转换
-  let normalizedQuery = query;
-  try {
-    normalizedQuery = await toSimplified(query);
-  } catch (e) {
-    console.warn('繁体转简体失败', e);
-  }
-
-  const searchQueries = [normalizedQuery];
-  if (query !== normalizedQuery) searchQueries.unshift(query); // 原词优先
+  // 直接使用用户输入的关键词（无需繁简转换）
+  const searchQueries = [query];
 
   let streamClosed = false;
 
@@ -63,12 +54,11 @@ export async function GET(request: NextRequest) {
         }
       };
 
-      // 开始事件
+      // 发送开始事件
       safeEnqueue(
         `data: ${JSON.stringify({
           type: 'start',
           query,
-          normalizedQuery,
           totalSources: apiSites.length,
           timestamp: Date.now(),
         })}\n\n`
@@ -81,16 +71,16 @@ export async function GET(request: NextRequest) {
         let siteResults: any[] = [];
 
         try {
-          // 对每个查询词并行搜索，取所有结果
+          // 并行搜索（每个查询词独立超时）
           const promises = searchQueries.map((q) =>
             Promise.race([
               searchFromApi(site, q),
               new Promise<never>((_, reject) =>
-                setTimeout(() => reject(new Error('timeout')), 18000) // 缩短为18秒，更快失败
+                setTimeout(() => reject(new Error('timeout')), 18000)
               ),
             ]).catch((err) => {
-              console.warn(`${site.name} 查询 "${q}" 超时或失败:`, err.message || err);
-              return []; // 单个查询失败不影响其他
+              console.warn(`${site.name} 查询 "${q}" 失败:`, err.message || err);
+              return [];
             })
           );
 
@@ -104,11 +94,11 @@ export async function GET(request: NextRequest) {
           });
           siteResults = Array.from(uniqueMap.values());
 
-          // === 统一敏感内容过滤（赌博词始终过滤）===
+          // 统一敏感内容过滤（赌博词永久屏蔽，黄色词可配置）
           siteResults = filterSensitiveContent(siteResults, disableYellowFilter, apiSites);
 
           // 排序
-          siteResults = rankSearchResults(siteResults, normalizedQuery);
+          siteResults = rankSearchResults(siteResults, query);
 
           // 发送该源结果
           if (!streamClosed && siteResults.length > 0) {
@@ -138,10 +128,10 @@ export async function GET(request: NextRequest) {
             );
           }
         } finally {
-          // === 关键：无论成功失败，只加一次 ===
+          // 关键：每个源只计数一次
           completedSources++;
 
-          // 所有源都完成了
+          // 所有源处理完毕，发送 complete
           if (completedSources === apiSites.length && !streamClosed) {
             safeEnqueue(
               `data: ${JSON.stringify({
