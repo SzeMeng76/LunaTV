@@ -7,7 +7,7 @@ import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getAvailableApiSites, getConfig } from '@/lib/config';
 import { searchFromApi } from '@/lib/downstream';
 import { yellowWords } from '@/lib/yellow';
-import { blockedWords } from '@/lib/blocked';
+import { blockedKeywords } from '@/lib/blockedKeywords'; // 新增
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -24,6 +24,11 @@ export async function GET(request: NextRequest) {
     const query = searchParams.get('q')?.trim();
 
     if (!query) {
+      return NextResponse.json({ suggestions: [] });
+    }
+
+    // 新增：关键词黑名单检查，直接返回空建议
+    if (blockedKeywords.some(word => query.includes(word))) {
       return NextResponse.json({ suggestions: [] });
     }
 
@@ -48,58 +53,75 @@ export async function GET(request: NextRequest) {
   }
 }
 
-async function generateSuggestions(config: AdminConfig, query: string, username: string) {
+async function generateSuggestions(config: AdminConfig, query: string, username: string): Promise<
+  Array<{
+    text: string;
+    type: 'exact' | 'related' | 'suggestion';
+    score: number;
+  }>
+> {
   const queryLower = query.toLowerCase();
-  const apiSites = await getAvailableApiSites(username);
 
-  // 排除成人源
-  const validSites = apiSites.filter(site => !site.is_adult);
+  const apiSites = await getAvailableApiSites(username);
   let realKeywords: string[] = [];
 
-  if (validSites.length > 0) {
-    const firstSite = validSites[0];
+  if (apiSites.length > 0) {
+    const firstSite = apiSites[0];
     const results = await searchFromApi(firstSite, query);
-
-    const filteredResults = results.filter((r: any) => {
-      const title = (r.title || '').toLowerCase();
-      const typeName = (r.type_name || '').toLowerCase();
-
-      if (yellowWords.some((w: string) => typeName.includes(w.toLowerCase()))) return false;
-      if (blockedWords.some((w: string) => title.includes(w.toLowerCase()) || typeName.includes(w.toLowerCase()))) return false;
-
-      return true;
-    });
 
     realKeywords = Array.from(
       new Set(
-        filteredResults
+        results
+          .filter((r: any) => config.SiteConfig.DisableYellowFilter || !yellowWords.some((word: string) => (r.type_name || '').includes(word)))
           .map((r: any) => r.title)
           .filter(Boolean)
           .flatMap((title: string) => title.split(/[ -:：·、-]/))
-          .filter((w: string) => w.length > 1 && w.toLowerCase().includes(queryLower))
+          .filter(
+            (w: string) => w.length > 1 && w.toLowerCase().includes(queryLower)
+          )
       )
     ).slice(0, 8);
   }
 
-  // ... 后续建议生成逻辑保持不变（评分、排序等）
   const realSuggestions = realKeywords.map((word) => {
     const wordLower = word.toLowerCase();
     const queryWords = queryLower.split(/[ -:：·、-]/);
 
     let score = 1.0;
-    if (wordLower === queryLower) score = 2.0;
-    else if (wordLower.startsWith(queryLower) || wordLower.endsWith(queryLower)) score = 1.8;
-    else if (queryWords.some(qw => wordLower.includes(qw))) score = 1.5;
+    if (wordLower === queryLower) {
+      score = 2.0;
+    } else if (
+      wordLower.startsWith(queryLower) ||
+      wordLower.endsWith(queryLower)
+    ) {
+      score = 1.8;
+    } else if (queryWords.some((qw) => wordLower.includes(qw))) {
+      score = 1.5;
+    }
 
-    let type: 'exact' | 'related' | 'suggestion' = score >= 2.0 ? 'exact' : score >= 1.5 ? 'related' : 'suggestion';
+    let type: 'exact' | 'related' | 'suggestion' = 'related';
+    if (score >= 2.0) {
+      type = 'exact';
+    } else if (score >= 1.5) {
+      type = 'related';
+    } else {
+      type = 'suggestion';
+    }
 
-    return { text: word, type, score };
+    return {
+      text: word,
+      type,
+      score,
+    };
   });
 
-  return realSuggestions
-    .sort((a, b) => {
-      if (a.score !== b.score) return b.score - a.score;
-      const priority = { exact: 3, related: 2, suggestion: 1 };
-      return priority[b.type] - priority[a.type];
-    });
+  const sortedSuggestions = realSuggestions.sort((a, b) => {
+    if (a.score !== b.score) {
+      return b.score - a.score;
+    }
+    const typePriority = { exact: 3, related: 2, suggestion: 1 };
+    return typePriority[b.type] - typePriority[a.type];
+  });
+
+  return sortedSuggestions;
 }

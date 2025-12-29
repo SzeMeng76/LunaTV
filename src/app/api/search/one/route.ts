@@ -4,7 +4,7 @@ import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getAvailableApiSites, getCacheTime, getConfig } from '@/lib/config';
 import { searchFromApi } from '@/lib/downstream';
 import { yellowWords } from '@/lib/yellow';
-import { blockedWords } from '@/lib/blocked';
+import { blockedKeywords } from '@/lib/blockedKeywords'; // 新增
 
 export const runtime = 'nodejs';
 
@@ -15,8 +15,24 @@ export async function GET(request: NextRequest) {
   }
 
   const { searchParams } = new URL(request.url);
-  const query = searchParams.get('q');
+  const query = searchParams.get('q')?.trim();
   const resourceId = searchParams.get('resourceId');
+
+  // 新增：关键词黑名单检查
+  if (query && blockedKeywords.some(word => query.includes(word))) {
+    const cacheTime = await getCacheTime();
+    return NextResponse.json(
+      { result: null, error: '搜索内容受限' },
+      {
+        headers: {
+          'Cache-Control': `public, max-age=${cacheTime}, s-maxage=${cacheTime}`,
+          'CDN-Cache-Control': `public, s-maxage=${cacheTime}`,
+          'Vercel-CDN-Cache-Control': `public, s-maxage=${cacheTime}`,
+          'Netlify-Vary': 'query',
+        },
+      }
+    );
+  }
 
   if (!query || !resourceId) {
     const cacheTime = await getCacheTime();
@@ -40,50 +56,30 @@ export async function GET(request: NextRequest) {
     const targetSite = apiSites.find((site) => site.key === resourceId);
     if (!targetSite) {
       return NextResponse.json(
-        { error: `未找到指定的视频源: ${resourceId}`, result: null },
-        { status: 404 }
-      );
-    }
-
-    // 1. 整站成人源屏蔽
-    if (targetSite.is_adult) {
-      return NextResponse.json(
-        { error: '未找到结果', result: null },
+        {
+          error: `未找到指定的视频源: ${resourceId}`,
+          result: null,
+        },
         { status: 404 }
       );
     }
 
     const results = await searchFromApi(targetSite, query);
-    let result = results.filter((r: any) => r.title === query);
-
-    // 统一三层过滤
-    result = result.filter((item: any) => {
-      const title = (item.title || '').toLowerCase();
-      const typeName = (item.type_name || '').toLowerCase();
-
-      // 2. 分类包含成人敏感词
-      if (yellowWords.some((word: string) => typeName.includes(word.toLowerCase()))) {
-        return false;
-      }
-
-      // 3. 标题或分类包含违禁词
-      if (
-        blockedWords.some(
-          (word: string) =>
-            title.includes(word.toLowerCase()) || typeName.includes(word.toLowerCase())
-        )
-      ) {
-        return false;
-      }
-
-      return true;
-    });
-
+    let result = results.filter((r) => r.title === query);
+    if (!config.SiteConfig.DisableYellowFilter) {
+      result = result.filter((result) => {
+        const typeName = result.type_name || '';
+        return !yellowWords.some((word: string) => typeName.includes(word));
+      });
+    }
     const cacheTime = await getCacheTime();
 
     if (result.length === 0) {
       return NextResponse.json(
-        { error: '未找到结果', result: null },
+        {
+          error: '未找到结果',
+          result: null,
+        },
         { status: 404 }
       );
     } else {
@@ -101,7 +97,10 @@ export async function GET(request: NextRequest) {
     }
   } catch (error) {
     return NextResponse.json(
-      { error: '搜索失败', result: null },
+      {
+        error: '搜索失败',
+        result: null,
+      },
       { status: 500 }
     );
   }

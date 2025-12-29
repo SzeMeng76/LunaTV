@@ -1,7 +1,6 @@
-// src/lib/blocked.ts
-// 搜索屏蔽关键词列表
-// 标题或分类名中包含任意这里面的词，将被完全过滤掉
-export const blockedWords: string[] = [
+// src/lib/blockedKeywords.ts
+// 搜索关键词黑名单：如果用户输入的 q 中包含以下任意关键词，直接屏蔽搜索（返回空结果或提示）
+export const blockedKeywords = [
   '伦理片',
   '福利',
   '里番动漫',
@@ -56,6 +55,6 @@ export const blockedWords: string[] = [
   '开元',
   '皇冠',
   '罪恶之渊',  
-  // 在这里添加你想屏蔽的关键词，每行一个
-  // 例如：'AV', '成人', '限制级' 等
-];
+  // 可继续添加更多隐晦代称
+  // 根据实际需求继续添加或删除
+] as const;
