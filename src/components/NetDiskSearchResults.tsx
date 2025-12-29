@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ClipboardIcon, EyeIcon, EyeSlashIcon, LinkIcon } from '@heroicons/react/24/outline';
 
 interface NetDiskLink {
@@ -41,6 +41,17 @@ export default function NetDiskSearchResults({ results, loading, error, total }:
   const [selectedFilter, setSelectedFilter] = useState<string[]>([]);
   const [filterMode, setFilterMode] = useState<'all' | 'selected'>('all');
   const [expandedTitles, setExpandedTitles] = useState<{ [key: string]: boolean }>({});
+  const [isLargeScreen, setIsLargeScreen] = useState(false);
+
+  // 检测屏幕尺寸用于响应式 sticky top
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(min-width: 640px)');
+    setIsLargeScreen(mediaQuery.matches);
+
+    const handler = (e: MediaQueryListEvent) => setIsLargeScreen(e.matches);
+    mediaQuery.addEventListener('change', handler);
+    return () => mediaQuery.removeEventListener('change', handler);
+  }, []);
 
   const togglePasswordVisibility = (key: string) => {
     setVisiblePasswords(prev => ({ ...prev, [key]: !prev[key] }));
@@ -171,9 +182,20 @@ export default function NetDiskSearchResults({ results, loading, error, total }:
 
   return (
     <div className="relative">
-      {/* 快速筛选和导航栏 */}
-      <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-md rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 sticky top-0 z-10 mb-6">
-        <div className="p-4">
+      {/* 快速筛选和导航栏 - 使用负top值消除空隙 */}
+      <div
+        className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-md shadow-lg border-b border-gray-200 dark:border-gray-700 sticky z-10 mb-6"
+        style={{
+          top: isLargeScreen ? '-25px' : '-17px', // sm: 24px padding + 1px border = 25px; mobile: 16px + 1px = 17px
+          marginLeft: isLargeScreen ? '-1.5rem' : '-1rem',
+          marginRight: isLargeScreen ? '-1.5rem' : '-1rem',
+          paddingLeft: isLargeScreen ? '1.5rem' : '1rem',
+          paddingRight: isLargeScreen ? '1.5rem' : '1rem',
+          paddingTop: '1rem',
+          paddingBottom: '1rem',
+        }}
+      >
+        <div>
           {/* 筛选模式切换 */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 space-y-3 sm:space-y-0">
             <div className="flex items-center space-x-2">
