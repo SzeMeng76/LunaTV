@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { parseStringPromise } from 'xml2js';
 
 import { getAuthInfoFromCookie } from '@/lib/auth';
+import { filterSensitiveContent } from '@/lib/filter';  // 新增：引入统一过滤函数
+import { getConfig } from '@/lib/config';  // 新增：获取配置以确定 shouldFilter
 
 export const runtime = 'nodejs';
 
@@ -74,7 +76,7 @@ export async function POST(req: NextRequest) {
     const items = parsed.rss.channel[0].item;
 
     // 转换为标准格式
-    const results = items.map((item: any) => {
+    let results = items.map((item: any) => {
       // 提取描述中的图片（如果有）
       let images: string[] = [];
       if (item.description?.[0]) {
@@ -95,8 +97,16 @@ export async function POST(req: NextRequest) {
         torrentUrl: item.enclosure?.[0]?.$?.url || '',
         description: item.description?.[0] || '',
         images,
+        type_name: '',  // 新增：兼容 filterSensitiveContent，如果有分类可填充
       };
     });
+
+    // 新增：获取配置并应用过滤
+    const config = await getConfig();
+    const shouldFilter = !config.SiteConfig.DisableYellowFilter;
+
+    // 使用统一过滤函数屏蔽敏感内容
+    results = filterSensitiveContent(results, shouldFilter);
 
     return NextResponse.json({
       keyword: trimmedKeyword,
