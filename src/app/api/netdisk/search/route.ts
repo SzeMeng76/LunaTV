@@ -3,7 +3,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getConfig } from '@/lib/config';
 import { db } from '@/lib/db';
-import { filterSensitiveContent } from '@/lib/filter';  // 新增：引入统一过滤函数
 
 export const runtime = 'nodejs';
 
@@ -32,8 +31,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'PanSou服务地址未配置' }, { status: 400 });
   }
 
-  const shouldFilter = !config.SiteConfig.DisableYellowFilter;  // 新增：确定是否过滤
-
   // 网盘搜索缓存：30分钟
   const NETDISK_CACHE_TIME = 30 * 60; // 30分钟（秒）
   const enabledCloudTypesStr = (netDiskConfig.enabledCloudTypes || []).sort().join(',');
@@ -47,44 +44,32 @@ export async function GET(request: NextRequest) {
     const cached = await db.getCache(cacheKey);
     if (cached) {
       console.log(`✅ 网盘搜索缓存命中(数据库): "${query}" (${enabledCloudTypesStr})`);
-      // 新增：即使是缓存结果，也应用过滤（以防旧缓存未过滤）
-      if (shouldFilter && cached.data?.merged_by_type) {
-        // 假设 merged_by_type 是对象，值是数组结果
-        Object.keys(cached.data.merged_by_type).forEach(key => {
-          cached.data.merged_by_type[key] = filterSensitiveContent(
-            cached.data.merged_by_type[key],
-            true
-          );
-        });
-        cached.data.total = Object.values(cached.data.merged_by_type).reduce(
-          (sum: number, arr: any[]) => sum + (arr.length || 0),
-          0
-        );
-      }
       return NextResponse.json({
         ...cached,
         fromCache: true,
+        cacheSource: 'database',
+        cacheTimestamp: new Date().toISOString()
       });
     }
+    
+    console.log(`❌ 网盘搜索缓存未命中: "${query}" (${enabledCloudTypesStr})`);
   } catch (cacheError) {
-    console.warn('网盘搜索缓存检查失败:', cacheError);
+    console.warn('网盘搜索缓存读取失败:', cacheError);
+    // 缓存失败不影响主流程，继续执行
   }
 
-  // 没有缓存，进行实际搜索
-  console.log(`🌐 执行网盘搜索: "${query}"`);
-
-  const controller = new AbortController();
-  const signal = controller.signal;
-  const timeout = setTimeout(() => controller.abort(), 30000);  // 30秒超时
-
   try {
-    const pansouResponse = await fetch(netDiskConfig.pansouUrl, {
+    // 调用PanSou服务
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), (netDiskConfig.timeout || 30) * 1000);
+
+    const pansouResponse = await fetch(`${netDiskConfig.pansouUrl}/api/search`, {
       method: 'POST',
-      headers: {
+      headers: { 
         'Content-Type': 'application/json',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        'User-Agent': 'LunaTV/1.0'
       },
-      signal,
+      signal: controller.signal,
       body: JSON.stringify({
         kw: query,
         res: 'merge',
@@ -101,7 +86,7 @@ export async function GET(request: NextRequest) {
     const result = await pansouResponse.json();
     
     // 统一返回格式
-    let responseData = {
+    const responseData = {
       success: true,
       data: {
         total: result.data?.total || 0,
@@ -111,21 +96,6 @@ export async function GET(request: NextRequest) {
         timestamp: new Date().toISOString()
       }
     };
-
-    // 新增：应用过滤
-    if (shouldFilter && responseData.data.merged_by_type) {
-      // 假设 merged_by_type 是对象，值是数组结果（每个结果有 title/description 等字段）
-      Object.keys(responseData.data.merged_by_type).forEach(key => {
-        responseData.data.merged_by_type[key] = filterSensitiveContent(
-          responseData.data.merged_by_type[key],
-          true
-        );
-      });
-      responseData.data.total = Object.values(responseData.data.merged_by_type).reduce(
-        (sum: number, arr: any[]) => sum + (arr.length || 0),
-        0
-      );
-    }
 
     // 服务端直接保存到数据库（不用ClientCache，避免HTTP循环调用）
     try {

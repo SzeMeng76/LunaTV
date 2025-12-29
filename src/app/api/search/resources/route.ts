@@ -1,4 +1,4 @@
-// app/api/search/resources/route.ts  (资源列表接口，无需修改赌博过滤，保持原样)
+/* eslint-disable no-console */
 
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -7,7 +7,11 @@ import { getAuthInfoFromCookie } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 
+// OrionTV 兼容接口
 export async function GET(request: NextRequest) {
+  console.log('request', request.url);
+
+  // 添加用户认证检查
   const authInfo = getAuthInfoFromCookie(request);
   if (!authInfo || !authInfo.username) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -15,6 +19,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const apiSites = await getAvailableApiSites(authInfo.username);
+
     return NextResponse.json(apiSites);
   } catch (error) {
     return NextResponse.json({ error: '获取资源失败' }, { status: 500 });
