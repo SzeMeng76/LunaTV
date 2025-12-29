@@ -1,4 +1,3 @@
-
 /* eslint-disable @typescript-eslint/ban-ts-comment, @typescript-eslint/no-explicit-any, react-hooks/exhaustive-deps, no-console, @next/next/no-img-element */
 
 'use client';
@@ -83,22 +82,6 @@ function PlayPageClient() {
   // 返回顶部按钮显示状态
   const [showBackToTop, setShowBackToTop] = useState(false);
 
-  // 获取视频标题
-  const [videoTitle, setVideoTitle] = useState(searchParams.get('title') || '');
-
-  // 定义被禁止播放的影片列表
-  const blockedTitles = ["罪恶之渊", "影片二", "影片三"];
-
-  // 检查视频标题是否在被禁止播放的影片列表中
-  useEffect(() => {
-    if (blockedTitles.includes(videoTitle)) {
-      setError('该影片被禁止播放。');
-      setVideoUrl(''); // 清空视频链接
-      return;
-    }
-  }, [videoTitle]);
-
-  // 其他代码保持不变...
   // bangumi详情状态
   const [bangumiDetails, setBangumiDetails] = useState<any>(null);
   const [loadingBangumiDetails, setLoadingBangumiDetails] = useState(false);
@@ -6479,5 +6462,5 @@ export default function PlayPage() {
         <PlayPageClient />
       </Suspense>
     </>
-  );  
+  );
 }
