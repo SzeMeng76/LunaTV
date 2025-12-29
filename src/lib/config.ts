@@ -1,5 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, no-console, @typescript-eslint/no-non-null-assertion */
 
+import { unstable_noStore } from 'next/cache';
+
 import { db } from '@/lib/db';
 
 import { AdminConfig } from './admin.types';
@@ -296,10 +298,12 @@ async function getInitConfig(configFile: string, subConfig: {
 }
 
 export async function getConfig(): Promise<AdminConfig> {
-  // 直接使用内存缓存
-  if (cachedConfig) {
-    return cachedConfig;
-  }
+  // 🔥 防止 Next.js 在 Docker 环境下缓存配置（解决站点名称更新问题）
+  unstable_noStore();
+
+  // 🔥 完全移除内存缓存检查 - Docker 环境下模块级变量不会被清除
+  // 参考：https://nextjs.org/docs/app/guides/memory-usage
+  // 每次都从数据库读取最新配置，确保动态配置立即生效
 
   // 读 db
   let adminConfig: AdminConfig | null = null;
@@ -314,9 +318,11 @@ export async function getConfig(): Promise<AdminConfig> {
     adminConfig = await getInitConfig("");
   }
   adminConfig = await configSelfCheck(adminConfig);
+
+  // 🔥 仍然更新 cachedConfig 以保持向后兼容，但不再依赖它
   cachedConfig = adminConfig;
-  db.saveAdminConfig(cachedConfig);
-  return cachedConfig;
+
+  return adminConfig;
 }
 
 // 清除配置缓存，强制重新从数据库读取

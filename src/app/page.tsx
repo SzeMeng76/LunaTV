@@ -871,6 +871,7 @@ function HomeClient() {
 
                   if (item.releaseDate) {
                     const now = new Date();
+                    now.setHours(0, 0, 0, 0); // 归零时间，只比较日期
                     const releaseDate = new Date(item.releaseDate);
                     const daysDiff = Math.ceil((releaseDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
@@ -1060,12 +1061,13 @@ function HomeClient() {
                     ))}
                   </div>
 
-                  <ScrollableRow>
+                  <ScrollableRow enableVirtualization={true}>
                     {upcomingReleases
                       .filter(release => upcomingFilter === 'all' || release.type === upcomingFilter)
                       .map((release, index) => {
                       // 计算距离上映还有几天
                       const now = new Date();
+                      now.setHours(0, 0, 0, 0); // 归零时间，只比较日期
                       const releaseDate = new Date(release.releaseDate);
                       const daysDiff = Math.ceil((releaseDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
@@ -1117,7 +1119,7 @@ function HomeClient() {
                     <ChevronRight className='w-4 h-4 ml-1' />
                   </Link>
                 </div>
-                <ScrollableRow>
+                <ScrollableRow enableVirtualization={true}>
                   {loading
                     ? // 加载状态显示灰色占位数据
                     Array.from({ length: 8 }).map((_, index) => (
@@ -1158,7 +1160,7 @@ function HomeClient() {
                     <ChevronRight className='w-4 h-4 ml-1' />
                   </Link>
                 </div>
-                <ScrollableRow>
+                <ScrollableRow enableVirtualization={true}>
                   {loading
                     ? // 加载状态显示灰色占位数据
                     Array.from({ length: 8 }).map((_, index) => (
@@ -1199,7 +1201,7 @@ function HomeClient() {
                     <ChevronRight className='w-4 h-4 ml-1' />
                   </Link>
                 </div>
-                <ScrollableRow>
+                <ScrollableRow enableVirtualization={true}>
                   {loading
                     ? // 加载状态显示灰色占位数据
                     Array.from({ length: 8 }).map((_, index) => (
@@ -1268,7 +1270,7 @@ function HomeClient() {
                     <ChevronRight className='w-4 h-4 ml-1' />
                   </Link>
                 </div>
-                <ScrollableRow>
+                <ScrollableRow enableVirtualization={true}>
                   {loading
                     ? // 加载状态显示灰色占位数据
                     Array.from({ length: 8 }).map((_, index) => (
@@ -1309,7 +1311,7 @@ function HomeClient() {
                     <ChevronRight className='w-4 h-4 ml-1' />
                   </Link>
                 </div>
-                <ScrollableRow>
+                <ScrollableRow enableVirtualization={true}>
                   {loading
                     ? // 加载状态显示灰色占位数据
                     Array.from({ length: 8 }).map((_, index) => (
