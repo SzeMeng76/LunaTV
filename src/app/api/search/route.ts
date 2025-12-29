@@ -1,11 +1,11 @@
-/* eslint-disable @typescript-eslint/no-explicit-any,no-console */
+// app/api/search/route.ts  (主聚合搜索接口，已添加赌博关键词屏蔽)
 
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getAvailableApiSites, getCacheTime, getConfig } from '@/lib/config';
 import { searchFromApi } from '@/lib/downstream';
-import { yellowWords } from '@/lib/yellow';
+import { filterSensitiveContent } from '@/lib/filter';
 
 export const runtime = 'nodejs';
 
@@ -20,24 +20,20 @@ export async function GET(request: NextRequest) {
 
   if (!query) {
     const cacheTime = await getCacheTime();
-    return NextResponse.json(
-      { results: [] },
-      {
-        headers: {
-          'Cache-Control': `public, max-age=${cacheTime}, s-maxage=${cacheTime}`,
-          'CDN-Cache-Control': `public, s-maxage=${cacheTime}`,
-          'Vercel-CDN-Cache-Control': `public, s-maxage=${cacheTime}`,
-          'Netlify-Vary': 'query',
-        },
-      }
-    );
+    return NextResponse.json({ results: [] }, {
+      headers: {
+        'Cache-Control': `public, max-age=${cacheTime}, s-maxage=${cacheTime}`,
+        'CDN-Cache-Control': `public, s-maxage=${cacheTime}`,
+        'Vercel-CDN-Cache-Control': `public, s-maxage=${cacheTime}`,
+        'Netlify-Vary': 'query',
+      },
+    });
   }
 
   const config = await getConfig();
   const apiSites = await getAvailableApiSites(authInfo.username);
+  const shouldFilter = !config.SiteConfig.DisableYellowFilter;
 
-  // 添加超时控制和错误处理，避免慢接口拖累整体响应
-  // 移除数字变体后，统一使用智能搜索变体
   const searchPromises = apiSites.map((site) =>
     Promise.race([
       searchFromApi(site, query),
@@ -46,26 +42,24 @@ export async function GET(request: NextRequest) {
       ),
     ]).catch((err) => {
       console.warn(`搜索失败 ${site.name}:`, err.message);
-      return []; // 返回空数组而不是抛出错误
+      return [];
     })
   );
 
   try {
     const results = await Promise.allSettled(searchPromises);
     const successResults = results
-      .filter((result) => result.status === 'fulfilled')
-      .map((result) => (result as PromiseFulfilledResult<any>).value);
+      .filter((r) => r.status === 'fulfilled')
+      .map((r) => (r as PromiseFulfilledResult<any>).value);
+
     let flattenedResults = successResults.flat();
-    if (!config.SiteConfig.DisableYellowFilter) {
-      flattenedResults = flattenedResults.filter((result) => {
-        const typeName = result.type_name || '';
-        return !yellowWords.some((word: string) => typeName.includes(word));
-      });
-    }
+
+    // 统一过滤（成人 + 赌博关键词）
+    flattenedResults = filterSensitiveContent(flattenedResults, shouldFilter);
+
     const cacheTime = await getCacheTime();
 
     if (flattenedResults.length === 0) {
-      // no cache if empty
       return NextResponse.json({ results: [] }, { status: 200 });
     }
 
@@ -80,7 +74,7 @@ export async function GET(request: NextRequest) {
         },
       }
     );
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: '搜索失败' }, { status: 500 });
   }
 }
