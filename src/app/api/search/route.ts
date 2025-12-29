@@ -6,7 +6,7 @@ import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getAvailableApiSites, getCacheTime, getConfig } from '@/lib/config';
 import { searchFromApi } from '@/lib/downstream';
 import { yellowWords } from '@/lib/yellow';
-import { blockedWords } from '@/lib/blocked'; // 新增
+import { blockedWords } from '@/lib/blocked';
 
 export const runtime = 'nodejs';
 
@@ -37,7 +37,10 @@ export async function GET(request: NextRequest) {
   const config = await getConfig();
   const apiSites = await getAvailableApiSites(authInfo.username);
 
-  const searchPromises = apiSites.map((site) =>
+  // 过滤掉整站成人源
+  const validSites = apiSites.filter(site => !site.is_adult);
+
+  const searchPromises = validSites.map((site) =>
     Promise.race([
       searchFromApi(site, query),
       new Promise((_, reject) =>
@@ -52,29 +55,33 @@ export async function GET(request: NextRequest) {
   try {
     const results = await Promise.allSettled(searchPromises);
     const successResults = results
-      .filter((result) => result.status === 'fulfilled')
-      .map((result) => (result as PromiseFulfilledResult<any>).value);
+      .filter((r) => r.status === 'fulfilled')
+      .map((r) => (r as PromiseFulfilledResult<any>).value);
 
     let flattenedResults = successResults.flat();
 
-    // 黄名单过滤
-    if (!config.SiteConfig.DisableYellowFilter) {
-      flattenedResults = flattenedResults.filter((result) => {
-        const typeName = result.type_name || '';
-        return !yellowWords.some((word: string) => typeName.includes(word));
-      });
-    }
+    // 统一三层过滤（yellow + blocked）
+    flattenedResults = flattenedResults.filter((item: any) => {
+      const title = (item.title || '').toLowerCase();
+      const typeName = (item.type_name || '').toLowerCase();
 
-    // 新增：屏蔽关键词过滤
-    if (blockedWords.length > 0) {
-      flattenedResults = flattenedResults.filter((result) => {
-        const title = result.title || '';
-        const typeName = result.type_name || '';
-        return !blockedWords.some(
-          (word) => title.includes(word) || typeName.includes(word)
-        );
-      });
-    }
+      // 2. 分类包含成人敏感词
+      if (yellowWords.some((word: string) => typeName.includes(word.toLowerCase()))) {
+        return false;
+      }
+
+      // 3. 标题或分类包含违禁词
+      if (
+        blockedWords.some(
+          (word: string) =>
+            title.includes(word.toLowerCase()) || typeName.includes(word.toLowerCase())
+        )
+      ) {
+        return false;
+      }
+
+      return true;
+    });
 
     const cacheTime = await getCacheTime();
 
