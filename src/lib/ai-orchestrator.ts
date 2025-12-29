@@ -268,6 +268,7 @@ export async function orchestrateDataSources(
   config?: {
     enableWebSearch: boolean;
     tavilyApiKeys?: string | string[];
+    siteName?: string;
   }
 ): Promise<OrchestrationResult> {
   // 1. 意图分析
@@ -280,7 +281,8 @@ export async function orchestrateDataSources(
   });
 
   // 2. 构建基础系统提示词
-  let systemPrompt = `你是 LunaTV 的 AI 影视助手，专门帮助用户发现和了解影视内容。
+  const siteName = config?.siteName || 'LunaTV';
+  let systemPrompt = `你是 ${siteName} 的 AI 影视助手，专门帮助用户发现和了解影视内容。
 
 ## 你的能力
 - 提供影视推荐

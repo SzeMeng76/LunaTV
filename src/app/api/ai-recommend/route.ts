@@ -112,6 +112,7 @@ export async function POST(request: NextRequest) {
         {
           enableWebSearch: aiConfig.enableWebSearch || false,
           tavilyApiKeys: aiConfig.tavilyApiKeys,
+          siteName: adminConfig.SiteConfig?.SiteName || 'LunaTV',
         }
       );
       console.log('📊 意图分析完成:', {
@@ -189,7 +190,8 @@ ${youtubeSearchStatus}
 `;
     } else {
       // 使用原有的 systemPrompt（兼容旧逻辑）
-      systemPrompt = `你是LunaTV的智能推荐助手，支持：${capabilities.join('、')}。当前日期：${currentDate}
+      const siteName = adminConfig.SiteConfig?.SiteName || 'LunaTV';
+      systemPrompt = `你是${siteName}的智能推荐助手，支持：${capabilities.join('、')}。当前日期：${currentDate}
 
 ## 功能状态：
 1. **影视剧推荐** ✅ 始终可用
