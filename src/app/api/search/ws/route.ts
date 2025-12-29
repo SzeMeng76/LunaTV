@@ -1,32 +1,14 @@
-/* eslint-disable @typescript-eslint/no-explicit-any,no-console */
-
+// app/api/search/ws/route.ts
 import { NextRequest } from 'next/server';
 
 import { getAuthInfoFromCookie } from '@/lib/auth';
+import { toSimplified } from '@/lib/chinese';
 import { getAvailableApiSites, getConfig } from '@/lib/config';
 import { searchFromApi } from '@/lib/downstream';
-import { yellowWords } from '@/lib/yellow';
-import { blockedWords } from '@/lib/blocked';
+import { rankSearchResults } from '@/lib/search-ranking';
+import { filterSensitiveContent } from '@/lib/blocked';
 
 export const runtime = 'nodejs';
-
-function normalize(str: string): string {
-  return str
-    .toLowerCase()
-    .replace(/[：:]/g, ':')
-    .replace(/[·\.\-ー]/g, '')
-    .replace(/\s+/g, '');
-}
-
-function containsBlocked(text: string): boolean {
-  const normalized = normalize(text);
-  return blockedWords.some(word => normalized.includes(word));
-}
-
-function containsYellow(typeName: string): boolean {
-  const normalized = normalize(typeName);
-  return yellowWords.some(word => normalized.includes(word));
-}
 
 export async function GET(request: NextRequest) {
   const authInfo = getAuthInfoFromCookie(request);
@@ -50,6 +32,20 @@ export async function GET(request: NextRequest) {
   const config = await getConfig();
   const apiSites = await getAvailableApiSites(authInfo.username);
 
+  // 黄色过滤是否启用（赌博词始终过滤，不受此影响）
+  const disableYellowFilter = config.SiteConfig.DisableYellowFilter || false;
+
+  // 繁简转换
+  let normalizedQuery = query;
+  try {
+    normalizedQuery = await toSimplified(query);
+  } catch (e) {
+    console.warn('繁体转简体失败', e);
+  }
+
+  const searchQueries = [normalizedQuery];
+  if (query !== normalizedQuery) searchQueries.unshift(query); // 原词优先
+
   let streamClosed = false;
 
   const stream = new ReadableStream({
@@ -67,109 +63,109 @@ export async function GET(request: NextRequest) {
         }
       };
 
-      safeEnqueue(`data: ${JSON.stringify({
-        type: 'start',
-        query,
-        totalSources: apiSites.length,
-        timestamp: Date.now(),
-      })}\n\n`);
+      // 开始事件
+      safeEnqueue(
+        `data: ${JSON.stringify({
+          type: 'start',
+          query,
+          normalizedQuery,
+          totalSources: apiSites.length,
+          timestamp: Date.now(),
+        })}\n\n`
+      );
 
       let completedSources = 0;
+      const allResults: any[] = [];
 
       const tasks = apiSites.map(async (site) => {
-        let results: any[] = [];
+        let siteResults: any[] = [];
 
         try {
-          const timeoutPromise = new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error('timeout')), 18000)
+          // 对每个查询词并行搜索，取所有结果
+          const promises = searchQueries.map((q) =>
+            Promise.race([
+              searchFromApi(site, q),
+              new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error('timeout')), 18000) // 缩短为18秒，更快失败
+              ),
+            ]).catch((err) => {
+              console.warn(`${site.name} 查询 "${q}" 超时或失败:`, err.message || err);
+              return []; // 单个查询失败不影响其他
+            })
           );
 
-          results = await Promise.race([searchFromApi(site, query), timeoutPromise]);
+          const resultsArrays = await Promise.all(promises);
+          siteResults = resultsArrays.flat();
 
-          // 加强过滤：支持多种字段名 + 标准化处理
-          const filteredResults = results.filter((item: any) => {
-            // 提取标题（支持 title / name / vod_name 等常见字段）
-            const title = (
-              item.title ||
-              item.name ||
-              item.vod_name ||
-              item.video_name ||
-              ''
-            ).toString();
-
-            // 提取分类（支持 type_name / typeName / category / class 等）
-            const typeName = (
-              item.type_name ||
-              item.typeName ||
-              item.category ||
-              item.class ||
-              item.tag ||
-              ''
-            ).toString();
-
-            // 黄色过滤
-            if (!config.SiteConfig.DisableYellowFilter && containsYellow(typeName)) {
-              return false;
-            }
-
-            // 黑名单过滤（标题或分类）
-            if (containsBlocked(title) || containsBlocked(typeName)) {
-              return false;
-            }
-
-            return true;
+          // 去重（按 id）
+          const uniqueMap = new Map<string, any>();
+          siteResults.forEach((r: any) => {
+            if (r.id) uniqueMap.set(r.id, r);
           });
+          siteResults = Array.from(uniqueMap.values());
 
-          results = filteredResults; // 使用过滤后的结果
+          // === 统一敏感内容过滤（赌博词始终过滤）===
+          siteResults = filterSensitiveContent(siteResults, disableYellowFilter, apiSites);
 
-          if (!streamClosed) {
-            safeEnqueue(`data: ${JSON.stringify({
-              type: 'source_result',
-              source: site.key,
-              sourceName: site.name,
-              results,
-              timestamp: Date.now(),
-            })}\n\n`);
+          // 排序
+          siteResults = rankSearchResults(siteResults, normalizedQuery);
+
+          // 发送该源结果
+          if (!streamClosed && siteResults.length > 0) {
+            allResults.push(...siteResults);
+
+            safeEnqueue(
+              `data: ${JSON.stringify({
+                type: 'source_result',
+                source: site.key,
+                sourceName: site.name,
+                results: siteResults,
+                timestamp: Date.now(),
+              })}\n\n`
+            );
           }
-
-        } catch (err) {
-          console.warn(`搜索源失败 ${site.name}:`, (err as Error)?.message || err);
-
+        } catch (error) {
+          console.warn(`搜索源完全失败 ${site.name}:`, error);
           if (!streamClosed) {
-            safeEnqueue(`data: ${JSON.stringify({
-              type: 'source_error',
-              source: site.key,
-              sourceName: site.name,
-              error: (err as Error)?.message || '搜索失败',
-              timestamp: Date.now(),
-            })}\n\n`);
+            safeEnqueue(
+              `data: ${JSON.stringify({
+                type: 'source_error',
+                source: site.key,
+                sourceName: site.name,
+                error: error instanceof Error ? error.message : '搜索失败',
+                timestamp: Date.now(),
+              })}\n\n`
+            );
           }
         } finally {
+          // === 关键：无论成功失败，只加一次 ===
           completedSources++;
 
+          // 所有源都完成了
           if (completedSources === apiSites.length && !streamClosed) {
-            safeEnqueue(`data: ${JSON.stringify({
-              type: 'complete',
-              totalResults: 0, // 前端不依赖这个字段
-              completedSources,
-              timestamp: Date.now(),
-            })}\n\n`);
+            safeEnqueue(
+              `data: ${JSON.stringify({
+                type: 'complete',
+                totalResults: allResults.length,
+                completedSources,
+                timestamp: Date.now(),
+              })}\n\n`
+            );
 
-            try { controller.close(); } catch {}
+            try {
+              controller.close();
+            } catch {}
           }
         }
       });
 
-      Promise.allSettled(tasks).finally(() => {
-        if (!streamClosed) {
-          try { controller.close(); } catch {}
-        }
-      });
+      // 并行执行所有任务
+      await Promise.allSettled(tasks);
     },
 
     cancel() {
       streamClosed = true;
-      console.log('客户端断开，取消搜索流');
+      console.log('客户端断开，搜索流已取消');
     },
   });
 
