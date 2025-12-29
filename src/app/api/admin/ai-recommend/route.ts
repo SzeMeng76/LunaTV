@@ -56,6 +56,13 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: '最大Token数应在1-150000之间（GPT-5支持128k，推理模型建议2000+）' }, { status: 400 });
       }
 
+      // 验证智能协调器配置
+      if (aiRecommendConfig.enableOrchestrator && aiRecommendConfig.enableWebSearch) {
+        if (!Array.isArray(aiRecommendConfig.tavilyApiKeys) || aiRecommendConfig.tavilyApiKeys.length === 0) {
+          return NextResponse.json({ error: '启用联网搜索需要至少配置一个Tavily API Key' }, { status: 400 });
+        }
+      }
+
       // 验证和优化API地址格式
       try {
         const apiUrl = aiRecommendConfig.apiUrl.trim();
@@ -105,7 +112,10 @@ export async function POST(request: NextRequest) {
       apiKey: aiRecommendConfig.apiKey?.trim() || '',
       model: aiRecommendConfig.model?.trim() || 'gpt-3.5-turbo',
       temperature: aiRecommendConfig.temperature ?? 0.7,
-      maxTokens: aiRecommendConfig.maxTokens ?? 2000
+      maxTokens: aiRecommendConfig.maxTokens ?? 2000,
+      enableOrchestrator: aiRecommendConfig.enableOrchestrator ?? false,
+      enableWebSearch: aiRecommendConfig.enableWebSearch ?? false,
+      tavilyApiKeys: Array.isArray(aiRecommendConfig.tavilyApiKeys) ? aiRecommendConfig.tavilyApiKeys : []
     };
 
     // 保存配置到数据库

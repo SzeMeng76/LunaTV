@@ -2,7 +2,7 @@
 
 'use client';
 
-import { ChevronRight, Film, Tv, Calendar, Sparkles, Play } from 'lucide-react';
+import { ChevronRight, Film, Tv, Calendar, Sparkles, Play, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { Suspense, useEffect, useState } from 'react';
 
@@ -35,6 +35,7 @@ import SkeletonCard from '@/components/SkeletonCard';
 import { useSite } from '@/components/SiteProvider';
 import { TelegramWelcomeModal } from '@/components/TelegramWelcomeModal';
 import VideoCard from '@/components/VideoCard';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 
 function HomeClient() {
   const [activeTab, setActiveTab] = useState<'home' | 'favorites'>('home');
@@ -58,6 +59,14 @@ function HomeClient() {
     const authInfo = getAuthInfoFromBrowserCookie();
     if (authInfo?.username) {
       setUsername(authInfo.username);
+    }
+
+    // 读取清空确认设置
+    if (typeof window !== 'undefined') {
+      const savedRequireClearConfirmation = localStorage.getItem('requireClearConfirmation');
+      if (savedRequireClearConfirmation !== null) {
+        setRequireClearConfirmation(JSON.parse(savedRequireClearConfirmation));
+      }
     }
 
     // 检查公告弹窗状态
@@ -91,6 +100,8 @@ function HomeClient() {
   const [favoriteFilter, setFavoriteFilter] = useState<'all' | 'movie' | 'tv' | 'anime' | 'shortdrama' | 'live' | 'variety'>('all');
   const [favoriteSortBy, setFavoriteSortBy] = useState<'recent' | 'title' | 'rating'>('recent');
   const [upcomingFilter, setUpcomingFilter] = useState<'all' | 'movie' | 'tv'>('all');
+  const [showClearFavoritesDialog, setShowClearFavoritesDialog] = useState(false);
+  const [requireClearConfirmation, setRequireClearConfirmation] = useState(false);
 
   useEffect(() => {
     // 清理过期缓存
@@ -566,6 +577,12 @@ function HomeClient() {
     setFavoriteItems(sorted);
   };
 
+  // 处理清空所有收藏
+  const handleClearFavorites = async () => {
+    await clearAllFavorites();
+    setFavoriteItems([]);
+  };
+
   // 当切换到收藏夹时加载收藏数据
   useEffect(() => {
     if (activeTab !== 'favorites') return;
@@ -659,15 +676,18 @@ function HomeClient() {
                 </h2>
                 {favoriteItems.length > 0 && (
                   <button
-                    className='text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors'
-                    onClick={async () => {
-                      if (confirm('确定要清空所有收藏吗？')) {
-                        await clearAllFavorites();
-                        setFavoriteItems([]);
+                    className='flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 hover:text-white hover:bg-red-600 dark:text-red-400 dark:hover:text-white dark:hover:bg-red-500 border border-red-300 dark:border-red-700 hover:border-red-600 dark:hover:border-red-500 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md'
+                    onClick={() => {
+                      // 根据用户设置决定是否显示确认对话框
+                      if (requireClearConfirmation) {
+                        setShowClearFavoritesDialog(true);
+                      } else {
+                        handleClearFavorites();
                       }
                     }}
                   >
-                    清空收藏
+                    <Trash2 className='w-4 h-4' />
+                    <span>清空收藏</span>
                   </button>
                 )}
               </div>
@@ -929,6 +949,18 @@ function HomeClient() {
                   </div>
                 )}
               </div>
+
+              {/* 确认对话框 */}
+              <ConfirmDialog
+                isOpen={showClearFavoritesDialog}
+                title="确认清空收藏"
+                message={`确定要清空所有收藏吗？\n\n这将删除 ${favoriteItems.length} 项收藏，此操作无法撤销。`}
+                confirmText="确认清空"
+                cancelText="取消"
+                variant="danger"
+                onConfirm={handleClearFavorites}
+                onCancel={() => setShowClearFavoritesDialog(false)}
+              />
             </section>
           ) : (
             // 首页视图

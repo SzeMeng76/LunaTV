@@ -5,6 +5,8 @@
 import { Brain, Send, Sparkles, X, Play, ExternalLink } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useOptimistic, useTransition, useMemo, useCallback, memo } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 import {
   addMovieTitleClickListeners,
@@ -17,10 +19,13 @@ import {
   sendAIRecommendMessage,
   MovieRecommendation,
 } from '@/lib/ai-recommend.client';
+import { VideoContext } from '@/lib/ai-orchestrator';
 
 interface AIRecommendModalProps {
   isOpen: boolean;
   onClose: () => void;
+  context?: VideoContext; // 视频上下文（从VideoCard传入）
+  welcomeMessage?: string; // 自定义欢迎消息
 }
 
 interface ExtendedAIMessage extends AIMessage {
@@ -52,14 +57,6 @@ const MessageItem = memo(({
   playingVideoId,
   setPlayingVideoId
 }: MessageItemProps) => {
-  // 使用 useMemo 缓存格式化后的消息内容
-  const formattedContent = useMemo(() => {
-    if (message.role === 'assistant') {
-      return formatAIResponseWithLinks(message.content, handleTitleClick);
-    }
-    return null;
-  }, [message.content, message.role, handleTitleClick]);
-
   return (
     <div
       className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}
@@ -72,10 +69,11 @@ const MessageItem = memo(({
         } ${message.content === '思考中...' ? 'opacity-70 animate-pulse' : ''}`}
       >
         {message.role === 'assistant' ? (
-          <div
-            dangerouslySetInnerHTML={{ __html: formattedContent || '' }}
-            className="prose prose-sm dark:prose-invert max-w-none"
-          />
+          <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-2 prose-p:leading-relaxed prose-pre:bg-gray-800 prose-pre:text-gray-100 dark:prose-pre:bg-gray-900 prose-code:text-purple-600 dark:prose-code:text-purple-400 prose-code:bg-purple-50 dark:prose-code:bg-purple-900/20 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none prose-a:text-blue-600 dark:prose-a:text-blue-400 prose-strong:text-gray-900 dark:prose-strong:text-white prose-ul:my-2 prose-ol:my-2 prose-li:my-1">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {message.content}
+            </ReactMarkdown>
+          </div>
         ) : (
           <div className="whitespace-pre-wrap">{message.content}</div>
         )}
@@ -297,7 +295,7 @@ const MessageItem = memo(({
 
 MessageItem.displayName = 'MessageItem';
 
-export default function AIRecommendModal({ isOpen, onClose }: AIRecommendModalProps) {
+export default function AIRecommendModal({ isOpen, onClose, context, welcomeMessage }: AIRecommendModalProps) {
   const router = useRouter();
   const [messages, setMessages] = useState<ExtendedAIMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
@@ -430,12 +428,16 @@ export default function AIRecommendModal({ isOpen, onClose }: AIRecommendModalPr
       }
 
       // 没有有效缓存时显示欢迎消息
-      const welcomeMessage: ExtendedAIMessage = {
+      const defaultWelcome = context?.title
+        ? `想了解《${context.title}》的更多信息吗？我可以帮你查询剧情、演员、评价等。`
+        : '你好！我是AI智能助手，支持以下功能：\n\n🎬 影视剧推荐 - 推荐电影、电视剧、动漫等\n🔗 视频链接解析 - 解析YouTube链接并播放\n📺 视频内容搜索 - 搜索相关视频内容\n\n💡 直接告诉我你想看什么类型的内容，或发送YouTube链接给我解析！';
+
+      const welcomeMsg: ExtendedAIMessage = {
         role: 'assistant',
-        content: '你好！我是AI智能助手，支持以下功能：\n\n🎬 影视剧推荐 - 推荐电影、电视剧、动漫等\n🔗 视频链接解析 - 解析YouTube链接并播放\n📺 视频内容搜索 - 搜索相关视频内容\n\n💡 直接告诉我你想看什么类型的内容，或发送YouTube链接给我解析！',
+        content: welcomeMessage || defaultWelcome,
         timestamp: new Date().toISOString()
       };
-      setMessages([welcomeMessage]);
+      setMessages([welcomeMsg]);
     } catch (error) {
       console.error("Failed to load messages from cache", error);
       // 发生错误时也清除可能损坏的缓存
@@ -505,7 +507,28 @@ export default function AIRecommendModal({ isOpen, onClose }: AIRecommendModalPr
         // 智能上下文管理：只发送最近8条消息（4轮对话）
         const conversationHistory = updatedMessages.slice(-8);
 
-        const response = await sendAIRecommendMessage(conversationHistory);
+        // 🔥 流式响应：逐字显示AI回复
+        let streamingContent = '';
+        const response = await sendAIRecommendMessage(
+          conversationHistory,
+          context,
+          (chunk: string) => {
+            // 每次接收到chunk，更新消息内容
+            streamingContent += chunk;
+            setMessages((prev) => {
+              const newMessages = [...prev];
+              // 更新最后一条助手消息（"思考中..."）
+              if (newMessages[newMessages.length - 1]?.role === 'assistant') {
+                newMessages[newMessages.length - 1] = {
+                  ...newMessages[newMessages.length - 1],
+                  content: streamingContent,
+                };
+              }
+              return newMessages;
+            });
+          }
+        );
+
         const assistantMessage: ExtendedAIMessage = {
           role: 'assistant',
           content: response.choices[0].message.content,

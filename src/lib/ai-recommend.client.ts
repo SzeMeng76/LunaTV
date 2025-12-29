@@ -45,10 +45,19 @@ export interface AIRecommendHistory {
 }
 
 /**
- * 发送AI推荐请求
+ * 发送AI推荐请求（支持流式响应）
  */
 export async function sendAIRecommendMessage(
-  messages: AIMessage[]
+  messages: AIMessage[],
+  context?: {
+    title?: string;
+    year?: string;
+    douban_id?: number;
+    tmdb_id?: number;
+    type?: 'movie' | 'tv';
+    currentEpisode?: number;
+  },
+  onStream?: (chunk: string) => void // 🔥 流式回调函数
 ): Promise<AIChatResponse> {
   const response = await fetch('/api/ai-recommend', {
     method: 'POST',
@@ -59,7 +68,9 @@ export async function sendAIRecommendMessage(
       messages: messages.map(msg => ({
         role: msg.role,
         content: msg.content
-      }))
+      })),
+      context, // 🔥 传递视频上下文
+      stream: !!onStream, // 🔥 如果有回调函数，启用流式
     }),
   });
 
@@ -73,6 +84,58 @@ export async function sendAIRecommendMessage(
     }));
   }
 
+  // 🔥 流式响应处理
+  if (onStream && response.body) {
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let fullContent = '';
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n').filter(line => line.trim() !== '');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+
+            if (data === '[DONE]') {
+              break;
+            }
+
+            try {
+              const json = JSON.parse(data);
+              const text = json.text || '';
+
+              if (text) {
+                fullContent += text;
+                onStream(text); // 回调每个chunk
+              }
+            } catch (e) {
+              console.error('解析SSE数据失败:', e);
+            }
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock();
+    }
+
+    // 返回完整响应（兼容原有格式）
+    return {
+      choices: [{
+        message: {
+          role: 'assistant',
+          content: fullContent
+        }
+      }]
+    } as AIChatResponse;
+  }
+
+  // 非流式响应（保持原有逻辑）
   return response.json();
 }
 

@@ -118,6 +118,9 @@ export const UserMenu: React.FC = () => {
   const [enableAutoSkip, setEnableAutoSkip] = useState(true);
   const [enableAutoNextEpisode, setEnableAutoNextEpisode] = useState(true);
 
+  // 清空继续观看确认设置（默认关闭，需要的用户可以开启）
+  const [requireClearConfirmation, setRequireClearConfirmation] = useState(false);
+
   // 下载相关设置
   const [downloadFormat, setDownloadFormat] = useState<'TS' | 'MP4'>('TS');
 
@@ -314,6 +317,12 @@ export const UserMenu: React.FC = () => {
       const savedEnableAutoNextEpisode = localStorage.getItem('enableAutoNextEpisode');
       if (savedEnableAutoNextEpisode !== null) {
         setEnableAutoNextEpisode(JSON.parse(savedEnableAutoNextEpisode));
+      }
+
+      // 读取清空继续观看确认设置（默认关闭）
+      const savedRequireClearConfirmation = localStorage.getItem('requireClearConfirmation');
+      if (savedRequireClearConfirmation !== null) {
+        setRequireClearConfirmation(JSON.parse(savedRequireClearConfirmation));
       }
 
       // 读取下载格式设置
@@ -855,6 +864,13 @@ export const UserMenu: React.FC = () => {
     }
   };
 
+  const handleRequireClearConfirmationToggle = (value: boolean) => {
+    setRequireClearConfirmation(value);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('requireClearConfirmation', JSON.stringify(value));
+    }
+  };
+
   const handleDoubanDataSourceChange = (value: string) => {
     setDoubanDataSource(value);
     if (typeof window !== 'undefined') {
@@ -944,6 +960,7 @@ export const UserMenu: React.FC = () => {
       localStorage.setItem('enableContinueWatchingFilter', JSON.stringify(false));
       localStorage.setItem('enableAutoSkip', JSON.stringify(true));
       localStorage.setItem('enableAutoNextEpisode', JSON.stringify(true));
+      localStorage.setItem('requireClearConfirmation', JSON.stringify(false));
       localStorage.setItem('playerBufferMode', 'standard');
       localStorage.setItem('downloadFormat', 'TS');
     }
@@ -1729,6 +1746,30 @@ export const UserMenu: React.FC = () => {
                       className='sr-only peer'
                       checked={enableAutoNextEpisode}
                       onChange={(e) => handleEnableAutoNextEpisodeToggle(e.target.checked)}
+                    />
+                    <div className='w-11 h-6 bg-gray-300 rounded-full peer-checked:bg-green-500 transition-colors dark:bg-gray-600'></div>
+                    <div className='absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform peer-checked:translate-x-5'></div>
+                  </div>
+                </label>
+              </div>
+
+              {/* 清空继续观看确认开关 */}
+              <div className='flex items-center justify-between'>
+                <div>
+                  <h5 className='text-sm font-medium text-gray-700 dark:text-gray-300'>
+                    清空记录确认提示
+                  </h5>
+                  <p className='text-xs text-gray-500 dark:text-gray-400 mt-1'>
+                    开启后点击清空按钮时会弹出确认对话框，防止误操作
+                  </p>
+                </div>
+                <label className='flex items-center cursor-pointer'>
+                  <div className='relative'>
+                    <input
+                      type='checkbox'
+                      className='sr-only peer'
+                      checked={requireClearConfirmation}
+                      onChange={(e) => handleRequireClearConfirmationToggle(e.target.checked)}
                     />
                     <div className='w-11 h-6 bg-gray-300 rounded-full peer-checked:bg-green-500 transition-colors dark:bg-gray-600'></div>
                     <div className='absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform peer-checked:translate-x-5'></div>

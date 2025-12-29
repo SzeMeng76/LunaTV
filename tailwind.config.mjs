@@ -7,7 +7,9 @@ const config = {
   ],
   // Tailwind 4 使用 CSS @theme 和 @custom-variant 定义主题
   // 大部分配置已迁移到 src/app/globals.css
-  plugins: [],
+  plugins: [
+    require('@tailwindcss/typography'),
+  ],
 };
 
 export default config;
