@@ -1,32 +1,32 @@
 /* eslint-disable @typescript-eslint/no-explicit-any,no-console */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 
 import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getAvailableApiSites, getConfig } from '@/lib/config';
 import { searchFromApi } from '@/lib/downstream';
 import { yellowWords } from '@/lib/yellow';
-import { blockedWords } from '@/lib/blocked'; // ← 确保你已创建这个文件
+import { blockedWords } from '@/lib/blocked';
 
 export const runtime = 'nodejs';
 
 export async function GET(request: NextRequest) {
   const authInfo = getAuthInfoFromCookie(request);
   if (!authInfo || !authInfo.username) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
   const { searchParams } = new URL(request.url);
-  const query = searchParams.get('q');
+  const query = searchParams.get('q')?.trim();
 
   if (!query) {
-    return new Response(
-      JSON.stringify({ error: '搜索关键词不能为空' }),
-      {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+    return new Response(JSON.stringify({ error: '搜索关键词不能为空' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
   const config = await getConfig();
@@ -38,131 +38,118 @@ export async function GET(request: NextRequest) {
     async start(controller) {
       const encoder = new TextEncoder();
 
-      const safeEnqueue = (data: Uint8Array) => {
+      const safeEnqueue = (data: string) => {
+        if (streamClosed) return false;
         try {
-          if (streamClosed || (controller.desiredSize !== null && controller.desiredSize <= 0)) {
-            return false;
-          }
-          controller.enqueue(data);
+          controller.enqueue(encoder.encode(data));
           return true;
-        } catch (error) {
-          console.warn('Failed to enqueue data:', error);
+        } catch {
           streamClosed = true;
           return false;
         }
       };
 
-      const startEvent = `data: ${JSON.stringify({
+      // 发送开始事件
+      safeEnqueue(`data: ${JSON.stringify({
         type: 'start',
         query,
         totalSources: apiSites.length,
-        timestamp: Date.now()
-      })}\n\n`;
-
-      if (!safeEnqueue(encoder.encode(startEvent))) return;
+        timestamp: Date.now(),
+      })}\n\n`);
 
       let completedSources = 0;
       const allResults: any[] = [];
 
-      const searchPromises = apiSites.map(async (site) => {
+      // 为每个站点创建独立任务，并严格限制超时
+      const tasks = apiSites.map(async (site) => {
+        let results: any[] = [];
+
         try {
-          const searchPromise = Promise.race([
+          // 严格 18 秒超时（留 2 秒给后续处理）
+          const timeoutPromise = new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('timeout')), 18000)
+          );
+
+          results = await Promise.race([
             searchFromApi(site, query),
-            new Promise((_, reject) =>
-              setTimeout(() => reject(new Error(`${site.name} timeout`)), 20000)
-            ),
+            timeoutPromise,
           ]);
 
-          const results = (await searchPromise) as any[];
-
-          // ===== 正确的过滤逻辑：加入 blockedWords 黑名单 =====
-          let filteredResults = results;
-
+          // 过滤黄色 + 黑名单
           const shouldFilterYellow = !config.SiteConfig.DisableYellowFilter;
+          results = results.filter((item: any) => {
+            const typeName = (item.type_name || '').toLowerCase();
+            const title = (item.title || '').toLowerCase();
 
-          filteredResults = results.filter((result) => {
-            const typeName = (result.type_name || '').toLowerCase();
-            const title = (result.title || '').toLowerCase();
-
-            // 黄色内容过滤（可配置关闭）
-            if (shouldFilterYellow && yellowWords.some((word) => typeName.includes(word))) {
+            if (shouldFilterYellow && yellowWords.some(w => typeName.includes(w))) {
               return false;
             }
-
-            // 黑名单关键词过滤（标题或分类，永久生效）
-            if (blockedWords.some((word) => title.includes(word) || typeName.includes(word))) {
+            if (blockedWords.some(w => title.includes(w) || typeName.includes(w))) {
               return false;
             }
-
             return true;
           });
-          // =========================================================
 
-          completedSources++;
-
+          // 发送成功结果
           if (!streamClosed) {
-            const sourceEvent = `data: ${JSON.stringify({
+            safeEnqueue(`data: ${JSON.stringify({
               type: 'source_result',
               source: site.key,
               sourceName: site.name,
-              results: filteredResults,
-              timestamp: Date.now()
-            })}\n\n`;
-
-            if (!safeEnqueue(encoder.encode(sourceEvent))) {
-              streamClosed = true;
-              return;
-            }
+              results,
+              timestamp: Date.now(),
+            })}\n\n`);
           }
 
-          if (filteredResults.length > 0) {
-            allResults.push(...filteredResults);
+          if (results.length > 0) {
+            allResults.push(...results);
           }
 
-        } catch (error) {
-          console.warn(`搜索失败 ${site.name}:`, error);
-          completedSources++;
+        } catch (err) {
+          console.warn(`搜索源失败 ${site.name}:`, (err as Error).message || err);
 
+          // 发送错误事件
           if (!streamClosed) {
-            const errorEvent = `data: ${JSON.stringify({
+            safeEnqueue(`data: ${JSON.stringify({
               type: 'source_error',
               source: site.key,
               sourceName: site.name,
-              error: error instanceof Error ? error.message : '搜索失败',
-              timestamp: Date.now()
-            })}\n\n`;
-
-            if (!safeEnqueue(encoder.encode(errorEvent))) {
-              streamClosed = true;
-              return;
-            }
+              error: (err as Error).message || '搜索失败',
+              timestamp: Date.now(),
+            })}\n\n`);
           }
-        }
+        } finally {
+          completedSources++;
 
-        if (completedSources === apiSites.length && !streamClosed) {
-          const completeEvent = `data: ${JSON.stringify({
-            type: 'complete',
-            totalResults: allResults.length,
-            completedSources,
-            timestamp: Date.now()
-          })}\n\n`;
+          // 所有源都处理完了，发送完成事件
+          if (completedSources === apiSites.length && !streamClosed) {
+            safeEnqueue(`data: ${JSON.stringify({
+              type: 'complete',
+              totalResults: allResults.length,
+              completedSources,
+              timestamp: Date.now(),
+            })}\n\n`);
 
-          if (safeEnqueue(encoder.encode(completeEvent))) {
             try {
               controller.close();
-            } catch (error) {
-              console.warn('Failed to close controller:', error);
-            }
+            } catch {}
           }
         }
       });
 
-      await Promise.allSettled(searchPromises);
+      // 并行执行所有任务，不等待任何一个卡住
+      Promise.allSettled(tasks).finally(() => {
+        if (!streamClosed) {
+          try {
+            controller.close();
+          } catch {}
+        }
+      });
     },
 
     cancel() {
       streamClosed = true;
-      console.log('Client disconnected, cancelling search stream');
+      console.log('客户端断开连接，取消搜索流');
     },
   });
 
@@ -172,8 +159,6 @@ export async function GET(request: NextRequest) {
       'Cache-Control': 'no-cache',
       'Connection': 'keep-alive',
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET',
-      'Access-Control-Allow-Headers': 'Content-Type',
     },
   });
 }
