@@ -28,6 +28,9 @@ const AIRecommendConfig = ({ config, refreshConfig }: AIRecommendConfigProps) =>
     tavilyApiKeys: [] as string[]
   });
 
+  // Tavily API Keys 原始输入（逗号分隔的字符串）
+  const [tavilyKeysInput, setTavilyKeysInput] = useState('');
+
   // 常用模型参考（建议使用支持联网搜索的模型）
   const MODEL_EXAMPLES = [
     'gpt-5 (OpenAI)',
@@ -48,6 +51,7 @@ const AIRecommendConfig = ({ config, refreshConfig }: AIRecommendConfigProps) =>
   // 从config加载设置
   useEffect(() => {
     if (config?.AIRecommendConfig) {
+      const keys = config.AIRecommendConfig.tavilyApiKeys || [];
       setAiSettings({
         enabled: config.AIRecommendConfig.enabled ?? false,
         apiUrl: config.AIRecommendConfig.apiUrl || 'https://api.openai.com/v1',
@@ -57,8 +61,10 @@ const AIRecommendConfig = ({ config, refreshConfig }: AIRecommendConfigProps) =>
         maxTokens: config.AIRecommendConfig.maxTokens ?? 3000,
         enableOrchestrator: config.AIRecommendConfig.enableOrchestrator ?? false,
         enableWebSearch: config.AIRecommendConfig.enableWebSearch ?? false,
-        tavilyApiKeys: config.AIRecommendConfig.tavilyApiKeys || []
+        tavilyApiKeys: keys
       });
+      // 设置输入框的显示值
+      setTavilyKeysInput(keys.join(', '));
     }
   }, [config]);
 
@@ -70,31 +76,42 @@ const AIRecommendConfig = ({ config, refreshConfig }: AIRecommendConfigProps) =>
 
   // 保存AI推荐配置
   const handleSave = async () => {
+    // 先分割Tavily Keys输入
+    const keys = tavilyKeysInput
+      .split(/[,\n]+/)
+      .map(k => k.trim())
+      .filter(k => k.length > 0);
+
+    const settingsToSave = {
+      ...aiSettings,
+      tavilyApiKeys: keys
+    };
+
     // 基本验证
-    if (aiSettings.enabled) {
-      if (!aiSettings.apiUrl.trim()) {
+    if (settingsToSave.enabled) {
+      if (!settingsToSave.apiUrl.trim()) {
         showMessage('error', '请填写API地址');
         return;
       }
-      if (!aiSettings.apiKey.trim()) {
+      if (!settingsToSave.apiKey.trim()) {
         showMessage('error', '请填写API密钥');
         return;
       }
-      if (!aiSettings.model.trim()) {
+      if (!settingsToSave.model.trim()) {
         showMessage('error', '请选择或填写模型名称');
         return;
       }
-      if (aiSettings.temperature < 0 || aiSettings.temperature > 2) {
+      if (settingsToSave.temperature < 0 || settingsToSave.temperature > 2) {
         showMessage('error', '温度参数应在0-2之间');
         return;
       }
-      if (aiSettings.maxTokens < 1 || aiSettings.maxTokens > 150000) {
+      if (settingsToSave.maxTokens < 1 || settingsToSave.maxTokens > 150000) {
         showMessage('error', '最大Token数应在1-150000之间（GPT-5支持128k，推理模型建议2000+）');
         return;
       }
       // 如果启用了联网搜索，验证Tavily API Keys
-      if (aiSettings.enableOrchestrator && aiSettings.enableWebSearch) {
-        if (!aiSettings.tavilyApiKeys || aiSettings.tavilyApiKeys.length === 0) {
+      if (settingsToSave.enableOrchestrator && settingsToSave.enableWebSearch) {
+        if (!keys || keys.length === 0) {
           showMessage('error', '启用联网搜索需要至少配置一个Tavily API Key');
           return;
         }
@@ -106,7 +123,7 @@ const AIRecommendConfig = ({ config, refreshConfig }: AIRecommendConfigProps) =>
       const response = await fetch('/api/admin/ai-recommend', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(aiSettings)
+        body: JSON.stringify(settingsToSave)
       });
 
       if (!response.ok) {
@@ -472,23 +489,28 @@ const AIRecommendConfig = ({ config, refreshConfig }: AIRecommendConfigProps) =>
                   <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
                     Tavily API Keys（每个账号1000次/月免费）
                   </label>
-                  <textarea
-                    value={aiSettings.tavilyApiKeys.join('\n')}
+                  <input
+                    type='text'
+                    value={tavilyKeysInput}
                     onChange={(e) => {
-                      const keys = e.target.value
-                        .split('\n')
+                      // 直接保存原始输入，不做分割
+                      setTavilyKeysInput(e.target.value);
+                    }}
+                    onBlur={() => {
+                      // 失焦时分割并更新到settings（用于显示数量）
+                      const keys = tavilyKeysInput
+                        .split(/[,\n]+/)
                         .map(k => k.trim())
                         .filter(k => k.length > 0);
                       setAiSettings(prev => ({ ...prev, tavilyApiKeys: keys }));
                     }}
                     className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 font-mono text-sm'
-                    placeholder='tvly-xxxxxxxxxxxxxx&#x0A;tvly-yyyyyyyyyyyyyy&#x0A;tvly-zzzzzzzzzzzzzz'
-                    rows={4}
+                    placeholder='tvly-xxxxxxxxxxxxxx, tvly-yyyyyyyyyyyyyy, tvly-zzzzzzzzzzzzzz'
                   />
                   <div className='mt-2 space-y-2'>
                     <p className='text-xs text-gray-500 dark:text-gray-400'>
                       <span className='text-green-600 dark:text-green-400'>💡 提示：</span>
-                      每行填写一个API Key，系统会自动轮询使用以提高免费额度
+                      多个API Key用<strong>逗号</strong>分隔，系统会自动轮询使用以提高免费额度
                     </p>
                     <div className='text-xs bg-blue-50 dark:bg-blue-900/20 px-3 py-2 rounded-lg space-y-1'>
                       <p className='font-semibold text-blue-700 dark:text-blue-300'>📊 免费额度说明：</p>

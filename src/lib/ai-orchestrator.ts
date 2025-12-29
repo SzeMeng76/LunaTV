@@ -311,6 +311,9 @@ ${config?.enableWebSearch && intent.needWebSearch ? '- 搜索最新影视资讯�
       const formattedSearch = formatTavilyResults(webSearchResults);
       systemPrompt += `\n## 【实时搜索结果】（最新信息）\n${formattedSearch}\n`;
       systemPrompt += `\n**注意**: 优先使用上面的搜索结果回答用户问题，这些是最新的实时信息。\n`;
+      systemPrompt += `\n**重要**: 在你的回复开头，必须添加以下提示（使用Markdown格式）：\n`;
+      systemPrompt += `> 🌐 **已联网搜索最新资讯**\n\n`;
+      systemPrompt += `然后再开始正式回答问题。\n`;
       console.log(`✅ 联网搜索完成，获取到 ${webSearchResults.results.length} 条结果`);
     } else {
       console.log('⚠️ 联网搜索未返回结果');

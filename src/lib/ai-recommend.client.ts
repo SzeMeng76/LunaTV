@@ -89,6 +89,8 @@ export async function sendAIRecommendMessage(
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let fullContent = '';
+    let youtubeVideos: any[] = [];
+    let videoLinks: any[] = [];
 
     try {
       while (true) {
@@ -108,11 +110,23 @@ export async function sendAIRecommendMessage(
 
             try {
               const json = JSON.parse(data);
-              const text = json.text || '';
 
-              if (text) {
-                fullContent += text;
-                onStream(text); // 回调每个chunk
+              // 处理文本流
+              if (json.text) {
+                fullContent += json.text;
+                onStream(json.text); // 回调每个chunk
+              }
+
+              // 🎥 处理YouTube视频数据
+              if (json.type === 'youtube_data' && json.youtubeVideos) {
+                youtubeVideos = json.youtubeVideos;
+                console.log('✅ 收到YouTube视频数据:', youtubeVideos.length, '个视频');
+              }
+
+              // 🔗 处理视频链接数据
+              if (json.type === 'video_links' && json.videoLinks) {
+                videoLinks = json.videoLinks;
+                console.log('✅ 收到视频链接数据:', videoLinks.length, '个链接');
               }
             } catch (e) {
               console.error('解析SSE数据失败:', e);
@@ -124,14 +138,16 @@ export async function sendAIRecommendMessage(
       reader.releaseLock();
     }
 
-    // 返回完整响应（兼容原有格式）
+    // 返回完整响应（兼容原有格式，包含YouTube数据）
     return {
       choices: [{
         message: {
           role: 'assistant',
           content: fullContent
         }
-      }]
+      }],
+      youtubeVideos,
+      videoLinks
     } as AIChatResponse;
   }
 

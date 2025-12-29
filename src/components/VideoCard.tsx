@@ -523,6 +523,11 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
     return configs[from] || configs.search;
   }, [from, isAggregate, douban_id, rate, isUpcoming]);
 
+  // 🎯 智能判断是否有右下角按钮（垃圾桶/收藏，用于AI按钮水平位置调整）
+  const hasRightBottomButtons = useMemo(() => {
+    return (config.showHeart || config.showCheckCircle) && from !== 'favorite';
+  }, [config.showHeart, config.showCheckCircle, from]);
+
   // 移动端操作菜单配置
   const mobileActions = useMemo(() => {
     const actions = [];
@@ -1229,11 +1234,12 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
             );
           })()}
 
-          {/* 🎯 AI问片按钮 - 桌面端hover显示，智能位置（避开底部标签） */}
+          {/* 🎯 AI问片按钮 - 桌面端hover显示，智能位置（避开底部标签和右下角按钮） */}
           {aiEnabled && actualTitle && (
             <div
               className={`
-                hidden md:block absolute left-1/2 -translate-x-1/2
+                hidden md:block absolute
+                ${hasRightBottomButtons ? 'left-1/3 -translate-x-1/2' : 'left-1/2 -translate-x-1/2'}
                 ${hasBottomTags ? 'bottom-14' : 'bottom-4'}
                 opacity-0 translate-y-2
                 group-hover:opacity-100 group-hover:translate-y-0
@@ -1259,16 +1265,21 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
                   e.preventDefault();
                   setShowAIChat(true);
                 }}
-                className='flex items-center gap-2 px-4 py-2 rounded-full
-                  bg-gradient-to-r from-purple-500/90 to-blue-600/90
-                  backdrop-blur-md shadow-lg shadow-purple-500/50
-                  hover:shadow-purple-500/70 hover:shadow-xl hover:scale-105
-                  transition-all duration-200
-                  border border-white/20'
+                className='flex items-center gap-1.5 px-3 py-1.5 rounded-md
+                  bg-black/70 backdrop-blur-sm
+                  shadow-lg text-white/90
+                  hover:bg-black/80 hover:scale-105 hover:shadow-[0_0_12px_rgba(168,85,247,0.4)]
+                  transition-all duration-300 ease-out
+                  border border-white/10'
                 aria-label='AI问片'
+                style={{
+                  WebkitUserSelect: 'none',
+                  userSelect: 'none',
+                  WebkitTouchCallout: 'none',
+                } as React.CSSProperties}
               >
-                <Sparkles size={16} className='text-white' />
-                <span className='text-sm font-semibold text-white whitespace-nowrap'>AI问片</span>
+                <Sparkles size={14} className='text-purple-400' />
+                <span className='text-xs font-medium whitespace-nowrap'>AI问片</span>
               </button>
             </div>
           )}
