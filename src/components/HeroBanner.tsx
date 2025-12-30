@@ -40,12 +40,21 @@ export default function HeroBanner({
   const [isMuted, setIsMuted] = useState(true);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  const [videoLoaded, setVideoLoaded] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // 处理图片 URL，使用代理绕过防盗链
   const getProxiedImageUrl = (url: string) => {
     if (url?.includes('douban') || url?.includes('doubanio')) {
       return `/api/image-proxy?url=${encodeURIComponent(url)}`;
+    }
+    return url;
+  };
+
+  // 处理视频 URL，使用代理绕过防盗链
+  const getProxiedVideoUrl = (url: string) => {
+    if (url?.includes('douban') || url?.includes('doubanio')) {
+      return `/api/video-proxy?url=${encodeURIComponent(url)}`;
     }
     return url;
   };
@@ -86,6 +95,7 @@ export default function HeroBanner({
   const handleNext = () => {
     if (isTransitioning) return;
     setIsTransitioning(true);
+    setVideoLoaded(false); // 重置视频加载状态
     setCurrentIndex((prev) => (prev + 1) % items.length);
     setTimeout(() => setIsTransitioning(false), 800); // Netflix风格：更慢的过渡
   };
@@ -93,6 +103,7 @@ export default function HeroBanner({
   const handlePrev = () => {
     if (isTransitioning) return;
     setIsTransitioning(true);
+    setVideoLoaded(false); // 重置视频加载状态
     setCurrentIndex((prev) => (prev - 1 + items.length) % items.length);
     setTimeout(() => setIsTransitioning(false), 800);
   };
@@ -100,6 +111,7 @@ export default function HeroBanner({
   const handleIndicatorClick = (index: number) => {
     if (isTransitioning || index === currentIndex) return;
     setIsTransitioning(true);
+    setVideoLoaded(false); // 重置视频加载状态
     setCurrentIndex(index);
     setTimeout(() => setIsTransitioning(false), 800);
   };
@@ -144,6 +156,15 @@ export default function HeroBanner({
   const currentItem = items[currentIndex];
   const backgroundImage = currentItem.backdrop || currentItem.poster;
 
+  // 🔍 调试日志
+  console.log('[HeroBanner] 当前项目:', {
+    title: currentItem.title,
+    hasBackdrop: !!currentItem.backdrop,
+    hasTrailer: !!currentItem.trailerUrl,
+    trailerUrl: currentItem.trailerUrl,
+    enableVideo,
+  });
+
   return (
     <div
       className="relative w-full h-[70vh] sm:h-[75vh] md:h-[80vh] lg:h-[85vh] xl:h-[90vh] overflow-hidden group"
@@ -162,29 +183,43 @@ export default function HeroBanner({
               index === currentIndex ? 'opacity-100' : 'opacity-0'
             }`}
           >
-            {/* 视频背景（如果启用且有预告片URL） */}
-            {enableVideo && item.trailerUrl && index === currentIndex ? (
+            {/* 背景图片（始终显示，作为视频的占位符） */}
+            <Image
+              src={getProxiedImageUrl(item.backdrop || item.poster)}
+              alt={item.title}
+              fill
+              className="object-cover object-center"
+              priority={index === 0}
+              quality={100}
+              sizes="100vw"
+              unoptimized={item.backdrop?.includes('/l/') || item.backdrop?.includes('/l_ratio_poster/') || false}
+            />
+
+            {/* 视频背景（如果启用且有预告片URL，加载完成后淡入） */}
+            {enableVideo && item.trailerUrl && index === currentIndex && (
               <video
                 ref={videoRef}
-                className="absolute inset-0 w-full h-full object-cover"
+                className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${
+                  videoLoaded ? 'opacity-100' : 'opacity-0'
+                }`}
                 muted={isMuted}
                 loop
                 playsInline
                 preload="metadata"
+                onError={(e) => {
+                  console.error('[HeroBanner] 视频加载失败:', {
+                    title: item.title,
+                    trailerUrl: item.trailerUrl,
+                    error: e,
+                  });
+                }}
+                onLoadedData={() => {
+                  console.log('[HeroBanner] 视频加载成功:', item.title);
+                  setVideoLoaded(true); // 视频加载完成，淡入显示
+                }}
               >
-                <source src={item.trailerUrl} type="video/mp4" />
+                <source src={getProxiedVideoUrl(item.trailerUrl)} type="video/mp4" />
               </video>
-            ) : (
-              /* 静态背景图片 */
-              <Image
-                src={getProxiedImageUrl(item.backdrop || item.poster)}
-                alt={item.title}
-                fill
-                className="object-cover object-center"
-                priority={index === 0}
-                quality={85}
-                sizes="100vw"
-              />
             )}
           </div>
         ))}
