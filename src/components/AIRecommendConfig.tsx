@@ -18,9 +18,9 @@ const AIRecommendConfig = ({ config, refreshConfig }: AIRecommendConfigProps) =>
   
   const [aiSettings, setAiSettings] = useState({
     enabled: false,
-    apiUrl: 'https://api.openai.com/v1',
+    apiUrl: '',  // 🔥 不给默认值
     apiKey: '',
-    model: 'gpt-3.5-turbo',
+    model: '',  // 🔥 不给默认值
     temperature: 0.7,
     maxTokens: 3000,
     enableOrchestrator: false,
@@ -54,9 +54,9 @@ const AIRecommendConfig = ({ config, refreshConfig }: AIRecommendConfigProps) =>
       const keys = config.AIRecommendConfig.tavilyApiKeys || [];
       setAiSettings({
         enabled: config.AIRecommendConfig.enabled ?? false,
-        apiUrl: config.AIRecommendConfig.apiUrl || 'https://api.openai.com/v1',
+        apiUrl: config.AIRecommendConfig.apiUrl || '',  // 🔥 不给默认值，保持空字符串
         apiKey: config.AIRecommendConfig.apiKey || '',
-        model: config.AIRecommendConfig.model || 'gpt-3.5-turbo',
+        model: config.AIRecommendConfig.model || '',  // 🔥 不给默认值，保持空字符串
         temperature: config.AIRecommendConfig.temperature ?? 0.7,
         maxTokens: config.AIRecommendConfig.maxTokens ?? 3000,
         enableOrchestrator: config.AIRecommendConfig.enableOrchestrator ?? false,

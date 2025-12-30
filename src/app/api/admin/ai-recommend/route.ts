@@ -116,11 +116,12 @@ export async function POST(request: NextRequest) {
     }
     
     // 更新AI推荐配置
+    // 🔥 注意：Tavily纯搜索模式下，AI字段应该完全为空，不要有默认值
     adminConfig.AIRecommendConfig = {
       enabled: aiRecommendConfig.enabled,
-      apiUrl: aiRecommendConfig.apiUrl?.trim() || 'https://api.openai.com/v1',
-      apiKey: aiRecommendConfig.apiKey?.trim() || '',
-      model: aiRecommendConfig.model?.trim() || 'gpt-3.5-turbo',
+      apiUrl: aiRecommendConfig.apiUrl?.trim() || '',  // 空字符串，不给默认值
+      apiKey: aiRecommendConfig.apiKey?.trim() || '',  // 空字符串，不给默认值
+      model: aiRecommendConfig.model?.trim() || '',  // 空字符串，不给默认值
       temperature: aiRecommendConfig.temperature ?? 0.7,
       maxTokens: aiRecommendConfig.maxTokens ?? 2000,
       enableOrchestrator: aiRecommendConfig.enableOrchestrator ?? false,
