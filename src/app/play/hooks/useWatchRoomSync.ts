@@ -146,7 +146,7 @@ export function useWatchRoomSync({
       }, 1000);  // 给播放器足够时间加载新集数
 
     } else {
-      // 不同的剧或不同的源，使用 router.push 跳转（客户端路由，不刷新页面）
+      // 不同的剧或不同的源，使用 router.push 跳转（不刷新页面，保持 WebSocket 连接）
       const params = new URLSearchParams();
       params.set('id', state.videoId);
       params.set('source', state.source);
@@ -163,9 +163,21 @@ export function useWatchRoomSync({
       if (state.searchTitle) {
         params.set('stitle', state.searchTitle);
       }
+      // 添加特殊标记，告诉播放页面需要强制重新加载
+      params.set('_reload', Date.now().toString());
+
       const url = `/play?${params.toString()}`;
-      console.log('[PlaySync] Different show or source, routing to:', url);
+      console.log('[PlaySync] Different show or source, navigating with router.push:', url);
+
+      // 使用 router.push 而不是 window.location.href，保持 WebSocket 连接
       router.push(url);
+
+      // 关键修复：在 push 后延迟调用 refresh，确保数据重新加载
+      // 参考：https://github.com/vercel/next.js/issues/54766
+      setTimeout(() => {
+        router.refresh();
+        console.log('[PlaySync] Called router.refresh() to reload data');
+      }, 100);
     }
   }, [videoTitle, videoYear, currentSource, episodeIndex, setCurrentEpisodeIndex, artPlayerRef, router]);
 

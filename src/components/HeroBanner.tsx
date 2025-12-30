@@ -4,7 +4,9 @@
 import { ChevronLeft, ChevronRight, Info, Play, Volume2, VolumeX } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
+import { useAutoplay } from './hooks/useAutoplay';
+import { useSwipeGesture } from './hooks/useSwipeGesture';
 
 interface BannerItem {
   id: string | number;
@@ -38,8 +40,6 @@ export default function HeroBanner({
   const [isHovered, setIsHovered] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
-  const [touchStart, setTouchStart] = useState<number | null>(null);
-  const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const [videoLoaded, setVideoLoaded] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -59,54 +59,22 @@ export default function HeroBanner({
     return url;
   };
 
-  // 预加载背景图片
-  useEffect(() => {
-    items.forEach((item) => {
-      const img = new window.Image();
-      const imageUrl = item.backdrop || item.poster;
-      img.src = getProxiedImageUrl(imageUrl);
-    });
-  }, [items]);
-
-  // 自动轮播
-  useEffect(() => {
-    if (!autoPlayInterval || isHovered || items.length <= 1) return;
-
-    const interval = setInterval(() => {
-      handleNext();
-    }, autoPlayInterval);
-
-    return () => clearInterval(interval);
-  }, [currentIndex, isHovered, autoPlayInterval, items.length]);
-
-  // 视频自动播放（延迟3秒，Netflix风格）
-  useEffect(() => {
-    if (!enableVideo || !videoRef.current) return;
-
-    const timer = setTimeout(() => {
-      videoRef.current?.play().catch(() => {
-        // 自动播放失败时静默处理
-      });
-    }, 3000);
-
-    return () => clearTimeout(timer);
-  }, [currentIndex, enableVideo]);
-
-  const handleNext = () => {
+  // 导航函数
+  const handleNext = useCallback(() => {
     if (isTransitioning) return;
     setIsTransitioning(true);
     setVideoLoaded(false); // 重置视频加载状态
     setCurrentIndex((prev) => (prev + 1) % items.length);
     setTimeout(() => setIsTransitioning(false), 800); // Netflix风格：更慢的过渡
-  };
+  }, [isTransitioning, items.length]);
 
-  const handlePrev = () => {
+  const handlePrev = useCallback(() => {
     if (isTransitioning) return;
     setIsTransitioning(true);
     setVideoLoaded(false); // 重置视频加载状态
     setCurrentIndex((prev) => (prev - 1 + items.length) % items.length);
     setTimeout(() => setIsTransitioning(false), 800);
-  };
+  }, [isTransitioning, items.length]);
 
   const handleIndicatorClick = (index: number) => {
     if (isTransitioning || index === currentIndex) return;
@@ -123,31 +91,39 @@ export default function HeroBanner({
     }
   };
 
-  // 触摸手势处理
-  const minSwipeDistance = 50;
+  // 使用自动轮播 Hook
+  useAutoplay({
+    currentIndex,
+    isHovered,
+    autoPlayInterval,
+    itemsLength: items.length,
+    onNext: handleNext,
+  });
 
-  const onTouchStart = (e: React.TouchEvent) => {
-    setTouchEnd(null);
-    setTouchStart(e.targetTouches[0].clientX);
-  };
+  // 使用滑动手势 Hook
+  const swipeHandlers = useSwipeGesture({
+    onSwipeLeft: handleNext,
+    onSwipeRight: handlePrev,
+  });
 
-  const onTouchMove = (e: React.TouchEvent) => {
-    setTouchEnd(e.targetTouches[0].clientX);
-  };
+  // 预加载背景图片（只预加载当前和相邻的图片，优化性能）
+  useEffect(() => {
+    // 预加载当前、前一张、后一张
+    const indicesToPreload = [
+      currentIndex,
+      (currentIndex - 1 + items.length) % items.length,
+      (currentIndex + 1) % items.length,
+    ];
 
-  const onTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
-
-    const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > minSwipeDistance;
-    const isRightSwipe = distance < -minSwipeDistance;
-
-    if (isLeftSwipe) {
-      handleNext();
-    } else if (isRightSwipe) {
-      handlePrev();
-    }
-  };
+    indicesToPreload.forEach((index) => {
+      const item = items[index];
+      if (item) {
+        const img = new window.Image();
+        const imageUrl = item.backdrop || item.poster;
+        img.src = getProxiedImageUrl(imageUrl);
+      }
+    });
+  }, [items, currentIndex]);
 
   if (!items || items.length === 0) {
     return null;
@@ -167,62 +143,76 @@ export default function HeroBanner({
 
   return (
     <div
-      className="relative w-full h-[70vh] sm:h-[75vh] md:h-[80vh] lg:h-[85vh] xl:h-[90vh] overflow-hidden group"
+      className="relative w-full h-[50vh] sm:h-[55vh] md:h-[60vh] overflow-hidden group"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      onTouchStart={onTouchStart}
-      onTouchMove={onTouchMove}
-      onTouchEnd={onTouchEnd}
+      {...swipeHandlers}
     >
       {/* 背景图片/视频层 */}
       <div className="absolute inset-0">
-        {items.map((item, index) => (
-          <div
-            key={item.id}
-            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
-              index === currentIndex ? 'opacity-100' : 'opacity-0'
-            }`}
-          >
-            {/* 背景图片（始终显示，作为视频的占位符） */}
-            <Image
-              src={getProxiedImageUrl(item.backdrop || item.poster)}
-              alt={item.title}
-              fill
-              className="object-cover object-center"
-              priority={index === 0}
-              quality={100}
-              sizes="100vw"
-              unoptimized={item.backdrop?.includes('/l/') || item.backdrop?.includes('/l_ratio_poster/') || false}
-            />
+        {/* 只渲染当前、前一张、后一张（性能优化） */}
+        {items.map((item, index) => {
+          // 计算是否应该渲染此项
+          const prevIndex = (currentIndex - 1 + items.length) % items.length;
+          const nextIndex = (currentIndex + 1) % items.length;
+          const shouldRender = index === currentIndex || index === prevIndex || index === nextIndex;
 
-            {/* 视频背景（如果启用且有预告片URL，加载完成后淡入） */}
-            {enableVideo && item.trailerUrl && index === currentIndex && (
-              <video
-                ref={videoRef}
-                className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${
-                  videoLoaded ? 'opacity-100' : 'opacity-0'
-                }`}
-                muted={isMuted}
-                loop
-                playsInline
-                preload="metadata"
-                onError={(e) => {
-                  console.error('[HeroBanner] 视频加载失败:', {
-                    title: item.title,
-                    trailerUrl: item.trailerUrl,
-                    error: e,
-                  });
-                }}
-                onLoadedData={() => {
-                  console.log('[HeroBanner] 视频加载成功:', item.title);
-                  setVideoLoaded(true); // 视频加载完成，淡入显示
-                }}
-              >
-                <source src={getProxiedVideoUrl(item.trailerUrl)} type="video/mp4" />
-              </video>
-            )}
-          </div>
-        ))}
+          if (!shouldRender) return null;
+
+          return (
+            <div
+              key={item.id}
+              className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+                index === currentIndex ? 'opacity-100' : 'opacity-0'
+              }`}
+            >
+              {/* 背景图片（始终显示，作为视频的占位符） */}
+              <Image
+                src={getProxiedImageUrl(item.backdrop || item.poster)}
+                alt={item.title}
+                fill
+                className="object-cover object-center"
+                priority={index === 0}
+                quality={100}
+                sizes="100vw"
+                unoptimized={item.backdrop?.includes('/l/') || item.backdrop?.includes('/l_ratio_poster/') || false}
+              />
+
+              {/* 视频背景（如果启用且有预告片URL，加载完成后淡入） */}
+              {enableVideo && item.trailerUrl && index === currentIndex && (
+                <video
+                  ref={videoRef}
+                  className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${
+                    videoLoaded ? 'opacity-100' : 'opacity-0'
+                  }`}
+                  autoPlay
+                  muted={isMuted}
+                  loop
+                  playsInline
+                  preload="metadata"
+                  onError={(e) => {
+                    console.error('[HeroBanner] 视频加载失败:', {
+                      title: item.title,
+                      trailerUrl: item.trailerUrl,
+                      error: e,
+                    });
+                  }}
+                  onLoadedData={(e) => {
+                    console.log('[HeroBanner] 视频加载成功:', item.title);
+                    setVideoLoaded(true); // 视频加载完成，淡入显示
+                    // 确保视频开始播放
+                    const video = e.currentTarget;
+                    video.play().catch((error) => {
+                      console.error('[HeroBanner] 视频自动播放失败:', error);
+                    });
+                  }}
+                >
+                  <source src={getProxiedVideoUrl(item.trailerUrl)} type="video/mp4" />
+                </video>
+              )}
+            </div>
+          );
+        })}
 
         {/* Netflix经典渐变遮罩：底部黑→中间透明→顶部黑 */}
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/80" />

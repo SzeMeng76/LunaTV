@@ -249,6 +249,41 @@ function PlayPageClient() {
     }
   }, [searchParams]);
 
+  // 重新加载触发器（用于触发 initAll 重新执行）
+  const [reloadTrigger, setReloadTrigger] = useState(0);
+  const reloadFlagRef = useRef<string | null>(null);
+
+  // 监听 URL source/id 参数变化（观影室切换源同步）
+  useEffect(() => {
+    const newSource = searchParams.get('source') || '';
+    const newId = searchParams.get('id') || '';
+    const newIndex = parseInt(searchParams.get('index') || '0');
+    const newTime = parseInt(searchParams.get('t') || '0');
+    const reloadFlag = searchParams.get('_reload');
+
+    // 如果 source 或 id 变化，且有 _reload 标记，且不是已经处理过的reload
+    if (reloadFlag && reloadFlag !== reloadFlagRef.current && (newSource !== currentSource || newId !== currentId)) {
+      console.log('[PlayPage] URL source/id changed with reload flag, reloading:', { newSource, newId, newIndex, newTime });
+
+      // 标记此reload已处理
+      reloadFlagRef.current = reloadFlag;
+
+      // 重置所有相关状态（但保留 detail，让 initAll 重新加载后再更新）
+      setCurrentSource(newSource);
+      setCurrentId(newId);
+      setCurrentEpisodeIndex(newIndex);
+      // 不清空 detail，避免触发 videoUrl 清空导致黑屏
+      // setDetail(null);
+      setError(null);
+      setLoading(true);
+      setNeedPrefer(false);
+      setPlayerReady(false);
+
+      // 触发重新加载（通过更新 reloadTrigger 来触发 initAll 重新执行）
+      setReloadTrigger(prev => prev + 1);
+    }
+  }, [searchParams, currentSource, currentId]);
+
   // 换源相关状态
   const [availableSources, setAvailableSources] = useState<SearchResult[]>([]);
   const availableSourcesRef = useRef<SearchResult[]>([]);
@@ -2602,7 +2637,7 @@ function PlayPageClient() {
     };
 
     initAll();
-  }, []);
+  }, [reloadTrigger]); // 添加 reloadTrigger 作为依赖，当它变化时重新执行 initAll
 
   // 播放记录处理
   useEffect(() => {
@@ -3066,6 +3101,7 @@ function PlayPageClient() {
         save_time: Date.now(),
         search_title: searchTitle,
         remarks: remarksToSave, // 优先使用搜索结果的 remarks，因为详情接口可能没有
+        douban_id: videoDoubanIdRef.current || detailRef.current?.douban_id || undefined, // 添加豆瓣ID
       });
 
       lastSaveTimeRef.current = Date.now();
@@ -6523,8 +6559,17 @@ export default function PlayPage() {
   return (
     <>
       <Suspense fallback={<div>Loading...</div>}>
-        <PlayPageClient />
+        <PlayPageClientWrapper />
       </Suspense>
     </>
   );
+}
+
+function PlayPageClientWrapper() {
+  const searchParams = useSearchParams();
+  // 使用 source + id 作为 key，强制在切换源时重新挂载组件
+  // 参考：https://github.com/vercel/next.js/issues/2819
+  const key = `${searchParams.get('source')}-${searchParams.get('id')}-${searchParams.get('_reload') || ''}`;
+
+  return <PlayPageClient key={key} />;
 }

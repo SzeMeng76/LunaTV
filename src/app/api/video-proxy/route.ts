@@ -77,9 +77,9 @@ export async function GET(request: Request) {
     if (contentRange) headers.set('Content-Range', contentRange);
     if (acceptRanges) headers.set('Accept-Ranges', acceptRanges);
 
-    // 设置缓存头
-    headers.set('Cache-Control', 'public, max-age=31536000, immutable');
-    headers.set('CDN-Cache-Control', 'public, s-maxage=31536000');
+    // 设置缓存头（视频缓存4小时）
+    headers.set('Cache-Control', 'public, max-age=14400');
+    headers.set('CDN-Cache-Control', 'public, s-maxage=14400');
 
     // 添加 CORS 支持
     headers.set('Access-Control-Allow-Origin', '*');
@@ -142,7 +142,7 @@ export async function HEAD(request: Request) {
     if (acceptRanges) headers.set('Accept-Ranges', acceptRanges);
 
     headers.set('Access-Control-Allow-Origin', '*');
-    headers.set('Cache-Control', 'public, max-age=31536000');
+    headers.set('Cache-Control', 'public, max-age=3600');
 
     return new NextResponse(null, {
       status: videoResponse.status,

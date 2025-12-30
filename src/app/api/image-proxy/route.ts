@@ -70,10 +70,10 @@ export async function GET(request: Request) {
       headers.set('Content-Type', contentType);
     }
 
-    // 设置缓存头 - 长期缓存（半年）
-    headers.set('Cache-Control', 'public, max-age=15720000, s-maxage=15720000, immutable');
-    headers.set('CDN-Cache-Control', 'public, s-maxage=15720000');
-    headers.set('Vercel-CDN-Cache-Control', 'public, s-maxage=15720000');
+    // 设置缓存头 - 缓存7天（604800秒），允许重新验证
+    headers.set('Cache-Control', 'public, max-age=604800, stale-while-revalidate=86400');
+    headers.set('CDN-Cache-Control', 'public, s-maxage=604800');
+    headers.set('Vercel-CDN-Cache-Control', 'public, s-maxage=604800');
     headers.set('Netlify-Vary', 'query');
 
     // 添加 CORS 支持
