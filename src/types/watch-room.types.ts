@@ -50,6 +50,7 @@ export interface PlayState {
   source: string;
   poster?: string;  // 海报图片
   totalEpisodes?: number;  // 总集数（用于判断是否显示集数信息）
+  doubanId?: number;  // 豆瓣ID（用于准确判断是否是同一部视频）
 }
 
 // 直播状态
