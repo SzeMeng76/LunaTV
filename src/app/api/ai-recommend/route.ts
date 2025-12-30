@@ -66,10 +66,14 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // 检查API配置是否完整
-    if (!aiConfig.apiKey || !aiConfig.apiUrl) {
-      return NextResponse.json({ 
-        error: 'AI推荐功能配置不完整，请联系管理员' 
+    // 🔥 检查配置模式：AI模式 or 纯搜索模式
+    const hasAIModel = !!(aiConfig.apiKey && aiConfig.apiUrl);
+    const hasTavilySearch = !!(aiConfig.enableWebSearch && aiConfig.tavilyApiKeys);
+
+    // 至少需要一种模式可用
+    if (!hasAIModel && !hasTavilySearch) {
+      return NextResponse.json({
+        error: 'AI推荐功能配置不完整。请配置AI API或启用Tavily搜索功能。'
       }, { status: 500 });
     }
 
@@ -277,6 +281,67 @@ ${youtubeEnabled && youtubeConfig.apiKey ? `### YouTube推荐格式：
       } catch (error) {
         console.error('预解析YouTube视频失败:', error);
       }
+    }
+
+    // 🔥 纯搜索模式：如果没有AI模型，直接返回格式化的搜索结果
+    if (!hasAIModel && orchestrationResult?.webSearchResults) {
+      console.log('📋 纯搜索模式：直接返回Tavily搜索结果');
+
+      const searchResults = orchestrationResult.webSearchResults;
+      let formattedContent = `🌐 **搜索结果**（来自 Tavily）\n\n`;
+
+      // 添加视频上下文
+      if (context?.title) {
+        formattedContent += `**您正在查看**：${context.title}`;
+        if (context.year) formattedContent += ` (${context.year})`;
+        formattedContent += `\n\n`;
+      }
+
+      // 格式化搜索结果
+      if (searchResults.results && searchResults.results.length > 0) {
+        formattedContent += `找到 ${searchResults.results.length} 条相关信息：\n\n`;
+
+        searchResults.results.forEach((result, index) => {
+          formattedContent += `### ${index + 1}. ${result.title}\n\n`;
+          formattedContent += `${result.content}\n\n`;
+          formattedContent += `📎 来源：[${new URL(result.url).hostname}](${result.url})\n\n`;
+          formattedContent += `---\n\n`;
+        });
+
+        formattedContent += `💡 **提示**：以上信息来自实时网络搜索，可能需要进一步核实。`;
+      } else {
+        formattedContent += `抱歉，没有找到相关信息。请尝试其他关键词。`;
+      }
+
+      // 构建响应
+      const response = {
+        id: `search-${Date.now()}`,
+        object: 'chat.completion',
+        created: Math.floor(Date.now() / 1000),
+        model: 'tavily-search',
+        choices: [{
+          index: 0,
+          message: {
+            role: 'assistant',
+            content: formattedContent
+          },
+          finish_reason: 'stop'
+        }],
+        usage: {
+          prompt_tokens: 0,
+          completion_tokens: 0,
+          total_tokens: 0
+        }
+      };
+
+      return NextResponse.json(response);
+    }
+
+    // 🔥 如果没有AI模型且没有搜索结果，返回错误
+    if (!hasAIModel) {
+      return NextResponse.json({
+        error: '当前问题不需要联网搜索，但未配置AI模型。请配置AI API或询问需要联网搜索的问题。'
+      }, { status: 400 });
     }
 
     // 准备发送给OpenAI的消息

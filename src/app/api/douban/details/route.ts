@@ -153,7 +153,7 @@ async function _scrapeDoubanDetails(id: string, retryCount = 0): Promise<any> {
  * - 24小时缓存
  * - 自动重新验证
  */
-const scrapeDoubanDetails = unstable_cache(
+export const scrapeDoubanDetails = unstable_cache(
   _scrapeDoubanDetails,
   ['douban-details'],
   {

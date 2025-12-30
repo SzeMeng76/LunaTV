@@ -122,6 +122,104 @@ export async function isTMDBEnabled(): Promise<boolean> {
 }
 
 /**
+ * 通过标题搜索电影
+ */
+export async function searchTMDBMovie(
+  title: string,
+  year?: string
+): Promise<{ id: number; title: string; release_date: string; vote_average: number } | null> {
+  try {
+    // 检查缓存
+    const cacheKey = getCacheKey('movie_search', { title: title.trim(), year: year || '' });
+    const cached = await getCache(cacheKey);
+    if (cached) {
+      console.log(`TMDB电影搜索缓存命中: ${title}`);
+      return cached;
+    }
+
+    const params: Record<string, string> = {
+      query: title.trim(),
+    };
+    if (year) {
+      params.year = year;
+    }
+
+    const response = await fetchTMDB<any>('/search/movie', params);
+
+    if (response.results && response.results.length > 0) {
+      // 取第一个结果（最匹配的）
+      const result = {
+        id: response.results[0].id,
+        title: response.results[0].title,
+        release_date: response.results[0].release_date || '',
+        vote_average: response.results[0].vote_average || 0,
+      };
+
+      // 保存到缓存
+      await setCache(cacheKey, result, TMDB_CACHE_EXPIRE.actor_search);
+      console.log(`TMDB电影搜索成功: ${title} -> ID ${result.id}`);
+
+      return result;
+    }
+
+    console.log(`TMDB电影搜索无结果: ${title}`);
+    return null;
+  } catch (error) {
+    console.error(`搜索TMDB电影失败 (${title}):`, error);
+    return null;
+  }
+}
+
+/**
+ * 通过标题搜索电视剧
+ */
+export async function searchTMDBTV(
+  title: string,
+  year?: string
+): Promise<{ id: number; name: string; first_air_date: string; vote_average: number } | null> {
+  try {
+    // 检查缓存
+    const cacheKey = getCacheKey('tv_search', { title: title.trim(), year: year || '' });
+    const cached = await getCache(cacheKey);
+    if (cached) {
+      console.log(`TMDB电视剧搜索缓存命中: ${title}`);
+      return cached;
+    }
+
+    const params: Record<string, string> = {
+      query: title.trim(),
+    };
+    if (year) {
+      params.first_air_date_year = year;
+    }
+
+    const response = await fetchTMDB<any>('/search/tv', params);
+
+    if (response.results && response.results.length > 0) {
+      // 取第一个结果（最匹配的）
+      const result = {
+        id: response.results[0].id,
+        name: response.results[0].name,
+        first_air_date: response.results[0].first_air_date || '',
+        vote_average: response.results[0].vote_average || 0,
+      };
+
+      // 保存到缓存
+      await setCache(cacheKey, result, TMDB_CACHE_EXPIRE.actor_search);
+      console.log(`TMDB电视剧搜索成功: ${title} -> ID ${result.id}`);
+
+      return result;
+    }
+
+    console.log(`TMDB电视剧搜索无结果: ${title}`);
+    return null;
+  } catch (error) {
+    console.error(`搜索TMDB电视剧失败 (${title}):`, error);
+    return null;
+  }
+}
+
+/**
  * 调用TMDB API的通用函数
  */
 async function fetchTMDB<T>(endpoint: string, params: Record<string, string> = {}): Promise<T> {
@@ -220,6 +318,110 @@ export async function getTMDBPersonTVShows(personId: number): Promise<TMDBTVCred
   console.log(`TMDB演员电视剧作品已缓存: ${personId}`);
 
   return result;
+}
+
+/**
+ * 获取电影详情（包含keywords和similar）
+ */
+export async function getTMDBMovieDetails(movieId: number): Promise<{
+  id: number;
+  title: string;
+  original_title: string;
+  overview: string;
+  vote_average: number;
+  vote_count: number;
+  genres: Array<{ id: number; name: string }>;
+  keywords: Array<{ id: number; name: string }>;
+  similar: Array<{
+    id: number;
+    title: string;
+    vote_average: number;
+    release_date: string;
+  }>;
+} | null> {
+  try {
+    // 检查缓存
+    const cacheKey = getCacheKey('movie_details', { movieId });
+    const cached = await getCache(cacheKey);
+    if (cached) {
+      console.log(`TMDB电影详情缓存命中: ${movieId}`);
+      return cached;
+    }
+
+    // 并行获取详情、keywords、similar
+    const [details, keywordsData, similarData] = await Promise.all([
+      fetchTMDB(`/movie/${movieId}`, {}),
+      fetchTMDB(`/movie/${movieId}/keywords`, {}),
+      fetchTMDB(`/movie/${movieId}/similar`, {})
+    ]);
+
+    const result = {
+      ...(details as any),
+      keywords: (keywordsData as any).keywords || [],
+      similar: ((similarData as any).results || []).slice(0, 5) // 只取前5个相似影片
+    };
+
+    // 保存到缓存
+    await setCache(cacheKey, result, TMDB_CACHE_EXPIRE.movie_details);
+    console.log(`TMDB电影详情已缓存: ${movieId}`);
+
+    return result;
+  } catch (error) {
+    console.error(`获取TMDB电影详情失败 (ID: ${movieId}):`, error);
+    return null;
+  }
+}
+
+/**
+ * 获取电视剧详情（包含keywords和similar）
+ */
+export async function getTMDBTVDetails(tvId: number): Promise<{
+  id: number;
+  name: string;
+  original_name: string;
+  overview: string;
+  vote_average: number;
+  vote_count: number;
+  genres: Array<{ id: number; name: string }>;
+  keywords: Array<{ id: number; name: string }>;
+  similar: Array<{
+    id: number;
+    name: string;
+    vote_average: number;
+    first_air_date: string;
+  }>;
+} | null> {
+  try {
+    // 检查缓存
+    const cacheKey = getCacheKey('tv_details', { tvId });
+    const cached = await getCache(cacheKey);
+    if (cached) {
+      console.log(`TMDB电视剧详情缓存命中: ${tvId}`);
+      return cached;
+    }
+
+    // 并行获取详情、keywords、similar
+    const [details, keywordsData, similarData] = await Promise.all([
+      fetchTMDB(`/tv/${tvId}`, {}),
+      fetchTMDB(`/tv/${tvId}/keywords`, {}),
+      fetchTMDB(`/tv/${tvId}/similar`, {})
+    ]);
+
+    const result = {
+      ...(details as any),
+      keywords: ((keywordsData as any).results || []),
+      similar: ((similarData as any).results || []).slice(0, 5) // 只取前5个相似影片
+    };
+
+    // 保存到缓存
+    await setCache(cacheKey, result, TMDB_CACHE_EXPIRE.tv_details);
+    console.log(`TMDB电视剧详情已缓存: ${tvId}`);
+
+    return result;
+  } catch (error) {
+    console.error(`获取TMDB电视剧详情失败 (ID: ${tvId}):`, error);
+    return null;
+  }
 }
 
 /**

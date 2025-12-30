@@ -89,32 +89,31 @@ const AIRecommendConfig = ({ config, refreshConfig }: AIRecommendConfigProps) =>
 
     // 基本验证
     if (settingsToSave.enabled) {
-      if (!settingsToSave.apiUrl.trim()) {
-        showMessage('error', '请填写API地址');
+      // 🔥 检查是否至少配置了一种模式
+      const hasAIModel = !!(settingsToSave.apiUrl.trim() && settingsToSave.apiKey.trim() && settingsToSave.model.trim());
+      const hasTavilySearch = !!(settingsToSave.enableOrchestrator && settingsToSave.enableWebSearch && keys.length > 0);
+
+      if (!hasAIModel && !hasTavilySearch) {
+        showMessage('error', '请至少配置一种模式：\n1. AI模型（API地址+密钥+模型）\n2. Tavily搜索（启用智能协调器+联网搜索+Tavily Key）');
         return;
       }
-      if (!settingsToSave.apiKey.trim()) {
-        showMessage('error', '请填写API密钥');
-        return;
-      }
-      if (!settingsToSave.model.trim()) {
-        showMessage('error', '请选择或填写模型名称');
-        return;
-      }
-      if (settingsToSave.temperature < 0 || settingsToSave.temperature > 2) {
-        showMessage('error', '温度参数应在0-2之间');
-        return;
-      }
-      if (settingsToSave.maxTokens < 1 || settingsToSave.maxTokens > 150000) {
-        showMessage('error', '最大Token数应在1-150000之间（GPT-5支持128k，推理模型建议2000+）');
-        return;
-      }
-      // 如果启用了联网搜索，验证Tavily API Keys
-      if (settingsToSave.enableOrchestrator && settingsToSave.enableWebSearch) {
-        if (!keys || keys.length === 0) {
-          showMessage('error', '启用联网搜索需要至少配置一个Tavily API Key');
+
+      // 如果配置了AI模型，验证参数
+      if (hasAIModel) {
+        if (settingsToSave.temperature < 0 || settingsToSave.temperature > 2) {
+          showMessage('error', '温度参数应在0-2之间');
           return;
         }
+        if (settingsToSave.maxTokens < 1 || settingsToSave.maxTokens > 150000) {
+          showMessage('error', '最大Token数应在1-150000之间（GPT-5支持128k，推理模型建议2000+）');
+          return;
+        }
+      }
+
+      // 如果启用了联网搜索，验证Tavily API Keys
+      if (settingsToSave.enableOrchestrator && settingsToSave.enableWebSearch && keys.length === 0) {
+        showMessage('error', '启用联网搜索需要至少配置一个Tavily API Key');
+        return;
       }
     }
 
@@ -214,11 +213,25 @@ const AIRecommendConfig = ({ config, refreshConfig }: AIRecommendConfigProps) =>
       <div className='bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 shadow-sm'>
         <div className='mb-6'>
           <h3 className='text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2'>基础设置</h3>
-          <div className='flex items-center space-x-2 text-sm text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-3 py-2 rounded-lg'>
-            <svg className='h-4 w-4' fill='currentColor' viewBox='0 0 20 20'>
-              <path fillRule='evenodd' d='M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z' clipRule='evenodd' />
-            </svg>
-            <span>🤖 支持OpenAI兼容的API接口，包括ChatGPT、Claude、Gemini等模型</span>
+          <div className='space-y-2'>
+            <div className='flex items-center space-x-2 text-sm text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-3 py-2 rounded-lg'>
+              <svg className='h-4 w-4' fill='currentColor' viewBox='0 0 20 20'>
+                <path fillRule='evenodd' d='M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z' clipRule='evenodd' />
+              </svg>
+              <span>🤖 支持OpenAI兼容的API接口，包括ChatGPT、Claude、Gemini等模型</span>
+            </div>
+            <div className='flex items-center space-x-2 text-sm text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-3 py-2 rounded-lg'>
+              <svg className='h-4 w-4' fill='currentColor' viewBox='0 0 20 20'>
+                <path fillRule='evenodd' d='M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z' clipRule='evenodd' />
+              </svg>
+              <span>🆓 <strong>新功能</strong>：可以只配置Tavily搜索（免费），无需AI模型！适合预算有限的用户</span>
+            </div>
+            <div className='flex items-center space-x-2 text-sm text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 px-3 py-2 rounded-lg'>
+              <svg className='h-4 w-4' fill='currentColor' viewBox='0 0 20 20'>
+                <path fillRule='evenodd' d='M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z' clipRule='evenodd' />
+              </svg>
+              <span>📋 <strong>配置说明</strong>：请至少配置一种模式（AI模型 或 Tavily搜索），或两者都配置以获得最佳体验</span>
+            </div>
           </div>
         </div>
 
@@ -252,10 +265,20 @@ const AIRecommendConfig = ({ config, refreshConfig }: AIRecommendConfigProps) =>
         {/* API配置 */}
         {aiSettings.enabled && (
           <div className='space-y-4'>
+            {/* 配置模式提示 */}
+            <div className='bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/10 dark:to-purple-900/10 border border-blue-200 dark:border-blue-800 rounded-lg p-4'>
+              <h4 className='text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2'>💡 配置模式选择</h4>
+              <div className='text-xs text-gray-700 dark:text-gray-300 space-y-1'>
+                <p><strong>模式一：AI模型 + Tavily搜索（推荐）</strong> - 配置以下所有选项，获得最佳体验</p>
+                <p><strong>模式二：仅AI模型</strong> - 配置API地址/密钥/模型，跳过智能协调器</p>
+                <p><strong>模式三：仅Tavily搜索（免费）</strong> - 跳过API配置，直接配置智能协调器和Tavily Keys</p>
+              </div>
+            </div>
+
             {/* API地址 */}
             <div>
               <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                API地址
+                API地址 <span className='text-xs text-gray-500 dark:text-gray-400'>(Tavily纯搜索模式可留空)</span>
               </label>
               <div className='relative'>
                 <input
@@ -324,7 +347,7 @@ const AIRecommendConfig = ({ config, refreshConfig }: AIRecommendConfigProps) =>
             {/* API密钥 */}
             <div>
               <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                API密钥
+                API密钥 <span className='text-xs text-gray-500 dark:text-gray-400'>(Tavily纯搜索模式可留空)</span>
               </label>
               <input
                 type='password'
@@ -341,7 +364,7 @@ const AIRecommendConfig = ({ config, refreshConfig }: AIRecommendConfigProps) =>
             {/* 模型名称 */}
             <div>
               <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                模型名称
+                模型名称 <span className='text-xs text-gray-500 dark:text-gray-400'>(Tavily纯搜索模式可留空)</span>
               </label>
               <input
                 type='text'
