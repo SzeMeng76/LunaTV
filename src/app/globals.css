@@ -372,6 +372,20 @@ div[data-media-provider] video {
   }
 }
 
+/* Netflix风格进度条闪烁动画 */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite;
+}
+
 /* 平滑动画效果 */
 @keyframes fade-in {
   from {

@@ -67,6 +67,14 @@ function PlayPageClient() {
   const [error, setError] = useState<string | null>(null);
   const [detail, setDetail] = useState<SearchResult | null>(null);
 
+  // 测速进度状态
+  const [speedTestProgress, setSpeedTestProgress] = useState<{
+    current: number;
+    total: number;
+    currentSource: string;
+    result?: string;
+  } | null>(null);
+
   // 收藏状态
   const [favorited, setFavorited] = useState(false);
 
@@ -1207,19 +1215,36 @@ function PlayPageClient() {
   // 完整测速（桌面设备）
   const fullSpeedTest = async (sources: SearchResult[]): Promise<SearchResult> => {
     // 桌面设备使用小批量并发，避免创建过多实例
-    const concurrency = 2;
+    const concurrency = 3;
+    // 限制最大测试数量为20个源（平衡速度和覆盖率）
+    const maxTestCount = 20;
+    const sourcesToTest = sources.slice(0, maxTestCount);
+
+    console.log(`开始测速: 共${sources.length}个源，将测试前${sourcesToTest.length}个`);
+
     const allResults: Array<{
       source: SearchResult;
       testResult: { quality: string; loadSpeed: string; pingTime: number };
     } | null> = [];
 
-    for (let i = 0; i < sources.length; i += concurrency) {
-      const batch = sources.slice(i, i + concurrency);
-      console.log(`测速批次 ${Math.floor(i/concurrency) + 1}/${Math.ceil(sources.length/concurrency)}: ${batch.length} 个源`);
-      
+    let shouldStop = false; // 早停标志
+    let testedCount = 0; // 已测试数量
+
+    for (let i = 0; i < sourcesToTest.length && !shouldStop; i += concurrency) {
+      const batch = sourcesToTest.slice(i, i + concurrency);
+      console.log(`测速批次 ${Math.floor(i/concurrency) + 1}/${Math.ceil(sourcesToTest.length/concurrency)}: ${batch.length} 个源`);
+
       const batchResults = await Promise.all(
-        batch.map(async (source) => {
+        batch.map(async (source, batchIndex) => {
           try {
+            // 更新进度：显示当前正在测试的源
+            const currentIndex = i + batchIndex + 1;
+            setSpeedTestProgress({
+              current: currentIndex,
+              total: sourcesToTest.length,
+              currentSource: source.source_name,
+            });
+
             if (!source.episodes || source.episodes.length === 0) {
               return null;
             }
@@ -1227,21 +1252,63 @@ function PlayPageClient() {
             const episodeUrl = source.episodes.length > 1
               ? source.episodes[1]
               : source.episodes[0];
-            
+
             const testResult = await getVideoResolutionFromM3u8(episodeUrl);
+
+            // 更新进度：显示测试结果
+            setSpeedTestProgress({
+              current: currentIndex,
+              total: sourcesToTest.length,
+              currentSource: source.source_name,
+              result: `${testResult.quality} | ${testResult.loadSpeed} | ${testResult.pingTime}ms`,
+            });
+
             return { source, testResult };
           } catch (error) {
             console.warn(`测速失败: ${source.source_name}`, error);
+
+            // 更新进度：显示失败
+            const currentIndex = i + batchIndex + 1;
+            setSpeedTestProgress({
+              current: currentIndex,
+              total: sourcesToTest.length,
+              currentSource: source.source_name,
+              result: '测速失败',
+            });
+
             return null;
           }
         })
       );
-      
+
       allResults.push(...batchResults);
-      
-      // 批次间延迟，让资源有时间清理
-      if (i + concurrency < sources.length) {
-        await new Promise(resolve => setTimeout(resolve, 500));
+      testedCount += batch.length;
+
+      // 🎯 保守策略早停判断：找到高质量源
+      const successfulInBatch = batchResults.filter(Boolean) as Array<{
+        source: SearchResult;
+        testResult: { quality: string; loadSpeed: string; pingTime: number };
+      }>;
+
+      for (const result of successfulInBatch) {
+        const { quality, loadSpeed } = result.testResult;
+        const speedMatch = loadSpeed.match(/^([\d.]+)\s*MB\/s$/);
+        const speedMBps = speedMatch ? parseFloat(speedMatch[1]) : 0;
+
+        // 🛑 保守策略：只有非常优质的源才早停
+        const is4KHighSpeed = quality === '4K' && speedMBps >= 8;
+        const is2KHighSpeed = quality === '2K' && speedMBps >= 6;
+
+        if (is4KHighSpeed || is2KHighSpeed) {
+          console.log(`✓ 找到顶级优质源: ${result.source.source_name} (${quality}, ${loadSpeed})，停止测速`);
+          shouldStop = true;
+          break;
+        }
+      }
+
+      // 批次间延迟，让资源有时间清理（减少延迟时间）
+      if (i + concurrency < sourcesToTest.length && !shouldStop) {
+        await new Promise(resolve => setTimeout(resolve, 200));
       }
     }
 
@@ -1326,6 +1393,9 @@ function PlayPageClient() {
         }, ${result.testResult.pingTime}ms)`
       );
     });
+
+    // 清除测速进度状态
+    setSpeedTestProgress(null);
 
     return resultsWithScore[0].source;
   };
@@ -5083,6 +5153,70 @@ function PlayPageClient() {
               <p className='text-xl font-semibold text-gray-800 dark:text-gray-200 animate-pulse'>
                 {loadingMessage}
               </p>
+
+              {/* Netflix风格测速进度显示 */}
+              {speedTestProgress && (
+                <div className='mt-6 space-y-3'>
+                  {/* 进度条容器 */}
+                  <div className='relative w-full'>
+                    {/* 背景进度条 */}
+                    <div className='h-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden'>
+                      {/* 动态进度条 - Netflix红色 */}
+                      <div
+                        className='h-full bg-gradient-to-r from-red-600 to-red-500 rounded-full transition-all duration-300 ease-out relative overflow-hidden'
+                        style={{
+                          width: `${(speedTestProgress.current / speedTestProgress.total) * 100}%`,
+                        }}
+                      >
+                        {/* 闪烁效果 */}
+                        <div className='absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer'></div>
+                      </div>
+                    </div>
+
+                    {/* 进度数字 - 靠右显示 */}
+                    <div className='absolute -top-6 right-0 text-xs font-medium text-gray-500 dark:text-gray-400'>
+                      {speedTestProgress.current}/{speedTestProgress.total}
+                    </div>
+                  </div>
+
+                  {/* 当前测试源信息卡片 */}
+                  <div className='bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 border border-gray-200 dark:border-gray-700'>
+                    <div className='flex items-center gap-2'>
+                      {/* 脉动指示器 */}
+                      <div className='relative'>
+                        <div className='w-2 h-2 bg-red-500 rounded-full animate-pulse'></div>
+                        <div className='absolute inset-0 w-2 h-2 bg-red-500 rounded-full animate-ping'></div>
+                      </div>
+
+                      {/* 源名称 */}
+                      <span className='text-sm font-semibold text-gray-700 dark:text-gray-300 truncate flex-1'>
+                        {speedTestProgress.currentSource}
+                      </span>
+                    </div>
+
+                    {/* 测试结果 */}
+                    {speedTestProgress.result && (
+                      <div className='mt-2 flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400 font-mono'>
+                        {speedTestProgress.result === '测速失败' ? (
+                          <span className='text-red-500 flex items-center gap-1'>
+                            <svg className='w-3 h-3' fill='currentColor' viewBox='0 0 20 20'>
+                              <path fillRule='evenodd' d='M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z' clipRule='evenodd' />
+                            </svg>
+                            连接失败
+                          </span>
+                        ) : (
+                          <span className='text-green-600 dark:text-green-400 flex items-center gap-1'>
+                            <svg className='w-3 h-3' fill='currentColor' viewBox='0 0 20 20'>
+                              <path fillRule='evenodd' d='M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z' clipRule='evenodd' />
+                            </svg>
+                            {speedTestProgress.result}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

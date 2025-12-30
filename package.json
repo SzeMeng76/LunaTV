@@ -4,8 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "pnpm gen:manifest && next dev -H 0.0.0.0",
-    "build": "pnpm gen:manifest && pnpm build:css:legacy && next build",
-    "build:css:legacy": "node ./node_modules/.pnpm/tailwindcss@3.4.19/node_modules/tailwindcss/lib/cli.js -c tailwind.v3.config.js -i ./src/app/globals-legacy.css -o ./public/styles-legacy.css --minify",
+    "build": "pnpm gen:manifest && next build",
     "start": "next start",
     "lint": "next lint",
     "lint:fix": "eslint src --fix && pnpm format",
@@ -95,7 +94,6 @@
     "prettier": "^3.5.3",
     "prettier-plugin-tailwindcss": "^0.6.12",
     "tailwindcss": "^4.1.18",
-    "tailwindcss-v3": "npm:tailwindcss@^3.4.19",
     "typescript": "^5.8.3",
     "webpack-obfuscator": "^3.5.1"
   },
