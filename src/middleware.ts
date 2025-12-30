@@ -10,6 +10,13 @@ export async function middleware(request: NextRequest) {
 
   console.log(`[Middleware ${requestId}] Path:`, pathname);
 
+  // 检测User-Agent并设置CSS版本cookie（用于双CSS Bundle策略）
+  const userAgent = request.headers.get('user-agent') || '';
+  const isOldIOS = detectOldIOSBrowser(userAgent);
+  const cssVersion = isOldIOS ? 'legacy' : 'modern';
+
+  console.log(`[Middleware ${requestId}] CSS Version:`, cssVersion, isOldIOS ? '(Old iOS detected)' : '');
+
   // 处理 /adult/ 路径前缀，重写为实际 API 路径
   if (pathname.startsWith('/adult/')) {
     console.log(`[Middleware ${requestId}] Adult path detected, rewriting...`);
@@ -38,19 +45,22 @@ export async function middleware(request: NextRequest) {
     if (newPathname.startsWith('/api')) {
       // 将重写后的请求传递给认证逻辑
       const modifiedRequest = new NextRequest(url, request);
-      return handleAuthentication(modifiedRequest, newPathname, requestId, response);
+      return handleAuthentication(modifiedRequest, newPathname, requestId, response, cssVersion);
     }
 
+    setCSSVersionCookie(response, cssVersion);
     return response;
   }
 
   // 跳过不需要认证的路径
   if (shouldSkipAuth(pathname)) {
     console.log(`[Middleware ${requestId}] Skipping auth for path:`, pathname);
-    return NextResponse.next();
+    const response = NextResponse.next();
+    setCSSVersionCookie(response, cssVersion);
+    return response;
   }
 
-  return handleAuthentication(request, pathname, requestId);
+  return handleAuthentication(request, pathname, requestId, undefined, cssVersion);
 }
 
 // 提取认证处理逻辑为单独的函数
@@ -58,7 +68,8 @@ async function handleAuthentication(
   request: NextRequest,
   pathname: string,
   requestId: string,
-  response?: NextResponse
+  response?: NextResponse,
+  cssVersion?: string
 ) {
 
   const storageType = process.env.NEXT_PUBLIC_STORAGE_TYPE || 'localstorage';
@@ -85,15 +96,21 @@ async function handleAuthentication(
 
   if (!authInfo) {
     console.log(`[Middleware ${requestId}] No auth info, failing auth`);
-    return handleAuthFailure(request, pathname);
+    const failResponse = handleAuthFailure(request, pathname);
+    if (cssVersion) setCSSVersionCookie(failResponse, cssVersion);
+    return failResponse;
   }
 
   // localstorage模式：在middleware中完成验证
   if (storageType === 'localstorage') {
     if (!authInfo.password || authInfo.password !== process.env.PASSWORD) {
-      return handleAuthFailure(request, pathname);
+      const failResponse = handleAuthFailure(request, pathname);
+      if (cssVersion) setCSSVersionCookie(failResponse, cssVersion);
+      return failResponse;
     }
-    return response || NextResponse.next();
+    const nextResponse = response || NextResponse.next();
+    if (cssVersion) setCSSVersionCookie(nextResponse, cssVersion);
+    return nextResponse;
   }
 
   // 其他模式：只验证签名
@@ -103,7 +120,9 @@ async function handleAuthentication(
       hasUsername: !!authInfo.username,
       hasSignature: !!authInfo.signature
     });
-    return handleAuthFailure(request, pathname);
+    const failResponse = handleAuthFailure(request, pathname);
+    if (cssVersion) setCSSVersionCookie(failResponse, cssVersion);
+    return failResponse;
   }
 
   // 验证签名（如果存在）
@@ -120,13 +139,17 @@ async function handleAuthentication(
     // 签名验证通过即可
     if (isValidSignature) {
       console.log(`[Middleware ${requestId}] Auth successful, allowing access`);
-      return response || NextResponse.next();
+      const nextResponse = response || NextResponse.next();
+      if (cssVersion) setCSSVersionCookie(nextResponse, cssVersion);
+      return nextResponse;
     }
   }
 
   // 签名验证失败或不存在签名
   console.log(`[Middleware ${requestId}] Signature verification failed, denying access`);
-  return handleAuthFailure(request, pathname);
+  const failResponse = handleAuthFailure(request, pathname);
+  if (cssVersion) setCSSVersionCookie(failResponse, cssVersion);
+  return failResponse;
 }
 
 // 验证签名
@@ -199,6 +222,52 @@ function shouldSkipAuth(pathname: string): boolean {
   ];
 
   return skipPaths.some((path) => pathname.startsWith(path));
+}
+
+// 检测旧版iOS浏览器（iOS < 16.4）
+function detectOldIOSBrowser(userAgent: string): boolean {
+  // 匹配 iOS 版本号
+  // 例如: "iPhone OS 15_7 like Mac OS X" 或 "iPhone OS 16_3_1 like Mac OS X"
+  const iosVersionMatch = userAgent.match(/iPhone OS (\d+)_(\d+)/);
+
+  if (iosVersionMatch) {
+    const majorVersion = parseInt(iosVersionMatch[1], 10);
+    const minorVersion = parseInt(iosVersionMatch[2], 10);
+
+    // iOS 16.4 以下的版本需要使用legacy CSS
+    if (majorVersion < 16) {
+      return true;
+    }
+    if (majorVersion === 16 && minorVersion < 4) {
+      return true;
+    }
+  }
+
+  // 同样检测 iPad
+  const ipadVersionMatch = userAgent.match(/CPU OS (\d+)_(\d+)/);
+  if (ipadVersionMatch) {
+    const majorVersion = parseInt(ipadVersionMatch[1], 10);
+    const minorVersion = parseInt(ipadVersionMatch[2], 10);
+
+    if (majorVersion < 16) {
+      return true;
+    }
+    if (majorVersion === 16 && minorVersion < 4) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+// 设置CSS版本cookie
+function setCSSVersionCookie(response: NextResponse, cssVersion: string): void {
+  response.cookies.set('css-version', cssVersion, {
+    path: '/',
+    maxAge: 60 * 60 * 24 * 30, // 30天
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+  });
 }
 
 // 配置middleware匹配规则

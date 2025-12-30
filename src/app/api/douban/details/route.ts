@@ -26,6 +26,50 @@ function randomDelay(min = 1000, max = 3000): Promise<void> {
 export const runtime = 'nodejs';
 
 // ============================================================================
+// 移动端API数据获取（预告片和高清图片）
+// ============================================================================
+
+/**
+ * 从移动端API获取预告片和高清图片
+ */
+async function fetchMobileApiData(id: string): Promise<{
+  trailerUrl?: string;
+  backdrop?: string;
+} | null> {
+  try {
+    const mobileApiUrl = `https://m.douban.com/rexxar/api/v2/movie/${id}`;
+    const response = await fetch(mobileApiUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/537.36',
+        'Referer': 'https://m.douban.com/',
+        'Accept': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      console.warn(`移动端API请求失败: ${response.status}`);
+      return null;
+    }
+
+    const data = await response.json();
+
+    // 提取预告片URL（取第一个预告片）
+    const trailerUrl = data.trailers?.[0]?.video_url || undefined;
+
+    // 提取高清封面作为backdrop（优先使用large尺寸）
+    const backdrop = data.cover?.image?.large?.url ||
+                    data.cover?.image?.normal?.url ||
+                    data.pic?.large ||
+                    undefined;
+
+    return { trailerUrl, backdrop };
+  } catch (error) {
+    console.warn(`获取移动端API数据失败: ${(error as Error).message}`);
+    return null;
+  }
+}
+
+// ============================================================================
 // 核心爬虫函数（带缓存）
 // ============================================================================
 
@@ -178,7 +222,17 @@ export async function GET(request: Request) {
   }
 
   try {
-    const details = await scrapeDoubanDetails(id);
+    // 并行获取详情和移动端API数据
+    const [details, mobileData] = await Promise.all([
+      scrapeDoubanDetails(id),
+      fetchMobileApiData(id),
+    ]);
+
+    // 合并数据：移动端API数据优先级高于爬虫数据
+    if (details.code === 200 && details.data && mobileData) {
+      details.data.trailerUrl = mobileData.trailerUrl;
+      details.data.backdrop = mobileData.backdrop;
+    }
 
     const cacheTime = await getCacheTime();
     return NextResponse.json(details, {
@@ -517,6 +571,9 @@ function parseDoubanDetails(html: string, id: string) {
         recommendations,
         // 🎯 新增：将 celebrities 中的演员单独提取为 actors 字段
         actors: celebrities.filter(c => !c.role.includes('导演')),
+        // 🎬 预留字段：预告片和背景图（由移动端API填充）
+        trailerUrl: undefined,
+        backdrop: undefined,
       }
     };
   } catch (error) {

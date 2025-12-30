@@ -215,6 +215,9 @@ export interface DoubanItem {
   movie_duration?: number;
   first_aired?: string;
   plot_summary?: string;
+  // 🎬 Netflix风格字段
+  backdrop?: string;      // 高清背景图（用于HeroBanner）
+  trailerUrl?: string;    // 预告片视频URL
 }
 
 export interface DoubanResult {

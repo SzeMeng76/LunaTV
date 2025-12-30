@@ -633,6 +633,8 @@ export async function getDoubanDetails(id: string): Promise<{
     episode_length?: number;
     first_aired?: string;
     plot_summary?: string;
+    backdrop?: string;
+    trailerUrl?: string;
   };
 }> {
   // 检查缓存 - 如果缓存中没有plot_summary则重新获取
