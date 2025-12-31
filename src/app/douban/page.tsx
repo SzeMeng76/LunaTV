@@ -93,6 +93,10 @@ function DoubanPageClient() {
   // 星期选择器状态
   const [selectedWeekday, setSelectedWeekday] = useState<string>('');
 
+  // 页面级别的AI权限检测状态
+  const [aiEnabled, setAiEnabled] = useState(false);
+  const [aiCheckComplete, setAiCheckComplete] = useState(false);
+
   // 保存虚拟化设置
   const toggleVirtualization = () => {
     const newValue = !useVirtualization;
@@ -119,6 +123,36 @@ function DoubanPageClient() {
       setCustomCategories(runtimeConfig.CUSTOM_CATEGORIES);
     }
   }, []);
+
+  // 页面级别的AI权限检测 - 只检测一次
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const response = await fetch('/api/ai-recommend', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            messages: [{ role: 'user', content: 'ping' }],
+          }),
+        });
+        if (!cancelled) {
+          setAiEnabled(response.status !== 403);
+          setAiCheckComplete(true);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setAiEnabled(false);
+          setAiCheckComplete(true);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []); // 只在组件挂载时检测一次
+
 
   // 同步最新参数值到 ref
   useEffect(() => {
@@ -920,6 +954,8 @@ function DoubanPageClient() {
               loading={loading || !selectorsReady}
               primarySelection={primarySelection}
               isBangumi={type === 'anime' && primarySelection === '每日放送'}
+              aiEnabled={aiEnabled}
+              aiCheckComplete={aiCheckComplete}
             />
           ) : (
             <>
@@ -947,6 +983,8 @@ function DoubanPageClient() {
                           isBangumi={
                             type === 'anime' && primarySelection === '每日放送'
                           }
+                          aiEnabled={aiEnabled}
+                          aiCheckComplete={aiCheckComplete}
                         />
                       </div>
                     );
