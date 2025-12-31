@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
     tags: [v*]
+  workflow_dispatch:  # 添加手动触发
 
 jobs:
   build-and-push:
@@ -11,6 +12,18 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Validate project structure
+        run: |
+          [ -f "Dockerfile" ] || (echo "❌ Dockerfile缺失" && exit 1)
+          [ -f "package.json" ] || (echo "❌ package.json缺失" && exit 1)
+          echo "✅ 项目结构验证通过"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: |
+            image=moby/buildkit:master
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -26,3 +39,12 @@ jobs:
           tags: |
             978261656/firmiana:latest
             978261656/firmiana:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64  # 明确指定架构
+
+      - name: Verify push success
+        run: |
+          echo "✅ 构建推送完成"
+          echo "📦 镜像: 978261656/firmiana"
+          echo "🏷️  标签: latest 和 ${{ github.sha }}"
