@@ -1218,9 +1218,26 @@ function PlayPageClient() {
     const concurrency = 3;
     // 限制最大测试数量为20个源（平衡速度和覆盖率）
     const maxTestCount = 20;
-    const sourcesToTest = sources.slice(0, maxTestCount);
+    const topPriorityCount = 5; // 前5个优先级最高的源
 
-    console.log(`开始测速: 共${sources.length}个源，将测试前${sourcesToTest.length}个`);
+    // 🎯 混合策略：前5个 + 随机15个
+    let sourcesToTest: SearchResult[];
+    if (sources.length <= maxTestCount) {
+      // 如果源总数不超过20个，全部测试
+      sourcesToTest = sources;
+    } else {
+      // 保留前5个（搜索结果通常已按相关性/质量排序）
+      const prioritySources = sources.slice(0, topPriorityCount);
+
+      // 从剩余源中随机选择15个
+      const remainingSources = sources.slice(topPriorityCount);
+      const shuffled = remainingSources.sort(() => 0.5 - Math.random());
+      const randomSources = shuffled.slice(0, maxTestCount - topPriorityCount);
+
+      sourcesToTest = [...prioritySources, ...randomSources];
+    }
+
+    console.log(`开始测速: 共${sources.length}个源，将测试前${topPriorityCount}个 + 随机${sourcesToTest.length - Math.min(topPriorityCount, sources.length)}个 = ${sourcesToTest.length}个`);
 
     const allResults: Array<{
       source: SearchResult;

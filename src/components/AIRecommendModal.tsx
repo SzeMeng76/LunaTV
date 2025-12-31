@@ -890,33 +890,83 @@ export default function AIRecommendModal({ isOpen, onClose, context, welcomeMess
           ref={messagesContainerRef}
           className="flex-1 overflow-y-auto p-4 space-y-4 bg-linear-to-b from-gray-50 to-gray-100/50 dark:from-gray-800 dark:to-gray-900/50"
         >
-          {messages.length <= 1 && messages.every(msg => msg.role === 'assistant' && (msg.content.includes('AI智能助手') || msg.content.includes('AI 智能助手'))) && (
+          {messages.length <= 1 && messages.every(msg => msg.role === 'assistant') && (
             <div className="text-center py-8">
               <div className="inline-flex items-center justify-center w-16 h-16 bg-linear-to-br from-blue-500 to-purple-600 rounded-full mb-4">
                 <Sparkles className="h-8 w-8 text-white" />
               </div>
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                欢迎使用AI智能助手
+                {context?.title ? `关于《${context.title}》` : '欢迎使用AI智能助手'}
               </h3>
               <p className="text-gray-600 dark:text-gray-400 mb-6">
-                支持影视推荐、YouTube链接解析和视频搜索推荐
+                {context?.title
+                  ? '选择快捷操作或直接输入你的问题'
+                  : '支持影视推荐、YouTube链接解析和视频搜索推荐'
+                }
               </p>
-              
-              {/* 预设问题 */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-2xl mx-auto">
-                {AI_RECOMMEND_PRESETS.map((preset, index) => (
+
+              {/* 快捷操作按钮 - 针对特定影片 */}
+              {context?.title ? (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 max-w-2xl mx-auto">
                   <button
-                    key={index}
-                    onClick={() => handlePresetClick(preset)}
-                    className="p-3 text-left bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 hover:shadow-md transition-all group"
+                    onClick={() => handlePresetClick({ title: '📖 剧情介绍', message: '这部影片讲了什么故事？请详细介绍一下剧情' })}
+                    className="p-4 text-center bg-white dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 hover:shadow-lg hover:scale-105 transition-all group"
                     disabled={isPending}
                   >
-                    <div className="font-medium text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                      {preset.title}
+                    <div className="text-3xl mb-2">📖</div>
+                    <div className="font-semibold text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                      剧情介绍
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      获取剧情摘要
                     </div>
                   </button>
-                ))}
-              </div>
+
+                  <button
+                    onClick={() => handlePresetClick({ title: '⭐ 影片评价', message: '这部影片评分怎么样？豆瓣和TMDB评分是多少？演员阵容如何？' })}
+                    className="p-4 text-center bg-white dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600 hover:border-yellow-500 dark:hover:border-yellow-400 hover:shadow-lg hover:scale-105 transition-all group"
+                    disabled={isPending}
+                  >
+                    <div className="text-3xl mb-2">⭐</div>
+                    <div className="font-semibold text-gray-900 dark:text-gray-100 group-hover:text-yellow-600 dark:group-hover:text-yellow-400 transition-colors">
+                      影片评价
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      查看评分和演员
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => handlePresetClick({ title: '🎬 相似推荐', message: '有没有类似的影片推荐？请推荐5部相似的电影或电视剧' })}
+                    className="p-4 text-center bg-white dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600 hover:border-purple-500 dark:hover:border-purple-400 hover:shadow-lg hover:scale-105 transition-all group"
+                    disabled={isPending}
+                  >
+                    <div className="text-3xl mb-2">🎬</div>
+                    <div className="font-semibold text-gray-900 dark:text-gray-100 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
+                      相似推荐
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      推荐类似影片
+                    </div>
+                  </button>
+                </div>
+              ) : (
+                /* 通用预设问题 - 全局AI按钮 */
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-2xl mx-auto">
+                  {AI_RECOMMEND_PRESETS.map((preset, index) => (
+                    <button
+                      key={index}
+                      onClick={() => handlePresetClick(preset)}
+                      className="p-3 text-left bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 hover:shadow-md transition-all group"
+                      disabled={isPending}
+                    >
+                      <div className="font-medium text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                        {preset.title}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
