@@ -76,7 +76,7 @@ export async function GET(request: Request) {
 
       headers.set(
         'Cache-Control',
-        'public, max-age=3600, stale-while-revalidate=1800, must-revalidate'
+        'public, max-age=1800, stale-while-revalidate=900, must-revalidate'
       );
       headers.set('Access-Control-Allow-Origin', '*');
 
@@ -123,15 +123,16 @@ export async function GET(request: Request) {
     if (etag) headers.set('ETag', etag);
     if (lastModified) headers.set('Last-Modified', lastModified);
 
-    // 设置缓存头（视频1小时缓存 + 智能重验证）
+    // 设置缓存头（视频30分钟缓存 + 智能重验证）
     // 使用 stale-while-revalidate 策略：允许在后台重新验证时提供旧内容
     // 但添加 must-revalidate 确保过期后必须验证源服务器
+    // trailer URL 有时效性，使用较短的 30 分钟缓存
     headers.set(
       'Cache-Control',
-      'public, max-age=3600, stale-while-revalidate=1800, must-revalidate'
+      'public, max-age=1800, stale-while-revalidate=900, must-revalidate'
     );
-    // CDN缓存：1小时 + 30分钟宽限期
-    headers.set('CDN-Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=1800');
+    // CDN缓存：30分钟 + 15分钟宽限期
+    headers.set('CDN-Cache-Control', 'public, s-maxage=1800, stale-while-revalidate=900');
 
     // 添加 CORS 支持
     headers.set('Access-Control-Allow-Origin', '*');

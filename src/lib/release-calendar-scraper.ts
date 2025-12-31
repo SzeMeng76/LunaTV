@@ -411,31 +411,271 @@ export async function scrapeTVReleases(retryCount = 0): Promise<ReleaseCalendarI
 }
 
 /**
+ * 解析首页上映时间表HTML（包含2026年1月数据）
+ */
+function parseHomepageHTML(html: string, type: 'movie' | 'tv'): ReleaseCalendarItem[] {
+  const items: ReleaseCalendarItem[] = [];
+  const now = Date.now();
+  const currentYear = new Date().getFullYear();
+  const currentMonth = new Date().getMonth() + 1; // 1-12
+
+  try {
+    // 首页使用 <div class="sjbul-d"> 结构
+    const itemBlocks = html.split(/<div class="sjbul-d(?:\s+sjbul-d\d+)?">/);
+
+    for (let i = 1; i < itemBlocks.length; i++) {
+      const block = itemBlocks[i];
+
+      // 提取标题
+      const titleMatch = /<a href="[^"]*" title="([^"]+)" target="_blank" class="ddp1">/.exec(block);
+
+      // 提取详情页链接（用于提取ID）
+      const linkMatch = /<a title="[^"]+" target="_blank" href="\/dy2013\/(\d{6})\/(\d+)\.shtml">/.exec(block);
+
+      // 提取上映日期（只有月日，例如 "01月01日"）
+      const dateMatch = /<p class="ddp2">上映：<span>(\d{2})月(\d{2})日<\/span><\/p>/.exec(block);
+
+      // 提取类型
+      const genreMatches = block.match(/<a href="\/dy2013\/dian(?:ying|shiju)\/\w+\/" target="_blank" title="[^"]+">([^<]+)<\/a>/g);
+      let genre = '未知';
+      if (genreMatches && genreMatches.length > 0) {
+        genre = genreMatches.map(m => {
+          const match = />([^<]+)<\/a>/.exec(m);
+          return match ? match[1].replace(/电影|电视剧/g, '') : '';
+        }).filter(g => g).join('/');
+      }
+
+      // 提取主演
+      const actorsMatch = /<p class="ddp4">主演：(.*?)<\/p>/.exec(block);
+      let actors = '未知';
+      if (actorsMatch) {
+        const actorMatches = actorsMatch[1].match(/<a[^>]*>([^<]+)<\/a>/g);
+        if (actorMatches) {
+          actors = actorMatches.map(m => {
+            const match = />([^<]+)<\/a>/.exec(m);
+            return match ? match[1] : '';
+          }).filter(a => a).join('/');
+        }
+      }
+
+      // 提取海报图片
+      const imgMatch = /data-src="([^"]+)"/.exec(block) || /src="([^"]+)"/.exec(block);
+      let coverUrl: string | undefined;
+      if (imgMatch && imgMatch[1] && !imgMatch[1].includes('fbg.png') && !imgMatch[1].includes('loadimg.gif')) {
+        coverUrl = imgMatch[1].trim();
+        if (coverUrl.startsWith('//')) {
+          coverUrl = 'https:' + coverUrl;
+        }
+      }
+
+      if (titleMatch && dateMatch && linkMatch) {
+        const title = titleMatch[1].trim();
+        const month = parseInt(dateMatch[1]);
+        const day = parseInt(dateMatch[2]);
+
+        // 推断年份：如果月份小于当前月份，说明是下一年
+        let year = currentYear;
+        if (month < currentMonth || (month === currentMonth && day < new Date().getDate())) {
+          year = currentYear + 1;
+        }
+
+        const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+        // 只保留今天及以后的数据
+        const today = new Date().toISOString().split('T')[0];
+        if (dateStr < today) {
+          continue;
+        }
+
+        const itemId = linkMatch[2];
+
+        if (title && !title.includes('暂无')) {
+          const item: ReleaseCalendarItem = {
+            id: `${type}_homepage_${dateStr}_${generateId(title)}_${itemId}`,
+            title: title,
+            type: type,
+            director: '未知', // 首页没有导演信息
+            actors: actors,
+            region: '未知', // 首页没有地区信息
+            genre: genre,
+            releaseDate: dateStr,
+            cover: coverUrl,
+            source: 'manmankan',
+            createdAt: now,
+            updatedAt: now,
+          };
+
+          items.push(item);
+        }
+      }
+    }
+  } catch (error) {
+    console.error(`解析${type === 'movie' ? '电影' : '电视剧'}首页HTML失败:`, error);
+  }
+
+  return items;
+}
+
+/**
+ * 抓取电影首页（包含2026年1月数据）
+ */
+export async function scrapeMovieHomepage(retryCount = 0): Promise<ReleaseCalendarItem[]> {
+  const MAX_RETRIES = 3;
+  const RETRY_DELAYS = [2000, 4000, 8000];
+
+  try {
+    await randomDelay(500, 1500);
+
+    // 使用 www.manmankan.com 而不是 g.manmankan.com
+    const url = `https://www.manmankan.com/dy2013/dianying/`;
+
+    const { ua, browser, platform } = getRandomUserAgent();
+    const secChHeaders = getSecChUaHeaders(browser, platform);
+
+    const response = await fetch(url, {
+      headers: {
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+        'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+        'Accept-Encoding': 'gzip, deflate, br, zstd',
+        'Cache-Control': 'max-age=0',
+        'DNT': '1',
+        ...secChHeaders,
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Sec-Fetch-User': '?1',
+        'Upgrade-Insecure-Requests': '1',
+        'User-Agent': ua,
+        'Referer': 'https://www.manmankan.com/',
+      },
+      signal: AbortSignal.timeout(20000),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const html = await response.text();
+    const items = parseHomepageHTML(html, 'movie');
+
+    console.log(`✅ 电影首页数据抓取成功: ${items.length} 部`);
+    return items;
+  } catch (error) {
+    console.error(`抓取电影首页数据失败 (重试 ${retryCount}/${MAX_RETRIES}):`, error);
+
+    if (retryCount < MAX_RETRIES) {
+      console.warn(`等待 ${RETRY_DELAYS[retryCount]}ms 后重试...`);
+      await new Promise(resolve => setTimeout(resolve, RETRY_DELAYS[retryCount]));
+      return scrapeMovieHomepage(retryCount + 1);
+    }
+
+    console.error('电影首页数据抓取失败，已达到最大重试次数');
+    return [];
+  }
+}
+
+/**
+ * 抓取电视剧首页（包含2026年1月数据）
+ */
+export async function scrapeTVHomepage(retryCount = 0): Promise<ReleaseCalendarItem[]> {
+  const MAX_RETRIES = 3;
+  const RETRY_DELAYS = [2000, 4000, 8000];
+
+  try {
+    await randomDelay(500, 1500);
+
+    const url = `https://www.manmankan.com/dy2013/dianshiju/`;
+
+    const { ua, browser, platform } = getRandomUserAgent();
+    const secChHeaders = getSecChUaHeaders(browser, platform);
+
+    const response = await fetch(url, {
+      headers: {
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+        'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+        'Accept-Encoding': 'gzip, deflate, br, zstd',
+        'Cache-Control': 'max-age=0',
+        'DNT': '1',
+        ...secChHeaders,
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Sec-Fetch-User': '?1',
+        'Upgrade-Insecure-Requests': '1',
+        'User-Agent': ua,
+        'Referer': 'https://www.manmankan.com/',
+      },
+      signal: AbortSignal.timeout(20000),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const html = await response.text();
+    const items = parseHomepageHTML(html, 'tv');
+
+    console.log(`✅ 电视剧首页数据抓取成功: ${items.length} 部`);
+    return items;
+  } catch (error) {
+    console.error(`抓取电视剧首页数据失败 (重试 ${retryCount}/${MAX_RETRIES}):`, error);
+
+    if (retryCount < MAX_RETRIES) {
+      console.warn(`等待 ${RETRY_DELAYS[retryCount]}ms 后重试...`);
+      await new Promise(resolve => setTimeout(resolve, RETRY_DELAYS[retryCount]));
+      return scrapeTVHomepage(retryCount + 1);
+    }
+
+    console.error('电视剧首页数据抓取失败，已达到最大重试次数');
+    return [];
+  }
+}
+
+/**
  * 抓取所有数据（顺序执行，避免并发失败）
  */
 export async function scrapeAllReleases(): Promise<ReleaseCalendarItem[]> {
   try {
     console.log('📅 开始抓取发布日历数据...');
 
-    // 抓取电影数据
-    console.log('🎬 抓取电影数据...');
+    // 抓取电影时间表数据
+    console.log('🎬 抓取电影时间表数据...');
     const movies = await scrapeMovieReleases();
-    console.log(`✅ 电影数据抓取完成: ${movies.length} 部`);
+    console.log(`✅ 电影时间表数据抓取完成: ${movies.length} 部`);
 
-    // 添加随机延迟避免请求过于频繁（2-4秒）
-    const delay = Math.floor(Math.random() * 2000) + 2000;
-    console.log(`⏳ 等待 ${delay}ms 后继续抓取电视剧数据...`);
-    await new Promise(resolve => setTimeout(resolve, delay));
+    // 添加随机延迟
+    await randomDelay(2000, 4000);
 
-    // 抓取电视剧数据
-    console.log('📺 抓取电视剧数据...');
+    // 抓取电影首页数据（包含2026年1月）
+    console.log('🎬 抓取电影首页数据（2026年）...');
+    const moviesHomepage = await scrapeMovieHomepage();
+    console.log(`✅ 电影首页数据抓取完成: ${moviesHomepage.length} 部`);
+
+    // 添加随机延迟
+    await randomDelay(2000, 4000);
+
+    // 抓取电视剧时间表数据
+    console.log('📺 抓取电视剧时间表数据...');
     const tvShows = await scrapeTVReleases();
-    console.log(`✅ 电视剧数据抓取完成: ${tvShows.length} 部`);
+    console.log(`✅ 电视剧时间表数据抓取完成: ${tvShows.length} 部`);
 
-    const allItems = [...movies, ...tvShows];
-    console.log(`🎉 总共抓取到 ${allItems.length} 条发布数据`);
+    // 添加随机延迟
+    await randomDelay(2000, 4000);
 
-    return allItems;
+    // 抓取电视剧首页数据（包含2026年1月）
+    console.log('📺 抓取电视剧首页数据（2026年）...');
+    const tvHomepage = await scrapeTVHomepage();
+    console.log(`✅ 电视剧首页数据抓取完成: ${tvHomepage.length} 部`);
+
+    // 合并所有数据，去重（按title和releaseDate去重）
+    const allItems = [...movies, ...moviesHomepage, ...tvShows, ...tvHomepage];
+    const uniqueItems = allItems.filter((item, index, self) =>
+      index === self.findIndex(t => t.title === item.title && t.releaseDate === item.releaseDate)
+    );
+
+    console.log(`🎉 总共抓取到 ${allItems.length} 条发布数据（去重后 ${uniqueItems.length} 条）`);
+
+    return uniqueItems;
   } catch (error) {
     console.error('❌ 抓取发布日历数据失败:', error);
     return [];
