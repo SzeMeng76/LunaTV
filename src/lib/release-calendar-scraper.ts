@@ -509,6 +509,98 @@ function parseHomepageHTML(html: string, type: 'movie' | 'tv'): ReleaseCalendarI
         }
       }
     }
+
+    // 🎯 新增：解析 <dl> 结构（首页顶部列表，包含1月23日等数据）
+    const dlBlocks = html.split(/<dl><dt>/);
+    for (let i = 1; i < dlBlocks.length; i++) {
+      const block = '<dl><dt>' + dlBlocks[i]; // 恢复开头标签
+
+      // 提取标题 - 两种可能的位置
+      let titleMatch = /<a href="[^"]*" title="([^"]+)" target="_blank" class="ddp1">/.exec(block);
+      if (!titleMatch) {
+        titleMatch = /<a title="([^"]+)" target="_blank" href="[^"]*">/.exec(block);
+      }
+
+      // 提取详情页链接（用于提取ID）
+      const linkMatch = /<a title="[^"]+" target="_blank" href="\/dy2013\/(\d{6})\/(\d+)\.shtml">/.exec(block);
+
+      // 提取上映日期（只有月日，例如 "01月23日"）
+      const dateMatch = /<p class="ddp2">上映：<span>(\d{2})月(\d{2})日<\/span><\/p>/.exec(block);
+
+      // 提取类型
+      const genreMatches = block.match(/<a href="\/dy2013\/dian(?:ying|shiju)\/\w+\/" target="_blank" title="[^"]+">([^<]+)<\/a>/g);
+      let genre = '未知';
+      if (genreMatches && genreMatches.length > 0) {
+        genre = genreMatches.map(m => {
+          const match = />([^<]+)<\/a>/.exec(m);
+          return match ? match[1].replace(/电影|电视剧/g, '') : '';
+        }).filter(g => g).join('/');
+      }
+
+      // 提取主演
+      const actorsMatch = /<p class="ddp4">主演：(.*?)<\/p>/.exec(block);
+      let actors = '未知';
+      if (actorsMatch) {
+        const actorMatches = actorsMatch[1].match(/<a[^>]*>([^<]+)<\/a>/g);
+        if (actorMatches) {
+          actors = actorMatches.map(m => {
+            const match = />([^<]+)<\/a>/.exec(m);
+            return match ? match[1] : '';
+          }).filter(a => a).join('/');
+        }
+      }
+
+      // 提取海报图片
+      const imgMatch = /data-src="([^"]+)"/.exec(block) || /src="([^"]+)"/.exec(block);
+      let coverUrl: string | undefined;
+      if (imgMatch && imgMatch[1] && !imgMatch[1].includes('fbg.png') && !imgMatch[1].includes('loadimg.gif')) {
+        coverUrl = imgMatch[1].trim();
+        if (coverUrl.startsWith('//')) {
+          coverUrl = 'https:' + coverUrl;
+        }
+      }
+
+      if (titleMatch && dateMatch && linkMatch) {
+        const title = titleMatch[1].trim();
+        const month = parseInt(dateMatch[1]);
+        const day = parseInt(dateMatch[2]);
+
+        // 推断年份：如果月份小于当前月份，说明是下一年
+        let year = currentYear;
+        if (month < currentMonth || (month === currentMonth && day < new Date().getDate())) {
+          year = currentYear + 1;
+        }
+
+        const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+        // 只保留今天及以后的数据
+        const today = new Date().toISOString().split('T')[0];
+        if (dateStr < today) {
+          continue;
+        }
+
+        const itemId = linkMatch[2];
+
+        if (title && !title.includes('暂无')) {
+          const item: ReleaseCalendarItem = {
+            id: `${type}_homepage_dl_${dateStr}_${generateId(title)}_${itemId}`,
+            title: title,
+            type: type,
+            director: '未知', // 首页没有导演信息
+            actors: actors,
+            region: '未知', // 首页没有地区信息
+            genre: genre,
+            releaseDate: dateStr,
+            cover: coverUrl,
+            source: 'manmankan',
+            createdAt: now,
+            updatedAt: now,
+          };
+
+          items.push(item);
+        }
+      }
+    }
   } catch (error) {
     console.error(`解析${type === 'movie' ? '电影' : '电视剧'}首页HTML失败:`, error);
   }

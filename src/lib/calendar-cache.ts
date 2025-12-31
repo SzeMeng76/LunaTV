@@ -3,7 +3,7 @@ import { db } from './db';
 // 日历缓存键
 const CALENDAR_DATA_KEY = 'calendar:release_calendar_data';
 const CALENDAR_TIME_KEY = 'calendar:release_calendar_time';
-const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24小时缓存
+const CACHE_DURATION = 8 * 60 * 60 * 1000; // 8小时缓存（参考TMDb API标准）
 
 // 获取存储类型
 function getStorageType(): string {

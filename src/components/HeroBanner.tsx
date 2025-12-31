@@ -43,8 +43,20 @@ export default function HeroBanner({
   const [videoLoaded, setVideoLoaded] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // 存储刷新后的trailer URL（用于403自动重试）
-  const [refreshedTrailerUrls, setRefreshedTrailerUrls] = useState<Record<string, string>>({});
+  // 存储刷新后的trailer URL（用于403自动重试，使用localStorage持久化）
+  const [refreshedTrailerUrls, setRefreshedTrailerUrls] = useState<Record<string, string>>(() => {
+    // 从 localStorage 加载已刷新的 URL
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('refreshed-trailer-urls');
+        return stored ? JSON.parse(stored) : {};
+      } catch (error) {
+        console.error('[HeroBanner] 读取localStorage失败:', error);
+        return {};
+      }
+    }
+    return {};
+  });
 
   // 处理图片 URL，使用代理绕过防盗链
   const getProxiedImageUrl = (url: string) => {
@@ -78,10 +90,24 @@ export default function HeroBanner({
       const data = await response.json();
       if (data.code === 200 && data.data?.trailerUrl) {
         console.log('[HeroBanner] 成功获取新的trailer URL');
-        setRefreshedTrailerUrls(prev => ({
-          ...prev,
-          [doubanId]: data.data.trailerUrl
-        }));
+
+        // 更新 state 并保存到 localStorage
+        setRefreshedTrailerUrls(prev => {
+          const updated = {
+            ...prev,
+            [doubanId]: data.data.trailerUrl
+          };
+
+          // 持久化到 localStorage
+          try {
+            localStorage.setItem('refreshed-trailer-urls', JSON.stringify(updated));
+          } catch (error) {
+            console.error('[HeroBanner] 保存到localStorage失败:', error);
+          }
+
+          return updated;
+        });
+
         return data.data.trailerUrl;
       } else {
         console.warn('[HeroBanner] 未能获取新的trailer URL:', data.message);
@@ -240,8 +266,28 @@ export default function HeroBanner({
                     });
 
                     // 检测是否是403错误（trailer URL过期）
-                    // 如果有douban_id，尝试刷新URL
-                    if (item.douban_id && !refreshedTrailerUrls[item.douban_id]) {
+                    if (item.douban_id) {
+                      // 如果localStorage中有URL，说明之前刷新过，但现在又失败了
+                      // 需要清除localStorage中的旧URL，重新刷新
+                      if (refreshedTrailerUrls[item.douban_id]) {
+                        console.log('[HeroBanner] localStorage中的URL也过期了，清除并重新获取');
+
+                        // 清除state和localStorage中的旧URL
+                        setRefreshedTrailerUrls(prev => {
+                          const updated = { ...prev };
+                          delete updated[item.douban_id];
+
+                          try {
+                            localStorage.setItem('refreshed-trailer-urls', JSON.stringify(updated));
+                          } catch (error) {
+                            console.error('[HeroBanner] 清除localStorage失败:', error);
+                          }
+
+                          return updated;
+                        });
+                      }
+
+                      // 重新刷新URL
                       const newUrl = await refreshTrailerUrl(item.douban_id);
                       if (newUrl) {
                         // 重新加载视频
