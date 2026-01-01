@@ -1193,7 +1193,9 @@ export const UserMenu: React.FC = () => {
               setIsVersionPanelOpen(true);
               handleCloseMenu();
             }}
-            className='w-full px-3 py-2 text-center flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors text-xs'
+            disabled 
+            //className='w-full px-3 py-2 text-center flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors text-xs'
+            className='w-full px-3 py-2 text-center flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors text-xs opacity-50 cursor-not-allowed'
           >
             <div className='flex items-center gap-1'>
               <span className='font-mono'>v{CURRENT_VERSION}</span>
