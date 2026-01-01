@@ -399,7 +399,7 @@ export default function HeroBanner({
               <Play className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7" fill="currentColor" />
               <span>播放</span>
             </Link>
-            <Link
+         {/* <Link
               href={
                 currentItem.type === 'shortdrama'
                   ? '/shortdrama'
@@ -411,7 +411,7 @@ export default function HeroBanner({
             >
               <Info className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7" />
               <span>更多信息</span>
-            </Link>
+            </Link> */}
           </div>
         </div>
       </div>
