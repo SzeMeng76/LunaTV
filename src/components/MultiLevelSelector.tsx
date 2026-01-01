@@ -393,17 +393,19 @@ const MultiLevelSelector: React.FC<MultiLevelSelectorProps> = ({
     setValues(newValues);
 
     // 构建传递给父组件的值，排序传递 value，其他传递 label
+    // anime 类型默认使用近期热度(U)，其他类型使用综合排序(T)
+    const defaultSort = (contentType === 'anime-tv' || contentType === 'anime-movie') ? 'U' : 'T';
     const selectionsForParent: Record<string, string> = {
       type: 'all',
       region: 'all',
       year: 'all',
       platform: 'all',
       label: 'all',
-      sort: 'T',
+      sort: defaultSort,
     };
 
     Object.entries(newValues).forEach(([key, value]) => {
-      if (value && value !== 'all' && (key !== 'sort' || value !== 'T')) {
+      if (value && value !== 'all' && (key !== 'sort' || value !== defaultSort)) {
         const category = categories.find((cat) => cat.key === key);
         if (category) {
           const option = category.options.find((opt) => opt.value === value);
@@ -443,8 +445,9 @@ const MultiLevelSelector: React.FC<MultiLevelSelectorProps> = ({
   // 检查是否为默认值
   const isDefaultValue = (categoryKey: string) => {
     const value = values[categoryKey];
+    const defaultSort = (contentType === 'anime-tv' || contentType === 'anime-movie') ? 'U' : 'T';
     return (
-      !value || value === 'all' || (categoryKey === 'sort' && value === 'T')
+      !value || value === 'all' || (categoryKey === 'sort' && value === defaultSort)
     );
   };
 
@@ -454,7 +457,7 @@ const MultiLevelSelector: React.FC<MultiLevelSelectorProps> = ({
     if (value === undefined) {
       value = 'all';
       if (categoryKey === 'sort') {
-        value = 'T';
+        value = (contentType === 'anime-tv' || contentType === 'anime-movie') ? 'U' : 'T';
       }
     }
     return value === optionValue;
@@ -483,6 +486,19 @@ const MultiLevelSelector: React.FC<MultiLevelSelectorProps> = ({
       window.removeEventListener('resize', handleResize);
     };
   }, [activeCategory]);
+
+  // 组件挂载时初始化默认值
+  useEffect(() => {
+    const defaultSort = (contentType === 'anime-tv' || contentType === 'anime-movie') ? 'U' : 'T';
+    onChange({
+      type: 'all',
+      region: 'all',
+      year: 'all',
+      platform: 'all',
+      label: 'all',
+      sort: defaultSort,
+    });
+  }, [contentType]); // 当 contentType 变化时重新初始化
 
   // 点击外部关闭下拉框
   useEffect(() => {

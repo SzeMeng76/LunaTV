@@ -67,7 +67,7 @@ const PageLayout = ({
           <ModernNav showAIButton={aiEnabled ?? false} onAIButtonClick={() => setShowAIRecommendModal(true)} />
 
         {/* 移动端头部 - Logo和用户菜单 */}
-        <div className='md:hidden fixed top-0 left-0 right-0 z-40 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl shadow-sm'>
+        <div className='md:hidden fixed top-0 left-0 right-0 z-40 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md shadow-sm'>
           <div className='flex items-center justify-between h-11 px-4'>
             {/* Logo */}
             <div className='text-base font-bold bg-linear-to-r from-green-600 via-emerald-600 to-teal-600 dark:from-green-400 dark:via-emerald-400 dark:to-teal-400 bg-clip-text text-transparent'>
@@ -91,8 +91,8 @@ const PageLayout = ({
           </div>
         </div>
 
-        {/* Main Content - 移动端44px，桌面端64px */}
-        <main className='w-full min-h-screen pt-[44px] md:pt-16 pb-32 md:pb-8'>
+        {/* Main Content - 移动端44px顶部 + 底部导航栏空间，桌面端64px */}
+        <main className='w-full min-h-screen pt-[44px] md:pt-16 pb-16 md:pb-8'>
           <div className='w-full max-w-[2560px] mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 2xl:px-20'>
             {children}
           </div>
@@ -149,7 +149,8 @@ const PageLayout = ({
           <main
             className='flex-1 md:min-h-0 mb-14 md:mb-0 md:mt-0 mt-12'
             style={{
-              paddingBottom: 'calc(3.5rem + env(safe-area-inset-bottom))',
+              // 悬浮胶囊导航栏高度约 56px + 底部 1rem 间距 + 安全区
+              paddingBottom: 'calc(5.5rem + env(safe-area-inset-bottom))',
             }}
           >
             {children}

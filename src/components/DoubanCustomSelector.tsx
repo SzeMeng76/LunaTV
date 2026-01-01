@@ -43,6 +43,26 @@ const DoubanCustomSelector: React.FC<DoubanCustomSelectorProps> = ({
   // 二级选择器滚动容器的ref
   const secondaryScrollContainerRef = useRef<HTMLDivElement>(null);
 
+  // RAF ID ref for performance optimization
+  const rafIdRef = useRef<number>(0);
+
+  // 处理二级选择器的鼠标滚轮事件（原生 DOM 事件）
+  const handleSecondaryWheel = React.useCallback((e: WheelEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // 使用 RAF 包裹滚动操作，避免频繁更新导致卡顿
+    if (rafIdRef.current) {
+      cancelAnimationFrame(rafIdRef.current);
+    }
+    rafIdRef.current = requestAnimationFrame(() => {
+      const container = secondaryScrollContainerRef.current;
+      if (container) {
+        const scrollAmount = e.deltaY * 2;
+        container.scrollLeft += scrollAmount;
+      }
+    });
+  }, []);
+
   // 根据 customCategories 生成一级选择器选项（按 type 分组，电影优先）
   const primaryOptions = React.useMemo(() => {
     const types = Array.from(new Set(customCategories.map((cat) => cat.type)));
@@ -69,17 +89,6 @@ const DoubanCustomSelector: React.FC<DoubanCustomSelectorProps> = ({
       }));
   }, [customCategories, primarySelection]);
 
-  // 处理二级选择器的鼠标滚轮事件（原生 DOM 事件）
-  const handleSecondaryWheel = React.useCallback((e: WheelEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const container = secondaryScrollContainerRef.current;
-    if (container) {
-      const scrollAmount = e.deltaY * 2;
-      container.scrollLeft += scrollAmount;
-    }
-  }, []);
-
   // 添加二级选择器的鼠标滚轮事件监听器
   useEffect(() => {
     const scrollContainer = secondaryScrollContainerRef.current;
@@ -95,6 +104,9 @@ const DoubanCustomSelector: React.FC<DoubanCustomSelectorProps> = ({
       });
 
       return () => {
+        if (rafIdRef.current) {
+          cancelAnimationFrame(rafIdRef.current);
+        }
         scrollContainer.removeEventListener('wheel', handleSecondaryWheel);
         capsuleContainer.removeEventListener('wheel', handleSecondaryWheel);
       };
@@ -116,6 +128,9 @@ const DoubanCustomSelector: React.FC<DoubanCustomSelectorProps> = ({
       });
 
       return () => {
+        if (rafIdRef.current) {
+          cancelAnimationFrame(rafIdRef.current);
+        }
         scrollContainer.removeEventListener('wheel', handleSecondaryWheel);
         capsuleContainer.removeEventListener('wheel', handleSecondaryWheel);
       };

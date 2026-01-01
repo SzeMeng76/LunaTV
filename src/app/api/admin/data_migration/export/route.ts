@@ -75,7 +75,11 @@ export async function POST(req: NextRequest) {
         searchHistory: await db.getSearchHistory(username),
         // 跳过片头片尾配置
         skipConfigs: await db.getAllSkipConfigs(username),
-        // 用户密码（通过验证空密码来检查用户是否存在，然后获取密码）
+        // V2用户信息（包含 oidcSub, role, tags, enabledApis 等）
+        userInfoV2: await db.getUserInfoV2(username),
+        // 登录统计（loginCount, firstLoginTime, lastLoginTime）
+        loginStats: await getUserLoginStats(username),
+        // 用户密码（V1兼容，通过验证空密码来检查用户是否存在，然后获取密码）
         password: await getUserPassword(username)
       };
 
@@ -131,6 +135,37 @@ async function getUserPassword(username: string): Promise<string | null> {
     return null;
   } catch (error) {
     console.error(`获取用户 ${username} 密码失败:`, error);
+    return null;
+  }
+}
+
+// 辅助函数：获取用户登录统计（通过数据库直接访问）
+async function getUserLoginStats(username: string): Promise<{
+  loginCount: number;
+  firstLoginTime: number;
+  lastLoginTime: number;
+  lastLoginDate: number;
+} | null> {
+  try {
+    const storage = (db as any).storage;
+    if (storage && typeof storage.client?.get === 'function') {
+      const loginStatsKey = `user_login_stats:${username}`;
+      const statsData = await storage.client.get(loginStatsKey);
+
+      if (statsData) {
+        // 处理不同存储类型的返回格式
+        if (typeof statsData === 'string') {
+          // KVRocks/Redis 返回字符串
+          return JSON.parse(statsData);
+        } else {
+          // Upstash 返回对象
+          return statsData as any;
+        }
+      }
+    }
+    return null;
+  } catch (error) {
+    console.error(`获取用户 ${username} 登录统计失败:`, error);
     return null;
   }
 }
