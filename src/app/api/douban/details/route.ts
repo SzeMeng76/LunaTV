@@ -161,9 +161,10 @@ async function _fetchMobileApiData(id: string): Promise<{
  * 使用 unstable_cache 包裹移动端API请求
  * - 30分钟缓存（trailer URL 有时效性，需要较短缓存）
  * - 与详情页缓存分开管理
+ * - Next.js会自动根据函数参数区分缓存
  */
 const fetchMobileApiData = unstable_cache(
-  _fetchMobileApiData,
+  async (id: string) => _fetchMobileApiData(id),
   ['douban-mobile-api'],
   {
     revalidate: 1800, // 30分钟缓存
@@ -305,9 +306,10 @@ async function _scrapeDoubanDetails(id: string, retryCount = 0): Promise<any> {
  * 使用 unstable_cache 包裹爬虫函数
  * - 4小时缓存
  * - 自动重新验证
+ * - Next.js会自动根据函数参数区分缓存
  */
 export const scrapeDoubanDetails = unstable_cache(
-  _scrapeDoubanDetails,
+  async (id: string, retryCount = 0) => _scrapeDoubanDetails(id, retryCount),
   ['douban-details'],
   {
     revalidate: 14400, // 4小时缓存
