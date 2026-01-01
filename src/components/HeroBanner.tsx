@@ -388,11 +388,11 @@ export default function HeroBanner({
         </div>
       </div>
 
-      {/* 音量控制按钮（仅视频模式） */}
+      {/* 音量控制按钮（仅视频模式） - 底部右下角，避免遮挡简介 */}
       {enableVideo && currentItem.trailerUrl && (
         <button
           onClick={toggleMute}
-          className="absolute bottom-28 sm:bottom-32 md:bottom-36 right-4 sm:right-8 md:right-12 lg:right-16 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-black/50 backdrop-blur-sm text-white flex items-center justify-center hover:bg-black/70 transition-all border border-white/50"
+          className="absolute bottom-6 sm:bottom-8 right-4 sm:right-8 md:right-12 lg:right-16 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-black/50 backdrop-blur-sm text-white flex items-center justify-center hover:bg-black/70 transition-all border border-white/50 z-10"
           aria-label={isMuted ? '取消静音' : '静音'}
         >
           {isMuted ? (

@@ -89,19 +89,21 @@ export const runtime = 'nodejs';
 /**
  * 从移动端API获取预告片和高清图片（内部函数）
  * 2024-2025 最佳实践：使用最新 User-Agent 和完整请求头
+ * 支持电影和电视剧（自动检测并切换端点）
  */
 async function _fetchMobileApiData(id: string): Promise<{
   trailerUrl?: string;
   backdrop?: string;
 } | null> {
   try {
-    const mobileApiUrl = `https://m.douban.com/rexxar/api/v2/movie/${id}`;
+    // 先尝试 movie 端点
+    let mobileApiUrl = `https://m.douban.com/rexxar/api/v2/movie/${id}`;
 
     // 创建 AbortController 用于超时控制
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15秒超时
 
-    const response = await fetch(mobileApiUrl, {
+    let response = await fetch(mobileApiUrl, {
       signal: controller.signal,
       headers: {
         // 2024-2025 最新 User-Agent（桌面版更不容易被限制）
@@ -115,9 +117,36 @@ async function _fetchMobileApiData(id: string): Promise<{
         'Sec-Fetch-Mode': 'cors',
         'Sec-Fetch-Site': 'same-site',
       },
+      redirect: 'manual', // 手动处理重定向
     });
 
     clearTimeout(timeoutId);
+
+    // 如果是 3xx 重定向，说明可能是电视剧，尝试 tv 端点
+    if (response.status >= 300 && response.status < 400) {
+      console.log(`[details] 检测到重定向，尝试 TV 端点: ${id}`);
+      mobileApiUrl = `https://m.douban.com/rexxar/api/v2/tv/${id}`;
+
+      const tvController = new AbortController();
+      const tvTimeoutId = setTimeout(() => tvController.abort(), 15000);
+
+      response = await fetch(mobileApiUrl, {
+        signal: tvController.signal,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
+          'Referer': 'https://movie.douban.com/explore',
+          'Accept': 'application/json, text/plain, */*',
+          'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'Origin': 'https://movie.douban.com',
+          'Sec-Fetch-Dest': 'empty',
+          'Sec-Fetch-Mode': 'cors',
+          'Sec-Fetch-Site': 'same-site',
+        },
+      });
+
+      clearTimeout(tvTimeoutId);
+    }
 
     if (!response.ok) {
       console.warn(`移动端API请求失败: ${response.status}`);
