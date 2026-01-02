@@ -615,9 +615,28 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
     role: 'user' | 'admin' | 'owner';
     enabledApis?: string[];
     showAdultContent?: boolean;
+    tags?: string[];
   }) => {
     setSelectedUser(user);
-    setSelectedApis(user.enabledApis || []);
+
+    // 计算用户的所有有效 API（个人 + 用户组）
+    const userApis = user.enabledApis || [];
+    const tagApis: string[] = [];
+
+    // 从用户组获取 API 权限
+    if (user.tags && user.tags.length > 0) {
+      user.tags.forEach(tagName => {
+        const tag = config.UserConfig.Tags?.find(t => t.name === tagName);
+        if (tag && tag.enabledApis) {
+          tagApis.push(...tag.enabledApis);
+        }
+      });
+    }
+
+    // 合并去重
+    const allApis = [...new Set([...userApis, ...tagApis])];
+
+    setSelectedApis(allApis);
     setSelectedShowAdultContent(user.showAdultContent || false);
     setShowConfigureApisModal(true);
   };
@@ -1016,6 +1035,99 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                   天（最后登入超过此天数的用户将被自动删除）
                 </span>
               </div>
+            </div>
+
+            {/* 默认用户组设置 */}
+            <div className='mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700'>
+              <div className='mb-3'>
+                <div className='font-medium text-gray-900 dark:text-gray-100 mb-1'>
+                  默认用户组
+                </div>
+                <div className='text-sm text-gray-600 dark:text-gray-400'>
+                  新注册用户将自动加入以下分组（不选择则默认无限制访问所有源）
+                </div>
+              </div>
+
+              {config.UserConfig.Tags && config.UserConfig.Tags.length > 0 ? (
+                <div className='space-y-2'>
+                  {config.UserConfig.Tags.map(tag => (
+                    <label
+                      key={tag.name}
+                      className='flex items-center p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md cursor-pointer transition-colors'
+                    >
+                      <input
+                        type="checkbox"
+                        checked={config.SiteConfig.DefaultUserTags?.includes(tag.name) || false}
+                        onChange={async (e) => {
+                          const isChecked = e.target.checked;
+                          const tagName = tag.name;
+
+                          await withLoading('toggleDefaultTag', async () => {
+                            try {
+                              const currentTags = config.SiteConfig.DefaultUserTags || [];
+                              const newTags = isChecked
+                                ? [...currentTags, tagName]
+                                : currentTags.filter(t => t !== tagName);
+
+                              const response = await fetch('/api/admin/config', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                  ...config,
+                                  SiteConfig: {
+                                    ...config.SiteConfig,
+                                    DefaultUserTags: newTags.length > 0 ? newTags : undefined
+                                  }
+                                })
+                              });
+
+                              if (response.ok) {
+                                await refreshConfig();
+                                showAlert({
+                                  type: 'success',
+                                  title: '设置已更新',
+                                  message: isChecked
+                                    ? `已添加默认分组：${tagName}`
+                                    : `已移除默认分组：${tagName}`,
+                                  timer: 2000
+                                });
+                              } else {
+                                throw new Error('更新失败');
+                              }
+                            } catch (err) {
+                              showAlert({
+                                type: 'error',
+                                title: '更新失败',
+                                message: err instanceof Error ? err.message : '未知错误'
+                              });
+                            }
+                          });
+                        }}
+                        className='h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded'
+                      />
+                      <span className='ml-3 text-sm font-medium text-gray-900 dark:text-gray-100'>
+                        {tag.name}
+                      </span>
+                      <span className='ml-2 text-xs text-gray-500 dark:text-gray-400'>
+                        ({tag.enabledApis.length} 个源
+                        {tag.showAdultContent !== undefined && (tag.showAdultContent ? ', 包含成人内容' : ', 过滤成人内容')})
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              ) : (
+                <div className='text-sm text-gray-500 dark:text-gray-400 italic'>
+                  暂无可用的用户组，请先在下方"用户组管理"中创建用户组
+                </div>
+              )}
+
+              {config.SiteConfig.DefaultUserTags && config.SiteConfig.DefaultUserTags.length > 0 && (
+                <div className='mt-3 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-200 dark:border-blue-800'>
+                  <div className='text-xs text-blue-700 dark:text-blue-300'>
+                    💡 已选择 {config.SiteConfig.DefaultUserTags.length} 个默认分组，新用户将获得这些分组的权限并集
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1450,9 +1562,29 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                         <td className='px-6 py-4 whitespace-nowrap'>
                           <div className='flex items-center space-x-2'>
                             <span className='text-sm text-gray-900 dark:text-gray-100'>
-                              {user.enabledApis && user.enabledApis.length > 0
-                                ? `${user.enabledApis.length} 个源`
-                                : '无限制'}
+                              {(() => {
+                                // 计算用户的有效 API 权限
+                                const userApis = user.enabledApis || [];
+                                const tagApis: string[] = [];
+
+                                // 从用户组获取 API 权限
+                                if (user.tags && user.tags.length > 0) {
+                                  user.tags.forEach(tagName => {
+                                    const tag = config.UserConfig.Tags?.find(t => t.name === tagName);
+                                    if (tag && tag.enabledApis) {
+                                      tagApis.push(...tag.enabledApis);
+                                    }
+                                  });
+                                }
+
+                                // 合并去重
+                                const allApis = [...new Set([...userApis, ...tagApis])];
+
+                                if (allApis.length > 0) {
+                                  return `${allApis.length} 个源`;
+                                }
+                                return '无限制';
+                              })()}
                             </span>
                             {/* 配置采集源权限按钮 */}
                             {(role === 'owner' ||

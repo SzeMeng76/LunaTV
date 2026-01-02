@@ -329,13 +329,61 @@ export class UpstashRedisStorage implements IStorage {
       return null;
     }
 
+    // 安全解析 tags 字段
+    let parsedTags: string[] | undefined;
+    if (userInfo.tags) {
+      try {
+        const tagsStr = ensureString(userInfo.tags);
+        // 如果 tags 已经是数组（某些情况），直接使用
+        if (Array.isArray(userInfo.tags)) {
+          parsedTags = userInfo.tags;
+        } else {
+          // 尝试 JSON 解析
+          const parsed = JSON.parse(tagsStr);
+          parsedTags = Array.isArray(parsed) ? parsed : [parsed];
+        }
+      } catch (e) {
+        // JSON 解析失败，可能是单个字符串值
+        console.warn(`用户 ${userName} tags 解析失败，原始值:`, userInfo.tags);
+        const tagsStr = ensureString(userInfo.tags);
+        // 如果是逗号分隔的字符串
+        if (tagsStr.includes(',')) {
+          parsedTags = tagsStr.split(',').map(t => t.trim());
+        } else {
+          parsedTags = [tagsStr];
+        }
+      }
+    }
+
+    // 安全解析 enabledApis 字段
+    let parsedApis: string[] | undefined;
+    if (userInfo.enabledApis) {
+      try {
+        const apisStr = ensureString(userInfo.enabledApis);
+        if (Array.isArray(userInfo.enabledApis)) {
+          parsedApis = userInfo.enabledApis;
+        } else {
+          const parsed = JSON.parse(apisStr);
+          parsedApis = Array.isArray(parsed) ? parsed : [parsed];
+        }
+      } catch (e) {
+        console.warn(`用户 ${userName} enabledApis 解析失败`);
+        const apisStr = ensureString(userInfo.enabledApis);
+        if (apisStr.includes(',')) {
+          parsedApis = apisStr.split(',').map(t => t.trim());
+        } else {
+          parsedApis = [apisStr];
+        }
+      }
+    }
+
     return {
       username: userName,
       role: (userInfo.role as 'owner' | 'admin' | 'user') || 'user',
       banned: userInfo.banned === 'true',
-      tags: userInfo.tags ? JSON.parse(ensureString(userInfo.tags)) : undefined,
+      tags: parsedTags,
       oidcSub: userInfo.oidcSub ? ensureString(userInfo.oidcSub) : undefined,
-      enabledApis: userInfo.enabledApis ? JSON.parse(ensureString(userInfo.enabledApis)) : undefined,
+      enabledApis: parsedApis,
       createdAt: userInfo.created_at ? parseInt(ensureString(userInfo.created_at), 10) : undefined,
     };
   }

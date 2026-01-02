@@ -364,6 +364,7 @@ export async function configSelfCheck(adminConfig: AdminConfig): Promise<AdminCo
         try {
           // 从数据库V2获取用户信息（OIDC/新版用户）
           const userInfoV2 = await db.getUserInfoV2(username);
+          console.log(`=== configSelfCheck: 用户 ${username} 数据库信息 ===`, userInfoV2);
           if (userInfoV2) {
             createdAt = userInfoV2.createdAt || Date.now();
             oidcSub = userInfoV2.oidcSub;
@@ -371,6 +372,7 @@ export async function configSelfCheck(adminConfig: AdminConfig): Promise<AdminCo
             role = userInfoV2.role || role;
             banned = userInfoV2.banned || false;
             enabledApis = userInfoV2.enabledApis;
+            console.log(`=== configSelfCheck: 用户 ${username} tags ===`, tags);
           }
         } catch (err) {
           console.warn(`获取用户 ${username} 信息失败:`, err);
@@ -388,6 +390,9 @@ export async function configSelfCheck(adminConfig: AdminConfig): Promise<AdminCo
         }
         if (tags && tags.length > 0) {
           newUserConfig.tags = tags;
+          console.log(`=== configSelfCheck: 用户 ${username} 最终配置包含tags ===`, newUserConfig.tags);
+        } else {
+          console.log(`=== configSelfCheck: 用户 ${username} 没有tags (tags=${tags}) ===`);
         }
         if (enabledApis && enabledApis.length > 0) {
           newUserConfig.enabledApis = enabledApis;

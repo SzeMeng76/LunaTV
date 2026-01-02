@@ -1069,6 +1069,13 @@ Based on [MoonTV](https://github.com/MoonTechLab/LunaTV) with extensive customiz
 - [Zwei](https://github.com/bestzwei) — Douban CORS proxy
 - [CMLiussss](https://github.com/cmliu) — Douban CDN service
 
+### Design & Implementation References
+This project references design concepts and implementation approaches from the following excellent open-source projects:
+- **[MoonTVPlus](https://github.com/mtvpls/MoonTVPlus)** — Watch room sync playback, mobile optimization, and other feature implementations
+- **[DecoTV](https://github.com/Decohererk/DecoTV)** — TVBox security strategies, performance optimization, UI design, and other implementations
+
+Thanks to these projects and their authors for their open-source contributions and excellent implementations!
+
 ### Special Thanks
 - All sites providing free video APIs
 - Open source community contributors

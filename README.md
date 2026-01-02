@@ -1056,6 +1056,13 @@ services:
 - [Zwei](https://github.com/bestzwei) — 豆瓣 CORS 代理
 - [CMLiussss](https://github.com/cmliu) — 豆瓣 CDN 服务
 
+### 设计与实现参考
+本项目在开发过程中参考了以下优秀开源项目的设计思路和实现方案：
+- **[MoonTVPlus](https://github.com/mtvpls/MoonTVPlus)** — 观影室同步播放、移动端优化等功能实现参考
+- **[DecoTV](https://github.com/Decohererk/DecoTV)** — TVBox 安全策略、性能优化、UI 设计等实现参考
+
+感谢这些项目及其作者的开源贡献和优秀实现！
+
 ### 特别感谢
 - 所有提供免费影视接口的站点
 - 开源社区的贡献者们
