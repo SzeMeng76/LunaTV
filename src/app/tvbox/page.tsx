@@ -1273,11 +1273,11 @@ export default function TVBoxConfigPage() {
                                     <XCircle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" />
                                   )}
                                   <div className="flex-1 min-w-0">
-                                    <div className="text-xs font-mono text-gray-600 dark:text-gray-300 truncate">
+                                    <div className="text-xs font-mono text-gray-600 dark:text-gray-300 break-words [overflow-wrap:anywhere]">
                                       {test.url.split('/').slice(-3).join('/')}
                                     </div>
                                     {test.error && (
-                                      <div className="text-xs text-red-500 dark:text-red-400 break-words">{test.error}</div>
+                                      <div className="text-xs text-red-500 dark:text-red-400 break-words [overflow-wrap:anywhere]">{test.error}</div>
                                     )}
                                   </div>
                                 </div>
@@ -1445,7 +1445,7 @@ export default function TVBoxConfigPage() {
                                       {source.responseTime}ms
                                     </div>
                                   </div>
-                                  <div className="text-xs font-mono text-gray-600 dark:text-gray-400 break-all">
+                                  <div className="text-xs font-mono text-gray-600 dark:text-gray-400 break-words [overflow-wrap:anywhere]">
                                     {source.url}
                                   </div>
                                   {source.size && (
@@ -1480,11 +1480,11 @@ export default function TVBoxConfigPage() {
                                       <div className="text-sm font-medium text-gray-900 dark:text-white">
                                         {test.name}
                                       </div>
-                                      <div className="text-xs font-mono text-gray-600 dark:text-gray-400 truncate">
+                                      <div className="text-xs font-mono text-gray-600 dark:text-gray-400 break-words [overflow-wrap:anywhere]">
                                         {test.url}
                                       </div>
                                       {test.error && (
-                                        <div className="text-xs text-red-600 dark:text-red-400 mt-1 break-words">{test.error}</div>
+                                        <div className="text-xs text-red-600 dark:text-red-400 mt-1 break-words [overflow-wrap:anywhere]">{test.error}</div>
                                       )}
                                     </div>
                                   </div>
@@ -1623,30 +1623,30 @@ export default function TVBoxConfigPage() {
                         </div>
 
                         {/* 测试统计 */}
-                        <div className="grid grid-cols-4 gap-3">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                           <div className="p-3 bg-linear-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-lg text-center">
-                            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 break-words">
                               {deepDiagnosticResult.summary.totalTested}
                             </div>
-                            <div className="text-xs text-blue-700 dark:text-blue-300 mt-1">总测试源</div>
+                            <div className="text-xs text-blue-700 dark:text-blue-300 mt-1 break-words">总测试源</div>
                           </div>
                           <div className="p-3 bg-linear-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-lg text-center">
-                            <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                            <div className="text-2xl font-bold text-green-600 dark:text-green-400 break-words">
                               {deepDiagnosticResult.summary.successCount}
                             </div>
-                            <div className="text-xs text-green-700 dark:text-green-300 mt-1">可用源</div>
+                            <div className="text-xs text-green-700 dark:text-green-300 mt-1 break-words">可用源</div>
                           </div>
                           <div className="p-3 bg-linear-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 rounded-lg text-center">
-                            <div className="text-2xl font-bold text-red-600 dark:text-red-400">
+                            <div className="text-2xl font-bold text-red-600 dark:text-red-400 break-words">
                               {deepDiagnosticResult.summary.failedCount}
                             </div>
-                            <div className="text-xs text-red-700 dark:text-red-300 mt-1">失败源</div>
+                            <div className="text-xs text-red-700 dark:text-red-300 mt-1 break-words">失败源</div>
                           </div>
                           <div className="p-3 bg-linear-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-lg text-center">
-                            <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                            <div className="text-xl sm:text-2xl font-bold text-purple-600 dark:text-purple-400 break-words">
                               {Math.round(deepDiagnosticResult.summary.averageResponseTime)}ms
                             </div>
-                            <div className="text-xs text-purple-700 dark:text-purple-300 mt-1">平均响应</div>
+                            <div className="text-xs text-purple-700 dark:text-purple-300 mt-1 break-words">平均响应</div>
                           </div>
                         </div>
 
@@ -1655,7 +1655,7 @@ export default function TVBoxConfigPage() {
                           <h3 className="font-semibold text-yellow-900 dark:text-yellow-300 mb-2">💡 诊断建议</h3>
                           <ul className="space-y-1">
                             {deepDiagnosticResult.recommendations.map((rec: string, idx: number) => (
-                              <li key={idx} className="text-sm text-yellow-700 dark:text-yellow-300">
+                              <li key={idx} className="text-sm text-yellow-700 dark:text-yellow-300 break-words [overflow-wrap:anywhere]">
                                 {rec}
                               </li>
                             ))}
@@ -1684,7 +1684,7 @@ export default function TVBoxConfigPage() {
                                     ) : (
                                       <XCircle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" />
                                     )}
-                                    <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                    <span className="text-sm font-medium text-gray-900 dark:text-white break-words">
                                       {test.name}
                                     </span>
                                   </div>
@@ -1707,7 +1707,7 @@ export default function TVBoxConfigPage() {
                                   </span>
                                 </div>
 
-                                <div className="text-xs font-mono text-gray-600 dark:text-gray-400 mb-2 break-all">
+                                <div className="text-xs font-mono text-gray-600 dark:text-gray-400 mb-2 break-words [overflow-wrap:anywhere]">
                                   {test.url}
                                 </div>
 
@@ -1749,9 +1749,9 @@ export default function TVBoxConfigPage() {
                                     </div>
                                   )}
                                   {test.md5 && (
-                                    <div className="col-span-2">
+                                    <div className="col-span-2 sm:col-span-4">
                                       <span className="text-gray-500 dark:text-gray-400">MD5:</span>
-                                      <span className="ml-1 font-mono text-gray-900 dark:text-white">
+                                      <span className="ml-1 font-mono text-gray-900 dark:text-white break-words [overflow-wrap:anywhere]">
                                         {test.md5}
                                       </span>
                                     </div>
@@ -1759,7 +1759,7 @@ export default function TVBoxConfigPage() {
                                 </div>
 
                                 {test.error && (
-                                  <div className="mt-2 p-2 bg-red-100 dark:bg-red-900/30 rounded text-xs text-red-700 dark:text-red-300">
+                                  <div className="mt-2 p-2 bg-red-100 dark:bg-red-900/30 rounded text-xs text-red-700 dark:text-red-300 break-words [overflow-wrap:anywhere]">
                                     <strong>错误:</strong> {test.error}
                                   </div>
                                 )}
