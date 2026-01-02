@@ -422,6 +422,9 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
   const [showDeleteUserModal, setShowDeleteUserModal] = useState(false);
   const [deletingUser, setDeletingUser] = useState<string | null>(null);
 
+  // 用户组筛选状态
+  const [filterUserGroup, setFilterUserGroup] = useState<string>('all');
+
   // 🔑 TVBox Token 管理状态
   const [showTVBoxTokenModal, setShowTVBoxTokenModal] = useState(false);
   const [tvboxTokenUser, setTVBoxTokenUser] = useState<{
@@ -1244,9 +1247,25 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
       {/* 用户列表 */}
       <div>
         <div className='flex items-center justify-between mb-3'>
-          <h4 className='text-sm font-medium text-gray-700 dark:text-gray-300'>
-            用户列表
-          </h4>
+          <div className='flex items-center space-x-3'>
+            <h4 className='text-sm font-medium text-gray-700 dark:text-gray-300'>
+              用户列表
+            </h4>
+            {/* 用户组筛选下拉框 */}
+            <select
+              value={filterUserGroup}
+              onChange={(e) => setFilterUserGroup(e.target.value)}
+              className='px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+            >
+              <option value='all'>全部用户</option>
+              <option value='none'>无用户组</option>
+              {userGroups.map((group) => (
+                <option key={group.name} value={group.name}>
+                  {group.name}
+                </option>
+              ))}
+            </select>
+          </div>
           <div className='flex items-center space-x-2'>
             {/* 批量操作按钮 */}
             {selectedUsers.size > 0 && (
@@ -1456,16 +1475,27 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
             </thead>
             {/* 按规则排序用户：自己 -> 站长(若非自己) -> 管理员 -> 其他 */}
             {(() => {
-              const sortedUsers = [...config.UserConfig.Users].sort((a, b) => {
-                type UserInfo = (typeof config.UserConfig.Users)[number];
-                const priority = (u: UserInfo) => {
-                  if (u.username === currentUsername) return 0;
-                  if (u.role === 'owner') return 1;
-                  if (u.role === 'admin') return 2;
-                  return 3;
-                };
-                return priority(a) - priority(b);
-              });
+              const sortedUsers = [...config.UserConfig.Users]
+                .sort((a, b) => {
+                  type UserInfo = (typeof config.UserConfig.Users)[number];
+                  const priority = (u: UserInfo) => {
+                    if (u.username === currentUsername) return 0;
+                    if (u.role === 'owner') return 1;
+                    if (u.role === 'admin') return 2;
+                    return 3;
+                  };
+                  return priority(a) - priority(b);
+                })
+                .filter((user) => {
+                  // 根据选择的用户组筛选用户
+                  if (filterUserGroup === 'all') {
+                    return true; // 显示所有用户
+                  } else if (filterUserGroup === 'none') {
+                    return !user.tags || user.tags.length === 0; // 显示无用户组的用户
+                  } else {
+                    return user.tags && user.tags.includes(filterUserGroup); // 显示包含指定用户组的用户
+                  }
+                });
               return (
                 <tbody className='divide-y divide-gray-200 dark:divide-gray-700'>
                   {sortedUsers.map((user) => {
