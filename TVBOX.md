@@ -205,6 +205,58 @@ https://your-domain.com/api/tvbox?strict=1
 - **多设备**：不同设备使用不同 URL，灵活控制
 - **个人使用**：添加 `?adult=1` 或使用 `/adult/` 路径查看完整内容
 
+### ☁️ Cloudflare Worker 代理加速
+
+LunaTV 支持通过 Cloudflare Worker 为视频源 API 提供全球 CDN 加速。
+
+**功能特点：**
+- ✅ **全球加速** - 利用 Cloudflare 全球 CDN 节点加速源站访问
+- ✅ **智能替换** - 自动检测并替换源中已有的旧代理地址
+- ✅ **统一管理** - 管理面板一键启用，所有源自动应用
+- ✅ **支持自定义** - 可部署自己的 Worker 服务
+
+**配置方法：**
+
+1. **管理员后台配置**
+   - 登录 LunaTV 管理后台
+   - 进入 **TVBox 安全配置** 页面
+   - 找到 **Cloudflare Worker 代理** 区域
+   - 启用代理并配置 Worker 地址（默认：`https://corsapi.smone.workers.dev`）
+   - 保存配置
+
+2. **自定义部署（可选）**
+
+   如果想部署自己的 Worker 服务，请参考：
+   - 项目地址：[CORSAPI](https://github.com/SzeMeng76/CORSAPI)
+   - 部署到 Cloudflare Workers
+   - 在管理面板填入你的 Worker 地址
+
+**工作原理：**
+
+1. 原始源地址：`https://lovedan.net/api.php/provide/vod`
+2. 启用代理后自动转换为：`https://corsapi.smone.workers.dev/p/lovedan?url=https://lovedan.net/api.php/provide/vod`
+3. TVBox 调用时添加参数：`...?url=...&ac=list&pg=1`
+4. Worker 自动转发所有参数到真实源：`https://lovedan.net/api.php/provide/vod?ac=list&pg=1`
+
+**智能处理：**
+- 🔄 **自动去重**：如果源地址已包含代理（如 `?url=`），自动提取真实地址并替换为新代理
+- 🎯 **唯一路径**：为每个源生成唯一的 `/p/{sourceId}` 路径，避免 TVBox 将所有源识别为同一个
+- 📦 **参数转发**：完整转发 TVBox 的所有 API 参数（`ac`, `ids`, `pg` 等）
+
+**示例：**
+
+假设你有一个源已经配置了旧代理：
+```
+https://old-proxy.com/?url=https://lovedan.net/api.php/provide/vod
+```
+
+启用新代理后，系统会自动：
+1. 检测到 `?url=` 参数
+2. 提取真实地址：`https://lovedan.net/api.php/provide/vod`
+3. 替换为新代理：`https://corsapi.smone.workers.dev/p/lovedan?url=https://lovedan.net/api.php/provide/vod`
+
+这样就实现了代理的统一管理和升级。
+
 ### 🔄 Spider Jar 智能管理
 
 LunaTV 自动管理 spider jar 文件，确保最佳可用性：
@@ -526,6 +578,17 @@ GET /api/tvbox/health?url=JAR_URL
 本功能遵循项目主许可证，仅供学习和个人使用。请遵守相关法律法规，不要用于商业用途。
 
 ## 🆕 更新日志
+
+### v3.1 - 2025-01-04
+
+- ✨ **Cloudflare Worker 代理加速** - 为视频源 API 提供全球 CDN 加速
+  - 管理面板一键启用/配置代理地址
+  - 自动检测并替换源中已有的旧代理
+  - 为每个源生成唯一路径（避免 TVBox 识别冲突）
+  - 完整转发 TVBox API 参数（ac, ids, pg 等）
+  - 支持自定义部署 Worker 服务
+- 🔧 智能代理去重和替换机制
+- 📝 完善 Worker 代理配置文档
 
 ### v3.0 - 2025-11-01
 

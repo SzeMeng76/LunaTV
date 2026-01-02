@@ -853,8 +853,8 @@ export default function TVBoxConfigPage() {
         <div className="mb-6 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700">
           {/* 标签页头部 */}
           <div className="border-b border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between p-4 pb-0">
-              <div className="flex items-center gap-2 mb-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 pb-0">
+              <div className="flex items-center gap-2">
                 <Activity className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
                   🔍 配置诊断
@@ -863,17 +863,17 @@ export default function TVBoxConfigPage() {
               <button
                 onClick={handleRefreshJar}
                 disabled={refreshingJar}
-                className="px-4 py-2 mb-4 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors text-sm"
+                className="w-full sm:w-auto px-4 py-2 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors text-sm"
               >
                 {refreshingJar ? '刷新中...' : '🔄 刷新 JAR'}
               </button>
             </div>
 
             {/* 标签导航 */}
-            <div className="flex gap-2 px-4">
+            <div className="flex gap-2 px-4 overflow-x-auto scrollbar-hide">
               <button
                 onClick={() => setActiveTab('basic')}
-                className={`px-4 py-2 font-medium transition-colors border-b-2 ${
+                className={`flex-shrink-0 px-4 py-2 font-medium transition-colors border-b-2 whitespace-nowrap ${
                   activeTab === 'basic'
                     ? 'text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-400'
                     : 'text-gray-500 dark:text-gray-400 border-transparent hover:text-gray-700 dark:hover:text-gray-300'
@@ -883,7 +883,7 @@ export default function TVBoxConfigPage() {
               </button>
               <button
                 onClick={() => setActiveTab('smart-health')}
-                className={`px-4 py-2 font-medium transition-colors border-b-2 flex items-center gap-2 ${
+                className={`flex-shrink-0 px-4 py-2 font-medium transition-colors border-b-2 flex items-center gap-2 whitespace-nowrap ${
                   activeTab === 'smart-health'
                     ? 'text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-400'
                     : 'text-gray-500 dark:text-gray-400 border-transparent hover:text-gray-700 dark:hover:text-gray-300'
@@ -894,7 +894,7 @@ export default function TVBoxConfigPage() {
               </button>
               <button
                 onClick={() => setActiveTab('jar-fix')}
-                className={`px-4 py-2 font-medium transition-colors border-b-2 flex items-center gap-2 ${
+                className={`flex-shrink-0 px-4 py-2 font-medium transition-colors border-b-2 flex items-center gap-2 whitespace-nowrap ${
                   activeTab === 'jar-fix'
                     ? 'text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-400'
                     : 'text-gray-500 dark:text-gray-400 border-transparent hover:text-gray-700 dark:hover:text-gray-300'
@@ -905,7 +905,7 @@ export default function TVBoxConfigPage() {
               </button>
               <button
                 onClick={() => setActiveTab('deep-diagnostic')}
-                className={`px-4 py-2 font-medium transition-colors border-b-2 flex items-center gap-2 ${
+                className={`flex-shrink-0 px-4 py-2 font-medium transition-colors border-b-2 flex items-center gap-2 whitespace-nowrap ${
                   activeTab === 'deep-diagnostic'
                     ? 'text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-400'
                     : 'text-gray-500 dark:text-gray-400 border-transparent hover:text-gray-700 dark:hover:text-gray-300'
@@ -922,14 +922,14 @@ export default function TVBoxConfigPage() {
             {/* 基础诊断标签页 */}
             {activeTab === 'basic' && (
               <div>
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     检查配置基本信息和 Spider JAR 状态
                   </p>
                   <button
                     onClick={handleDiagnose}
                     disabled={diagnosing}
-                    className="px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors"
+                    className="w-full sm:w-auto px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors flex-shrink-0"
                   >
                     {diagnosing ? '诊断中...' : '开始诊断'}
                   </button>
@@ -953,7 +953,7 @@ export default function TVBoxConfigPage() {
                   {/* 基本信息 */}
                   <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-700">
                     <h3 className="font-semibold text-green-900 dark:text-green-300 mb-3">✓ 基本信息</h3>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
                       <div className="text-gray-600 dark:text-gray-400">状态码:</div>
                       <div className="text-gray-900 dark:text-gray-100 font-medium">{diagnosisResult.status || 'N/A'}</div>
 
@@ -1023,7 +1023,7 @@ export default function TVBoxConfigPage() {
                       <Shield className="w-4 h-4" />
                       Spider JAR 状态
                     </h3>
-                    <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                       <div>
                         <div className="text-blue-600 dark:text-blue-400 text-xs mb-1">来源</div>
                         <div className="text-gray-900 dark:text-gray-100 font-mono text-xs break-all">
@@ -1090,7 +1090,7 @@ export default function TVBoxConfigPage() {
                   {(diagnosisResult.sitesCount !== undefined || diagnosisResult.livesCount !== undefined) && (
                     <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
                       <h3 className="font-semibold text-gray-900 dark:text-white mb-2">配置统计:</h3>
-                      <div className="grid grid-cols-2 gap-2 text-sm text-gray-600 dark:text-gray-300">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-600 dark:text-gray-300">
                         {diagnosisResult.sitesCount !== undefined && (
                           <>
                             <div>影视源:</div>
@@ -1172,14 +1172,14 @@ export default function TVBoxConfigPage() {
             {/* 智能健康检查标签页 */}
             {activeTab === 'smart-health' && (
               <div>
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     全面检测网络环境、JAR可达性和智能优化建议
                   </p>
                   <button
                     onClick={handleSmartHealthCheck}
                     disabled={smartHealthLoading}
-                    className="px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors"
+                    className="w-full sm:w-auto px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors flex-shrink-0"
                   >
                     {smartHealthLoading ? '检查中...' : '开始检查'}
                   </button>
@@ -1199,7 +1199,7 @@ export default function TVBoxConfigPage() {
                             <Globe className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                             <h3 className="font-semibold text-blue-900 dark:text-blue-300">网络环境</h3>
                           </div>
-                          <div className="grid grid-cols-2 gap-3 text-sm">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                             <div>
                               <div className="text-blue-600 dark:text-blue-400 text-xs mb-1">环境类型</div>
                               <div className="text-gray-900 dark:text-gray-100 font-medium">
@@ -1265,31 +1265,31 @@ export default function TVBoxConfigPage() {
                           <h3 className="font-semibold text-gray-900 dark:text-white mb-3">JAR 源可达性测试</h3>
                           <div className="space-y-2">
                             {smartHealthResult.reachability.tests.map((test, idx) => (
-                              <div key={idx} className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-600">
-                                <div className="flex items-center gap-2 flex-1">
+                              <div key={idx} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-2 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-600">
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
                                   {test.success ? (
                                     <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400 shrink-0" />
                                   ) : (
                                     <XCircle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" />
                                   )}
                                   <div className="flex-1 min-w-0">
-                                    <div className="text-xs font-mono text-gray-600 dark:text-gray-300 truncate">
+                                    <div className="text-xs font-mono text-gray-600 dark:text-gray-300 break-words [overflow-wrap:anywhere]">
                                       {test.url.split('/').slice(-3).join('/')}
                                     </div>
                                     {test.error && (
-                                      <div className="text-xs text-red-500 dark:text-red-400">{test.error}</div>
+                                      <div className="text-xs text-red-500 dark:text-red-400 break-words [overflow-wrap:anywhere]">{test.error}</div>
                                     )}
                                   </div>
                                 </div>
-                                <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+                                <div className="flex items-center gap-2 sm:gap-3 text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">
                                   {test.success && (
                                     <>
-                                      <div className="flex items-center gap-1">
+                                      <div className="flex items-center gap-1 whitespace-nowrap">
                                         <Clock className="w-3 h-3" />
                                         {test.responseTime}ms
                                       </div>
                                       {test.size && (
-                                        <div>{Math.round(test.size / 1024)}KB</div>
+                                        <div className="whitespace-nowrap">{Math.round(test.size / 1024)}KB</div>
                                       )}
                                     </>
                                   )}
@@ -1315,7 +1315,7 @@ export default function TVBoxConfigPage() {
                         {/* Spider状态概览 */}
                         <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
                           <h3 className="font-semibold text-gray-900 dark:text-white mb-2">当前 Spider JAR</h3>
-                          <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
                             <div className="text-gray-600 dark:text-gray-400">来源:</div>
                             <div className="text-gray-900 dark:text-gray-100 font-mono text-xs break-all">
                               {smartHealthResult.spider.current.source}
@@ -1350,14 +1350,14 @@ export default function TVBoxConfigPage() {
             {/* JAR源修复标签页 */}
             {activeTab === 'jar-fix' && (
               <div>
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     测试所有 JAR 源并提供修复建议
                   </p>
                   <button
                     onClick={handleJarFix}
                     disabled={jarFixLoading}
-                    className="px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors"
+                    className="w-full sm:w-auto px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors flex-shrink-0"
                   >
                     {jarFixLoading ? '诊断中...' : '开始诊断'}
                   </button>
@@ -1408,7 +1408,7 @@ export default function TVBoxConfigPage() {
                             ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-700'
                             : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700'
                         }`}>
-                          <div className="flex items-center justify-between">
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                             <div>
                               <div className="font-semibold text-gray-900 dark:text-white">网络质量</div>
                               <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
@@ -1438,14 +1438,14 @@ export default function TVBoxConfigPage() {
                             <div className="space-y-2">
                               {jarFixResult.recommended_sources.map((source, idx) => (
                                 <div key={idx} className="p-3 bg-white dark:bg-gray-800 rounded border border-green-200 dark:border-green-700">
-                                  <div className="flex items-center justify-between mb-1">
+                                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-1">
                                     <div className="font-medium text-green-700 dark:text-green-300">#{idx + 1} {source.name}</div>
-                                    <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2">
+                                    <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 whitespace-nowrap flex-shrink-0">
                                       <Clock className="w-3 h-3" />
                                       {source.responseTime}ms
                                     </div>
                                   </div>
-                                  <div className="text-xs font-mono text-gray-600 dark:text-gray-400 break-all">
+                                  <div className="text-xs font-mono text-gray-600 dark:text-gray-400 break-words [overflow-wrap:anywhere]">
                                     {source.url}
                                   </div>
                                   {source.size && (
@@ -1469,8 +1469,8 @@ export default function TVBoxConfigPage() {
                                   ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700'
                                   : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700'
                               }`}>
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-2 flex-1">
+                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                  <div className="flex items-center gap-2 flex-1 min-w-0">
                                     {test.success ? (
                                       <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400 shrink-0" />
                                     ) : (
@@ -1480,16 +1480,16 @@ export default function TVBoxConfigPage() {
                                       <div className="text-sm font-medium text-gray-900 dark:text-white">
                                         {test.name}
                                       </div>
-                                      <div className="text-xs font-mono text-gray-600 dark:text-gray-400 truncate">
+                                      <div className="text-xs font-mono text-gray-600 dark:text-gray-400 break-words [overflow-wrap:anywhere]">
                                         {test.url}
                                       </div>
                                       {test.error && (
-                                        <div className="text-xs text-red-600 dark:text-red-400 mt-1">{test.error}</div>
+                                        <div className="text-xs text-red-600 dark:text-red-400 mt-1 break-words [overflow-wrap:anywhere]">{test.error}</div>
                                       )}
                                     </div>
                                   </div>
                                   {test.success && (
-                                    <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2">
+                                    <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 whitespace-nowrap flex-shrink-0">
                                       <Clock className="w-3 h-3" />
                                       {test.responseTime}ms
                                     </div>
@@ -1579,14 +1579,14 @@ export default function TVBoxConfigPage() {
             {/* 深度诊断标签页 */}
             {activeTab === 'deep-diagnostic' && (
               <div>
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     深度测试 JAR 文件源的可用性和性能，包含文件头验证和 MD5 校验
                   </p>
                   <button
                     onClick={handleDeepDiagnostic}
                     disabled={deepDiagnosticLoading}
-                    className="px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors"
+                    className="w-full sm:w-auto px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors flex-shrink-0"
                   >
                     {deepDiagnosticLoading ? '诊断中...' : '开始诊断'}
                   </button>
@@ -1601,7 +1601,7 @@ export default function TVBoxConfigPage() {
                     ) : (
                       <>
                         {/* 环境信息 */}
-                        <div className="grid grid-cols-3 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                           <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
                             <div className="text-xs text-blue-600 dark:text-blue-400 mb-1">网络环境</div>
                             <div className="text-sm font-medium text-gray-900 dark:text-white">
@@ -1623,30 +1623,30 @@ export default function TVBoxConfigPage() {
                         </div>
 
                         {/* 测试统计 */}
-                        <div className="grid grid-cols-4 gap-3">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                           <div className="p-3 bg-linear-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-lg text-center">
-                            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 break-words">
                               {deepDiagnosticResult.summary.totalTested}
                             </div>
-                            <div className="text-xs text-blue-700 dark:text-blue-300 mt-1">总测试源</div>
+                            <div className="text-xs text-blue-700 dark:text-blue-300 mt-1 break-words">总测试源</div>
                           </div>
                           <div className="p-3 bg-linear-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-lg text-center">
-                            <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                            <div className="text-2xl font-bold text-green-600 dark:text-green-400 break-words">
                               {deepDiagnosticResult.summary.successCount}
                             </div>
-                            <div className="text-xs text-green-700 dark:text-green-300 mt-1">可用源</div>
+                            <div className="text-xs text-green-700 dark:text-green-300 mt-1 break-words">可用源</div>
                           </div>
                           <div className="p-3 bg-linear-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 rounded-lg text-center">
-                            <div className="text-2xl font-bold text-red-600 dark:text-red-400">
+                            <div className="text-2xl font-bold text-red-600 dark:text-red-400 break-words">
                               {deepDiagnosticResult.summary.failedCount}
                             </div>
-                            <div className="text-xs text-red-700 dark:text-red-300 mt-1">失败源</div>
+                            <div className="text-xs text-red-700 dark:text-red-300 mt-1 break-words">失败源</div>
                           </div>
                           <div className="p-3 bg-linear-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-lg text-center">
-                            <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                            <div className="text-xl sm:text-2xl font-bold text-purple-600 dark:text-purple-400 break-words">
                               {Math.round(deepDiagnosticResult.summary.averageResponseTime)}ms
                             </div>
-                            <div className="text-xs text-purple-700 dark:text-purple-300 mt-1">平均响应</div>
+                            <div className="text-xs text-purple-700 dark:text-purple-300 mt-1 break-words">平均响应</div>
                           </div>
                         </div>
 
@@ -1655,7 +1655,7 @@ export default function TVBoxConfigPage() {
                           <h3 className="font-semibold text-yellow-900 dark:text-yellow-300 mb-2">💡 诊断建议</h3>
                           <ul className="space-y-1">
                             {deepDiagnosticResult.recommendations.map((rec: string, idx: number) => (
-                              <li key={idx} className="text-sm text-yellow-700 dark:text-yellow-300">
+                              <li key={idx} className="text-sm text-yellow-700 dark:text-yellow-300 break-words [overflow-wrap:anywhere]">
                                 {rec}
                               </li>
                             ))}
@@ -1677,19 +1677,19 @@ export default function TVBoxConfigPage() {
                                     : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700'
                                 }`}
                               >
-                                <div className="flex items-center justify-between mb-2">
-                                  <div className="flex items-center gap-2">
+                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
+                                  <div className="flex items-center gap-2 min-w-0">
                                     {test.status === 'success' ? (
-                                      <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400" />
+                                      <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400 shrink-0" />
                                     ) : (
-                                      <XCircle className="w-4 h-4 text-red-600 dark:text-red-400" />
+                                      <XCircle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" />
                                     )}
-                                    <span className="text-sm font-medium text-gray-900 dark:text-white">
+                                    <span className="text-sm font-medium text-gray-900 dark:text-white break-words">
                                       {test.name}
                                     </span>
                                   </div>
                                   <span
-                                    className={`text-xs px-2 py-1 rounded ${
+                                    className={`text-xs px-2 py-1 rounded whitespace-nowrap flex-shrink-0 ${
                                       test.status === 'success'
                                         ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
                                         : test.status === 'timeout'
@@ -1707,7 +1707,7 @@ export default function TVBoxConfigPage() {
                                   </span>
                                 </div>
 
-                                <div className="text-xs font-mono text-gray-600 dark:text-gray-400 mb-2 break-all">
+                                <div className="text-xs font-mono text-gray-600 dark:text-gray-400 mb-2 break-words [overflow-wrap:anywhere]">
                                   {test.url}
                                 </div>
 
@@ -1749,9 +1749,9 @@ export default function TVBoxConfigPage() {
                                     </div>
                                   )}
                                   {test.md5 && (
-                                    <div className="col-span-2">
+                                    <div className="col-span-2 sm:col-span-4">
                                       <span className="text-gray-500 dark:text-gray-400">MD5:</span>
-                                      <span className="ml-1 font-mono text-gray-900 dark:text-white">
+                                      <span className="ml-1 font-mono text-gray-900 dark:text-white break-words [overflow-wrap:anywhere]">
                                         {test.md5}
                                       </span>
                                     </div>
@@ -1759,7 +1759,7 @@ export default function TVBoxConfigPage() {
                                 </div>
 
                                 {test.error && (
-                                  <div className="mt-2 p-2 bg-red-100 dark:bg-red-900/30 rounded text-xs text-red-700 dark:text-red-300">
+                                  <div className="mt-2 p-2 bg-red-100 dark:bg-red-900/30 rounded text-xs text-red-700 dark:text-red-300 break-words [overflow-wrap:anywhere]">
                                     <strong>错误:</strong> {test.error}
                                   </div>
                                 )}

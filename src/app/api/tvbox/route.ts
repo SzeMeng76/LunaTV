@@ -168,6 +168,7 @@ export async function GET(request: NextRequest) {
     // 读取当前配置
     const config = await getConfig();
     const securityConfig = config.TVBoxSecurityConfig;
+    const proxyConfig = config.TVBoxProxyConfig; // 🔑 读取代理配置
 
     // 🔑 新增：基于用户 Token 的身份识别
     let currentUser: { username: string; tvboxEnabledSources?: string[]; showAdultContent?: boolean } | null = null;
@@ -499,11 +500,50 @@ export async function GET(request: NextRequest) {
           return ["电影", "电视剧", "综艺", "动漫", "纪录片", "短剧"];
         });
 
+        // 🔑 Cloudflare Worker 代理：为每个源生成唯一的代理路径
+        let finalApi = source.api;
+        if (proxyConfig?.enabled && proxyConfig.proxyUrl) {
+          // 🔍 检查并提取真实 API 地址（如果已有代理，先去除旧代理）
+          let realApiUrl = source.api;
+          const urlMatch = source.api.match(/[?&]url=([^&]+)/);
+          if (urlMatch) {
+            // 已有代理前缀，提取真实 URL
+            realApiUrl = decodeURIComponent(urlMatch[1]);
+            console.log(`[TVBox Proxy] ${source.name}: 检测到旧代理，替换为新代理`);
+          }
+
+          // 提取源的唯一标识符（从真实域名中提取）
+          const extractSourceId = (apiUrl: string): string => {
+            try {
+              const url = new URL(apiUrl);
+              const hostname = url.hostname;
+              const parts = hostname.split('.');
+
+              // 如果是 caiji.xxx.com 或 api.xxx.com 格式，取倒数第二部分
+              if (parts.length >= 3 && (parts[0] === 'caiji' || parts[0] === 'api' || parts[0] === 'cj' || parts[0] === 'www')) {
+                return parts[parts.length - 2].toLowerCase().replace(/[^a-z0-9]/g, '');
+              }
+
+              // 否则取第一部分（去掉 zyapi/zy 等后缀）
+              let name = parts[0].toLowerCase();
+              name = name.replace(/zyapi$/, '').replace(/zy$/, '').replace(/api$/, '');
+              return name.replace(/[^a-z0-9]/g, '') || 'source';
+            } catch {
+              return source.key || source.name.replace(/[^a-z0-9]/g, '');
+            }
+          };
+
+          const sourceId = extractSourceId(realApiUrl);
+          const proxyBaseUrl = proxyConfig.proxyUrl.replace(/\/$/, ''); // 去掉结尾的斜杠
+          finalApi = `${proxyBaseUrl}/p/${sourceId}?url=${encodeURIComponent(realApiUrl)}`;
+          console.log(`[TVBox Proxy] ${source.name}: ✓ 已应用代理`);
+        }
+
         return {
           key: source.key || source.name,
           name: source.name,
           type: type, // 使用智能判断的type
-          api: source.api,
+          api: finalApi, // 🔑 使用代理后的 API 地址（如果启用）
           searchable: 1, // 可搜索
           quickSearch: 1, // 支持快速搜索
           filterable: 1, // 支持分类筛选

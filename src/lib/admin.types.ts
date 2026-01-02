@@ -109,6 +109,14 @@ export interface AdminConfig {
     enableRateLimit: boolean;            // 是否启用频率限制
     rateLimit: number;                   // 每分钟允许的请求次数
   };
+  TVBoxProxyConfig?: {
+    enabled: boolean;                    // 是否为TVBox启用Cloudflare Worker代理
+    proxyUrl: string;                    // Cloudflare Worker代理地址（例如：https://corsapi.smone.workers.dev）
+  };
+  VideoProxyConfig?: {
+    enabled: boolean;                    // 是否为普通视频源启用Cloudflare Worker代理
+    proxyUrl: string;                    // Cloudflare Worker代理地址（例如：https://corsapi.smone.workers.dev）
+  };
   TelegramAuthConfig?: {
     enabled: boolean;                    // 是否启用Telegram登录
     botToken: string;                    // Telegram Bot Token
