@@ -688,7 +688,7 @@ function HomeClient() {
         {/* 欢迎横幅已被删除 */}
         
         {/* 顶部 Tab 切换 - AI 按钮已移至右上角导航栏 */}
-        <div className='mb-8 flex items-center justify-center'>
+        <div className='mb-8 -mt-6 md:mt-0 flex items-center justify-center'>
           <CapsuleSwitch
             options={[
               { label: '首页', value: 'home' },
