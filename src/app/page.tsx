@@ -684,7 +684,7 @@ function HomeClient() {
       {/* Telegram 新用户欢迎弹窗 */}
       <TelegramWelcomeModal />
 
-      <div className='overflow-visible'>
+      <div className='overflow-visible -mt-8'>
         {/* 欢迎横幅已被删除 */}
         
         {/* 顶部 Tab 切换 - AI 按钮已移至右上角导航栏 */}
