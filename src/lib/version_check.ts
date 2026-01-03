@@ -16,25 +16,145 @@ const VERSION_CHECK_URLS = [
   'https://raw.githubusercontent.com/SzeMeng76/LunaTV/refs/heads/main/VERSION.txt',
 ];
 
+// ========== 缓存机制 ==========
+
+// 缓存配置
+const CACHE_TTL = 5 * 60 * 1000; // 5分钟缓存时间
+const SESSION_STORAGE_KEY = 'lunatv_version_check_cache';
+
+// 内存缓存
+interface CacheEntry {
+  status: UpdateStatus;
+  timestamp: number;
+  remoteVersion?: string;
+}
+
+let memoryCache: CacheEntry | null = null;
+let pendingRequest: Promise<UpdateStatus> | null = null;
+
 /**
- * 检查是否有新版本可用
+ * 从 sessionStorage 读取缓存
+ */
+function getCacheFromStorage(): CacheEntry | null {
+  if (typeof window === 'undefined' || !window.sessionStorage) {
+    return null;
+  }
+
+  try {
+    const cached = sessionStorage.getItem(SESSION_STORAGE_KEY);
+    if (!cached) return null;
+
+    const entry: CacheEntry = JSON.parse(cached);
+    const now = Date.now();
+
+    // 检查缓存是否过期
+    if (now - entry.timestamp > CACHE_TTL) {
+      sessionStorage.removeItem(SESSION_STORAGE_KEY);
+      return null;
+    }
+
+    return entry;
+  } catch (error) {
+    console.warn('读取版本检查缓存失败:', error);
+    return null;
+  }
+}
+
+/**
+ * 保存缓存到 sessionStorage
+ */
+function saveCacheToStorage(entry: CacheEntry): void {
+  if (typeof window === 'undefined' || !window.sessionStorage) {
+    return;
+  }
+
+  try {
+    sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(entry));
+  } catch (error) {
+    console.warn('保存版本检查缓存失败:', error);
+  }
+}
+
+/**
+ * 检查是否有新版本可用（带缓存和去重）
  * @returns Promise<UpdateStatus> - 返回版本检查状态
  */
 export async function checkForUpdates(): Promise<UpdateStatus> {
+  const now = Date.now();
+
+  // 1. 检查内存缓存
+  if (memoryCache && now - memoryCache.timestamp < CACHE_TTL) {
+    console.log('使用内存缓存的版本检查结果');
+    return memoryCache.status;
+  }
+
+  // 2. 检查 sessionStorage 缓存
+  const storageCache = getCacheFromStorage();
+  if (storageCache) {
+    console.log('使用 sessionStorage 缓存的版本检查结果');
+    memoryCache = storageCache; // 同步到内存缓存
+    return storageCache.status;
+  }
+
+  // 3. 检查是否有正在进行的请求（去重）
+  if (pendingRequest) {
+    console.log('复用正在进行的版本检查请求');
+    return pendingRequest;
+  }
+
+  // 4. 发起新的版本检查请求
+  console.log('发起新的版本检查请求');
+  pendingRequest = performVersionCheck();
+
+  try {
+    const status = await pendingRequest;
+    return status;
+  } finally {
+    // 请求完成后清除 pending 状态
+    pendingRequest = null;
+  }
+}
+
+/**
+ * 执行实际的版本检查（内部函数）
+ */
+async function performVersionCheck(): Promise<UpdateStatus> {
   try {
     // 尝试从主要URL获取版本信息
     const primaryVersion = await fetchVersionFromUrl(VERSION_CHECK_URLS[0]);
     if (primaryVersion) {
-      return compareVersions(primaryVersion);
+      const status = compareVersions(primaryVersion);
+
+      // 保存到缓存
+      const cacheEntry: CacheEntry = {
+        status,
+        timestamp: Date.now(),
+        remoteVersion: primaryVersion,
+      };
+      memoryCache = cacheEntry;
+      saveCacheToStorage(cacheEntry);
+
+      return status;
     }
 
     // 如果主要URL失败，尝试备用URL
     const backupVersion = await fetchVersionFromUrl(VERSION_CHECK_URLS[1]);
     if (backupVersion) {
-      return compareVersions(backupVersion);
+      const status = compareVersions(backupVersion);
+
+      // 保存到缓存
+      const cacheEntry: CacheEntry = {
+        status,
+        timestamp: Date.now(),
+        remoteVersion: backupVersion,
+      };
+      memoryCache = cacheEntry;
+      saveCacheToStorage(cacheEntry);
+
+      return status;
     }
 
-    // 如果两个URL都失败，返回获取失败状态
+    // 如果两个URL都失败，返回获取失败状态（不缓存失败结果）
     return UpdateStatus.FETCH_FAILED;
   } catch (error) {
     console.error('版本检查失败:', error);
