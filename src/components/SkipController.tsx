@@ -367,15 +367,25 @@ export default function SkipController({
         // 添加片头配置
         const openingStart = timeToSeconds(currentBatchSettings.openingStart);
         const openingEnd = timeToSeconds(currentBatchSettings.openingEnd);
-        if (openingStart < openingEnd) {
+
+        // 🔥 优化：对于短视频，智能调整片头检测范围
+        // 如果视频总长度小于 5 分钟（300秒），不启用默认片头检测
+        // 避免在短视频中频繁触发片头跳过
+        const isShortVideo = duration > 0 && duration < 300; // 5分钟以下算短视频
+        const shouldEnableOpening = openingStart < openingEnd && (!isShortVideo || openingEnd < duration * 0.3);
+
+        if (shouldEnableOpening) {
           tempSegments.push({
             type: 'opening',
             start: openingStart,
-            end: openingEnd,
+            end: Math.min(openingEnd, duration * 0.4), // 限制片头最多占视频40%
             autoSkip: currentBatchSettings.autoSkip,
           });
-          console.log(`✅ [SkipController] 添加片头配置: ${openingStart}s-${openingEnd}s, autoSkip=${currentBatchSettings.autoSkip}`);
+          console.log(`✅ [SkipController] 添加片头配置: ${openingStart}s-${Math.min(openingEnd, duration * 0.4)}s, autoSkip=${currentBatchSettings.autoSkip}`);
+        } else if (isShortVideo) {
+          console.log(`⏭️ [SkipController] 短视频(${duration}s)，跳过片头检测`);
         }
+
 
         // 添加片尾配置（如果设置了）
         if (duration > 0 && currentBatchSettings.endingStart) {
@@ -384,16 +394,25 @@ export default function SkipController({
             ? duration - endingStartSeconds
             : endingStartSeconds;
 
-          tempSegments.push({
-            type: 'ending',
-            start: endingStart,
-            end: duration,
-            autoSkip: currentBatchSettings.autoSkip,
-            autoNextEpisode: currentBatchSettings.autoNextEpisode,
-            mode: currentBatchSettings.endingMode as 'absolute' | 'remaining',
-            remainingTime: currentBatchSettings.endingMode === 'remaining' ? endingStartSeconds : undefined,
-          });
-          console.log(`✅ [SkipController] 添加片尾配置: ${endingStart}s-${duration}s, autoSkip=${currentBatchSettings.autoSkip}, autoNextEpisode=${currentBatchSettings.autoNextEpisode}`);
+          // 🔥 优化：对于短视频，确保片尾检测合理
+          // 如果片尾开始时间太早（超过视频60%），调整或跳过
+          const endingStartRatio = endingStart / duration;
+          const shouldEnableEnding = endingStart < duration && endingStartRatio > 0.6;
+
+          if (shouldEnableEnding) {
+            tempSegments.push({
+              type: 'ending',
+              start: endingStart,
+              end: duration,
+              autoSkip: currentBatchSettings.autoSkip,
+              autoNextEpisode: currentBatchSettings.autoNextEpisode,
+              mode: currentBatchSettings.endingMode as 'absolute' | 'remaining',
+              remainingTime: currentBatchSettings.endingMode === 'remaining' ? endingStartSeconds : undefined,
+            });
+            console.log(`✅ [SkipController] 添加片尾配置: ${endingStart}s-${duration}s, autoSkip=${currentBatchSettings.autoSkip}, autoNextEpisode=${currentBatchSettings.autoNextEpisode}`);
+          } else {
+            console.log(`⏭️ [SkipController] 片尾开始时间(${endingStart}s)太早(${(endingStartRatio * 100).toFixed(1)}%)，跳过片尾检测`);
+          }
         }
 
         segments = tempSegments;

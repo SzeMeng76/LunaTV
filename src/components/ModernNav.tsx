@@ -3,10 +3,10 @@
 'use client';
 
 import { Cat, Clover, Film, Globe, Home, MoreHorizontal, PlaySquare, Radio, Search, Sparkles, Star, Tv, X } from 'lucide-react';
-import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
+import { FastLink } from './FastLink';
 import { ThemeToggle } from './ThemeToggle';
 import { UserMenu } from './UserMenu';
 import { useSite } from './SiteProvider';
@@ -140,11 +140,11 @@ export default function ModernNav({ showAIButton = false, onAIButtonClick }: Mod
         <div className='max-w-[2560px] mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 2xl:px-20'>
           <div className='flex items-center justify-between h-16 gap-4'>
             {/* Logo */}
-            <Link href='/' prefetch={false} className='shrink-0'>
+            <FastLink href='/' className='shrink-0'>
               <div className='text-xl font-bold bg-linear-to-r from-green-600 via-emerald-600 to-teal-600 dark:from-green-400 dark:via-emerald-400 dark:to-teal-400 bg-clip-text text-transparent'>
                 {siteName}
               </div>
-            </Link>
+            </FastLink>
 
             {/* Navigation Items */}
             <div className='flex items-center justify-center gap-1 lg:gap-2 overflow-x-auto scrollbar-hide flex-1 px-4'>
@@ -153,10 +153,10 @@ export default function ModernNav({ showAIButton = false, onAIButtonClick }: Mod
               const active = isActive(item.href);
 
               return (
-                <Link
+                <FastLink
                   key={item.label}
                   href={item.href}
-                  prefetch={false}
+                  useTransitionNav
                   onClick={() => setActive(item.href)}
                   className='group relative flex items-center gap-2 px-3 lg:px-4 py-2 rounded-full transition-all duration-300 hover:bg-gray-100/50 dark:hover:bg-gray-800/50 whitespace-nowrap shrink-0'
                 >
@@ -195,7 +195,7 @@ export default function ModernNav({ showAIButton = false, onAIButtonClick }: Mod
                       className={`absolute bottom-0 left-0 right-0 h-0.5 bg-linear-to-r ${item.gradient} rounded-full`}
                     />
                   )}
-                </Link>
+                </FastLink>
               );
             })}
             </div>
@@ -247,10 +247,10 @@ export default function ModernNav({ showAIButton = false, onAIButtonClick }: Mod
                 const active = isActive(item.href);
 
                 return (
-                  <Link
+                  <FastLink
                     key={item.label}
                     href={item.href}
-                    prefetch={false}
+                    useTransitionNav
                     onClick={() => {
                       setActive(item.href);
                       setShowMoreMenu(false);
@@ -281,7 +281,7 @@ export default function ModernNav({ showAIButton = false, onAIButtonClick }: Mod
                     >
                       {item.label}
                     </span>
-                  </Link>
+                  </FastLink>
                 );
               })}
             </div>
@@ -304,10 +304,10 @@ export default function ModernNav({ showAIButton = false, onAIButtonClick }: Mod
             const active = isActive(item.href);
 
             return (
-              <Link
+              <FastLink
                 key={item.label}
                 href={item.href}
-                prefetch={false}
+                useTransitionNav
                 onClick={() => setActive(item.href)}
                 className='flex flex-col items-center justify-center min-w-[60px] flex-1 py-2 px-1 transition-all duration-200 active:scale-95'
               >
@@ -323,7 +323,7 @@ export default function ModernNav({ showAIButton = false, onAIButtonClick }: Mod
                 >
                   {item.label}
                 </span>
-              </Link>
+              </FastLink>
             );
           })}
 
