@@ -589,6 +589,59 @@ export async function getCacheTime(): Promise<number> {
   return config.SiteConfig.SiteInterfaceCacheTime || 7200;
 }
 
+// Helper function to apply VideoProxyConfig to API sites
+function applyVideoProxy(sites: ApiSite[], config: AdminConfig): ApiSite[] {
+  const proxyConfig = config.VideoProxyConfig;
+
+  // If proxy is not enabled, return sites as-is
+  if (!proxyConfig?.enabled || !proxyConfig.proxyUrl) {
+    return sites;
+  }
+
+  const proxyBaseUrl = proxyConfig.proxyUrl.replace(/\/$/, ''); // Remove trailing slash
+
+  return sites.map(source => {
+    // Extract real API URL (remove old proxy if exists)
+    let realApiUrl = source.api;
+    const urlMatch = source.api.match(/[?&]url=([^&]+)/);
+    if (urlMatch) {
+      realApiUrl = decodeURIComponent(urlMatch[1]);
+      console.log(`[Video Proxy] ${source.name}: Detected old proxy, replacing with new proxy`);
+    }
+
+    // Extract source ID from real API URL
+    const extractSourceId = (apiUrl: string): string => {
+      try {
+        const url = new URL(apiUrl);
+        const hostname = url.hostname;
+        const parts = hostname.split('.');
+
+        // For caiji.xxx.com or api.xxx.com format, take second-to-last part
+        if (parts.length >= 3 && (parts[0] === 'caiji' || parts[0] === 'api' || parts[0] === 'cj' || parts[0] === 'www')) {
+          return parts[parts.length - 2].toLowerCase().replace(/[^a-z0-9]/g, '');
+        }
+
+        // Otherwise take first part (remove zyapi/zy suffix)
+        let name = parts[0].toLowerCase();
+        name = name.replace(/zyapi$/, '').replace(/zy$/, '').replace(/api$/, '');
+        return name.replace(/[^a-z0-9]/g, '') || 'source';
+      } catch {
+        return source.key || source.name.replace(/[^a-z0-9]/g, '');
+      }
+    };
+
+    const sourceId = extractSourceId(realApiUrl);
+    const proxiedApi = `${proxyBaseUrl}/p/${sourceId}?url=${encodeURIComponent(realApiUrl)}`;
+
+    console.log(`[Video Proxy] ${source.name}: ✓ Applied proxy`);
+
+    return {
+      ...source,
+      api: proxiedApi,
+    };
+  });
+}
+
 export async function getAvailableApiSites(user?: string): Promise<ApiSite[]> {
   const config = await getConfig();
 
@@ -634,23 +687,24 @@ export async function getAvailableApiSites(user?: string): Promise<ApiSite[]> {
   });
 
   if (!user) {
-    return allApiSites;
+    return applyVideoProxy(allApiSites, config);
   }
 
   const userConfig = config.UserConfig.Users.find((u) => u.username === user);
   if (!userConfig) {
-    return allApiSites;
+    return applyVideoProxy(allApiSites, config);
   }
 
   // 优先根据用户自己的 enabledApis 配置查找
   if (userConfig.enabledApis && userConfig.enabledApis.length > 0) {
     const userApiSitesSet = new Set(userConfig.enabledApis);
-    return allApiSites.filter((s) => userApiSitesSet.has(s.key)).map((s) => ({
+    const userSites = allApiSites.filter((s) => userApiSitesSet.has(s.key)).map((s) => ({
       key: s.key,
       name: s.name,
       api: s.api,
       detail: s.detail,
     }));
+    return applyVideoProxy(userSites, config);
   }
 
   // 如果没有 enabledApis 配置，则根据 tags 查找
@@ -666,17 +720,18 @@ export async function getAvailableApiSites(user?: string): Promise<ApiSite[]> {
     });
 
     if (enabledApisFromTags.size > 0) {
-      return allApiSites.filter((s) => enabledApisFromTags.has(s.key)).map((s) => ({
+      const tagSites = allApiSites.filter((s) => enabledApisFromTags.has(s.key)).map((s) => ({
         key: s.key,
         name: s.name,
         api: s.api,
         detail: s.detail,
       }));
+      return applyVideoProxy(tagSites, config);
     }
   }
 
   // 如果都没有配置，返回所有可用的 API 站点
-  return allApiSites;
+  return applyVideoProxy(allApiSites, config);
 }
 
 export async function setCachedConfig(config: AdminConfig) {

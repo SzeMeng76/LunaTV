@@ -3661,70 +3661,70 @@ const VideoSourceConfig = ({
                 </a>
               </p>
             </div>
+          </div>
+        )}
 
-            <div className='flex justify-end gap-2'>
-              <button
-                onClick={handleCheckProxyStatus}
-                disabled={!videoProxySettings.enabled || isLoading('checkProxyStatus')}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                  !videoProxySettings.enabled || isLoading('checkProxyStatus')
-                    ? 'bg-gray-300 dark:bg-gray-600 cursor-not-allowed text-gray-500'
-                    : 'bg-green-600 hover:bg-green-700 text-white'
-                }`}
-              >
-                {isLoading('checkProxyStatus') ? '检测中...' : '🔍 检测代理状态'}
-              </button>
-              <button
-                onClick={handleSaveVideoProxy}
-                disabled={isLoading('saveVideoProxy')}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                  isLoading('saveVideoProxy')
-                    ? 'bg-gray-400 cursor-not-allowed'
-                    : 'bg-blue-600 hover:bg-blue-700 text-white'
-                }`}
-              >
-                {isLoading('saveVideoProxy') ? '保存中...' : '保存代理配置'}
-              </button>
-            </div>
+        <div className='flex justify-end gap-2'>
+          <button
+            onClick={handleCheckProxyStatus}
+            disabled={!videoProxySettings.enabled || isLoading('checkProxyStatus')}
+            className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+              !videoProxySettings.enabled || isLoading('checkProxyStatus')
+                ? 'bg-gray-300 dark:bg-gray-600 cursor-not-allowed text-gray-500'
+                : 'bg-green-600 hover:bg-green-700 text-white'
+            }`}
+          >
+            {isLoading('checkProxyStatus') ? '检测中...' : '🔍 检测代理状态'}
+          </button>
+          <button
+            onClick={handleSaveVideoProxy}
+            disabled={isLoading('saveVideoProxy')}
+            className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+              isLoading('saveVideoProxy')
+                ? 'bg-gray-400 cursor-not-allowed'
+                : 'bg-blue-600 hover:bg-blue-700 text-white'
+            }`}
+          >
+            {isLoading('saveVideoProxy') ? '保存中...' : '保存代理配置'}
+          </button>
+        </div>
 
-            {/* 代理状态显示 */}
-            {proxyStatus && (
-              <div className={`mt-3 p-3 rounded-lg border ${
-                proxyStatus.healthy
-                  ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
-                  : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
-              }`}>
-                <div className='flex items-center gap-2'>
-                  {proxyStatus.healthy ? (
-                    <svg className='w-5 h-5 text-green-600' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-                      <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M5 13l4 4L19 7' />
-                    </svg>
-                  ) : (
-                    <svg className='w-5 h-5 text-red-600' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-                      <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M6 18L18 6M6 6l12 12' />
-                    </svg>
+        {/* 代理状态显示 */}
+        {proxyStatus && (
+          <div className={`mt-3 p-3 rounded-lg border ${
+            proxyStatus.healthy
+              ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+              : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+          }`}>
+            <div className='flex items-center gap-2'>
+              {proxyStatus.healthy ? (
+                <svg className='w-5 h-5 text-green-600' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                  <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M5 13l4 4L19 7' />
+                </svg>
+              ) : (
+                <svg className='w-5 h-5 text-red-600' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                  <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M6 18L18 6M6 6l12 12' />
+                </svg>
+              )}
+              <div className='flex-1'>
+                <div className={`text-sm font-semibold ${
+                  proxyStatus.healthy ? 'text-green-900 dark:text-green-300' : 'text-red-900 dark:text-red-300'
+                }`}>
+                  {proxyStatus.healthy ? '✅ 代理正常工作' : '❌ 代理连接失败'}
+                </div>
+                <div className='text-xs text-gray-600 dark:text-gray-400 mt-1'>
+                  {proxyStatus.healthy && proxyStatus.responseTime && (
+                    <span>响应时间: {proxyStatus.responseTime}ms</span>
                   )}
-                  <div className='flex-1'>
-                    <div className={`text-sm font-semibold ${
-                      proxyStatus.healthy ? 'text-green-900 dark:text-green-300' : 'text-red-900 dark:text-red-300'
-                    }`}>
-                      {proxyStatus.healthy ? '✅ 代理正常工作' : '❌ 代理连接失败'}
-                    </div>
-                    <div className='text-xs text-gray-600 dark:text-gray-400 mt-1'>
-                      {proxyStatus.healthy && proxyStatus.responseTime && (
-                        <span>响应时间: {proxyStatus.responseTime}ms</span>
-                      )}
-                      {!proxyStatus.healthy && proxyStatus.error && (
-                        <span>错误: {proxyStatus.error}</span>
-                      )}
-                      {proxyStatus.lastCheck && (
-                        <span className='ml-3'>检测时间: {proxyStatus.lastCheck}</span>
-                      )}
-                    </div>
-                  </div>
+                  {!proxyStatus.healthy && proxyStatus.error && (
+                    <span>错误: {proxyStatus.error}</span>
+                  )}
+                  {proxyStatus.lastCheck && (
+                    <span className='ml-3'>检测时间: {proxyStatus.lastCheck}</span>
+                  )}
                 </div>
               </div>
-            )}
+            </div>
           </div>
         )}
       </div>

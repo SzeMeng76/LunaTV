@@ -167,109 +167,16 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // ☁️ Cloudflare Worker 代理：如果启用，优先使用 Worker 代理
-    const proxyConfig = config.VideoProxyConfig; // 使用 VideoProxyConfig（普通视频源配置）
-    if (proxyConfig?.enabled && proxyConfig.proxyUrl) {
-      try {
-        // 🔍 检查并提取真实 API 地址（如果已有代理，先去除旧代理）
-        let realApiUrl = targetUrl;
-        const urlMatch = targetUrl.match(/[?&]url=([^&]+)/);
-        if (urlMatch) {
-          // 已有代理前缀，提取真实 URL
-          realApiUrl = decodeURIComponent(urlMatch[1]);
-          console.log(`[CMS Proxy] Detected old proxy in URL, extracting: ${realApiUrl}`);
-        }
+    // ☁️ 注意：Cloudflare Worker 代理已在 getAvailableApiSites() 中统一应用
+    // targetUrl 如果来自已启用代理的源，已经包含代理前缀
+    // 这里只需要直接请求即可，不需要再次应用代理
 
-        // 提取源的唯一标识符
-        const extractSourceId = (apiUrl: string): string => {
-          try {
-            const url = new URL(apiUrl);
-            const hostname = url.hostname;
-            const parts = hostname.split('.');
-
-            if (parts.length >= 3 && (parts[0] === 'caiji' || parts[0] === 'api' || parts[0] === 'cj' || parts[0] === 'www')) {
-              return parts[parts.length - 2].toLowerCase().replace(/[^a-z0-9]/g, '');
-            }
-
-            let name = parts[0].toLowerCase();
-            name = name.replace(/zyapi$/, '').replace(/zy$/, '').replace(/api$/, '');
-            return name.replace(/[^a-z0-9]/g, '') || 'source';
-          } catch {
-            return 'source';
-          }
-        };
-
-        // 构建 Worker 代理 URL（保留原始 URL 的所有查询参数）
-        const realParsedUrl = new URL(realApiUrl);
-        const sourceId = extractSourceId(realApiUrl);
-        const proxyBaseUrl = proxyConfig.proxyUrl.replace(/\/$/, '');
-
-        // 将原始 URL 的所有参数提取出来
-        const extraParams = new URLSearchParams(realParsedUrl.search);
-
-        // 构建 Worker URL：基础 URL（不含参数） + 所有原始参数
-        const baseApiUrl = `${realParsedUrl.protocol}//${realParsedUrl.host}${realParsedUrl.pathname}`;
-        let workerUrl = `${proxyBaseUrl}/p/${sourceId}?url=${encodeURIComponent(baseApiUrl)}`;
-
-        // 添加所有额外参数
-        for (const [key, value] of extraParams) {
-          workerUrl += `&${key}=${encodeURIComponent(value)}`;
-        }
-
-        console.log(`[CMS Proxy] ☁️ Using Cloudflare Worker: ${workerUrl.substring(0, 150)}...`);
-
-        // 通过 Worker 代理请求
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 20000);
-
-        const response = await fetch(workerUrl, {
-          method: 'GET',
-          headers: BROWSER_HEADERS,
-          signal: controller.signal,
-        });
-
-        clearTimeout(timeoutId);
-
-        if (!response.ok) {
-          throw new Error(`Worker proxy failed: ${response.status}`);
-        }
-
-        let responseText = await response.text();
-        responseText = cleanResponseText(responseText);
-
-        let jsonData;
-        try {
-          jsonData = JSON.parse(responseText);
-        } catch {
-          return new NextResponse(responseText, {
-            status: 200,
-            headers: {
-              ...getCorsHeaders(),
-              'Content-Type': response.headers.get('content-type') || 'text/plain; charset=utf-8',
-            }
-          });
-        }
-
-        return NextResponse.json(jsonData, {
-          status: 200,
-          headers: {
-            ...getCorsHeaders(),
-            'X-Proxy-Via': 'Cloudflare-Worker', // 🔍 标记请求经过 Worker 代理
-          }
-        });
-
-      } catch (workerError: any) {
-        // Worker 代理失败，降级到本地代理
-        console.warn(`[CMS Proxy] Worker proxy failed, falling back to local: ${workerError.message}`);
-      }
-    }
-
-    // 🔄 本地代理（Worker 未启用或失败时使用）
+    // 🔄 直接请求目标 URL（可能是原始 URL，也可能是已包含代理的 URL）
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 20000); // 20秒超时
 
     try {
-      console.log(`[CMS Proxy] Fetching (local): ${targetUrl}`);
+      console.log(`[CMS Proxy] Fetching: ${targetUrl}`);
 
       const response = await fetch(targetUrl, {
         method: 'GET',
