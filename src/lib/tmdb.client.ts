@@ -2,6 +2,7 @@
 
 import { getConfig } from '@/lib/config';
 import { TMDB_CACHE_EXPIRE, getCacheKey, getCache, setCache } from '@/lib/tmdb-cache';
+import { ReleaseCalendarItem } from '@/lib/types';
 
 // TMDB API 配置
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
@@ -638,5 +639,406 @@ export async function searchTMDBActorWorks(
       list: [],
       source: 'tmdb'
     } as TMDBResult;
+  }
+}
+
+// ========================================
+// Release Calendar 相关函数
+// ========================================
+
+/**
+ * 获取 TMDB API Key（支持用户自定义设置）
+ */
+async function getTMDBApiKey(): Promise<string | null> {
+  try {
+    const config = await getConfig();
+
+    // 优先使用用户设置的 TMDB API Key
+    if (config?.SiteConfig?.TMDBApiKey && config.SiteConfig.TMDBApiKey.trim()) {
+      return config.SiteConfig.TMDBApiKey.trim();
+    }
+
+    // 没有用户设置，返回 null（表示用户未配置）
+    return null;
+  } catch (error) {
+    console.error('[TMDB] 获取 API Key 失败:', error);
+    return null;
+  }
+}
+
+/**
+ * 获取电影即将上映列表
+ * @param page 页码
+ * @param region 地区代码 (如: CN, US, TW, HK)
+ */
+export async function getMovieUpcoming(page: number = 1, region?: string): Promise<any> {
+  try {
+    const apiKey = await getTMDBApiKey();
+    if (!apiKey) {
+      console.log('[TMDB] 用户未设置 TMDB API Key，跳过获取即将上映电影数据');
+      return null;
+    }
+
+    const params = new URLSearchParams({
+      api_key: apiKey,
+      language: 'zh-CN',
+      page: page.toString(),
+    });
+
+    if (region) {
+      params.append('region', region);
+    }
+
+    const url = `${TMDB_BASE_URL}/movie/upcoming?${params.toString()}`;
+    console.log(`[TMDB] 获取即将上映电影: page=${page}, region=${region || 'all'}`);
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`TMDB API 请求失败: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('[TMDB] 获取即将上映电影失败:', error);
+    return null;
+  }
+}
+
+/**
+ * 获取电影正在上映列表
+ * @param page 页码
+ * @param region 地区代码
+ */
+export async function getMovieNowPlaying(page: number = 1, region?: string): Promise<any> {
+  try {
+    const apiKey = await getTMDBApiKey();
+    if (!apiKey) {
+      console.log('[TMDB] 用户未设置 TMDB API Key，跳过获取正在上映电影数据');
+      return null;
+    }
+
+    const params = new URLSearchParams({
+      api_key: apiKey,
+      language: 'zh-CN',
+      page: page.toString(),
+    });
+
+    if (region) {
+      params.append('region', region);
+    }
+
+    const url = `${TMDB_BASE_URL}/movie/now_playing?${params.toString()}`;
+    console.log(`[TMDB] 获取正在上映电影: page=${page}, region=${region || 'all'}`);
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`TMDB API 请求失败: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('[TMDB] 获取正在上映电影失败:', error);
+    return null;
+  }
+}
+
+/**
+ * 获取电视剧今日播出列表
+ * @param page 页码
+ */
+export async function getTVAiringToday(page: number = 1): Promise<any> {
+  try {
+    const apiKey = await getTMDBApiKey();
+    if (!apiKey) {
+      console.log('[TMDB] 用户未设置 TMDB API Key，跳过获取今日播出电视剧数据');
+      return null;
+    }
+
+    const params = new URLSearchParams({
+      api_key: apiKey,
+      language: 'zh-CN',
+      page: page.toString(),
+    });
+
+    const url = `${TMDB_BASE_URL}/tv/airing_today?${params.toString()}`;
+    console.log(`[TMDB] 获取今日播出电视剧: page=${page}`);
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`TMDB API 请求失败: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('[TMDB] 获取今日播出电视剧失败:', error);
+    return null;
+  }
+}
+
+/**
+ * 获取电视剧正在播出列表
+ * @param page 页码
+ */
+export async function getTVOnTheAir(page: number = 1): Promise<any> {
+  try {
+    const apiKey = await getTMDBApiKey();
+    if (!apiKey) {
+      console.log('[TMDB] 用户未设置 TMDB API Key，跳过获取正在播出电视剧数据');
+      return null;
+    }
+
+    const params = new URLSearchParams({
+      api_key: apiKey,
+      language: 'zh-CN',
+      page: page.toString(),
+    });
+
+    const url = `${TMDB_BASE_URL}/tv/on_the_air?${params.toString()}`;
+    console.log(`[TMDB] 获取正在播出电视剧: page=${page}`);
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`TMDB API 请求失败: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('[TMDB] 获取正在播出电视剧失败:', error);
+    return null;
+  }
+}
+
+/**
+ * 获取电影或电视剧的详细信息（包含演职员信息）
+ * @param id TMDB ID
+ * @param type 类型 (movie 或 tv)
+ */
+export async function getTMDBDetails(id: number, type: 'movie' | 'tv'): Promise<any> {
+  try {
+    const apiKey = await getTMDBApiKey();
+    if (!apiKey) {
+      return null;
+    }
+
+    const params = new URLSearchParams({
+      api_key: apiKey,
+      language: 'zh-CN',
+      append_to_response: 'credits,release_dates,content_ratings', // 获取演职员、上映日期、分级信息
+    });
+
+    const url = `${TMDB_BASE_URL}/${type}/${id}?${params.toString()}`;
+    console.log(`[TMDB] 获取详情: ${type}/${id}`);
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`TMDB API 请求失败: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error(`[TMDB] 获取${type}详情失败:`, error);
+    return null;
+  }
+}
+
+/**
+ * 将 TMDB 电影数据转换为 ReleaseCalendarItem 格式
+ * 实现中文优先逻辑：有中文标题就用中文，否则用原标题
+ */
+export async function convertTMDBMovieToCalendarItem(movie: any): Promise<ReleaseCalendarItem | null> {
+  try {
+    if (!movie || !movie.id) {
+      return null;
+    }
+
+    // 获取详细信息（包含演职员）
+    const details = await getTMDBDetails(movie.id, 'movie');
+    const now = Date.now();
+
+    // 🎯 中文优先逻辑：优先使用中文标题，没有中文则用原标题
+    const title = movie.title || movie.original_title || '';
+
+    // 获取导演（从 crew 中筛选）
+    let director = '未知';
+    if (details?.credits?.crew) {
+      const directors = details.credits.crew
+        .filter((person: any) => person.job === 'Director')
+        .map((person: any) => person.name)
+        .slice(0, 3); // 最多3个导演
+      if (directors.length > 0) {
+        director = directors.join('/');
+      }
+    }
+
+    // 获取主演（从 cast 中获取，中文 API 返回的就是中文名）
+    let actors = '未知';
+    if (details?.credits?.cast) {
+      const castNames = details.credits.cast
+        .slice(0, 5) // 前5个演员
+        .map((person: any) => person.name)
+        .filter((name: string) => name);
+      if (castNames.length > 0) {
+        actors = castNames.join('/');
+      }
+    }
+
+    // 获取地区（从 production_countries 获取）
+    let region = '未知';
+    if (details?.production_countries && details.production_countries.length > 0) {
+      const countries = details.production_countries
+        .map((country: any) => country.name || country.iso_3166_1)
+        .slice(0, 3);
+      region = countries.join('/');
+    }
+
+    // 获取类型（从 genres 获取，中文 API 返回中文类型）
+    let genre = '未知';
+    if (details?.genres && details.genres.length > 0) {
+      const genres = details.genres
+        .map((g: any) => g.name)
+        .slice(0, 3);
+      genre = genres.join('/');
+    }
+
+    // 上映日期
+    const releaseDate = movie.release_date || '';
+
+    // 海报图片
+    const cover = movie.poster_path
+      ? `${TMDB_IMAGE_BASE_URL}${movie.poster_path}`
+      : undefined;
+
+    // 简介（中文 API 返回中文简介）
+    const description = movie.overview || details?.overview || undefined;
+
+    const item: ReleaseCalendarItem = {
+      id: `tmdb_movie_${movie.id}`,
+      title,
+      type: 'movie',
+      director,
+      actors,
+      region,
+      genre,
+      releaseDate,
+      cover,
+      description,
+      source: 'tmdb',
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    return item;
+  } catch (error) {
+    console.error('[TMDB] 转换电影数据失败:', error);
+    return null;
+  }
+}
+
+/**
+ * 将 TMDB 电视剧数据转换为 ReleaseCalendarItem 格式
+ */
+export async function convertTMDBTVToCalendarItem(tv: any): Promise<ReleaseCalendarItem | null> {
+  try {
+    if (!tv || !tv.id) {
+      return null;
+    }
+
+    // 获取详细信息（包含演职员）
+    const details = await getTMDBDetails(tv.id, 'tv');
+    const now = Date.now();
+
+    // 🎯 中文优先逻辑：优先使用中文名称，没有中文则用原名称
+    const title = tv.name || tv.original_name || '';
+
+    // 获取导演/创作者
+    let director = '未知';
+    if (details?.created_by && details.created_by.length > 0) {
+      const creators = details.created_by
+        .map((person: any) => person.name)
+        .slice(0, 3);
+      director = creators.join('/');
+    } else if (details?.credits?.crew) {
+      // 如果没有创作者，尝试从 crew 获取导演
+      const directors = details.credits.crew
+        .filter((person: any) => person.job === 'Director' || person.job === 'Executive Producer')
+        .map((person: any) => person.name)
+        .slice(0, 3);
+      if (directors.length > 0) {
+        director = directors.join('/');
+      }
+    }
+
+    // 获取主演
+    let actors = '未知';
+    if (details?.credits?.cast) {
+      const castNames = details.credits.cast
+        .slice(0, 5)
+        .map((person: any) => person.name)
+        .filter((name: string) => name);
+      if (castNames.length > 0) {
+        actors = castNames.join('/');
+      }
+    }
+
+    // 获取地区
+    let region = '未知';
+    if (details?.production_countries && details.production_countries.length > 0) {
+      const countries = details.production_countries
+        .map((country: any) => country.name || country.iso_3166_1)
+        .slice(0, 3);
+      region = countries.join('/');
+    } else if (details?.origin_country && details.origin_country.length > 0) {
+      region = details.origin_country.slice(0, 3).join('/');
+    }
+
+    // 获取类型
+    let genre = '未知';
+    if (details?.genres && details.genres.length > 0) {
+      const genres = details.genres
+        .map((g: any) => g.name)
+        .slice(0, 3);
+      genre = genres.join('/');
+    }
+
+    // 首播日期
+    const releaseDate = tv.first_air_date || '';
+
+    // 海报图片
+    const cover = tv.poster_path
+      ? `${TMDB_IMAGE_BASE_URL}${tv.poster_path}`
+      : undefined;
+
+    // 简介
+    const description = tv.overview || details?.overview || undefined;
+
+    // 集数
+    const episodes = details?.number_of_episodes || undefined;
+
+    const item: ReleaseCalendarItem = {
+      id: `tmdb_tv_${tv.id}`,
+      title,
+      type: 'tv',
+      director,
+      actors,
+      region,
+      genre,
+      releaseDate,
+      cover,
+      description,
+      episodes,
+      source: 'tmdb',
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    return item;
+  } catch (error) {
+    console.error('[TMDB] 转换电视剧数据失败:', error);
+    return null;
   }
 }
