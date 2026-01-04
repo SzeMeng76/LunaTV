@@ -2,14 +2,6 @@
 'use server';
 
 import { ReleaseCalendarItem } from './types';
-import {
-  getMovieUpcoming,
-  getMovieNowPlaying,
-  getTVAiringToday,
-  getTVOnTheAir,
-  convertTMDBMovieToCalendarItem,
-  convertTMDBTVToCalendarItem,
-} from './tmdb.client';
 
 const baseUrl = 'https://g.manmankan.com/dy2013';
 
@@ -152,15 +144,10 @@ function parseMovieHTML(html: string): ReleaseCalendarItem[] {
         const title = titleMatch[1].trim();
         const dateStr = dateMatch[1].replace(/\//g, '-'); // 转换日期格式
 
-        // 🎯 修改：保留过去7天到未来的数据（与主页逻辑一致）
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const sevenDaysAgo = new Date(today);
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-        const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
-
-        if (dateStr < sevenDaysAgoStr) {
-          continue; // 过滤掉7天前的数据
+        // 只保留今天及以后的数据
+        const today = new Date().toISOString().split('T')[0];
+        if (dateStr < today) {
+          continue;
         }
 
         const director = directorMatch ? directorMatch[1].trim() : '未知';
@@ -257,15 +244,10 @@ function parseTVHTML(html: string): ReleaseCalendarItem[] {
         const title = titleMatch[1].trim();
         const dateStr = dateMatch[1].replace(/\//g, '-'); // 转换日期格式
 
-        // 🎯 修改：保留过去7天到未来的数据（与主页逻辑一致）
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const sevenDaysAgo = new Date(today);
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-        const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
-
-        if (dateStr < sevenDaysAgoStr) {
-          continue; // 过滤掉7天前的数据
+        // 只保留今天及以后的数据
+        const today = new Date().toISOString().split('T')[0];
+        if (dateStr < today) {
+          continue;
         }
 
         const director = directorMatch ? directorMatch[1].trim() : '未知';
@@ -499,14 +481,9 @@ function parseHomepageHTML(html: string, type: 'movie' | 'tv'): ReleaseCalendarI
 
         const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 
-        // 🎯 修改：保留过去7天到未来的数据
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const sevenDaysAgo = new Date(today);
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-        const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
-
-        if (dateStr < sevenDaysAgoStr) {
+        // 只保留今天及以后的数据
+        const today = new Date().toISOString().split('T')[0];
+        if (dateStr < today) {
           continue;
         }
 
@@ -596,14 +573,9 @@ function parseHomepageHTML(html: string, type: 'movie' | 'tv'): ReleaseCalendarI
 
         const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 
-        // 🎯 修改：保留过去7天到未来的数据
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const sevenDaysAgo = new Date(today);
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-        const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
-
-        if (dateStr < sevenDaysAgoStr) {
+        // 只保留今天及以后的数据
+        const today = new Date().toISOString().split('T')[0];
+        if (dateStr < today) {
           continue;
         }
 
@@ -752,134 +724,6 @@ export async function scrapeTVHomepage(retryCount = 0): Promise<ReleaseCalendarI
 }
 
 /**
- * 从 TMDB 获取电影数据（即将上映 + 正在上映）
- */
-async function scrapeTMDBMovies(): Promise<ReleaseCalendarItem[]> {
-  try {
-    console.log('🎬 [TMDB] 开始获取电影数据...');
-    const items: ReleaseCalendarItem[] = [];
-
-    // 🔥 先获取第1页，读取总页数
-    const firstPageData = await getMovieUpcoming(1);
-    if (!firstPageData || !firstPageData.results) {
-      console.warn('[TMDB] 无法获取电影数据');
-      return items;
-    }
-
-    const totalMoviePages = firstPageData.total_pages || 1;
-    console.log(`📊 [TMDB] 电影总页数: ${totalMoviePages}`);
-
-    // 处理第1页数据
-    console.log(`✅ [TMDB] 电影第1/${totalMoviePages}页：获取到 ${firstPageData.results.length} 部`);
-    for (const movie of firstPageData.results) {
-      const item = await convertTMDBMovieToCalendarItem(movie);
-      if (item && item.releaseDate) {
-        items.push(item);
-      }
-    }
-
-    // 获取剩余页面
-    for (let page = 2; page <= totalMoviePages; page++) {
-      await randomDelay(50, 100); // 🔥 TMDB允许40req/s，用50-100ms延迟（每秒10-20个请求）
-      const upcomingData = await getMovieUpcoming(page);
-      if (upcomingData && upcomingData.results) {
-        console.log(`✅ [TMDB] 电影第${page}/${totalMoviePages}页：获取到 ${upcomingData.results.length} 部`);
-        for (const movie of upcomingData.results) {
-          const item = await convertTMDBMovieToCalendarItem(movie);
-          if (item && item.releaseDate) {
-            items.push(item);
-          }
-        }
-      }
-    }
-
-    console.log(`✅ [TMDB] 电影数据过滤后: ${items.length} 部`);
-    return items;
-  } catch (error) {
-    console.error('❌ [TMDB] 获取电影数据失败:', error);
-    return [];
-  }
-}
-
-/**
- * 从 TMDB 获取电视剧数据（今日播出 + 正在播出）
- */
-async function scrapeTMDBTVShows(): Promise<ReleaseCalendarItem[]> {
-  try {
-    console.log('📺 [TMDB] 开始获取电视剧数据...');
-    const items: ReleaseCalendarItem[] = [];
-
-    // 🔥 今日播出 - 动态获取总页数
-    const firstAiringToday = await getTVAiringToday(1);
-    if (firstAiringToday && firstAiringToday.results) {
-      const totalAiringTodayPages = firstAiringToday.total_pages || 1;
-      console.log(`📊 [TMDB] 今日播出总页数: ${totalAiringTodayPages}`);
-
-      // 处理第1页
-      console.log(`✅ [TMDB] 今日播出第1/${totalAiringTodayPages}页：获取到 ${firstAiringToday.results.length} 部`);
-      for (const tv of firstAiringToday.results) {
-        const item = await convertTMDBTVToCalendarItem(tv);
-        if (item && item.releaseDate) {
-          items.push(item);
-        }
-      }
-
-      // 获取剩余页面
-      for (let page = 2; page <= totalAiringTodayPages; page++) {
-        await randomDelay(50, 100); // 🔥 TMDB允许40req/s
-        const airingTodayData = await getTVAiringToday(page);
-        if (airingTodayData && airingTodayData.results) {
-          console.log(`✅ [TMDB] 今日播出第${page}/${totalAiringTodayPages}页：获取到 ${airingTodayData.results.length} 部`);
-          for (const tv of airingTodayData.results) {
-            const item = await convertTMDBTVToCalendarItem(tv);
-            if (item && item.releaseDate) {
-              items.push(item);
-            }
-          }
-        }
-      }
-    }
-
-    // 🔥 正在播出 - 动态获取总页数
-    const firstOnTheAir = await getTVOnTheAir(1);
-    if (firstOnTheAir && firstOnTheAir.results) {
-      const totalOnTheAirPages = firstOnTheAir.total_pages || 1;
-      console.log(`📊 [TMDB] 正在播出总页数: ${totalOnTheAirPages}`);
-
-      // 处理第1页
-      console.log(`✅ [TMDB] 正在播出第1/${totalOnTheAirPages}页：获取到 ${firstOnTheAir.results.length} 部`);
-      for (const tv of firstOnTheAir.results) {
-        const item = await convertTMDBTVToCalendarItem(tv);
-        if (item && item.releaseDate) {
-          items.push(item);
-        }
-      }
-
-      // 获取剩余页面
-      for (let page = 2; page <= totalOnTheAirPages; page++) {
-        await randomDelay(50, 100); // 🔥 TMDB允许40req/s
-        const onTheAirData = await getTVOnTheAir(page);
-        if (onTheAirData && onTheAirData.results) {
-          console.log(`✅ [TMDB] 正在播出第${page}/${totalOnTheAirPages}页：获取到 ${onTheAirData.results.length} 部`);
-          for (const tv of onTheAirData.results) {
-            const item = await convertTMDBTVToCalendarItem(tv);
-            if (item && item.releaseDate) {
-              items.push(item);
-            }
-          }
-        }
-      }
-    }
-
-    console.log(`✅ [TMDB] 电视剧数据过滤后: ${items.length} 部`);
-    return items;
-  } catch (error) {
-    console.error('❌ [TMDB] 获取电视剧数据失败:', error);
-    return [];
-  }
-}
-
-/**
  * 抓取所有数据（顺序执行，避免并发失败）
  */
 export async function scrapeAllReleases(): Promise<ReleaseCalendarItem[]> {
@@ -915,36 +759,13 @@ export async function scrapeAllReleases(): Promise<ReleaseCalendarItem[]> {
     const tvHomepage = await scrapeTVHomepage();
     console.log(`✅ 电视剧首页数据抓取完成: ${tvHomepage.length} 部`);
 
-    // 🎯 添加 TMDB 数据（如果用户已配置 API Key）
-    let tmdbMovies: ReleaseCalendarItem[] = [];
-    let tmdbTVShows: ReleaseCalendarItem[] = [];
-
-    try {
-      console.log('🌐 [TMDB] 尝试获取 TMDB 数据...');
-      tmdbMovies = await scrapeTMDBMovies();
-      await randomDelay(1000, 2000);
-      tmdbTVShows = await scrapeTMDBTVShows();
-      console.log(`✅ [TMDB] 总共获取 ${tmdbMovies.length + tmdbTVShows.length} 条数据`);
-    } catch (error) {
-      console.warn('⚠️ [TMDB] 获取数据失败或用户未配置 API Key:', error);
-    }
-
     // 合并所有数据，去重（按title和releaseDate去重）
-    const allItems = [
-      ...movies,
-      ...moviesHomepage,
-      ...tvShows,
-      ...tvHomepage,
-      ...tmdbMovies,
-      ...tmdbTVShows,
-    ];
+    const allItems = [...movies, ...moviesHomepage, ...tvShows, ...tvHomepage];
     const uniqueItems = allItems.filter((item, index, self) =>
       index === self.findIndex(t => t.title === item.title && t.releaseDate === item.releaseDate)
     );
 
     console.log(`🎉 总共抓取到 ${allItems.length} 条发布数据（去重后 ${uniqueItems.length} 条）`);
-    console.log(`   ├─ manmankan: ${movies.length + moviesHomepage.length + tvShows.length + tvHomepage.length} 条`);
-    console.log(`   └─ TMDB: ${tmdbMovies.length + tmdbTVShows.length} 条`);
 
     return uniqueItems;
   } catch (error) {

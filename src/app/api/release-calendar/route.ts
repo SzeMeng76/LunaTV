@@ -7,7 +7,6 @@ import { ReleaseCalendarResult } from '@/lib/types';
 import { CalendarCacheManager } from '@/lib/calendar-cache';
 
 export const runtime = 'nodejs';
-export const maxDuration = 300; // 🔥 设置最大执行时间为5分钟（TMDB需要抓取多页数据+过滤）
 
 // 🔄 缓存管理已迁移到数据库（CalendarCacheManager）
 // 移除内存缓存，使用数据库缓存实现全局共享
