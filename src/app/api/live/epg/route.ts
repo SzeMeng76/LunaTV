@@ -35,6 +35,7 @@ export async function GET(request: NextRequest) {
 
     // 从epgs字段中获取对应tvgId的节目单信息
     const epgData = channelData.epgs[tvgId] || [];
+    const logoUrl = channelData.epgLogos?.[tvgId] || '';
 
     return NextResponse.json({
       success: true,
@@ -42,6 +43,7 @@ export async function GET(request: NextRequest) {
         tvgId,
         source: sourceKey,
         epgUrl: channelData.epgUrl,
+        logo: logoUrl,
         programs: epgData
       }
     });
