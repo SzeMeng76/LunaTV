@@ -761,7 +761,7 @@ function PlayPageClient() {
     }
 
     try {
-      const response = await fetch(`https://api.bgm.tv/v0/subjects/${bangumiId}`);
+      const response = await fetch(`/api/proxy/bangumi?path=v0/subjects/${bangumiId}`);
       if (response.ok) {
         const bangumiData = await response.json();
         

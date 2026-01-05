@@ -431,7 +431,7 @@ export default function SourceBrowserPage() {
     try {
       setPreviewBangumiLoading(true);
       setPreviewBangumi(null);
-      const res = await fetch(`https://api.bgm.tv/v0/subjects/${bangumiId}`);
+      const res = await fetch(`/api/proxy/bangumi?path=v0/subjects/${bangumiId}`);
       if (res.ok) {
         const data = (await res.json()) as {
           name?: string;
