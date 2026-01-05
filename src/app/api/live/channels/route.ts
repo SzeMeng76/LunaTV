@@ -19,9 +19,21 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: '频道信息未找到' }, { status: 404 });
     }
 
+    // 合并EPG logo到频道信息中
+    const channelsWithEpgLogos = channelData.channels.map(channel => {
+      const channelKey = channel.tvgId || channel.name;
+      const epgLogo = channelData.epgLogos?.[channelKey];
+
+      return {
+        ...channel,
+        // 优先使用EPG logo，如果没有则使用M3U logo
+        logo: epgLogo || channel.logo
+      };
+    });
+
     return NextResponse.json({
       success: true,
-      data: channelData.channels
+      data: channelsWithEpgLogos
     });
   } catch (error) {
     return NextResponse.json(
