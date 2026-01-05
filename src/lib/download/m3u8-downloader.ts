@@ -379,6 +379,8 @@ export async function downloadM3U8Video(
   // 边下边存模式：待写入队列（按顺序写入）
   const pendingWrites = new Map<number, ArrayBuffer | 'failed'>();
   let nextWriteIndex = startSegment - 1; // 下一个要写入的片段索引
+  // 写入锁：确保写入操作的串行化，避免多线程并发写入导致数据丢失
+  let writeLock: Promise<void> = Promise.resolve();
   
   if (streamMode !== 'disabled') {
     try {
@@ -432,19 +434,86 @@ export async function downloadM3U8Video(
   
   let completedCount = 0;
 
+  // 串行化写入函数：确保写入操作按顺序执行，避免多线程并发写入
+  const flushPendingWrites = async (): Promise<void> => {
+    // 等待之前的写入操作完成
+    await writeLock;
+
+    // 如果没有 writer，直接返回
+    if (!writer) {
+      return;
+    }
+
+    // 将新的写入操作添加到 Promise 链中，确保写入操作的串行化
+    writeLock = writeLock.then(async () => {
+      // 按顺序写入所有待写入的片段
+      while (pendingWrites.has(nextWriteIndex)) {
+        // 在写入循环中检查暂停状态
+        if (pauseResumeController) {
+          await pauseResumeController.waitIfPaused();
+        }
+        if (signal?.aborted) {
+          throw new Error('下载已取消');
+        }
+
+        const data = pendingWrites.get(nextWriteIndex);
+
+        if (data === 'failed') {
+          // 失败的片段，跳过
+          // eslint-disable-next-line no-console
+          console.warn(`⚠️ 跳过失败片段 ${nextWriteIndex + 1}`);
+          pendingWrites.delete(nextWriteIndex);
+          nextWriteIndex++;
+          continue;
+        }
+
+        if (!data) {
+          // 数据不存在，等待下载
+          break;
+        }
+
+        // 写入成功下载的片段
+        try {
+          if (streamingTransmuxer) {
+            await streamingTransmuxer.pushAndTransmux(new Uint8Array(data));
+          } else {
+            if (writer) {
+              await writer.write(new Uint8Array(data));
+            } else {
+              throw new Error('Writer is not initialized');
+            }
+          }
+          pendingWrites.delete(nextWriteIndex);
+          nextWriteIndex++;
+        } catch (error) {
+          // eslint-disable-next-line no-console
+          console.error(`片段 ${nextWriteIndex + 1} 写入流失败:`, error);
+          // 写入失败意味着用户可能取消了下载，应该停止整个下载任务
+          throw new Error(`写入失败: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      }
+    });
+
+    // 等待当前写入操作完成
+    await writeLock;
+  };
+
   // 如果提供了完成流函数引用，设置完成流的函数（需要在 completedCount 和 writer 初始化后设置）
   if (completeStreamRef && streamMode !== 'disabled' && writer) {
     completeStreamRef.current = async () => {
       if (!writer) return;
-      
+
       try {
+        // 等待所有待写入的数据完成
+        await flushPendingWrites();
+
         // 如果使用了流式转码器，需要先完成转码
         if (streamingTransmuxer) {
           await streamingTransmuxer.finish();
         } else {
           await writer.close();
         }
-        
+
         onProgress?.({
           current: completedCount,
           total: totalSegments,
@@ -519,49 +588,9 @@ export async function downloadM3U8Video(
       if (writer) {
         // 将片段数据加入队列
         pendingWrites.set(index, segmentData);
-        
-        // 尝试按顺序写入
-        while (pendingWrites.has(nextWriteIndex)) {
-          // 在写入循环中检查暂停状态
-          if (pauseResumeController) {
-            await pauseResumeController.waitIfPaused();
-          }
-          if (signal?.aborted) {
-            throw new Error('下载已取消');
-          }
 
-          const data = pendingWrites.get(nextWriteIndex);
-          
-          if (data === 'failed') {
-            // 失败的片段，跳过
-            // eslint-disable-next-line no-console
-            console.warn(`⚠️ 跳过失败片段 ${nextWriteIndex + 1}`);
-            pendingWrites.delete(nextWriteIndex);
-            nextWriteIndex++;
-            continue;
-          }
-          
-          if (!data) {
-            // 数据不存在，等待下载
-            break;
-          }
-          
-          // 写入成功下载的片段
-          try {
-            if (streamingTransmuxer) {
-              await streamingTransmuxer.pushAndTransmux(new Uint8Array(data));
-            } else {
-              await writer.write(new Uint8Array(data));
-            }
-            pendingWrites.delete(nextWriteIndex);
-            nextWriteIndex++;
-          } catch (error) {
-            // eslint-disable-next-line no-console
-            console.error(`片段 ${nextWriteIndex + 1} 写入流失败:`, error);
-            // 写入失败意味着用户可能取消了下载，应该停止整个下载任务
-            throw new Error(`写入失败: ${error instanceof Error ? error.message : String(error)}`);
-          }
-        }
+        // 使用串行化写入函数，确保写入操作按顺序执行，避免多线程并发写入
+        await flushPendingWrites();
       } else {
         // 普通模式：保存到内存
         if (!task.downloadedSegments) {
@@ -588,7 +617,7 @@ export async function downloadM3U8Video(
       onProgress?.({
         current: completedCount,
         total: totalSegments,
-        percentage: Math.round((completedCount / totalSegments) * 100),
+        percentage: Math.floor((completedCount / totalSegments) * 100),
         status: 'downloading',
         message: `正在下载 ${completedCount}/${totalSegments} 个片段 (${concurrency} 线程)${retryCount > 0 ? ` [重试成功]` : ''}`,
       });
@@ -610,7 +639,7 @@ export async function downloadM3U8Video(
         onProgress?.({
           current: completedCount,
           total: totalSegments,
-          percentage: Math.round((completedCount / totalSegments) * 100),
+          percentage: Math.floor((completedCount / totalSegments) * 100),
           status: 'downloading',
           message: `片段 ${index + 1} 重试中 (${retryCount + 1}/${maxRetries})`,
         });
@@ -633,56 +662,16 @@ export async function downloadM3U8Video(
       if (streamMode !== 'disabled' && writer) {
         // 标记为失败，以便按顺序跳过
         pendingWrites.set(index, 'failed');
-        
-        // 尝试继续写入后续片段
-        while (pendingWrites.has(nextWriteIndex)) {
-          // 在写入循环中检查暂停状态
-          if (pauseResumeController) {
-            await pauseResumeController.waitIfPaused();
-          }
-          if (signal?.aborted) {
-            throw new Error('下载已取消');
-          }
 
-          const data = pendingWrites.get(nextWriteIndex);
-          
-          if (data === 'failed') {
-            // 失败的片段，跳过
-            // eslint-disable-next-line no-console
-            console.warn(`⚠️ 跳过失败片段 ${nextWriteIndex + 1}`);
-            pendingWrites.delete(nextWriteIndex);
-            nextWriteIndex++;
-            continue;
-          }
-          
-          if (!data) {
-            // 数据不存在，等待下载
-            break;
-          }
-          
-          // 写入成功下载的片段
-          try {
-            if (streamingTransmuxer) {
-              await streamingTransmuxer.pushAndTransmux(new Uint8Array(data));
-            } else {
-              await writer.write(new Uint8Array(data));
-            }
-            pendingWrites.delete(nextWriteIndex);
-            nextWriteIndex++;
-          } catch (writeError) {
-            // eslint-disable-next-line no-console
-            console.error(`片段 ${nextWriteIndex + 1} 写入流失败:`, writeError);
-            // 写入失败意味着用户可能取消了下载，应该停止整个下载任务
-            throw new Error(`写入失败: ${writeError instanceof Error ? writeError.message : String(writeError)}`);
-          }
-        }
-        
+        // 使用串行化写入函数，确保写入操作按顺序执行，避免多线程并发写入
+        await flushPendingWrites();
+
         // eslint-disable-next-line no-console
         console.warn(`边下边存模式：已跳过失败片段 ${index + 1}，继续下载...`);
         onProgress?.({
           current: completedCount,
           total: totalSegments,
-          percentage: Math.round((completedCount / totalSegments) * 100),
+          percentage: Math.floor((completedCount / totalSegments) * 100),
           status: 'downloading',
           message: `片段 ${index + 1} 失败已跳过 (已完成 ${completedCount}/${totalSegments})`,
         });
@@ -691,7 +680,7 @@ export async function downloadM3U8Video(
         onProgress?.({
           current: completedCount,
           total: totalSegments,
-          percentage: Math.round((completedCount / totalSegments) * 100),
+          percentage: Math.floor((completedCount / totalSegments) * 100),
           status: 'downloading',
           message: `片段 ${index + 1} 下载失败，等待重试 (已完成 ${completedCount}/${totalSegments})`,
         });
@@ -788,7 +777,7 @@ export async function downloadM3U8Video(
     onProgress?.({
       current: completedCount,
       total: totalSegments,
-      percentage: Math.round((completedCount / totalSegments) * 100),
+      percentage: Math.floor((completedCount / totalSegments) * 100),
       status: 'downloading',
       message: `${failedCount} 个片段失败，等待重试...`,
     });

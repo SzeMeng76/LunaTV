@@ -22,6 +22,9 @@ import PageLayout from '@/components/PageLayout';
 import VideoCard from '@/components/VideoCard';
 import VirtualDoubanGrid, { VirtualDoubanGridRef } from '@/components/VirtualDoubanGrid';
 
+// 🔧 统一分页常量 - 防止分页步长不一致导致重复数据
+const PAGE_SIZE = 25;
+
 function DoubanPageClient() {
   const searchParams = useSearchParams();
   const [doubanData, setDoubanData] = useState<DoubanItem[]>([]);
@@ -334,7 +337,7 @@ function DoubanPageClient() {
           kind: 'tv' as const,
           category: type,
           type: secondarySelection,
-          pageLimit: 25,
+          pageLimit: PAGE_SIZE,
           pageStart,
         };
       }
@@ -344,7 +347,7 @@ function DoubanPageClient() {
         kind: type as 'tv' | 'movie',
         category: primarySelection,
         type: secondarySelection,
-        pageLimit: 25,
+        pageLimit: PAGE_SIZE,
         pageStart,
       };
     },
@@ -384,7 +387,7 @@ function DoubanPageClient() {
           data = await getDoubanList({
             tag: selectedCategory.query,
             type: selectedCategory.type,
-            pageLimit: 25,
+            pageLimit: PAGE_SIZE,
             pageStart: 0,
           });
         } else {
@@ -419,7 +422,7 @@ function DoubanPageClient() {
       } else if (type === 'anime') {
         data = await getDoubanRecommends({
           kind: primarySelection === '番剧' ? 'tv' : 'movie',
-          pageLimit: 25,
+          pageLimit: PAGE_SIZE,
           pageStart: 0,
           category: '动画',
           format: primarySelection === '番剧' ? '电视剧' : '',
@@ -438,7 +441,7 @@ function DoubanPageClient() {
       } else if (primarySelection === '全部') {
         data = await getDoubanRecommends({
           kind: type === 'show' ? 'tv' : (type as 'tv' | 'movie'),
-          pageLimit: 25,
+          pageLimit: PAGE_SIZE,
           pageStart: 0, // 初始数据加载始终从第一页开始
           category: multiLevelValues.type
             ? (multiLevelValues.type as string)
@@ -562,8 +565,8 @@ function DoubanPageClient() {
               data = await getDoubanList({
                 tag: selectedCategory.query,
                 type: selectedCategory.type,
-                pageLimit: 25,
-                pageStart: currentPage * 25,
+                pageLimit: PAGE_SIZE,
+                pageStart: currentPage * PAGE_SIZE,
               });
             } else {
               throw new Error('没有找到对应的分类');
@@ -578,8 +581,8 @@ function DoubanPageClient() {
           } else if (type === 'anime') {
             data = await getDoubanRecommends({
               kind: primarySelection === '番剧' ? 'tv' : 'movie',
-              pageLimit: 25,
-              pageStart: currentPage * 25,
+              pageLimit: PAGE_SIZE,
+              pageStart: currentPage * PAGE_SIZE,
               category: '动画',
               format: primarySelection === '番剧' ? '电视剧' : '',
               region: multiLevelValues.region
@@ -601,8 +604,8 @@ function DoubanPageClient() {
           } else if (primarySelection === '全部') {
             data = await getDoubanRecommends({
               kind: type === 'show' ? 'tv' : (type as 'tv' | 'movie'),
-              pageLimit: 25,
-              pageStart: currentPage * 25,
+              pageLimit: PAGE_SIZE,
+              pageStart: currentPage * PAGE_SIZE,
               category: multiLevelValues.type
                 ? (multiLevelValues.type as string)
                 : '',
@@ -625,7 +628,7 @@ function DoubanPageClient() {
             });
           } else {
             data = await getDoubanCategories(
-              getRequestParams(currentPage * 25)
+              getRequestParams(currentPage * PAGE_SIZE)
             );
           }
 
@@ -641,7 +644,25 @@ function DoubanPageClient() {
             );
 
             if (keyParamsMatch) {
-              setDoubanData((prev) => [...prev, ...data.list]);
+              // 🔧 双重去重逻辑：防止跨批次和批次内重复数据
+              setDoubanData((prev) => {
+                const existingIds = new Set(prev.map((item) => item.id));
+                const uniqueNewItems: DoubanItem[] = [];
+
+                for (const item of data.list) {
+                  if (!existingIds.has(item.id)) {
+                    existingIds.add(item.id);  // 立即添加，防止批次内重复
+                    uniqueNewItems.push(item);
+                  }
+                }
+
+                console.log(
+                  `📊 Batch: ${data.list.length}, Added: ${uniqueNewItems.length}, Duplicates removed: ${data.list.length - uniqueNewItems.length}`
+                );
+
+                if (uniqueNewItems.length === 0) return prev;
+                return [...prev, ...uniqueNewItems];
+              });
               setHasMore(data.list.length !== 0);
             } else {
               console.log('关键参数不一致，不执行任何操作，避免设置过期数据');
