@@ -641,7 +641,25 @@ function DoubanPageClient() {
             );
 
             if (keyParamsMatch) {
-              setDoubanData((prev) => [...prev, ...data.list]);
+              // 🔧 双重去重逻辑：防止跨批次和批次内重复数据
+              setDoubanData((prev) => {
+                const existingIds = new Set(prev.map((item) => item.id));
+                const uniqueNewItems: DoubanItem[] = [];
+
+                for (const item of data.list) {
+                  if (!existingIds.has(item.id)) {
+                    existingIds.add(item.id);  // 立即添加，防止批次内重复
+                    uniqueNewItems.push(item);
+                  }
+                }
+
+                console.log(
+                  `📊 Batch: ${data.list.length}, Added: ${uniqueNewItems.length}, Duplicates removed: ${data.list.length - uniqueNewItems.length}`
+                );
+
+                if (uniqueNewItems.length === 0) return prev;
+                return [...prev, ...uniqueNewItems];
+              });
               setHasMore(data.list.length !== 0);
             } else {
               console.log('关键参数不一致，不执行任何操作，避免设置过期数据');
