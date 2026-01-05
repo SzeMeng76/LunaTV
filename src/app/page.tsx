@@ -371,7 +371,7 @@ function HomeClient() {
             if (todayAnimes.length > 0 && !todayAnimes[0].summary) {
               const anime = todayAnimes[0];
               try {
-                const response = await fetch(`https://api.bgm.tv/v0/subjects/${anime.id}`);
+                const response = await fetch(`/api/proxy/bangumi?path=v0/subjects/${anime.id}`);
                 if (response.ok) {
                   const detailData = await response.json();
                   if (detailData.summary) {
