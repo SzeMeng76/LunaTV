@@ -5668,6 +5668,41 @@ const LiveSourceConfig = ({
     );
   }
 
+  // 📊 读取 CORS 统计数据
+  const [corsStats, setCorsStats] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('live-cors-stats');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch {
+          return { directCount: 0, proxyCount: 0, totalChecked: 0 };
+        }
+      }
+    }
+    return { directCount: 0, proxyCount: 0, totalChecked: 0 };
+  });
+
+  // 清除CORS统计和缓存
+  const handleClearCorsCache = () => {
+    if (typeof window !== 'undefined') {
+      // 清除统计数据
+      setCorsStats({ directCount: 0, proxyCount: 0, totalChecked: 0 });
+      localStorage.removeItem('live-cors-stats');
+
+      // 清除所有CORS缓存
+      const keys = Object.keys(localStorage);
+      keys.forEach(key => {
+        if (key.startsWith('cors-cache-')) {
+          localStorage.removeItem(key);
+        }
+      });
+
+      console.log('🧹 已清除所有CORS统计和缓存数据');
+      showAlert({ type: 'success', title: '清除成功', message: 'CORS统计和缓存已清除', timer: 2000 });
+    }
+  };
+
   return (
     <div className='space-y-6'>
       {/* 添加直播源表单 */}
@@ -5693,6 +5728,71 @@ const LiveSourceConfig = ({
             {showAddForm ? '取消' : '添加直播源'}
           </button>
         </div>
+      </div>
+
+      {/* 📊 CORS 检测统计面板 */}
+      <div className='bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 space-y-3'>
+        {corsStats.totalChecked > 0 ? (
+          <>
+          <div className='flex items-center justify-between'>
+            <h4 className='text-sm font-semibold text-blue-900 dark:text-blue-100'>
+              📊 直连模式统计
+            </h4>
+            <button
+              onClick={handleClearCorsCache}
+              className='text-xs px-3 py-1.5 bg-blue-100 dark:bg-blue-800 hover:bg-blue-200 dark:hover:bg-blue-700 text-blue-700 dark:text-blue-200 rounded-lg transition-colors font-medium'
+            >
+              清除缓存
+            </button>
+          </div>
+
+          <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
+            <div className='bg-white dark:bg-gray-800 rounded-lg px-3 py-2.5 border border-gray-200 dark:border-gray-700'>
+              <div className='text-xs text-gray-500 dark:text-gray-400 mb-1'>支持直连</div>
+              <div className='text-base font-semibold text-green-600 dark:text-green-400'>
+                ✅ {corsStats.directCount} 个
+                <span className='text-sm ml-2 font-normal'>
+                  ({corsStats.totalChecked > 0 ? Math.round((corsStats.directCount / corsStats.totalChecked) * 100) : 0}%)
+                </span>
+              </div>
+            </div>
+
+            <div className='bg-white dark:bg-gray-800 rounded-lg px-3 py-2.5 border border-gray-200 dark:border-gray-700'>
+              <div className='text-xs text-gray-500 dark:text-gray-400 mb-1'>需要代理</div>
+              <div className='text-base font-semibold text-orange-600 dark:text-orange-400'>
+                ❌ {corsStats.proxyCount} 个
+                <span className='text-sm ml-2 font-normal'>
+                  ({corsStats.totalChecked > 0 ? Math.round((corsStats.proxyCount / corsStats.totalChecked) * 100) : 0}%)
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className='bg-white dark:bg-gray-800 rounded-lg px-3 py-2.5 border border-gray-200 dark:border-gray-700'>
+            <div className='text-xs text-gray-500 dark:text-gray-400 mb-1'>总检测数 / 估算流量节省</div>
+            <div className='text-base font-semibold text-blue-600 dark:text-blue-400'>
+              📈 {corsStats.totalChecked} 个源
+              <span className='text-sm ml-3 text-green-600 dark:text-green-400 font-normal'>
+                💾 节省约 {corsStats.totalChecked > 0 ? Math.round((corsStats.directCount / corsStats.totalChecked) * 100) : 0}% 带宽
+              </span>
+            </div>
+          </div>
+
+          <div className='text-xs text-gray-500 dark:text-gray-400 pt-2 border-t border-blue-200 dark:border-blue-800'>
+            💡 提示: 直连模式通过客户端直接访问流媒体源来节省服务器带宽，但需要流媒体源支持跨域访问（CORS）。检测结果缓存有效期7天。
+          </div>
+          </>
+        ) : (
+          <div className='text-center py-8'>
+            <div className='text-4xl mb-3'>📊</div>
+            <p className='text-gray-600 dark:text-gray-400 text-sm'>
+              暂无检测数据
+            </p>
+            <p className='text-xs text-gray-500 dark:text-gray-500 mt-2'>
+              当用户播放直播频道时，系统会自动检测CORS支持情况并在此显示统计
+            </p>
+          </div>
+        )}
       </div>
 
       {showAddForm && (

@@ -5,7 +5,7 @@
 import { Suspense, useEffect, useRef, useState } from 'react';
 
 import Hls from 'hls.js';
-import { Heart, Menu, Radio, RefreshCw, Search, Tv, X } from 'lucide-react';
+import { Heart, Menu, Radio, RefreshCw, Search, Tv, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Tabs, Tab, Box } from '@mui/material';
 
@@ -117,6 +117,33 @@ function LivePageClient() {
   });
   const autoRefreshTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // 🚀 直连模式相关状态
+  const [directPlaybackEnabled, setDirectPlaybackEnabled] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('live-direct-playback-enabled');
+      return saved ? JSON.parse(saved) : false; // 默认关闭，使用代理
+    }
+    return false;
+  });
+  const [corsSupport, setCorsSupport] = useState<Map<string, boolean>>(new Map());
+  const corsSupportRef = useRef<Map<string, boolean>>(new Map());
+  const [playbackMode, setPlaybackMode] = useState<'direct' | 'proxy'>('proxy');
+
+  // 📊 CORS 检测统计（管理员用）
+  const [corsStats, setCorsStats] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('live-cors-stats');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch {
+          return { directCount: 0, proxyCount: 0, totalChecked: 0 };
+        }
+      }
+    }
+    return { directCount: 0, proxyCount: 0, totalChecked: 0 };
+  });
+
   // 分组相关
   const [groupedChannels, setGroupedChannels] = useState<{ [key: string]: LiveChannel[] }>({});
   const [selectedGroup, setSelectedGroup] = useState<string>('');
@@ -162,6 +189,9 @@ function LivePageClient() {
   const [favorited, setFavorited] = useState(false);
   const favoritedRef = useRef(false);
   const currentChannelRef = useRef<LiveChannel | null>(null);
+
+  // 频道名展开状态
+  const [expandedChannels, setExpandedChannels] = useState<Set<string>>(new Set());
 
   // DVR 回放检测状态
   const [dvrDetected, setDvrDetected] = useState(false);
@@ -555,6 +585,167 @@ function LivePageClient() {
     }
   };
 
+  // 🚀 CORS 智能检测函数（带持久化和统计）
+  const testCORSSupport = async (url: string): Promise<boolean> => {
+    // 0. 🔐 Mixed Content 检测：HTTPS页面不能加载HTTP资源
+    if (typeof window !== 'undefined' && window.location.protocol === 'https:' && url.startsWith('http:')) {
+      console.log(`🔐 Mixed Content: ${url.substring(0, 50)}... => ❌ 需要代理 (HTTPS页面不能加载HTTP资源)`);
+      // 直接返回false，不浪费时间检测，也不计入统计
+      corsSupportRef.current.set(url, false);
+      setCorsSupport(new Map(corsSupportRef.current));
+      return false;
+    }
+
+    // 1. 检查内存缓存
+    if (corsSupportRef.current.has(url)) {
+      return corsSupportRef.current.get(url)!;
+    }
+
+    // 2. 检查 localStorage 持久化缓存（7天有效期）
+    if (typeof window !== 'undefined') {
+      try {
+        const cacheKey = `cors-cache-${btoa(url).substring(0, 50)}`;
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+          const { supports, timestamp } = JSON.parse(cached);
+          const age = Date.now() - timestamp;
+          const MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7天
+
+          if (age < MAX_AGE) {
+            // 缓存有效，直接使用
+            corsSupportRef.current.set(url, supports);
+            setCorsSupport(new Map(corsSupportRef.current));
+            console.log(`💾 CORS缓存命中: ${url.substring(0, 50)}... => ${supports ? '✅ 直连' : '❌ 代理'} (${Math.floor(age / 86400000)}天前检测)`);
+            return supports;
+          }
+        }
+      } catch (error) {
+        // 缓存读取失败，继续检测
+      }
+    }
+
+    // 3. 执行实际检测
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000); // 3秒超时
+
+      const response = await fetch(url, {
+        method: 'HEAD',
+        signal: controller.signal,
+        cache: 'no-cache',
+      });
+
+      clearTimeout(timeoutId);
+
+      const supports = response.ok;
+
+      // 4. 保存到内存缓存
+      corsSupportRef.current.set(url, supports);
+      setCorsSupport(new Map(corsSupportRef.current));
+
+      // 5. 保存到 localStorage（7天有效）
+      if (typeof window !== 'undefined') {
+        try {
+          const cacheKey = `cors-cache-${btoa(url).substring(0, 50)}`;
+          localStorage.setItem(cacheKey, JSON.stringify({
+            supports,
+            timestamp: Date.now(),
+            url: url.substring(0, 100), // 保存URL前缀便于调试
+          }));
+        } catch (error) {
+          // localStorage 满了或其他错误，忽略
+        }
+      }
+
+      // 6. 更新统计数据
+      setCorsStats(prev => {
+        const newStats = {
+          directCount: prev.directCount + (supports ? 1 : 0),
+          proxyCount: prev.proxyCount + (supports ? 0 : 1),
+          totalChecked: prev.totalChecked + 1,
+        };
+        // 保存统计到 localStorage
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('live-cors-stats', JSON.stringify(newStats));
+        }
+        return newStats;
+      });
+
+      console.log(`🔍 CORS检测: ${url.substring(0, 50)}... => ${supports ? '✅ 支持直连' : '❌ 需要代理'}`);
+
+      return supports;
+    } catch (error) {
+      // CORS 错误、Mixed Content 或超时，标记为不支持
+      const supports = false;
+
+      corsSupportRef.current.set(url, supports);
+      setCorsSupport(new Map(corsSupportRef.current));
+
+      // 保存到 localStorage
+      if (typeof window !== 'undefined') {
+        try {
+          const cacheKey = `cors-cache-${btoa(url).substring(0, 50)}`;
+          localStorage.setItem(cacheKey, JSON.stringify({
+            supports,
+            timestamp: Date.now(),
+            url: url.substring(0, 100),
+          }));
+        } catch {
+          // 忽略错误
+        }
+      }
+
+      // 更新统计数据
+      setCorsStats(prev => {
+        const newStats = {
+          directCount: prev.directCount,
+          proxyCount: prev.proxyCount + 1,
+          totalChecked: prev.totalChecked + 1,
+        };
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('live-cors-stats', JSON.stringify(newStats));
+        }
+        return newStats;
+      });
+
+      // 优化错误信息显示
+      let errorMsg = '网络错误';
+      if (error instanceof Error) {
+        if (error.message.includes('Failed to fetch')) {
+          errorMsg = 'CORS限制';
+        } else if (error.name === 'AbortError') {
+          errorMsg = '超时';
+        } else {
+          errorMsg = error.message;
+        }
+      }
+
+      console.log(`🔍 CORS检测: ${url.substring(0, 50)}... => ❌ 需要代理 (${errorMsg})`);
+
+      return false;
+    }
+  };
+
+  // 🚀 决定是否使用直连播放
+  const shouldUseDirectPlayback = async (url: string): Promise<boolean> => {
+    // 如果用户未启用直连模式，始终使用代理
+    if (!directPlaybackEnabled) {
+      setPlaybackMode('proxy');
+      return false;
+    }
+
+    // 智能检测 CORS 支持
+    const supportsCORS = await testCORSSupport(url);
+
+    if (supportsCORS) {
+      setPlaybackMode('direct');
+      return true;
+    } else {
+      setPlaybackMode('proxy');
+      return false;
+    }
+  };
+
   // 切换频道
   const handleChannelChange = async (channel: LiveChannel) => {
     // 如果正在切换直播源，则禁用频道切换
@@ -803,6 +994,19 @@ function LivePageClient() {
   const handleSourceSearchChange = (query: string) => {
     setSourceSearchQuery(query);
     debouncedSourceSearch(query);
+  };
+
+  // 切换频道名展开状态
+  const toggleChannelNameExpanded = (channelId: string) => {
+    setExpandedChannels(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(channelId)) {
+        newSet.delete(channelId);
+      } else {
+        newSet.add(channelId);
+      }
+      return newSet;
+    });
   };
 
   // 切换收藏
@@ -1264,12 +1468,19 @@ function LivePageClient() {
 
       // 根据hls.js源码设计，直接让hls.js处理各种媒体类型和错误
       // 不需要预检查，hls.js会在加载时自动检测和处理
-      
+
       // 重置不支持的类型
       setUnsupportedType(null);
 
+      // 🚀 智能选择直连或代理模式
+      const useDirect = await shouldUseDirectPlayback(videoUrl);
+      const targetUrl = useDirect
+        ? videoUrl  // 直连模式：直接使用原始 URL
+        : `/api/proxy/m3u8?url=${encodeURIComponent(videoUrl)}&moontv-source=${currentSourceRef.current?.key || ''}`;  // 代理模式
+
+      console.log(`🎬 播放模式: ${useDirect ? '⚡ 直连' : '🔄 代理'} | URL: ${targetUrl.substring(0, 100)}...`);
+
       const customType = { m3u8: m3u8Loader };
-      const targetUrl = `/api/proxy/m3u8?url=${encodeURIComponent(videoUrl)}&moontv-source=${currentSourceRef.current?.key || ''}`;
       try {
         // 使用动态导入的 Artplayer
         const Artplayer = (window as any).DynamicArtplayer;
@@ -1602,22 +1813,62 @@ function LivePageClient() {
       <div className='flex flex-col gap-3 py-4 px-5 lg:px-[3rem] 2xl:px-20'>
         {/* 第一行：页面标题 */}
         <div className='py-1'>
-          <h1 className='text-xl font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2 max-w-[80%]'>
+          <h1 className='text-xl font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2'>
             <Radio className='w-5 h-5 text-blue-500 shrink-0' />
-            <div className='min-w-0 flex-1'>
-              <div className='truncate'>
-                {currentSource?.name}
-                {currentSource && currentChannel && (
-                  <span className='text-gray-500 dark:text-gray-400'>
-                    {` > ${currentChannel.name}`}
-                  </span>
-                )}
-                {currentSource && !currentChannel && (
-                  <span className='text-gray-500 dark:text-gray-400'>
-                    {` > ${currentSource.name}`}
-                  </span>
+            <div className='min-w-0 flex-1 flex items-center gap-2'>
+              {/* 频道名称 - 点击展开/收起 */}
+              <div
+                className='min-w-0 flex-1 flex items-center gap-1 cursor-pointer select-none group'
+                onClick={() => currentChannel && toggleChannelNameExpanded('page-title')}
+              >
+                <div className='min-w-0 flex-1'>
+                  <div className={expandedChannels.has('page-title') ? '' : 'line-clamp-1 md:line-clamp-2'}>
+                    <span className='text-gray-900 dark:text-gray-100'>
+                      {currentSource?.name}
+                    </span>
+                    {currentSource && currentChannel && (
+                      <span className='text-gray-500 dark:text-gray-400'>
+                        {` > ${currentChannel.name}`}
+                      </span>
+                    )}
+                    {currentSource && !currentChannel && (
+                      <span className='text-gray-500 dark:text-gray-400'>
+                        {` > ${currentSource.name}`}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {/* Chevron图标 - 始终显示，带旋转动画 */}
+                {currentChannel && (
+                  <div className='shrink-0 flex items-center gap-1'>
+                    {expandedChannels.has('page-title') ? (
+                      <ChevronUp className='w-4 h-4 text-blue-500 dark:text-blue-400 transition-transform duration-300' />
+                    ) : (
+                      <ChevronDown className='w-4 h-4 text-gray-400 dark:text-gray-500 group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-all duration-300' />
+                    )}
+                    {/* 文字提示 - 仅桌面端显示 */}
+                    <span className='hidden md:inline text-xs text-blue-500 dark:text-blue-400'>
+                      {expandedChannels.has('page-title') ? '收起' : '展开'}
+                    </span>
+                  </div>
                 )}
               </div>
+              {/* 播放模式指示器 - 移动端始终可见 */}
+              {currentChannel && (
+                <span className='inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full shrink-0 bg-gradient-to-r from-blue-100 to-cyan-100 dark:from-blue-900/40 dark:to-cyan-900/40 border border-blue-200 dark:border-blue-700 whitespace-nowrap'>
+                  {playbackMode === 'direct' ? (
+                    <>
+                      <span className='text-green-600 dark:text-green-400'>⚡</span>
+                      <span className='text-green-700 dark:text-green-300'>直连</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className='text-orange-600 dark:text-orange-400'>🔄</span>
+                      <span className='text-orange-700 dark:text-orange-300'>代理</span>
+                    </>
+                  )}
+                </span>
+              )}
             </div>
           </h1>
         </div>
@@ -1977,15 +2228,35 @@ function LivePageClient() {
                                   )}
                                 </div>
                                 <div className='flex-1 min-w-0'>
-                                  <div className='text-sm font-medium text-gray-900 dark:text-gray-100 overflow-hidden group/channelName'>
-                                    <span className='inline-block whitespace-nowrap group-hover/channelName:animate-scroll-text'>
-                                      {channel.name}
-                                    </span>
+                                  {/* 频道名 - 点击展开/收起 */}
+                                  <div
+                                    className='flex items-center gap-1 cursor-pointer select-none group'
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      toggleChannelNameExpanded(channel.id);
+                                    }}
+                                  >
+                                    <div className='flex-1 min-w-0'>
+                                      <div className={`text-sm font-medium text-gray-900 dark:text-gray-100 ${expandedChannels.has(channel.id) ? '' : 'line-clamp-1 md:line-clamp-2'}`}>
+                                        {channel.name}
+                                      </div>
+                                    </div>
+                                    {/* Chevron图标 - 始终显示，带旋转动画 */}
+                                    <div className='shrink-0 flex items-center gap-1'>
+                                      {expandedChannels.has(channel.id) ? (
+                                        <ChevronUp className='w-4 h-4 text-blue-500 dark:text-blue-400 transition-transform duration-300' />
+                                      ) : (
+                                        <ChevronDown className='w-4 h-4 text-gray-400 dark:text-gray-500 group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-all duration-300' />
+                                      )}
+                                      {/* 文字提示 - 仅桌面端显示 */}
+                                      <span className='hidden md:inline text-xs text-blue-500 dark:text-blue-400'>
+                                        {expandedChannels.has(channel.id) ? '收起' : '展开'}
+                                      </span>
+                                    </div>
                                   </div>
-                                  <div className='text-xs text-gray-500 dark:text-gray-400 mt-1 overflow-hidden group/channelGroup'>
-                                    <span className='inline-block whitespace-nowrap group-hover/channelGroup:animate-scroll-text'>
-                                      {channel.group}
-                                    </span>
+                                  {/* 分组名 - 始终单行截断 */}
+                                  <div className='text-xs text-gray-500 dark:text-gray-400 mt-1 truncate' title={channel.group}>
+                                    {channel.group}
                                   </div>
                                 </div>
                               </div>
@@ -2072,22 +2343,43 @@ function LivePageClient() {
                                     )}
                                   </div>
                                   <div className='flex-1 min-w-0'>
-                                    <div className='text-sm font-medium text-gray-900 dark:text-gray-100 overflow-hidden group/searchName'>
-                                      <span
-                                        className='inline-block whitespace-nowrap group-hover/searchName:animate-scroll-text'
-                                        dangerouslySetInnerHTML={{
-                                          __html: searchQuery ?
-                                            channel.name.replace(
-                                              new RegExp(`(${searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'),
-                                              '<mark class="bg-yellow-200 dark:bg-yellow-800 px-0.5 rounded">$1</mark>'
-                                            ) : channel.name
-                                        }}
-                                      />
+                                    {/* 搜索结果频道名 - 点击展开/收起 */}
+                                    <div
+                                      className='flex items-center gap-1 cursor-pointer select-none group'
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        toggleChannelNameExpanded(channel.id);
+                                      }}
+                                    >
+                                      <div className='flex-1 min-w-0'>
+                                        <div className={`text-sm font-medium text-gray-900 dark:text-gray-100 ${expandedChannels.has(channel.id) ? '' : 'line-clamp-1 md:line-clamp-2'}`}>
+                                          <span
+                                            dangerouslySetInnerHTML={{
+                                              __html: searchQuery ?
+                                                channel.name.replace(
+                                                  new RegExp(`(${searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'),
+                                                  '<mark class="bg-yellow-200 dark:bg-yellow-800 px-0.5 rounded">$1</mark>'
+                                                ) : channel.name
+                                            }}
+                                          />
+                                        </div>
+                                      </div>
+                                      {/* Chevron图标 - 始终显示，带旋转动画 */}
+                                      <div className='shrink-0 flex items-center gap-1'>
+                                        {expandedChannels.has(channel.id) ? (
+                                          <ChevronUp className='w-4 h-4 text-blue-500 dark:text-blue-400 transition-transform duration-300' />
+                                        ) : (
+                                          <ChevronDown className='w-4 h-4 text-gray-400 dark:text-gray-500 group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-all duration-300' />
+                                        )}
+                                        {/* 文字提示 - 仅桌面端显示 */}
+                                        <span className='hidden md:inline text-xs text-blue-500 dark:text-blue-400'>
+                                          {expandedChannels.has(channel.id) ? '收起' : '展开'}
+                                        </span>
+                                      </div>
                                     </div>
-                                    <div className='text-xs text-gray-500 dark:text-gray-400 mt-1 overflow-hidden group/searchGroup'>
-                                      <span className='inline-block whitespace-nowrap group-hover/searchGroup:animate-scroll-text'>
-                                        {channel.group}
-                                      </span>
+                                    {/* 搜索结果分组名 - 始终单行截断 */}
+                                    <div className='text-xs text-gray-500 dark:text-gray-400 mt-1 truncate' title={channel.group}>
+                                      {channel.group}
                                     </div>
                                   </div>
                                 </div>
@@ -2165,7 +2457,7 @@ function LivePageClient() {
                             自动刷新
                           </label>
                         </div>
-                        
+
                         {autoRefreshEnabled && (
                           <div className='flex items-center gap-2'>
                             <select
@@ -2181,6 +2473,29 @@ function LivePageClient() {
                             </select>
                           </div>
                         )}
+                      </div>
+
+                      {/* 🚀 直连模式控制 */}
+                      <div className='flex items-center gap-3 pt-2'>
+                        <div className='flex items-center gap-2'>
+                          <input
+                            type='checkbox'
+                            id='directPlayback'
+                            checked={directPlaybackEnabled}
+                            onChange={(e) => {
+                              const enabled = e.target.checked;
+                              setDirectPlaybackEnabled(enabled);
+                              if (typeof window !== 'undefined') {
+                                localStorage.setItem('live-direct-playback-enabled', JSON.stringify(enabled));
+                              }
+                            }}
+                            className='rounded text-green-500 focus:ring-green-500'
+                          />
+                          <label htmlFor='directPlayback' className='text-sm text-gray-700 dark:text-gray-300 flex items-center gap-1'>
+                            ⚡ 直连模式
+                            <span className='text-xs text-gray-500 dark:text-gray-400'>(智能检测CORS)</span>
+                          </label>
+                        </div>
                       </div>
                     </div>
 
@@ -2327,9 +2642,31 @@ function LivePageClient() {
                   </div>
                   <div className='flex-1 min-w-0'>
                     <div className='flex items-center gap-3'>
-                      <h3 className='text-lg font-semibold text-gray-900 dark:text-gray-100 truncate'>
-                        {currentChannel.name}
-                      </h3>
+                      {/* 当前频道名 - 点击展开/收起 */}
+                      <div
+                        className='flex-1 min-w-0 flex items-center gap-1 cursor-pointer select-none group'
+                        onClick={() => toggleChannelNameExpanded('current-channel-info')}
+                      >
+                        <div className='flex-1 min-w-0'>
+                          <h3 className='text-lg font-semibold text-gray-900 dark:text-gray-100'>
+                            <div className={expandedChannels.has('current-channel-info') ? '' : 'truncate'}>
+                              {currentChannel.name}
+                            </div>
+                          </h3>
+                        </div>
+                        {/* Chevron图标 - 始终显示，带旋转动画 */}
+                        <div className='shrink-0 flex items-center gap-1'>
+                          {expandedChannels.has('current-channel-info') ? (
+                            <ChevronUp className='w-4 h-4 text-blue-500 dark:text-blue-400 transition-transform duration-300' />
+                          ) : (
+                            <ChevronDown className='w-4 h-4 text-gray-400 dark:text-gray-500 group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-all duration-300' />
+                          )}
+                          {/* 文字提示 - 仅桌面端显示 */}
+                          <span className='hidden md:inline text-xs text-blue-500 dark:text-blue-400'>
+                            {expandedChannels.has('current-channel-info') ? '收起' : '展开'}
+                          </span>
+                        </div>
+                      </div>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
