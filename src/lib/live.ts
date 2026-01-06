@@ -176,6 +176,7 @@ async function parseEpg(
     let buffer = '';
     let currentEpgChannelId = '';
     let currentProgram: { start: string; end: string; title: string } | null = null;
+    let currentChannelId = ''; // 用于跨行解析 <channel> 标签
 
     while (true) {
       const { done, value } = await reader.read();
@@ -192,33 +193,65 @@ async function parseEpg(
         const trimmedLine = line.trim();
         if (!trimmedLine) continue;
 
-        // 解析 <channel> 标签，建立名称映射（始终收集）
+        // 解析 <channel> 开始标签
         if (trimmedLine.startsWith('<channel')) {
           const channelIdMatch = trimmedLine.match(/id="([^"]*)"/);
-          const channelId = channelIdMatch ? channelIdMatch[1] : '';
+          currentChannelId = channelIdMatch ? channelIdMatch[1] : '';
 
-          // 查找 display-name
+          // 查找 display-name（可能在同一行）
           const displayNameMatch = trimmedLine.match(/<display-name[^>]*>(.*?)<\/display-name>/);
-          if (channelId && displayNameMatch) {
+          if (currentChannelId && displayNameMatch) {
             const displayName = displayNameMatch[1];
             const normalizedDisplayName = normalizeChannelName(displayName);
-            epgNameToChannelId.set(normalizedDisplayName, channelId);
+            epgNameToChannelId.set(normalizedDisplayName, currentChannelId);
 
             // 支持一个 channel ID 对应多个 display-name
-            if (!epgChannelIdToNames.has(channelId)) {
-              epgChannelIdToNames.set(channelId, []);
+            if (!epgChannelIdToNames.has(currentChannelId)) {
+              epgChannelIdToNames.set(currentChannelId, []);
             }
-            epgChannelIdToNames.get(channelId)!.push(normalizedDisplayName);
+            epgChannelIdToNames.get(currentChannelId)!.push(normalizedDisplayName);
           }
 
-          // 提取 icon URL
+          // 提取 icon URL（可能在同一行）
           const iconMatch = trimmedLine.match(/<icon\s+src="([^"]*)"/);
-          if (channelId && iconMatch) {
+          if (currentChannelId && iconMatch) {
             const iconUrl = iconMatch[1];
-            epgChannelIdToLogo.set(channelId, iconUrl);
+            epgChannelIdToLogo.set(currentChannelId, iconUrl);
           }
 
-          continue; // 处理完 channel 标签后跳过后续逻辑
+          continue;
+        }
+
+        // 解析 <display-name> 标签（在 <channel> 后的单独一行）
+        if (trimmedLine.startsWith('<display-name') && currentChannelId) {
+          const displayNameMatch = trimmedLine.match(/<display-name[^>]*>(.*?)<\/display-name>/);
+          if (displayNameMatch) {
+            const displayName = displayNameMatch[1];
+            const normalizedDisplayName = normalizeChannelName(displayName);
+            epgNameToChannelId.set(normalizedDisplayName, currentChannelId);
+
+            if (!epgChannelIdToNames.has(currentChannelId)) {
+              epgChannelIdToNames.set(currentChannelId, []);
+            }
+            epgChannelIdToNames.get(currentChannelId)!.push(normalizedDisplayName);
+          }
+          continue;
+        }
+
+        // 解析 <icon> 标签（在单独一行）
+        if (trimmedLine.startsWith('<icon') && currentChannelId) {
+          const iconMatch = trimmedLine.match(/<icon\s+src="([^"]*)"/);
+          if (iconMatch) {
+            const iconUrl = iconMatch[1];
+            epgChannelIdToLogo.set(currentChannelId, iconUrl);
+          }
+          continue;
+        }
+
+        // 结束 channel 标签
+        if (trimmedLine === '</channel>') {
+          currentChannelId = '';
+          continue;
         }
 
         // 解析 <programme> 标签 - 直接按 EPG channel ID 存储
@@ -396,6 +429,7 @@ export async function parseEpgWithDebug(
     let buffer = '';
     let currentEpgChannelId = '';
     let currentProgram: { start: string; end: string; title: string } | null = null;
+    let currentChannelId = ''; // 用于跨行解析 <channel> 标签
 
     while (true) {
       const { done, value } = await reader.read();
@@ -412,33 +446,65 @@ export async function parseEpgWithDebug(
         const trimmedLine = line.trim();
         if (!trimmedLine) continue;
 
-        // 解析 <channel> 标签，建立名称映射（始终收集）
+        // 解析 <channel> 开始标签
         if (trimmedLine.startsWith('<channel')) {
           const channelIdMatch = trimmedLine.match(/id="([^"]*)"/);
-          const channelId = channelIdMatch ? channelIdMatch[1] : '';
+          currentChannelId = channelIdMatch ? channelIdMatch[1] : '';
 
-          // 查找 display-name
+          // 查找 display-name（可能在同一行）
           const displayNameMatch = trimmedLine.match(/<display-name[^>]*>(.*?)<\/display-name>/);
-          if (channelId && displayNameMatch) {
+          if (currentChannelId && displayNameMatch) {
             const displayName = displayNameMatch[1];
             const normalizedDisplayName = normalizeChannelName(displayName);
-            epgNameToChannelId.set(normalizedDisplayName, channelId);
+            epgNameToChannelId.set(normalizedDisplayName, currentChannelId);
 
             // 支持一个 channel ID 对应多个 display-name
-            if (!epgChannelIdToNames.has(channelId)) {
-              epgChannelIdToNames.set(channelId, []);
+            if (!epgChannelIdToNames.has(currentChannelId)) {
+              epgChannelIdToNames.set(currentChannelId, []);
             }
-            epgChannelIdToNames.get(channelId)!.push(normalizedDisplayName);
+            epgChannelIdToNames.get(currentChannelId)!.push(normalizedDisplayName);
           }
 
-          // 提取 icon URL
+          // 提取 icon URL（可能在同一行）
           const iconMatch = trimmedLine.match(/<icon\s+src="([^"]*)"/);
-          if (channelId && iconMatch) {
+          if (currentChannelId && iconMatch) {
             const iconUrl = iconMatch[1];
-            epgChannelIdToLogo.set(channelId, iconUrl);
+            epgChannelIdToLogo.set(currentChannelId, iconUrl);
           }
 
-          continue; // 处理完 channel 标签后跳过后续逻辑
+          continue;
+        }
+
+        // 解析 <display-name> 标签（在 <channel> 后的单独一行）
+        if (trimmedLine.startsWith('<display-name') && currentChannelId) {
+          const displayNameMatch = trimmedLine.match(/<display-name[^>]*>(.*?)<\/display-name>/);
+          if (displayNameMatch) {
+            const displayName = displayNameMatch[1];
+            const normalizedDisplayName = normalizeChannelName(displayName);
+            epgNameToChannelId.set(normalizedDisplayName, currentChannelId);
+
+            if (!epgChannelIdToNames.has(currentChannelId)) {
+              epgChannelIdToNames.set(currentChannelId, []);
+            }
+            epgChannelIdToNames.get(currentChannelId)!.push(normalizedDisplayName);
+          }
+          continue;
+        }
+
+        // 解析 <icon> 标签（在单独一行）
+        if (trimmedLine.startsWith('<icon') && currentChannelId) {
+          const iconMatch = trimmedLine.match(/<icon\s+src="([^"]*)"/);
+          if (iconMatch) {
+            const iconUrl = iconMatch[1];
+            epgChannelIdToLogo.set(currentChannelId, iconUrl);
+          }
+          continue;
+        }
+
+        // 结束 channel 标签
+        if (trimmedLine === '</channel>') {
+          currentChannelId = '';
+          continue;
         }
 
         // 解析 <programme> 标签 - 直接按 EPG channel ID 存储
