@@ -351,7 +351,7 @@ export default function HeroBanner({
       <div className="absolute bottom-0 left-0 right-0 px-4 sm:px-8 md:px-12 lg:px-16 xl:px-20 pb-12 sm:pb-16 md:pb-20 lg:pb-24">
         <div className="max-w-2xl space-y-3 sm:space-y-4 md:space-y-5 lg:space-y-6">
           {/* 标题 - Netflix风格：超大字体 */}
-          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-white drop-shadow-2xl leading-tight">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-white drop-shadow-2xl leading-tight break-words w-full text-balance">
             {currentItem.title}
           </h1>
 
