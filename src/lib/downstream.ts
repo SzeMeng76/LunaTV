@@ -6,6 +6,9 @@ import { SearchResult } from '@/lib/types';
 import { cleanHtmlTags } from '@/lib/utils';
 import { Converter } from 'opencc-js';
 
+// 创建模块级别的繁简转换器实例（单例模式，避免重复创建）
+const tw2cnConverter = Converter({ from: 'tw', to: 'cn' });
+
 interface ApiSearchItem {
   vod_id: string;
   vod_name: string;
@@ -346,15 +349,11 @@ function generateSearchVariants(originalQuery: string): string[] {
   variants.push(trimmed);
 
   // 2. 繁体转简体变体（用于搜索简体数据源）
-  try {
-    const converter = Converter({ from: 'tw', to: 'cn' });
-    const simplifiedVariant = converter(trimmed);
-    if (simplifiedVariant !== trimmed && !variants.includes(simplifiedVariant)) {
-      variants.push(simplifiedVariant);
-      console.log(`[DEBUG] 添加繁转简变体: "${trimmed}" -> "${simplifiedVariant}"`);
-    }
-  } catch (error) {
-    console.log('[DEBUG] 繁简转换出错:', error);
+  // 使用模块级别的 converter 单例，避免每次创建新实例
+  const simplifiedVariant = tw2cnConverter(trimmed);
+  if (simplifiedVariant !== trimmed && !variants.includes(simplifiedVariant)) {
+    variants.push(simplifiedVariant);
+    console.log(`[DEBUG] 添加繁转简变体: "${trimmed}" -> "${simplifiedVariant}"`);
   }
 
   // 3. 处理中文标点符号变体
