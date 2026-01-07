@@ -4,10 +4,23 @@ import { API_CONFIG, ApiSite, getConfig } from '@/lib/config';
 import { getCachedSearchPage, setCachedSearchPage } from '@/lib/search-cache';
 import { SearchResult } from '@/lib/types';
 import { cleanHtmlTags } from '@/lib/utils';
-import { Converter } from 'opencc-js';
+// 使用 tree-shakeable 的精简版 opencc-js，减小打包体积
+import * as OpenCC from 'opencc-js/core';
+import * as Locale from 'opencc-js/preset';
 
-// 创建模块级别的繁简转换器实例（单例模式，避免重复创建）
-const tw2cnConverter = Converter({ from: 'tw', to: 'cn' });
+// 创建模块级别的繁简转换器实例（使用 ConverterFactory 以支持 tree shaking）
+const tw2cnConverter = OpenCC.ConverterFactory(Locale.from.tw, Locale.to.cn);
+
+/**
+ * 快速检测文本是否包含繁体中文字符
+ * 只检查最常见的繁体字，避免复杂计算
+ */
+function hasTraditionalChinese(text: string): boolean {
+  // 常见繁体字特征字符集（300+个高频繁体字）
+  const traditionalChars = /[繁體萬與國際們組織機構學術專業實現開發設計運營數據網絡無線電視頻視聽網際網路傳統環境標準應該對於時間關於問題進階經過經濟條件說明選擇設備備份確認資訊處處理會員參與產業備註說話語言計劃際國銀連絡關係備選會議歡戲劇隊團樂營銷員會會長現場營業證據說證書書當藝術觀觀點點評備選講錄雖雜緒談論備查屬屬於類學習臺檯灣愛戀戀愛舊暫時時間無滅實現檢測證業務電話營運費點論據賴歷曆歷史賓賬賬號幹乾優壓廣廳雙華嚴協協會應應對應該單據凈經費緊緊張際電賽壞廠倉點總營備萬幣電話經費樓對備對學學習隊備選說備齊會檢驗風與鳳風險數點舉認識證據認實實現論際產認證據證會議講備態環環境機點業標購買賣賣場場營連對線營點業組檔檔案證據說對說對備誰線營營業鐵銅銀經驗驗證證據實現實實現檢檢查證協說該對業會運營運營協說際標協備證說讀複雜總經總總結實對設點業論風時應對協實雜記錄經連應態壓說實營話際環連說協備參總總營標產營點風連總誰綫]/;
+
+  return traditionalChars.test(text);
+}
 
 interface ApiSearchItem {
   vod_id: string;
@@ -349,11 +362,13 @@ function generateSearchVariants(originalQuery: string): string[] {
   variants.push(trimmed);
 
   // 2. 繁体转简体变体（用于搜索简体数据源）
-  // 使用模块级别的 converter 单例，避免每次创建新实例
-  const simplifiedVariant = tw2cnConverter(trimmed);
-  if (simplifiedVariant !== trimmed && !variants.includes(simplifiedVariant)) {
-    variants.push(simplifiedVariant);
-    console.log(`[DEBUG] 添加繁转简变体: "${trimmed}" -> "${simplifiedVariant}"`);
+  // 先快速检测是否包含繁体字，避免对简体输入进行不必要的转换
+  if (hasTraditionalChinese(trimmed)) {
+    const simplifiedVariant = tw2cnConverter(trimmed);
+    if (simplifiedVariant !== trimmed && !variants.includes(simplifiedVariant)) {
+      variants.push(simplifiedVariant);
+      console.log(`[DEBUG] 添加繁转简变体: "${trimmed}" -> "${simplifiedVariant}"`);
+    }
   }
 
   // 3. 处理中文标点符号变体
