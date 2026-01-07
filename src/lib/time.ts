@@ -54,3 +54,23 @@ export function isValidTime(timeString: string): boolean {
     return false;
   }
 }
+
+/**
+ * 将秒数格式化为时间字符串
+ * @param seconds 秒数
+ * @returns 格式化的时间字符串 (HH:MM:SS 或 MM:SS)
+ */
+export function formatTime(seconds: number): string {
+  if (seconds === 0) return '00:00';
+
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+
+  const pad = (num: number) => num.toString().padStart(2, '0');
+
+  if (hours > 0) {
+    return `${pad(hours)}:${pad(minutes)}:${pad(secs)}`;
+  }
+  return `${pad(minutes)}:${pad(secs)}`;
+}

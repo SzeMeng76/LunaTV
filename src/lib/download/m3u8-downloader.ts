@@ -73,6 +73,7 @@ export interface M3U8Task {
     key: string;
   };
   durationSecond: number;
+  segmentDurations: number[]; // 每个片段的实际时长（秒）
   rangeDownload: {
     startSegment: number;
     endSegment: number;
@@ -195,6 +196,7 @@ export async function parseM3U8(url: string, depth = 0): Promise<M3U8Task> {
       key: '',
     },
     durationSecond: 0,
+    segmentDurations: [], // 初始化片段时长数组
     rangeDownload: {
       startSegment: 1,
       endSegment: 0,
@@ -203,15 +205,23 @@ export async function parseM3U8(url: string, depth = 0): Promise<M3U8Task> {
     totalSize: 0,
   };
 
-  // 提取 ts 视频片段地址
+  // 提取 ts 视频片段地址和时长
   const lines = m3u8Str.split('\n');
+  let currentSegmentDuration = 0;
+
   for (const line of lines) {
     if (line.startsWith('#EXTINF:')) {
-      task.durationSecond += parseFloat(line.split('#EXTINF:')[1]);
+      // 提取片段时长（#EXTINF:duration,title）
+      const durationStr = line.split('#EXTINF:')[1].split(',')[0];
+      currentSegmentDuration = parseFloat(durationStr);
+      task.durationSecond += currentSegmentDuration;
     } else if (/^[^#]/.test(line) && line.trim()) {
       const tsUrl = applyURL(line.trim(), url);
       task.tsUrlList.push(tsUrl);
       task.finishList.push({ title: line.trim(), status: '' });
+      // 保存该片段的实际时长
+      task.segmentDurations.push(currentSegmentDuration);
+      currentSegmentDuration = 0; // 重置
     }
   }
 

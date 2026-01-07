@@ -4,6 +4,7 @@ import React from 'react';
 import { useDownload } from '@/contexts/DownloadContext';
 import { M3U8DownloadTask } from '@/lib/download';
 import { getStreamModeName, getStreamModeIcon } from '@/lib/download';
+import { formatTime } from '@/lib/time';
 import { DownloadSettingsModal } from './DownloadSettingsModal';
 
 export function DownloadPanel() {
@@ -46,6 +47,34 @@ export function DownloadPanel() {
       default:
         return 'text-gray-500';
     }
+  };
+
+  // 计算下载范围的时间信息
+  const getTimeRangeInfo = (task: M3U8DownloadTask) => {
+    if (!task.segmentDurations || task.segmentDurations.length === 0) {
+      return null;
+    }
+
+    const { startSegment, endSegment } = task.rangeDownload;
+
+    // 计算开始时间（累加前面的片段）
+    let startTime = 0;
+    for (let i = 0; i < startSegment - 1; i++) {
+      startTime += task.segmentDurations[i] || 0;
+    }
+
+    // 计算结束时间（累加到结束片段）
+    let endTime = 0;
+    for (let i = 0; i < endSegment; i++) {
+      endTime += task.segmentDurations[i] || 0;
+    }
+
+    return {
+      startTime,
+      endTime,
+      startFormatted: formatTime(startTime),
+      endFormatted: formatTime(endTime),
+    };
   };
 
   return (
@@ -103,6 +132,7 @@ export function DownloadPanel() {
           ) : (
             tasks.map((task) => {
               const progress = getProgress(task.id);
+              const timeRange = getTimeRangeInfo(task);
               return (
                 <div
                   key={task.id}
@@ -135,6 +165,14 @@ export function DownloadPanel() {
                     <div className='flex items-center justify-between text-xs text-gray-600 dark:text-gray-300 mb-1'>
                       <span>
                         {task.finishNum} / {task.rangeDownload.targetSegment} 片段
+                        {timeRange ? (
+                          <span className='ml-2 text-blue-600 dark:text-blue-400'>
+                            {task.rangeDownload.startSegment > 1 || task.rangeDownload.endSegment < task.tsUrlList.length
+                              ? `(范围: ${task.rangeDownload.startSegment}-${task.rangeDownload.endSegment} | 时长: ${timeRange.startFormatted} ~ ${timeRange.endFormatted})`
+                              : `(总时长: ${timeRange.endFormatted})`
+                            }
+                          </span>
+                        ) : null}
                       </span>
                       <span>{progress.toFixed(1)}%</span>
                     </div>
