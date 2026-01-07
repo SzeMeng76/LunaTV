@@ -4,6 +4,7 @@ import { API_CONFIG, ApiSite, getConfig } from '@/lib/config';
 import { getCachedSearchPage, setCachedSearchPage } from '@/lib/search-cache';
 import { SearchResult } from '@/lib/types';
 import { cleanHtmlTags } from '@/lib/utils';
+import { Converter } from 'opencc-js';
 
 interface ApiSearchItem {
   vod_id: string;
@@ -344,7 +345,19 @@ function generateSearchVariants(originalQuery: string): string[] {
   // 1. 原始查询（最高优先级）
   variants.push(trimmed);
 
-  // 2. 处理中文标点符号变体
+  // 2. 繁体转简体变体（用于搜索简体数据源）
+  try {
+    const converter = Converter({ from: 'tw', to: 'cn' });
+    const simplifiedVariant = converter(trimmed);
+    if (simplifiedVariant !== trimmed && !variants.includes(simplifiedVariant)) {
+      variants.push(simplifiedVariant);
+      console.log(`[DEBUG] 添加繁转简变体: "${trimmed}" -> "${simplifiedVariant}"`);
+    }
+  } catch (error) {
+    console.log('[DEBUG] 繁简转换出错:', error);
+  }
+
+  // 3. 处理中文标点符号变体
   const chinesePunctuationVariants = generateChinesePunctuationVariants(trimmed);
   chinesePunctuationVariants.forEach(variant => {
     if (!variants.includes(variant)) {
@@ -352,7 +365,7 @@ function generateSearchVariants(originalQuery: string): string[] {
     }
   });
 
-  // 3. 移除数字变体生成（优化性能，依赖页面智能匹配逻辑处理数字差异）
+  // 4. 移除数字变体生成（优化性能，依赖页面智能匹配逻辑处理数字差异）
   // const numberVariants = generateNumberVariants(trimmed);
   // numberVariants.forEach(variant => {
   //   if (!variants.includes(variant)) {
@@ -362,19 +375,19 @@ function generateSearchVariants(originalQuery: string): string[] {
 
   // 如果包含空格，生成额外变体
   if (trimmed.includes(' ')) {
-    // 4. 去除所有空格
+    // 5. 去除所有空格
     const noSpaces = trimmed.replace(/\s+/g, '');
     if (noSpaces !== trimmed) {
       variants.push(noSpaces);
     }
 
-    // 5. 标准化空格（多个空格合并为一个）
+    // 6. 标准化空格（多个空格合并为一个）
     const normalizedSpaces = trimmed.replace(/\s+/g, ' ');
     if (normalizedSpaces !== trimmed && !variants.includes(normalizedSpaces)) {
       variants.push(normalizedSpaces);
     }
 
-    // 6. 提取关键词组合（针对"中餐厅 第九季"这种情况）
+    // 7. 提取关键词组合（针对"中餐厅 第九季"这种情况）
     const keywords = trimmed.split(/\s+/);
     if (keywords.length >= 2) {
       // 主要关键词 + 季/集等后缀
@@ -389,13 +402,13 @@ function generateSearchVariants(originalQuery: string): string[] {
         }
       }
 
-      // 7. 空格变冒号的变体（重要！针对"死神来了 血脉诅咒" -> "死神来了：血脉诅咒"）
+      // 8. 空格变冒号的变体（重要！针对"死神来了 血脉诅咒" -> "死神来了：血脉诅咒"）
       const withColon = trimmed.replace(/\s+/g, '：');
       if (!variants.includes(withColon)) {
         variants.push(withColon);
       }
 
-      // 8. 空格变英文冒号的变体
+      // 9. 空格变英文冒号的变体
       const withEnglishColon = trimmed.replace(/\s+/g, ':');
       if (!variants.includes(withEnglishColon)) {
         variants.push(withEnglishColon);

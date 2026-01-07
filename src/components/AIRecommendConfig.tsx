@@ -15,6 +15,7 @@ interface AIRecommendConfigProps {
 const AIRecommendConfig = ({ config, refreshConfig }: AIRecommendConfigProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const [aiSettings, setAiSettings] = useState({
     enabled: false,
@@ -152,6 +153,7 @@ const AIRecommendConfig = ({ config, refreshConfig }: AIRecommendConfigProps) =>
       }
 
       showMessage('success', 'AI推荐配置保存成功');
+      setHasUnsavedChanges(false);
       await refreshConfig();
     } catch (err) {
       showMessage('error', err instanceof Error ? err.message : '保存失败');
@@ -214,14 +216,22 @@ const AIRecommendConfig = ({ config, refreshConfig }: AIRecommendConfigProps) =>
 
   // 获取 Tavily API 用量
   const fetchTavilyUsage = async (singleKeyIndex?: number) => {
+    // 先保存输入到 state（如果用户刚输入还没失焦）
+    const keys = tavilyKeysInput
+      .split(/[,\n]+/)
+      .map(k => k.trim())
+      .filter(k => k.length > 0);
+
+    setAiSettings(prev => ({ ...prev, tavilyApiKeys: keys }));
+
     let keysToCheck: string[];
 
     if (singleKeyIndex !== undefined) {
       // 查询单个 Key
-      keysToCheck = [aiSettings.tavilyApiKeys[singleKeyIndex]];
+      keysToCheck = [keys[singleKeyIndex]];
     } else {
       // 查询所有 Key
-      keysToCheck = aiSettings.tavilyApiKeys.filter(k => k.trim().length > 0);
+      keysToCheck = keys.filter(k => k.trim().length > 0);
     }
 
     if (keysToCheck.length === 0) {
@@ -293,6 +303,7 @@ const AIRecommendConfig = ({ config, refreshConfig }: AIRecommendConfigProps) =>
             lastUpdated: new Date().toLocaleString('zh-CN')
           };
         });
+        showMessage('success', '✅ 统计数据已更新！请点击下方"保存配置"按钮保存Key到配置文件');
       } else {
         // 全部查询：替换所有数据
         setTavilyUsage({
@@ -300,6 +311,7 @@ const AIRecommendConfig = ({ config, refreshConfig }: AIRecommendConfigProps) =>
           data: results,
           lastUpdated: new Date().toLocaleString('zh-CN')
         });
+        showMessage('success', '✅ 统计数据已更新！请点击下方"保存配置"按钮保存Key到配置文件');
       }
     } catch (err) {
       console.error('获取 Tavily 用量失败:', err);
@@ -635,6 +647,7 @@ const AIRecommendConfig = ({ config, refreshConfig }: AIRecommendConfigProps) =>
                     onChange={(e) => {
                       // 直接保存原始输入，不做分割
                       setTavilyKeysInput(e.target.value);
+                      setHasUnsavedChanges(true);
                     }}
                     onBlur={() => {
                       // 失焦时分割并更新到settings（用于显示数量）
@@ -854,12 +867,16 @@ const AIRecommendConfig = ({ config, refreshConfig }: AIRecommendConfigProps) =>
         <button
           onClick={handleSave}
           disabled={isLoading}
-          className='flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors'
+          className={`flex items-center px-4 py-2 ${
+            hasUnsavedChanges
+              ? 'bg-orange-600 hover:bg-orange-700 animate-pulse'
+              : 'bg-blue-600 hover:bg-blue-700'
+          } disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors`}
         >
           <svg className='h-4 w-4 mr-2' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
             <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M5 13l4 4L19 7' />
           </svg>
-          {isLoading ? '保存中...' : '保存配置'}
+          {isLoading ? '保存中...' : hasUnsavedChanges ? '⚠️ 保存配置（有未保存更改）' : '保存配置'}
         </button>
       </div>
     </div>
