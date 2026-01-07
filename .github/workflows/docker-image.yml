@@ -78,6 +78,12 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Login to Docker Hub  # ← 新增：登录 Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}  # ← 需要在 GitHub Secrets 中设置
+          password: ${{ secrets.DOCKERHUB_TOKEN }}     # ← 需要在 GitHub Secrets 中设置
+
       - name: Set lowercase repository owner
         id: lowercase
         run: echo "owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
@@ -86,7 +92,9 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ steps.lowercase.outputs.owner }}/lunatv
+          images: |  # ← 修改点：改为多行格式，添加 Docker Hub 仓库
+            ghcr.io/${{ steps.lowercase.outputs.owner }}/lunatv
+            978261656/firmiana  # ← 新增：你的 Docker Hub 仓库
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=raw,value=${{ steps.version_check.outputs.current_version }},enable=${{ steps.version_check.outputs.version_changed == 'true' }}
@@ -170,28 +178,36 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Login to Docker Hub  # ← 新增：在 merge 作业中也登录 Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Set lowercase repository owner
         id: lowercase
         run: echo "owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
 
       - name: Create manifest list and push
         working-directory: /tmp/digests
-        run: |
-          # Always create latest tag
-          docker buildx imagetools create -t ghcr.io/${{ steps.lowercase.outputs.owner }}/lunatv:latest \
-            $(printf 'ghcr.io/${{ steps.lowercase.outputs.owner }}/lunatv@sha256:%s ' *)
-
-          # Create version tag if version changed
+        run: |  # ← 修改点：完全替换为同时推送到两个仓库的命令
+          # 构建基础镜像引用列表
+          BASE_REFS=$(printf 'ghcr.io/${{ steps.lowercase.outputs.owner }}/lunatv@sha256:%s ' *)
+          
+          # 为两个仓库创建 latest 标签
+          docker buildx imagetools create -t ghcr.io/${{ steps.lowercase.outputs.owner }}/lunatv:latest -t 978261656/firmiana:latest $BASE_REFS
+          
+          # 如果版本改变，为两个仓库创建版本标签
           if [ "${{ steps.version_check.outputs.version_changed }}" = "true" ]; then
-            docker buildx imagetools create -t ghcr.io/${{ steps.lowercase.outputs.owner }}/lunatv:${{ steps.version_check.outputs.current_version }} \
-              $(printf 'ghcr.io/${{ steps.lowercase.outputs.owner }}/lunatv@sha256:%s ' *)
+            docker buildx imagetools create -t ghcr.io/${{ steps.lowercase.outputs.owner }}/lunatv:${{ steps.version_check.outputs.current_version }} -t 978261656/firmiana:${{ steps.version_check.outputs.current_version }} $BASE_REFS
           fi
-
-          # Create custom tag if provided
+          
+          # 如果提供了自定义标签，为两个仓库创建
           if [ -n "${{ github.event.inputs.tag }}" ] && [ "${{ github.event.inputs.tag }}" != "latest" ]; then
-            docker buildx imagetools create -t ghcr.io/${{ steps.lowercase.outputs.owner }}/lunatv:${{ github.event.inputs.tag }} \
-              $(printf 'ghcr.io/${{ steps.lowercase.outputs.owner }}/lunatv@sha256:%s ' *)
+            docker buildx imagetools create -t ghcr.io/${{ steps.lowercase.outputs.owner }}/lunatv:${{ github.event.inputs.tag }} -t 978261656/firmiana:${{ github.event.inputs.tag }} $BASE_REFS
           fi
+          
+          echo "✅ 已推送所有标签到 GitHub Container Registry 和 Docker Hub"
 
   cleanup-refresh:
     runs-on: ubuntu-latest
