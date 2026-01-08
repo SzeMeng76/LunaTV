@@ -4,23 +4,11 @@ import { API_CONFIG, ApiSite, getConfig } from '@/lib/config';
 import { getCachedSearchPage, setCachedSearchPage } from '@/lib/search-cache';
 import { SearchResult } from '@/lib/types';
 import { cleanHtmlTags } from '@/lib/utils';
-// 使用 tree-shakeable 的精简版 opencc-js，减小打包体积
-import * as OpenCC from 'opencc-js/core';
-import * as Locale from 'opencc-js/preset';
+// 使用轻量级 switch-chinese 库（93.8KB vs opencc-js 5.6MB）
+import stcasc, { ChineseType } from 'switch-chinese';
 
-// 创建模块级别的繁简转换器实例（使用 ConverterFactory 以支持 tree shaking）
-const tw2cnConverter = OpenCC.ConverterFactory(Locale.from.tw, Locale.to.cn);
-
-/**
- * 快速检测文本是否包含繁体中文字符
- * 只检查最常见的繁体字，避免复杂计算
- */
-function hasTraditionalChinese(text: string): boolean {
-  // 常见繁体字特征字符集（300+个高频繁体字）
-  const traditionalChars = /[繁體萬與國際們組織機構學術專業實現開發設計運營數據網絡無線電視頻視聽網際網路傳統環境標準應該對於時間關於問題進階經過經濟條件說明選擇設備備份確認資訊處處理會員參與產業備註說話語言計劃際國銀連絡關係備選會議歡戲劇隊團樂營銷員會會長現場營業證據說證書書當藝術觀觀點點評備選講錄雖雜緒談論備查屬屬於類學習臺檯灣愛戀戀愛舊暫時時間無滅實現檢測證業務電話營運費點論據賴歷曆歷史賓賬賬號幹乾優壓廣廳雙華嚴協協會應應對應該單據凈經費緊緊張際電賽壞廠倉點總營備萬幣電話經費樓對備對學學習隊備選說備齊會檢驗風與鳳風險數點舉認識證據認實實現論際產認證據證會議講備態環環境機點業標購買賣賣場場營連對線營點業組檔檔案證據說對說對備誰線營營業鐵銅銀經驗驗證證據實現實實現檢檢查證協說該對業會運營運營協說際標協備證說讀複雜總經總總結實對設點業論風時應對協實雜記錄經連應態壓說實營話際環連說協備參總總營標產營點風連總誰綫]/;
-
-  return traditionalChars.test(text);
-}
+// 创建模块级别的繁简转换器实例
+const converter = stcasc();
 
 interface ApiSearchItem {
   vod_id: string;
@@ -155,13 +143,14 @@ async function searchWithCache(
 
 export async function searchFromApi(
   apiSite: ApiSite,
-  query: string
+  query: string,
+  precomputedVariants?: string[] // 新增：预计算的变体
 ): Promise<SearchResult[]> {
   try {
     const apiBaseUrl = apiSite.api;
 
-    // 智能搜索：生成搜索变体（优化：只生成最有用的变体）
-    const searchVariants = generateSearchVariants(query).slice(0, 2); // 最多只用前2个变体
+    // 智能搜索：使用预计算的变体或即时生成（优化：只生成最有用的变体）
+    const searchVariants = precomputedVariants || generateSearchVariants(query).slice(0, 2);
     let results: SearchResult[] = [];
     let pageCountFromFirst = 0;
 
@@ -354,24 +343,14 @@ const M3U8_PATTERN = /(https?:\/\/[^"'\s]+?\.m3u8)/g;
  * @param originalQuery 原始查询
  * @returns 按优先级排序的搜索变体数组
  */
-function generateSearchVariants(originalQuery: string): string[] {
+export function generateSearchVariants(originalQuery: string): string[] {
   const variants: string[] = [];
   const trimmed = originalQuery.trim();
 
   // 1. 原始查询（最高优先级）
   variants.push(trimmed);
 
-  // 2. 繁体转简体变体（用于搜索简体数据源）
-  // 先快速检测是否包含繁体字，避免对简体输入进行不必要的转换
-  if (hasTraditionalChinese(trimmed)) {
-    const simplifiedVariant = tw2cnConverter(trimmed);
-    if (simplifiedVariant !== trimmed && !variants.includes(simplifiedVariant)) {
-      variants.push(simplifiedVariant);
-      console.log(`[DEBUG] 添加繁转简变体: "${trimmed}" -> "${simplifiedVariant}"`);
-    }
-  }
-
-  // 3. 处理中文标点符号变体
+  // 2. 处理中文标点符号变体
   const chinesePunctuationVariants = generateChinesePunctuationVariants(trimmed);
   chinesePunctuationVariants.forEach(variant => {
     if (!variants.includes(variant)) {
@@ -438,8 +417,31 @@ function generateSearchVariants(originalQuery: string): string[] {
     }
   }
 
-  // 去重并返回
-  return Array.from(new Set(variants));
+  // 去重
+  const uniqueVariants = Array.from(new Set(variants));
+
+  // 最后：只对前几个优先级高的变体进行繁体转简体处理
+  // 优化：使用 detect() 先检测，避免对简体输入进行无用转换（detect比simplized快1.5-3倍）
+  const finalVariants: string[] = [];
+  const MAX_VARIANTS_TO_CONVERT = 3; // 只转换前3个变体
+
+  uniqueVariants.forEach((variant, index) => {
+    finalVariants.push(variant);
+    // 只对前几个变体进行繁转简
+    if (index < MAX_VARIANTS_TO_CONVERT) {
+      // 优化：先用 detect() 检测，简体直接跳过（快1.5-3倍）
+      const type = converter.detect(variant);
+      if (type !== ChineseType.SIMPLIFIED) {
+        const simplifiedVariant = converter.simplized(variant);
+        if (simplifiedVariant !== variant && !finalVariants.includes(simplifiedVariant)) {
+          finalVariants.push(simplifiedVariant);
+          console.log(`[DEBUG] 添加繁转简变体: "${variant}" -> "${simplifiedVariant}"`);
+        }
+      }
+    }
+  });
+
+  return finalVariants;
 }
 
 /**
