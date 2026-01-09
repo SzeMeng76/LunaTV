@@ -1,6 +1,3 @@
-// 文件：suggestions.route.ts（已修改）
-// 添加违禁词检测 + 建议结果过滤
-
 /* eslint-disable @typescript-eslint/no-explicit-any,no-console */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -10,7 +7,7 @@ import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getAvailableApiSites, getConfig } from '@/lib/config';
 import { searchFromApi } from '@/lib/downstream';
 import { yellowWords } from '@/lib/yellow';
-import { bannedWords } from '@/lib/filter';   // ← 新增导入
+import { bannedWords } from '@/lib/filter';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -30,13 +27,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ suggestions: [] });
     }
 
-    // 1. 查询含违禁词直接返回空建议
+    // 1. 查询含违禁词 → 直接返回空建议
     const queryLower = query.toLowerCase();
     if (bannedWords.some(word => queryLower.includes(word.toLowerCase()))) {
       return NextResponse.json({ suggestions: [] });
     }
 
-    // 生成建议
     const suggestions = await generateSuggestions(config, query, authInfo.username);
 
     const cacheTime = config.SiteConfig.SiteInterfaceCacheTime || 300;
@@ -77,7 +73,7 @@ async function generateSuggestions(config: AdminConfig, query: string, username:
     realKeywords = Array.from(
       new Set(
         results
-          .filter((r: any) => config.SiteConfig.DisableYellowFilter || !yellowWords.some((word: string) => (r.type_name || '').includes(word)))
+          .filter((r: any) => config.SiteConfig.DisableYellowFilter || !yellowWords.some((word: string) => (r.type_name || '').toLowerCase().includes(word.toLowerCase())))
           .map((r: any) => r.title)
           .filter(Boolean)
           .flatMap((title: string) => title.split(/[ -:：·、-]/))
@@ -105,10 +101,11 @@ async function generateSuggestions(config: AdminConfig, query: string, username:
     return { text: word, type, score };
   });
 
-  // 2. 过滤掉建议词本身包含违禁词的情况
-  const filteredSuggestions = realSuggestions.filter(s => 
-    !bannedWords.some(word => s.text.toLowerCase().includes(word.toLowerCase()))
-  );
+  // 过滤掉建议词本身含有违禁词的
+  const filteredSuggestions = realSuggestions.filter(s => {
+    const textLower = s.text.toLowerCase();
+    return !bannedWords.some(word => textLower.includes(word.toLowerCase()));
+  });
 
   // 排序
   const sortedSuggestions = filteredSuggestions.sort((a, b) => {

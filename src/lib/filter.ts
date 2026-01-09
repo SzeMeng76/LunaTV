@@ -1,6 +1,4 @@
-// 文件：lib/filter.ts
-// 违禁词过滤列表（成人内容相关）
-
+// lib/filter.ts
 export const bannedWords: string[] = [
   '伦理片',
   '福利',

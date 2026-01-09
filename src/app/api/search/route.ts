@@ -1,6 +1,3 @@
-// 文件：route.ts（已修改）
-// 添加违禁词检测 + 全局搜索结果过滤
-
 /* eslint-disable @typescript-eslint/no-explicit-any,no-console */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -10,7 +7,7 @@ import { getAvailableApiSites, getCacheTime, getConfig } from '@/lib/config';
 import { searchFromApi } from '@/lib/downstream';
 import { generateSearchVariants } from '@/lib/downstream';
 import { yellowWords } from '@/lib/yellow';
-import { bannedWords } from '@/lib/filter';   // ← 新增导入
+import { bannedWords } from '@/lib/filter';
 
 export const runtime = 'nodejs';
 
@@ -38,7 +35,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // 1. 查询含违禁词 → 直接返回空结果
+  // 1. 查询本身含有违禁词 → 直接返回空结果
   const queryLower = query.toLowerCase();
   if (bannedWords.some(word => queryLower.includes(word.toLowerCase()))) {
     return NextResponse.json({ results: [] }, { status: 200 });
@@ -66,23 +63,25 @@ export async function GET(request: NextRequest) {
     const successResults = results
       .filter((result) => result.status === 'fulfilled')
       .map((result) => (result as PromiseFulfilledResult<any>).value);
+
     let flattenedResults = successResults.flat();
 
-    // 2. 违禁词过滤
-    flattenedResults = flattenedResults.filter(item => {
-      const title = (item.title || '').toLowerCase();
-      const typeName = (item.type_name || '').toLowerCase();
-      return !bannedWords.some(word => 
-        title.includes(word.toLowerCase()) || 
-        typeName.includes(word.toLowerCase())
-      );
+    // 违禁词过滤（检查 title 和 type_name 字段）
+    flattenedResults = flattenedResults.filter((item) => {
+      const title = (item.title || item.name || '').toLowerCase();
+      const typeName = (item.type_name || item.category || item.vod_type || '').toLowerCase();
+      
+      return !bannedWords.some((word) => {
+        const lowerWord = word.toLowerCase();
+        return title.includes(lowerWord) || typeName.includes(lowerWord);
+      });
     });
 
     // 原有黄色内容过滤
     if (!config.SiteConfig.DisableYellowFilter) {
       flattenedResults = flattenedResults.filter((result) => {
-        const typeName = result.type_name || '';
-        return !yellowWords.some((word: string) => typeName.includes(word));
+        const typeName = (result.type_name || result.category || result.vod_type || '').toLowerCase();
+        return !yellowWords.some((word: string) => typeName.includes(word.toLowerCase()));
       });
     }
 
