@@ -1,4 +1,6 @@
 /* eslint-disable no-console */
+// 文件：resources.route.ts
+// 本文件主要返回可用源列表，与违禁词过滤关系不大，仅保留原有逻辑
 
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -7,7 +9,7 @@ import { getAuthInfoFromCookie } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 
-// OrionTV 兼容接口
+// OrionTV 兼容接口 - 获取可用视频源列表
 export async function GET(request: NextRequest) {
   console.log('request', request.url);
 

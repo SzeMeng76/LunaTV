@@ -1,6 +1,7 @@
-// src/lib/blockedKeywords.ts
-// 搜索关键词黑名单：如果用户输入的 q 中包含以下任意关键词，直接屏蔽搜索（返回空结果或提示）
-export const blockedKeywords = [
+// 文件：lib/filter.ts
+// 违禁词过滤列表（成人内容相关）
+
+export const bannedWords: string[] = [
   '伦理片',
   '福利',
   '里番动漫',
@@ -31,7 +32,7 @@ export const blockedKeywords = [
   '伦理',
   '日本伦理',
   // 新加入 
+  '预告片',    
   '罪恶之渊',  
   // 可继续添加更多隐晦代称
-  // 根据实际需求继续添加或删除
-] as const;
+];

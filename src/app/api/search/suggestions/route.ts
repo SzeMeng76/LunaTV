@@ -1,3 +1,6 @@
+// 文件：suggestions.route.ts（已修改）
+// 添加违禁词检测 + 建议结果过滤
+
 /* eslint-disable @typescript-eslint/no-explicit-any,no-console */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -7,7 +10,7 @@ import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getAvailableApiSites, getConfig } from '@/lib/config';
 import { searchFromApi } from '@/lib/downstream';
 import { yellowWords } from '@/lib/yellow';
-import { blockedKeywords } from '@/lib/blockedKeywords'; // 新增
+import { bannedWords } from '@/lib/filter';   // ← 新增导入
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -27,11 +30,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ suggestions: [] });
     }
 
-    // 新增：关键词黑名单检查，直接返回空建议
-    if (blockedKeywords.some(word => query.includes(word))) {
+    // 1. 查询含违禁词直接返回空建议
+    const queryLower = query.toLowerCase();
+    if (bannedWords.some(word => queryLower.includes(word.toLowerCase()))) {
       return NextResponse.json({ suggestions: [] });
     }
 
+    // 生成建议
     const suggestions = await generateSuggestions(config, query, authInfo.username);
 
     const cacheTime = config.SiteConfig.SiteInterfaceCacheTime || 300;
@@ -88,37 +93,26 @@ async function generateSuggestions(config: AdminConfig, query: string, username:
     const queryWords = queryLower.split(/[ -:：·、-]/);
 
     let score = 1.0;
-    if (wordLower === queryLower) {
-      score = 2.0;
-    } else if (
-      wordLower.startsWith(queryLower) ||
-      wordLower.endsWith(queryLower)
-    ) {
-      score = 1.8;
-    } else if (queryWords.some((qw) => wordLower.includes(qw))) {
-      score = 1.5;
-    }
+    if (wordLower === queryLower) score = 2.0;
+    else if (wordLower.startsWith(queryLower) || wordLower.endsWith(queryLower)) score = 1.8;
+    else if (queryWords.some(qw => wordLower.includes(qw))) score = 1.5;
 
     let type: 'exact' | 'related' | 'suggestion' = 'related';
-    if (score >= 2.0) {
-      type = 'exact';
-    } else if (score >= 1.5) {
-      type = 'related';
-    } else {
-      type = 'suggestion';
-    }
+    if (score >= 2.0) type = 'exact';
+    else if (score >= 1.5) type = 'related';
+    else type = 'suggestion';
 
-    return {
-      text: word,
-      type,
-      score,
-    };
+    return { text: word, type, score };
   });
 
-  const sortedSuggestions = realSuggestions.sort((a, b) => {
-    if (a.score !== b.score) {
-      return b.score - a.score;
-    }
+  // 2. 过滤掉建议词本身包含违禁词的情况
+  const filteredSuggestions = realSuggestions.filter(s => 
+    !bannedWords.some(word => s.text.toLowerCase().includes(word.toLowerCase()))
+  );
+
+  // 排序
+  const sortedSuggestions = filteredSuggestions.sort((a, b) => {
+    if (a.score !== b.score) return b.score - a.score;
     const typePriority = { exact: 3, related: 2, suggestion: 1 };
     return typePriority[b.type] - typePriority[a.type];
   });

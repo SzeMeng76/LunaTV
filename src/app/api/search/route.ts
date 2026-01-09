@@ -1,3 +1,6 @@
+// 文件：route.ts（已修改）
+// 添加违禁词检测 + 全局搜索结果过滤
+
 /* eslint-disable @typescript-eslint/no-explicit-any,no-console */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -7,7 +10,7 @@ import { getAvailableApiSites, getCacheTime, getConfig } from '@/lib/config';
 import { searchFromApi } from '@/lib/downstream';
 import { generateSearchVariants } from '@/lib/downstream';
 import { yellowWords } from '@/lib/yellow';
-import { blockedKeywords } from '@/lib/blockedKeywords'; // 新增
+import { bannedWords } from '@/lib/filter';   // ← 新增导入
 
 export const runtime = 'nodejs';
 
@@ -18,23 +21,7 @@ export async function GET(request: NextRequest) {
   }
 
   const { searchParams } = new URL(request.url);
-  const query = searchParams.get('q')?.trim();
-
-  // 新增：关键词黑名单检查
-  if (query && blockedKeywords.some(word => query.includes(word))) {
-    const cacheTime = await getCacheTime();
-    return NextResponse.json(
-      { results: [] },
-      {
-        headers: {
-          'Cache-Control': `public, max-age=${cacheTime}, s-maxage=${cacheTime}`,
-          'CDN-Cache-Control': `public, s-maxage=${cacheTime}`,
-          'Vercel-CDN-Cache-Control': `public, s-maxage=${cacheTime}`,
-          'Netlify-Vary': 'query',
-        },
-      }
-    );
-  }
+  const query = searchParams.get('q');
 
   if (!query) {
     const cacheTime = await getCacheTime();
@@ -51,17 +38,20 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  // 1. 查询含违禁词 → 直接返回空结果
+  const queryLower = query.toLowerCase();
+  if (bannedWords.some(word => queryLower.includes(word.toLowerCase()))) {
+    return NextResponse.json({ results: [] }, { status: 200 });
+  }
+
   const config = await getConfig();
   const apiSites = await getAvailableApiSites(authInfo.username);
 
-  // 优化：预计算搜索变体，避免每个源重复计算（43个源 × 3次转换 = 129次转换）
   const searchVariants = generateSearchVariants(query).slice(0, 2);
 
-  // 添加超时控制和错误处理，避免慢接口拖累整体响应
-  // 移除数字变体后，统一使用智能搜索变体
   const searchPromises = apiSites.map((site) =>
     Promise.race([
-      searchFromApi(site, query, searchVariants), // 传入预计算的变体
+      searchFromApi(site, query, searchVariants),
       new Promise((_, reject) =>
         setTimeout(() => reject(new Error(`${site.name} timeout`)), 20000)
       ),
@@ -77,12 +67,25 @@ export async function GET(request: NextRequest) {
       .filter((result) => result.status === 'fulfilled')
       .map((result) => (result as PromiseFulfilledResult<any>).value);
     let flattenedResults = successResults.flat();
+
+    // 2. 违禁词过滤
+    flattenedResults = flattenedResults.filter(item => {
+      const title = (item.title || '').toLowerCase();
+      const typeName = (item.type_name || '').toLowerCase();
+      return !bannedWords.some(word => 
+        title.includes(word.toLowerCase()) || 
+        typeName.includes(word.toLowerCase())
+      );
+    });
+
+    // 原有黄色内容过滤
     if (!config.SiteConfig.DisableYellowFilter) {
       flattenedResults = flattenedResults.filter((result) => {
         const typeName = result.type_name || '';
         return !yellowWords.some((word: string) => typeName.includes(word));
       });
     }
+
     const cacheTime = await getCacheTime();
 
     if (flattenedResults.length === 0) {
