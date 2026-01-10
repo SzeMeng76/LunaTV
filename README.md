@@ -306,6 +306,7 @@
 - [技术栈](#-技术栈)
 - [部署](#-部署)
   - [Docker 部署（推荐）](#-推荐部署方案kvrocks-存储)
+  - [飞牛OS 部署](#-飞牛osfnos部署)
   - [Zeabur 部署（推荐）](#️-zeabur-部署推荐)
   - [Vercel 部署（无服务器）](#-vercel-部署无服务器)
 - [配置文件](#-配置文件)
@@ -464,6 +465,72 @@ services:
       - UPSTASH_URL=https://your-instance.upstash.io
       - UPSTASH_TOKEN=your_upstash_token
 ```
+
+### 🚀 飞牛OS（fnOS）部署
+
+飞牛OS 是一款国产免费 NAS 系统，原生支持 Docker Compose，适合家庭 NAS 用户部署。
+
+#### 部署方式一：Web 界面部署（推荐）
+
+1. **登录飞牛OS管理界面**
+   - 访问飞牛OS的 Web 管理界面
+   - 进入 "Docker" 或 "容器管理" 页面
+
+2. **创建 Compose 项目**
+   - 点击 "新建 Compose 项目" 或 "添加服务"
+   - 项目名称：`lunatv`
+   - 将上方的 [Kvrocks 存储配置](#-推荐部署方案kvrocks-存储) 粘贴到配置框中
+
+3. **修改配置**
+   - 修改 `PASSWORD` 为强密码
+   - （可选）修改 `SITE_BASE` 为您的访问地址
+
+4. **启动服务**
+   - 点击 "启动" 或 "部署" 按钮
+   - 等待容器启动完成
+
+5. **访问应用**
+   - 浏览器访问：`http://飞牛OS的IP:3000`
+   - 使用设置的管理员账号登录
+
+#### 部署方式二：SSH 命令行部署
+
+```bash
+# SSH 登录到飞牛OS
+ssh root@飞牛OS的IP
+
+# 创建项目目录
+mkdir -p /volume1/docker/lunatv
+cd /volume1/docker/lunatv
+
+# 创建 docker-compose.yml 文件
+nano docker-compose.yml
+# 将 Kvrocks 配置粘贴进去，保存退出
+
+# 启动服务
+docker-compose up -d
+
+# 查看日志
+docker-compose logs -f
+```
+
+#### 📝 飞牛OS 部署注意事项
+
+- **镜像加速**：建议在飞牛OS中配置 Docker 镜像加速（设置 → Docker → 镜像仓库），推荐使用轩辕镜像
+- **端口冲突**：确保 3000 端口未被占用，如有冲突可修改为其他端口（如 `3001:3000`）
+- **数据持久化**：Volume `kvrocks-data` 会自动创建在飞牛OS的 Docker 数据目录
+- **反向代理**：可配合飞牛OS的反向代理功能，实现域名访问和 HTTPS
+- **更新镜像**：在 Docker 管理界面选择容器 → 更新镜像 → 重启
+
+#### ✨ 飞牛OS 部署优势
+
+- ✅ **图形化管理**：Web 界面操作简单直观
+- ✅ **一键更新**：内置容器镜像更新功能
+- ✅ **数据安全**：NAS 级别的数据保护和备份
+- ✅ **网络加速**：支持配置镜像加速源
+- ✅ **资源监控**：实时查看容器资源占用
+
+---
 
 ### ☁️ Zeabur 部署（推荐）
 

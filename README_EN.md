@@ -319,6 +319,7 @@ This project is licensed under **CC BY-NC-SA 4.0**, with the following terms:
 - [Tech Stack](#-tech-stack)
 - [Deployment](#-deployment)
   - [Docker Deployment (Recommended)](#-recommended-kvrocks-storage)
+  - [fnOS Deployment](#-fnos-feiniao-nas-deployment)
   - [Zeabur Deployment (Recommended)](#️-zeabur-deployment-recommended)
   - [Vercel Deployment (Serverless)](#-vercel-deployment-serverless)
 - [Configuration File](#️-configuration-file)
@@ -477,6 +478,72 @@ services:
       - UPSTASH_URL=https://your-instance.upstash.io
       - UPSTASH_TOKEN=your_upstash_token
 ```
+
+### 🚀 fnOS (Feiniao NAS) Deployment
+
+fnOS is a free domestic NAS system with native Docker Compose support, ideal for home NAS users.
+
+#### Deployment Method 1: Web Interface (Recommended)
+
+1. **Login to fnOS Management Interface**
+   - Access fnOS Web management interface
+   - Navigate to "Docker" or "Container Management" page
+
+2. **Create Compose Project**
+   - Click "New Compose Project" or "Add Service"
+   - Project name: `lunatv`
+   - Paste the [Kvrocks Storage Configuration](#-recommended-deployment-kvrocks-storage) into the configuration box
+
+3. **Modify Configuration**
+   - Change `PASSWORD` to a strong password
+   - (Optional) Modify `SITE_BASE` to your access address
+
+4. **Start Service**
+   - Click "Start" or "Deploy" button
+   - Wait for containers to start
+
+5. **Access Application**
+   - Browser access: `http://fnOS-IP:3000`
+   - Login with configured admin credentials
+
+#### Deployment Method 2: SSH Command Line
+
+```bash
+# SSH login to fnOS
+ssh root@fnOS-IP
+
+# Create project directory
+mkdir -p /volume1/docker/lunatv
+cd /volume1/docker/lunatv
+
+# Create docker-compose.yml file
+nano docker-compose.yml
+# Paste Kvrocks configuration, save and exit
+
+# Start service
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+```
+
+#### 📝 fnOS Deployment Notes
+
+- **Image Acceleration**: Recommended to configure Docker image acceleration in fnOS (Settings → Docker → Image Registry), use Xuanyuan Mirror
+- **Port Conflicts**: Ensure port 3000 is not occupied. If conflicted, modify to another port (e.g., `3001:3000`)
+- **Data Persistence**: Volume `kvrocks-data` will be automatically created in fnOS Docker data directory
+- **Reverse Proxy**: Can use fnOS reverse proxy feature for domain access and HTTPS
+- **Update Images**: In Docker management interface, select container → Update Image → Restart
+
+#### ✨ fnOS Deployment Advantages
+
+- ✅ **Graphical Management**: Simple and intuitive web interface
+- ✅ **One-Click Update**: Built-in container image update functionality
+- ✅ **Data Security**: NAS-level data protection and backup
+- ✅ **Network Acceleration**: Supports configuring image acceleration sources
+- ✅ **Resource Monitoring**: Real-time container resource usage monitoring
+
+---
 
 ### ☁️ Zeabur Deployment (Recommended)
 

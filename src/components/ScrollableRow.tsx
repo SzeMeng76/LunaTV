@@ -201,7 +201,7 @@ function ScrollableRow({
               top: '40%',
               bottom: '60%',
               left: '-4.5rem',
-              pointerEvents: 'auto',
+              pointerEvents: isHovered ? 'auto' : 'none', // 隐藏时禁用pointer事件
             }}
           >
             <button
@@ -230,7 +230,7 @@ function ScrollableRow({
               top: '40%',
               bottom: '60%',
               right: '-4.5rem',
-              pointerEvents: 'auto',
+              pointerEvents: isHovered ? 'auto' : 'none', // 隐藏时禁用pointer事件
             }}
           >
             <button
