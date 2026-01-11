@@ -122,6 +122,9 @@ function PlayPageClient() {
   // 下载选集面板状态
   const [showDownloadEpisodeSelector, setShowDownloadEpisodeSelector] = useState(false);
 
+  // 视频分辨率状态
+  const [videoResolution, setVideoResolution] = useState<{ width: number; height: number } | null>(null);
+
   // 进度条拖拽状态管理
   const isDraggingProgressRef = useRef(false);
   const seekResetTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -4249,6 +4252,84 @@ function PlayPageClient() {
       artPlayerRef.current.on('ready', async () => {
         setError(null);
         setPlayerReady(true); // 标记播放器已就绪，启用观影室同步
+
+        // 使用ArtPlayer layers API添加分辨率徽章（带渐变和发光效果）
+        const video = artPlayerRef.current.video as HTMLVideoElement;
+        
+        // 添加分辨率徽章layer
+        artPlayerRef.current.layers.add({
+          name: 'resolution-badge',
+          html: '<div class="resolution-badge"></div>',
+          style: {
+            position: 'absolute',
+            bottom: '60px',
+            left: '20px',
+            padding: '5px 12px',
+            borderRadius: '6px',
+            fontSize: '13px',
+            fontWeight: '700',
+            color: 'white',
+            textShadow: '0 1px 3px rgba(0, 0, 0, 0.5)',
+            backdropFilter: 'blur(10px)',
+            pointerEvents: 'none',
+            transition: 'all 0.3s ease',
+            letterSpacing: '0.5px',
+          },
+        });
+        
+        const updateResolution = () => {
+          if (video.videoWidth && video.videoHeight) {
+            const height = video.videoHeight;
+            const label = height >= 2160 ? '4K' : 
+                         height >= 1440 ? '2K' : 
+                         height >= 1080 ? '1080P' : 
+                         height >= 720 ? '720P' : 
+                         height + 'P';
+            
+            // 根据质量设置不同的渐变背景和发光效果
+            let gradientStyle = '';
+            let boxShadow = '';
+            
+            if (height >= 2160) {
+              // 4K - 金色/紫色渐变 + 金色发光
+              gradientStyle = 'linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FF8C00 100%)';
+              boxShadow = '0 0 20px rgba(255, 215, 0, 0.6), 0 0 10px rgba(255, 165, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3)';
+            } else if (height >= 1440) {
+              // 2K - 蓝色/青色渐变 + 蓝色发光
+              gradientStyle = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+              boxShadow = '0 0 20px rgba(102, 126, 234, 0.6), 0 0 10px rgba(118, 75, 162, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3)';
+            } else if (height >= 1080) {
+              // 1080P - 绿色/青色渐变 + 绿色发光
+              gradientStyle = 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)';
+              boxShadow = '0 0 15px rgba(17, 153, 142, 0.5), 0 0 8px rgba(56, 239, 125, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.3)';
+            } else if (height >= 720) {
+              // 720P - 橙色渐变 + 橙色发光
+              gradientStyle = 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)';
+              boxShadow = '0 0 15px rgba(240, 147, 251, 0.4), 0 0 8px rgba(245, 87, 108, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.3)';
+            } else {
+              // 低质量 - 灰色渐变
+              gradientStyle = 'linear-gradient(135deg, #606c88 0%, #3f4c6b 100%)';
+              boxShadow = '0 0 10px rgba(96, 108, 136, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)';
+            }
+            
+            // 更新layer内容和样式
+            const badge = artPlayerRef.current.layers['resolution-badge'];
+            if (badge) {
+              badge.innerHTML = label;
+              badge.style.background = gradientStyle;
+              badge.style.boxShadow = boxShadow;
+            }
+            
+            // 同时更新state供React使用
+            setVideoResolution({ width: video.videoWidth, height: video.videoHeight });
+          }
+        };
+        
+        // 监听loadedmetadata事件获取分辨率
+        video.addEventListener('loadedmetadata', updateResolution);
+        if (video.videoWidth && video.videoHeight) {
+          updateResolution();
+        }
 
         // 观影室时间同步：从URL参数读取初始播放时间
         const timeParam = searchParams.get('t') || searchParams.get('time');
