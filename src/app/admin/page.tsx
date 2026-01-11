@@ -309,6 +309,7 @@ interface LiveDataSource {
   url: string;
   ua?: string;
   epg?: string;
+  isTvBox?: boolean;
   channelNumber?: number;
   disabled?: boolean;
   from: 'config' | 'custom';
@@ -5401,6 +5402,7 @@ const LiveSourceConfig = ({
     url: '',
     ua: '',
     epg: '',
+    isTvBox: false,
     disabled: false,
     from: 'custom',
   });
@@ -5505,6 +5507,7 @@ const LiveSourceConfig = ({
         url: newLiveSource.url,
         ua: newLiveSource.ua,
         epg: newLiveSource.epg,
+        isTvBox: newLiveSource.isTvBox,
       });
       setNewLiveSource({
         name: '',
@@ -5512,6 +5515,7 @@ const LiveSourceConfig = ({
         url: '',
         epg: '',
         ua: '',
+        isTvBox: false,
         disabled: false,
         from: 'custom',
       });
@@ -5531,6 +5535,7 @@ const LiveSourceConfig = ({
         url: editingLiveSource.url,
         ua: editingLiveSource.ua,
         epg: editingLiveSource.epg,
+        isTvBox: editingLiveSource.isTvBox,
       });
       setEditingLiveSource(null);
     }).catch(() => {
@@ -5844,6 +5849,31 @@ const LiveSourceConfig = ({
               className='px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
             />
 
+            {/* TVBox 模式开关 */}
+            <div>
+              <label className='block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1'>
+                强制识别为 TVBox 源
+              </label>
+              <div className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 flex items-center'>
+                <button
+                  type='button'
+                  onClick={() => setNewLiveSource(prev => ({ ...prev, isTvBox: !prev.isTvBox }))}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${newLiveSource.isTvBox
+                    ? 'bg-purple-600 focus:ring-purple-500'
+                    : 'bg-gray-200 dark:bg-gray-700 focus:ring-gray-500'
+                    }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${newLiveSource.isTvBox ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                  />
+                </button>
+                <span className='ml-3 text-sm text-gray-500 dark:text-gray-400'>
+                  {newLiveSource.isTvBox ? '已开启' : '已关闭'}
+                </span>
+              </div>
+            </div>
+
           </div>
           <div className='flex justify-end'>
             <button
@@ -5926,7 +5956,7 @@ const LiveSourceConfig = ({
               <label className='block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1'>
                 自定义 UA（选填）
               </label>
-              <input
+            <input
                 type='text'
                 value={editingLiveSource.ua}
                 onChange={(e) =>
@@ -5935,7 +5965,33 @@ const LiveSourceConfig = ({
                 className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
               />
             </div>
+
+            {/* TVBox 模式开关 (编辑) */}
+            <div>
+              <label className='block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1'>
+                强制识别为 TVBox 源
+              </label>
+              <div className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 flex items-center'>
+                <button
+                  type='button'
+                  onClick={() => setEditingLiveSource(prev => prev ? ({ ...prev, isTvBox: !prev.isTvBox }) : null)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${editingLiveSource.isTvBox
+                    ? 'bg-purple-600 focus:ring-purple-500'
+                    : 'bg-gray-200 dark:bg-gray-700 focus:ring-gray-500'
+                    }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${editingLiveSource.isTvBox ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                  />
+                </button>
+                <span className='ml-3 text-sm text-gray-500 dark:text-gray-400'>
+                  {editingLiveSource.isTvBox ? '已开启' : '已关闭'}
+                </span>
+              </div>
+            </div>
           </div>
+
           <div className='flex justify-end space-x-2'>
             <button
               onClick={handleCancelEdit}
