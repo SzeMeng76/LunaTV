@@ -86,11 +86,12 @@ function getDoubanImageProxyConfig(): {
   | 'img3'
   | 'cmliussss-cdn-tencent'
   | 'cmliussss-cdn-ali'
+  | 'baidu'
   | 'custom';
   proxyUrl: string;
 } {
   // 安全地访问 localStorage（避免服务端渲染报错）
-  let doubanImageProxyType: 'direct' | 'server' | 'img3' | 'cmliussss-cdn-tencent' | 'cmliussss-cdn-ali' | 'custom' = 'server'; // 默认值
+  let doubanImageProxyType: 'direct' | 'server' | 'img3' | 'cmliussss-cdn-tencent' | 'cmliussss-cdn-ali' | 'baidu' | 'custom' = 'server'; // 默认值
   let doubanImageProxy = '';
 
   if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
@@ -107,7 +108,7 @@ function getDoubanImageProxyConfig(): {
 
     const effectiveRuntimeType = (runtimeType === 'direct') ? 'server' : runtimeType;
 
-    doubanImageProxyType = (effectiveStoredType || effectiveRuntimeType || 'server') as 'direct' | 'server' | 'img3' | 'cmliussss-cdn-tencent' | 'cmliussss-cdn-ali' | 'custom';
+    doubanImageProxyType = (effectiveStoredType || effectiveRuntimeType || 'server') as 'direct' | 'server' | 'img3' | 'cmliussss-cdn-tencent' | 'cmliussss-cdn-ali' | 'baidu' | 'custom';
     doubanImageProxy =
       localStorage.getItem('doubanImageProxyUrl') ||
       (window as any).RUNTIME_CONFIG?.DOUBAN_IMAGE_PROXY ||
@@ -152,6 +153,8 @@ export function processImageUrl(originalUrl: string): string {
         /img\d+\.doubanio\.com/g,
         'img.doubanio.cmliussss.com'
       );
+    case 'baidu':
+      return `https://image.baidu.com/search/down?url=${encodeURIComponent(originalUrl)}`;
     case 'custom':
       return `${proxyUrl}${encodeURIComponent(originalUrl)}`;
     case 'direct':
