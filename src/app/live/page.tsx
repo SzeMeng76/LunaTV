@@ -1616,7 +1616,7 @@ function LivePageClient() {
     };
 
     loadAndInit();
-  }, [Hls, videoUrl, currentChannel, loading]);
+  }, [Hls, videoUrl, currentChannel, loading, directPlaybackEnabled]);
 
   // 清理播放器资源
   useEffect(() => {
@@ -1853,21 +1853,41 @@ function LivePageClient() {
                   </div>
                 )}
               </div>
-              {/* 播放模式指示器 - 移动端始终可见 */}
+              {/* 播放模式切换按钮 - 显示开关状态和实际播放模式 */}
               {currentChannel && (
-                <span className='inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full shrink-0 bg-gradient-to-r from-blue-100 to-cyan-100 dark:from-blue-900/40 dark:to-cyan-900/40 border border-blue-200 dark:border-blue-700 whitespace-nowrap'>
-                  {playbackMode === 'direct' ? (
+                <button
+                  onClick={() => {
+                    const newValue = !directPlaybackEnabled;
+                    setDirectPlaybackEnabled(newValue);
+                    // 保存到 localStorage
+                    if (typeof window !== 'undefined') {
+                      localStorage.setItem('live-direct-playback-enabled', JSON.stringify(newValue));
+                    }
+                    // useEffect 会自动检测 directPlaybackEnabled 的变化并重新加载播放器
+                  }}
+                  className='inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full shrink-0 bg-gradient-to-r from-blue-100 to-cyan-100 dark:from-blue-900/40 dark:to-cyan-900/40 border border-blue-200 dark:border-blue-700 whitespace-nowrap cursor-pointer hover:opacity-80 active:scale-95 transition-all duration-150'
+                  title={
+                    directPlaybackEnabled
+                      ? (playbackMode === 'direct'
+                          ? '直连模式已开启，当前使用直连播放。点击关闭。'
+                          : '直连模式已开启，但当前视频源不支持CORS，使用代理播放。点击关闭。')
+                      : '直连模式已关闭，使用代理播放。点击开启。'
+                  }
+                >
+                  {directPlaybackEnabled ? (
                     <>
                       <span className='text-green-600 dark:text-green-400'>⚡</span>
-                      <span className='text-green-700 dark:text-green-300'>直连</span>
+                      <span className='text-green-700 dark:text-green-300'>
+                        直连{playbackMode === 'proxy' ? '(降级)' : ''}
+                      </span>
                     </>
                   ) : (
                     <>
-                      <span className='text-orange-600 dark:text-orange-400'>🔄</span>
-                      <span className='text-orange-700 dark:text-orange-300'>代理</span>
+                      <span className='text-gray-600 dark:text-gray-400'>🔒</span>
+                      <span className='text-gray-700 dark:text-gray-300'>代理</span>
                     </>
                   )}
-                </span>
+                </button>
               )}
             </div>
           </h1>

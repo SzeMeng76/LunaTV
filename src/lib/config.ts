@@ -18,6 +18,7 @@ export interface LiveCfg {
   url: string;
   ua?: string;
   epg?: string; // 节目单
+  isTvBox?: boolean;
 }
 
 interface ConfigFileStruct {
@@ -282,6 +283,7 @@ async function getInitConfig(configFile: string, subConfig: {
       url: live.url,
       ua: live.ua,
       epg: live.epg,
+      isTvBox: live.isTvBox,
       channelNumber: 0,
       from: 'config',
       disabled: false,
