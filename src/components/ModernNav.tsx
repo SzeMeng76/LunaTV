@@ -145,7 +145,7 @@ export default function ModernNav({ showAIButton = false, onAIButtonClick }: Mod
                 <img 
                   src='/logo.png' 
                   alt='Logo' 
-                  className='h-8 w-auto object-contain'
+                  className='h-14 w-auto object-contain'
                   onError={(e) => {
                     e.currentTarget.style.display = 'none';
                     // 显示文字备选方案
