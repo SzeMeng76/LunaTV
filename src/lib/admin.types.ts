@@ -71,6 +71,7 @@ export interface AdminConfig {
     url: string;  // m3u 地址
     ua?: string;
     epg?: string; // 节目单
+    isTvBox?: boolean;
     from: 'config' | 'custom';
     channelNumber?: number;
     disabled?: boolean;
