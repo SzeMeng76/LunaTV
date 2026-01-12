@@ -141,8 +141,20 @@ export default function ModernNav({ showAIButton = false, onAIButtonClick }: Mod
           <div className='flex items-center justify-between h-16 gap-4'>
             {/* Logo */}
             <FastLink href='/' className='shrink-0'>
-              <div className='text-xl font-bold bg-linear-to-r from-green-600 via-emerald-600 to-teal-600 dark:from-green-400 dark:via-emerald-400 dark:to-teal-400 bg-clip-text text-transparent'>
-                {siteName}
+              <div className='flex items-center'>
+                <img 
+                  src='/logo.png' 
+                  alt='Logo' 
+                  className='h-8 w-auto object-contain'
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                    // 显示文字备选方案
+                    const textSpan = document.createElement('span');
+                    textSpan.className = 'text-xl font-bold bg-linear-to-r from-green-600 via-emerald-600 to-teal-600 dark:from-green-400 dark:via-emerald-400 dark:to-teal-400 bg-clip-text text-transparent';
+                    textSpan.textContent = siteName;
+                    e.currentTarget.parentNode?.appendChild(textSpan);
+                  }}
+                />
               </div>
             </FastLink>
 
