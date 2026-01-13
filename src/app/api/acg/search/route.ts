@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { parseStringPromise } from 'xml2js';
 
 import { getAuthInfoFromCookie } from '@/lib/auth';
+import { DEFAULT_USER_AGENT } from '@/lib/user-agent';
 
 export const runtime = 'nodejs';
 
@@ -49,7 +50,7 @@ export async function POST(req: NextRequest) {
 
     const response = await fetch(acgUrl, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        'User-Agent': DEFAULT_USER_AGENT,
       },
     });
 
