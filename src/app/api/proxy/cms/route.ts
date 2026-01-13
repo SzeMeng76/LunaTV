@@ -12,13 +12,14 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getConfig } from '@/lib/config';
+import { DEFAULT_USER_AGENT } from '@/lib/user-agent';
 
 // 使用 Node.js Runtime 以获得更好的网络兼容性
 export const runtime = 'nodejs';
 
 // 完整的浏览器请求头伪装
 const BROWSER_HEADERS = {
-  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'User-Agent': DEFAULT_USER_AGENT,
   'Accept': 'application/json, text/javascript, */*; q=0.01',
   'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
   'Accept-Encoding': 'gzip, deflate',

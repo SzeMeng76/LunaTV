@@ -5,6 +5,7 @@
  * - Provides minimal fallback jar when all fail (still 200 to avoid TVBox unreachable)
  */
 import crypto from 'crypto';
+import { DEFAULT_USER_AGENT } from './user-agent';
 
 // 高可用 JAR 候选源配置 - 针对不同网络环境优化
 // 策略：多源并发检测 + 地区优化 + 实时健康检查
@@ -121,8 +122,7 @@ async function fetchRemote(
       } else if (url.includes('jsdelivr') || url.includes('fastly')) {
         headers['User-Agent'] = 'LunaTV/1.0'; // CDN 源简洁标识
       } else {
-        headers['User-Agent'] =
-          'Mozilla/5.0 (Linux; Android 11; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Mobile Safari/537.36';
+        headers['User-Agent'] = DEFAULT_USER_AGENT;
       }
 
       // 直接获取文件内容，跳过 HEAD 检查（减少请求次数）

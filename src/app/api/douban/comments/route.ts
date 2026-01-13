@@ -1,21 +1,11 @@
 import { NextResponse } from 'next/server';
 
 import { getCacheTime } from '@/lib/config';
-
-// 用户代理池
-const USER_AGENTS = [
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-];
+import { getRandomUserAgent } from '@/lib/user-agent';
 
 // 请求限制器
 let lastRequestTime = 0;
 const MIN_REQUEST_INTERVAL = 2000; // 2秒最小间隔
-
-function getRandomUserAgent(): string {
-  return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
-}
 
 function randomDelay(min = 1000, max = 3000): Promise<void> {
   const delay = Math.floor(Math.random() * (max - min + 1)) + min;

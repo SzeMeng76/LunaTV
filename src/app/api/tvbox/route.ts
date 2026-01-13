@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getConfig } from '@/lib/config';
 import { db } from '@/lib/db';
 import { getSpiderJar, getCandidates } from '@/lib/spiderJar';
+import { DEFAULT_USER_AGENT } from '@/lib/user-agent';
 
 // Helper function to get base URL with SITE_BASE env support
 function getBaseUrl(request: NextRequest): string {
@@ -435,7 +436,7 @@ export async function GET(request: NextRequest) {
           // 苹果CMS接口优化配置
           siteHeader = {
             'User-Agent':
-              'Mozilla/5.0 (Linux; Android 11; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Mobile Safari/537.36',
+              DEFAULT_USER_AGENT,
             Accept: 'application/json, text/plain, */*',
             'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
             'Cache-Control': 'no-cache',

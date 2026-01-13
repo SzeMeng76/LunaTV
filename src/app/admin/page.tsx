@@ -4739,6 +4739,7 @@ const SiteConfigComponent = ({ config, refreshConfig }: { config: AdminConfig | 
       label: '豆瓣 CDN By CMLiussss（腾讯云）',
     },
     { value: 'cmliussss-cdn-ali', label: '豆瓣 CDN By CMLiussss（阿里云）' },
+    { value: 'baidu', label: '百度图片代理（境内CDN，Chrome可能触发下载）' },
     { value: 'custom', label: '自定义代理' },
   ];
 

@@ -2,6 +2,7 @@
 
 import { ClientCache } from './client-cache';
 import { DoubanItem, DoubanResult, DoubanCommentsResult } from './types';
+import { getRandomUserAgent } from './user-agent';
 
 // 🔍 调试工具：在浏览器控制台使用
 if (typeof window !== 'undefined') {
@@ -259,8 +260,7 @@ async function fetchWithTimeout(
   const fetchOptions: RequestInit = {
     signal: controller.signal,
     headers: {
-      'User-Agent':
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+      'User-Agent': getRandomUserAgent(),
       Referer: 'https://movie.douban.com/',
       Accept: 'application/json, text/plain, */*',
     },

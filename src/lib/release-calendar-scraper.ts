@@ -2,76 +2,9 @@
 'use server';
 
 import { ReleaseCalendarItem } from './types';
+import { getRandomUserAgentWithInfo, getSecChUaHeaders } from './user-agent';
 
 const baseUrl = 'https://g.manmankan.com/dy2013';
-
-// 用户代理池 - 2025 最新版本（多浏览器策略）
-const USER_AGENTS = [
-  // Chrome 133 (2025最新)
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
-  // Firefox 133 (2025最新)
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0',
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:133.0) Gecko/20100101 Firefox/133.0',
-  // Safari 18 (2025最新)
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15',
-  // Edge 133 (2025最新)
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36 Edg/133.0.0.0',
-];
-
-/**
- * 获取随机 User-Agent 及对应的浏览器指纹
- */
-function getRandomUserAgent(): {
-  ua: string;
-  browser: 'chrome' | 'firefox' | 'safari' | 'edge';
-  platform: string;
-} {
-  const index = Math.floor(Math.random() * USER_AGENTS.length);
-  const ua = USER_AGENTS[index];
-
-  // 识别浏览器类型和平台
-  let browser: 'chrome' | 'firefox' | 'safari' | 'edge' = 'chrome';
-  let platform = 'Windows';
-
-  if (ua.includes('Firefox')) {
-    browser = 'firefox';
-  } else if (ua.includes('Safari') && !ua.includes('Chrome')) {
-    browser = 'safari';
-  } else if (ua.includes('Edg/')) {
-    browser = 'edge';
-  }
-
-  if (ua.includes('Macintosh')) {
-    platform = 'macOS';
-  } else if (ua.includes('Linux')) {
-    platform = 'Linux';
-  }
-
-  return { ua, browser, platform };
-}
-
-/**
- * 生成 Sec-CH-UA 客户端提示（Chrome/Edge）
- */
-function getSecChUaHeaders(browser: 'chrome' | 'firefox' | 'safari' | 'edge', platform: string): Record<string, string> {
-  if (browser === 'chrome') {
-    return {
-      'Sec-CH-UA': '"Google Chrome";v="133", "Chromium";v="133", "Not?A_Brand";v="24"',
-      'Sec-CH-UA-Mobile': '?0',
-      'Sec-CH-UA-Platform': `"${platform}"`,
-    };
-  } else if (browser === 'edge') {
-    return {
-      'Sec-CH-UA': '"Microsoft Edge";v="133", "Chromium";v="133", "Not?A_Brand";v="24"',
-      'Sec-CH-UA-Mobile': '?0',
-      'Sec-CH-UA-Platform': `"${platform}"`,
-    };
-  }
-  // Firefox 和 Safari 不发送 Sec-CH-UA
-  return {};
-}
 
 /**
  * 随机延迟（模拟真实用户行为）
@@ -302,7 +235,7 @@ export async function scrapeMovieReleases(retryCount = 0): Promise<ReleaseCalend
     const url = `${baseUrl}/dianying/shijianbiao/`;
 
     // 获取随机浏览器指纹
-    const { ua, browser, platform } = getRandomUserAgent();
+    const { ua, browser, platform } = getRandomUserAgentWithInfo();
     const secChHeaders = getSecChUaHeaders(browser, platform);
 
     // 🎯 2025 最佳实践：完整的请求头
@@ -363,7 +296,7 @@ export async function scrapeTVReleases(retryCount = 0): Promise<ReleaseCalendarI
     const url = `${baseUrl}/dianshiju/shijianbiao/`;
 
     // 获取随机浏览器指纹
-    const { ua, browser, platform } = getRandomUserAgent();
+    const { ua, browser, platform } = getRandomUserAgentWithInfo();
     const secChHeaders = getSecChUaHeaders(browser, platform);
 
     // 🎯 2025 最佳实践：完整的请求头
@@ -621,7 +554,7 @@ export async function scrapeMovieHomepage(retryCount = 0): Promise<ReleaseCalend
     // 使用 www.manmankan.com 而不是 g.manmankan.com
     const url = `https://www.manmankan.com/dy2013/dianying/`;
 
-    const { ua, browser, platform } = getRandomUserAgent();
+    const { ua, browser, platform } = getRandomUserAgentWithInfo();
     const secChHeaders = getSecChUaHeaders(browser, platform);
 
     const response = await fetch(url, {
@@ -678,7 +611,7 @@ export async function scrapeTVHomepage(retryCount = 0): Promise<ReleaseCalendarI
 
     const url = `https://www.manmankan.com/dy2013/dianshiju/`;
 
-    const { ua, browser, platform } = getRandomUserAgent();
+    const { ua, browser, platform } = getRandomUserAgentWithInfo();
     const secChHeaders = getSecChUaHeaders(browser, platform);
 
     const response = await fetch(url, {

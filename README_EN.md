@@ -25,7 +25,7 @@
 ![HLS.js](https://img.shields.io/badge/HLS.js-1.6.15-ec407a)
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Docker Ready](https://img.shields.io/badge/Docker-ready-blue?logo=docker)
-![Version](https://img.shields.io/badge/Version-5.9.2-orange)
+![Version](https://img.shields.io/badge/Version-5.9.3-orange)
 
 </div>
 
@@ -33,7 +33,7 @@
 
 ## 📢 Project Overview
 
-This project is a deeply customized version based on **MoonTV**, continuously developed from **v4.3.1** to the current **v5.9.2**, with **60+ major feature modules** and **400+ detailed optimizations** added. See [CHANGELOG](CHANGELOG) for all new features.
+This project is a deeply customized version based on **MoonTV**, continuously developed from **v4.3.1** to the current **v5.9.3**, with **60+ major feature modules** and **400+ detailed optimizations** added. See [CHANGELOG](CHANGELOG) for all new features.
 
 ### 💡 Core Enhancement Highlights
 
@@ -42,8 +42,10 @@ This project is a deeply customized version based on **MoonTV**, continuously de
 - **Cloud Drive Search (PanSou)**: Integrated advanced filtering and cache management
 - **ACG Torrent Search**: Integrated ACG anime torrent resource search for rich anime content access
 - **Short Drama Features**: Search, playback, dedicated detail pages, mobile API proxy, auto-skip to next episode when backup API unavailable
-- **IPTV Live TV**: m3u/m3u8 subscriptions, EPG program guide (multi-source & url-tvg support), source aggregation, logo proxy, channel search within current source, live source tab quick search
+- **IPTV Live TV**: m3u/m3u8 subscriptions, EPG program guide (multi-source & url-tvg support), source aggregation, logo proxy, channel search within current source, live source tab quick search, long channel name click-to-expand
 - **Bangumi Anime**: Intelligent anime detection, API integration, caching mechanism
+- **Traditional Chinese Search Support**: Smart Traditional-Simplified conversion, multi-strategy search, lightweight switch-chinese library, optimized Traditional Chinese user search experience
+- **2026 Year Filter**: Add 2026 year filter option for Douban content, easily find latest releases
 
 #### 🤖 AI Recommendation System
 - **AI Smart Assistant**: Global AI recommendation button (ModernNav header), GPT-5/o series support, dynamic prompts, 85-90% input latency optimization, streaming transmission, orchestrator, video context support, integrated Douban and TMDB data, auto TMDB search when ID missing
@@ -81,6 +83,7 @@ This project is a deeply customized version based on **MoonTV**, continuously de
 - **Stream-on-Demand Auto-Detection**: Smart detection and enable stream download mode
 - **Batch Episode Download**: Supports batch downloading multiple episodes locally
 - **Concurrent Write Optimization**: Resolved stream-on-demand mode concurrent write data loss
+- **Time Range Display**: Add segment duration tracking and time range display for download tasks, show total duration for complete videos
 
 #### 📺 EPG System Enhancement
 - **Debug API Endpoint**: Dedicated EPG debug interface providing complete parsing information
@@ -174,6 +177,7 @@ This project is a deeply customized version based on **MoonTV**, continuously de
 #### 🔐 Security & Storage
 - **TVBox Complete Ecosystem**:
   - IP whitelist, user-specific Token authentication, full API compatibility, intelligent search proxy
+  - Manual source toggle control, complete source parsing support
   - TVBox Intelligent Search Proxy with adult content filtering, path prefix support, UI controls
   - Deep JAR diagnostic system (file header verification, smart health check)
   - Spider management system (multi-Spider JAR backup sources, fallback proxy, gaotianliuyun third backup source)
@@ -189,6 +193,7 @@ This project is a deeply customized version based on **MoonTV**, continuously de
 - **Cache Optimization**: Unified cache management (YouTube, cloud drive, Douban, danmaku), version check dual-layer cache and request deduplication optimization
 - **Enhanced Storage Modes**: Full Kvrocks/Redis/Upstash support, memory cache prevents QuotaExceededError, handles Redis tag serialization
 - **User Registration System** (configurable toggle)
+- **Image Proxy Optimization**: Improved image proxy performance and caching strategy, supports Baidu image proxy option, provides more proxy methods
 
 ---
 
@@ -219,14 +224,15 @@ This project is licensed under **CC BY-NC-SA 4.0**, with the following terms:
 ## ✨ Complete Feature List
 
 ### 🎬 Content Aggregation
-- ✅ Multi-source video aggregation search (streaming output, smart variants, language-aware filtering, fallback API support)
+- ✅ Multi-source video aggregation search (streaming output, smart variants, language-aware filtering, fallback API support, Traditional Chinese support)
 - ✅ YouTube integration (search, live streaming, iframe playback, time filtering & sorting)
 - ✅ Cloud drive search (PanSou integration, advanced filtering, cache management)
 - ✅ Short drama features (search, playback, dedicated detail pages, mobile API proxy)
-- ✅ IPTV live TV (m3u subscriptions, EPG guide, multi-source support, url-tvg, source aggregation, channel search)
+- ✅ IPTV live TV (m3u subscriptions, EPG guide, multi-source support, url-tvg, source aggregation, channel search, long channel name click-to-expand)
 - ✅ Bangumi anime (info detection, API integration, 3-6 digit ID support)
 - ✅ TMDB actor search (filtering, caching)
 - ✅ Completed series episode count (displays total episode count on search and category pages)
+- ✅ 2026 year filter (Douban content year filtering)
 
 ### 🤖 Smart Recommendations
 - ✅ AI recommendation system (GPT-5/o support, dynamic prompts)
@@ -285,7 +291,7 @@ This project is licensed under **CC BY-NC-SA 4.0**, with the following terms:
 - ✅ z-index hierarchy optimization (cards, badges, modals display correctly)
 
 ### 🔐 Security & Storage
-- ✅ TVBox complete ecosystem (IP whitelist, user-specific Token auth, full API compatibility, intelligent search proxy)
+- ✅ TVBox complete ecosystem (IP whitelist, user-specific Token auth, full API compatibility, intelligent search proxy, manual source toggle, complete source parsing)
 - ✅ TVBox intelligent search proxy (adult content filtering, path prefix support, UI controls)
 - ✅ Adult content management system (dual-layer filtering, auto-detection, batch operations, user/group-level controls)
 - ✅ Video source import/export (array/config file formats, backup & migration, quick copy buttons)
@@ -301,6 +307,7 @@ This project is licensed under **CC BY-NC-SA 4.0**, with the following terms:
 - ✅ Memory cache prevents QuotaExceededError (Kvrocks/Upstash memory cache)
 - ✅ User registration system (configurable toggle, admin user creation)
 - ✅ Cross-device original episode tracking (prevents API cache issues)
+- ✅ Image proxy optimization (performance improvements, Baidu image proxy option, caching strategy optimization)
 
 ### 🛠️ Technical Optimization
 - ✅ ArtPlayer 5.3.0 + HLS.js 1.6.15 (official source optimization)
@@ -1047,47 +1054,36 @@ This project works with [OrionTV](https://github.com/zimplexing/OrionTV) on Andr
 
 For complete feature updates and bug fixes, see [CHANGELOG](CHANGELOG).
 
-### Latest Version: v5.9.2 (2026-01-05)
+### Latest Version: v5.9.3 (2026-01-13)
 
 #### Added
-- 🎬 Douban Trailer System Enhancement: Added mobile API auto-refresh, dedicated refresh endpoint, localStorage persistence, auto-retry mechanism, performance logging, TV series content support
-- 💾 V2 User Data Backup Support: Backup/migration system added V2 user data support
-- 🎯 Anime Category Default Sorting: Default to "Recent Popularity" sorting for anime category pages
-- 👥 Default User Group for New Users: Added default user group feature for new registrations
-- 📚 Design and Implementation Reference Documentation: Added design and implementation reference section
-- 📱 TVBox Diagnostics Mobile Responsive Optimization: Optimized TVBox diagnostic page mobile layout
-- 🔍 Admin Backend User Group Filtering: Added user group filtering for admin backend user list
-- 🔧 Proxy Configuration System: Added independent proxy configs for TVBox and video playback, supports smart URL replacement, status detection, configuration guide documentation
-- ⚡ M3U8 Downloader Upgrade: Upgraded M3U8 downloader with 6x concurrent download speed boost, added download settings UI and stream-on-demand auto-detection
-- 📺 EPG System Enhancement: Added debug API endpoint, complete parsing debug info, name fallback matching (keeping tvg-id priority), logo extraction display and fallback icons, multi-display name support
-- ⚡ Live Direct Connect Mode: Added live direct connect playback mode with smart CORS detection, added CORS statistics panel in admin backend
+- 📱 Long Channel Name Click-to-Expand: Added click-to-expand/collapse for long channel names on mobile
+- ⚡ Download Feature Enhancement: Added segment duration tracking, time range, and total duration display for complete videos
+- 🔍 Traditional Chinese Search Support: Added Traditional Chinese search functionality, improved Traditional user search experience
+- 📅 2026 Year Filter Option: Added 2026 year filter option for Douban content
+- 📚 fnOS Deployment Guide: Added Feiniao NAS (fnOS) deployment guide to README
+- 📺 TVBox Source Management Enhancement: Added manual toggle control and complete source parsing support
+- 🖼️ Baidu Image Proxy Option: Added Baidu image proxy option for Douban images, providing more proxy methods
 
 #### Performance Optimizations
-- 📱 Mobile Navigation Complete Redesign: Bottom navigation adopts Netflix-style full-width layout (floating capsule → bottom docked → full-width), ModernNav redesigned to full-width style
-- ⚡ Navigation Performance Optimization: Added prefetch={false}, light mode support, transition-based FastLink component
-- ⚡ Douban Category Selector Scroll Optimization: Using requestAnimationFrame to optimize scroll performance
-- ⏱️ Release Calendar Cache Duration Adjustment: Reduced cache duration from 24 hours to 8 hours
-- ⚡ Version Check Dual-Layer Cache: Added dual-layer cache and request deduplication optimization
-- 📺 EPG Name Matching Optimization: Using reverse mapping to optimize EPG name matching performance
+- ⚡ Traditional Chinese Search Comprehensive Optimization: Lightweight switch-chinese library, tree-shakeable imports, singleton pattern, multi-strategy search, limited conversion range (top 3 variants), removed redundant detect() calls
+- 🔧 TVBox Optimization: User-Agent updated to okhttp/4.1.0, optimized admin backend toggle layout
+- 🚀 User-Agent Comprehensive Upgrade: Updated all User-Agents to 2026 latest versions (Chrome 135, Firefox 146, Safari 26, Edge 143)
+- ⚡ Image Proxy Performance Optimization: Improved image proxy performance and caching strategy
 
 #### Fixed
-- 🐛 Fixed Multiple HeroBanner Issues: Background images always use HD version, valid trailer URL rendering, volume button position avoids overlap, localStorage expired URL cleanup and retry refresh
-- 🐛 Fixed Mobile Performance and Missing Trailers: Optimized mobile performance and resolved trailer loss issues
-- 🐛 Fixed Anime Page Sorting Initialization: Initialize default sorting value on component mount
-- 🐛 Fixed Release Calendar <dl> Structure Support: Crawler added support for <dl> structure
-- 🐛 Fixed TVBox Diagnostics Mobile Text Overflow: Prevent mobile text overflow, completed all component mobile responsive fixes, resolved additional overflow issues
-- 🐛 Fixed User Group and API Permissions: Preselect user group API, display combined permissions, handle Redis tag serialization
-- 🐛 Fixed Subscription Source Replacement Logic: Replace subscription sources instead of merging
-- 🐛 Fixed Video Proxy Application: Apply video proxy config to source validation endpoints and source test API, apply at source level instead of request level
-- 🐛 Fixed Short Video Skip Detection: Optimized skip detection logic for short videos
-- 🐛 Fixed Source Switch Progress Retention: Retain playback progress when switching video sources
-- 🐛 Fixed Douban Pagination and Data: Unified pagination constants prevent inconsistency, added deduplication logic prevents duplicates, optimized image preloading and API proxy ensure CORS safety
-- 🐛 Fixed Stream Download Concurrent Write: Resolved stream-on-demand concurrent write data loss issue
-- 🐛 Fixed Multiple EPG Issues: Collect all channel tags before program matching, distribute data to all M3U channel name variants, handle single-line programme element inline title tags, debug function applies reverse mapping optimization
-- 🐛 Fixed Live CORS Detection: Optimized CORS detection to handle Mixed Content situations
+- 🐛 Fixed Live Mobile Channel Name Display: Optimized mobile channel name display, added chevron indicators for expandable names
+- 🐛 Fixed HeroBanner Title Overflow: Removed max-width constraint, prevent title truncation and container overflow
+- 🐛 Fixed Tavily API Key Unsaved Warning: Added unsaved changes warning
+- 🐛 Fixed EPG Channel Parsing: Support multi-line XML format channel parsing
+- 🐛 Fixed TVBox Config and Parsing: Support encrypted config (Base64), JSON comment parsing, M3U8 proxy source key propagation, full URL resolution fixes live segment 500 error
+- 🐛 Fixed TVBox Functionality Issues: AdminConfig type definition, edit mode toggle state updates, parsing and playback mode improvements
+- 🐛 Fixed UI Issues: Tab button visibility and mobile responsiveness, search category button dark mode contrast, ScrollableRow hidden button pointer event capture, Firefox hover disappearance
+- 🐛 Fixed Deployment Issues: Zeabur deployment standalone mode, time range display condition operator precedence, Traditional-Simplified conversion application scope
 
 ### Major Milestone Versions
 
+- **v5.9.3**: Traditional Chinese search support, download feature enhancement, TVBox source management enhancement, User-Agent comprehensive upgrade to 2026 latest versions, Baidu image proxy, fnOS deployment guide
 - **v5.9.2**: Douban Trailer System Enhancement, Proxy Configuration System, M3U8 Downloader 6x Speed Boost, EPG System Enhancement, Live Direct Connect Mode, Mobile Navigation Netflix-style Redesign
 - **v5.9.1**: Glassmorphism Design, Material UI CategoryBar, Netflix-style HeroBanner, AI Feature Comprehensive Enhancement, Douban Cache Optimization
 - **v5.9.0**: Multi-Provider OIDC (GitHub/Apple/Facebook/WeChat), Watch Room, M3U8 Download, Anime4K Super Resolution, Player Buffer Optimization
