@@ -1,0 +1,51 @@
+/* ============================================
+   ArtPlayer Mobile Optimizations
+   移动端适配样式 - 模块化重构版
+   ⚠️ 重要：这些规则使用 !important 覆盖 ArtPlayer 内联样式
+   ============================================ */
+
+/* ===== Medium Screen (Tablets & Mobile Landscape) ===== */
+@media (max-width: 768px) {
+  /* 网页全屏在移动端意义不大，隐藏以节省空间 */
+  .art-control-fullscreenWeb {
+    display: none !important;
+  }
+
+  /* 音量控制在移动端有物理按键，隐藏以节省空间 */
+  .art-control-volume {
+    display: none !important;
+  }
+}
+
+/* ===== Small Screen (Mobile Portrait) ===== */
+@media (max-width: 380px) {
+  /* 减小控制按钮的间距和尺寸，确保完整显示 */
+  .art-controls button,
+  .art-control {
+    min-width: 28px !important;
+    padding: 0 4px !important;
+    font-size: 13px !important;
+  }
+
+  /* 减小控制栏的内边距 */
+  .art-controls {
+    padding: 0 4px !important;
+  }
+
+  /* 确保全屏按钮始终可见 */
+  .art-control-fullscreen {
+    display: flex !important;
+    min-width: 32px !important;
+  }
+
+  /* 调整播放器时间显示更紧凑 */
+  .art-control-time {
+    font-size: 11px !important;
+    padding: 0 2px !important;
+  }
+
+  /* 减小进度条高度以节省空间 */
+  .art-progress {
+    height: 3px !important;
+  }
+}

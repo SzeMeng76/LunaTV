@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { DEFAULT_USER_AGENT } from '@/lib/user-agent';
 
 // 视频解析接口配置
 interface Parser {
@@ -86,7 +87,7 @@ async function checkParserHealth(parser: Parser): Promise<boolean> {
       method: 'HEAD',
       signal: controller.signal,
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        'User-Agent': DEFAULT_USER_AGENT
       }
     });
     

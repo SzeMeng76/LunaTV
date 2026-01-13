@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getConfig } from '@/lib/config';
+import { DEFAULT_USER_AGENT } from '@/lib/user-agent';
 
 export const runtime = 'nodejs';
 
@@ -33,7 +34,7 @@ export async function GET(request: NextRequest) {
         // 获取M3U内容
         const response = await fetch(live.url, {
           headers: {
-            'User-Agent': live.ua || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            'User-Agent': live.ua || DEFAULT_USER_AGENT
           }
         });
         

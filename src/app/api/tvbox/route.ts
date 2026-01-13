@@ -807,7 +807,7 @@ export async function GET(request: NextRequest) {
           } else {
             fastSite.header = {
               'User-Agent':
-                'Mozilla/5.0 (Linux; Android 11) AppleWebKit/537.36',
+                DEFAULT_USER_AGENT,
               Connection: 'close',
             };
           }

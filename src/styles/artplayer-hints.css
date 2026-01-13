@@ -1,0 +1,283 @@
+/*! Hint.css - Tooltip System for ArtPlayer
+ * Adapted for LunaTV with custom theming
+ * Based on Hint.css v2.7.0 by Kushagra Gour
+ * https://kushagra.dev/lab/hint/
+ */
+
+/* ===== Core Tooltip Structure ===== */
+.art-video-player [class*='hint--'] {
+  position: relative;
+  display: inline-block;
+  font-style: normal;
+}
+
+.art-video-player [class*='hint--']:before,
+.art-video-player [class*='hint--']:after {
+  position: absolute;
+  transform: translate3d(0, 0, 0);
+  visibility: hidden;
+  opacity: 0;
+  z-index: 1000000;
+  pointer-events: none;
+  transition: 0.3s ease;
+  transition-delay: 0ms;
+}
+
+.art-video-player [class*='hint--']:hover:before,
+.art-video-player [class*='hint--']:hover:after {
+  visibility: visible;
+  opacity: 1;
+  transition-delay: 100ms;
+}
+
+/* Arrow (before pseudo-element) */
+.art-video-player [class*='hint--']:before {
+  content: '';
+  position: absolute;
+  background: transparent;
+  border: 6px solid transparent;
+  z-index: 1000001;
+}
+
+/* Tooltip body (after pseudo-element) - Light mode */
+.art-video-player [class*='hint--']:after {
+  background: rgba(0, 0, 0, 0.85);
+  color: white;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.4;
+  white-space: nowrap;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(8px);
+}
+
+/* Dark mode support */
+.dark .art-video-player [class*='hint--']:after {
+  background: rgba(255, 255, 255, 0.9);
+  color: rgba(0, 0, 0, 0.87);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Content from attributes */
+.art-video-player [class*='hint--'][aria-label]:after {
+  content: attr(aria-label);
+}
+
+.art-video-player [class*='hint--'][data-hint]:after {
+  content: attr(data-hint);
+}
+
+/* Hide empty tooltips */
+.art-video-player [aria-label='']:before,
+.art-video-player [aria-label='']:after,
+.art-video-player [data-hint='']:before,
+.art-video-player [data-hint='']:after {
+  display: none !important;
+}
+
+/* ===== Position: Top ===== */
+.art-video-player .hint--top:before {
+  border-top-color: rgba(0, 0, 0, 0.85);
+  margin-bottom: -11px;
+}
+
+.dark .art-video-player .hint--top:before {
+  border-top-color: rgba(255, 255, 255, 0.9);
+}
+
+.art-video-player .hint--top:before,
+.art-video-player .hint--top:after {
+  bottom: 100%;
+  left: 50%;
+}
+
+.art-video-player .hint--top:before {
+  left: calc(50% - 6px);
+}
+
+.art-video-player .hint--top:after {
+  transform: translateX(-50%);
+}
+
+.art-video-player .hint--top:hover:before {
+  transform: translateY(-8px);
+}
+
+.art-video-player .hint--top:hover:after {
+  transform: translateX(-50%) translateY(-8px);
+}
+
+/* ===== Position: Bottom ===== */
+.art-video-player .hint--bottom:before {
+  border-bottom-color: rgba(0, 0, 0, 0.85);
+  margin-top: -11px;
+}
+
+.dark .art-video-player .hint--bottom:before {
+  border-bottom-color: rgba(255, 255, 255, 0.9);
+}
+
+.art-video-player .hint--bottom:before,
+.art-video-player .hint--bottom:after {
+  top: 100%;
+  left: 50%;
+}
+
+.art-video-player .hint--bottom:before {
+  left: calc(50% - 6px);
+}
+
+.art-video-player .hint--bottom:after {
+  transform: translateX(-50%);
+}
+
+.art-video-player .hint--bottom:hover:before {
+  transform: translateY(8px);
+}
+
+.art-video-player .hint--bottom:hover:after {
+  transform: translateX(-50%) translateY(8px);
+}
+
+/* ===== Position: Left ===== */
+.art-video-player .hint--left:before {
+  border-left-color: rgba(0, 0, 0, 0.85);
+  margin-right: -11px;
+  margin-bottom: -6px;
+}
+
+.dark .art-video-player .hint--left:before {
+  border-left-color: rgba(255, 255, 255, 0.9);
+}
+
+.art-video-player .hint--left:after {
+  margin-bottom: -14px;
+}
+
+.art-video-player .hint--left:before,
+.art-video-player .hint--left:after {
+  right: 100%;
+  bottom: 50%;
+}
+
+.art-video-player .hint--left:hover:before {
+  transform: translateX(-8px);
+}
+
+.art-video-player .hint--left:hover:after {
+  transform: translateX(-8px);
+}
+
+/* ===== Position: Right ===== */
+.art-video-player .hint--right:before {
+  border-right-color: rgba(0, 0, 0, 0.85);
+  margin-left: -11px;
+  margin-bottom: -6px;
+}
+
+.dark .art-video-player .hint--right:before {
+  border-right-color: rgba(255, 255, 255, 0.9);
+}
+
+.art-video-player .hint--right:after {
+  margin-bottom: -14px;
+}
+
+.art-video-player .hint--right:before,
+.art-video-player .hint--right:after {
+  left: 100%;
+  bottom: 50%;
+}
+
+.art-video-player .hint--right:hover:before {
+  transform: translateX(8px);
+}
+
+.art-video-player .hint--right:hover:after {
+  transform: translateX(8px);
+}
+
+/* ===== Multi-line Tooltip Sizes ===== */
+.art-video-player .hint--small:after,
+.art-video-player .hint--medium:after,
+.art-video-player .hint--large:after {
+  white-space: normal;
+  line-height: 1.4em;
+  word-wrap: break-word;
+}
+
+.art-video-player .hint--small:after {
+  width: 80px;
+}
+
+.art-video-player .hint--medium:after {
+  width: 150px;
+}
+
+.art-video-player .hint--large:after {
+  width: 300px;
+}
+
+/* ===== Special Effects ===== */
+.art-video-player .hint--rounded:after {
+  border-radius: 6px;
+}
+
+.art-video-player .hint--no-animate:before,
+.art-video-player .hint--no-animate:after {
+  transition-duration: 0ms;
+}
+
+.art-video-player .hint--bounce:before,
+.art-video-player .hint--bounce:after {
+  transition: opacity 0.3s ease, visibility 0.3s ease,
+    transform 0.3s cubic-bezier(0.71, 1.7, 0.77, 1.24);
+}
+
+.art-video-player .hint--no-shadow:before,
+.art-video-player .hint--no-shadow:after {
+  text-shadow: none;
+  box-shadow: none;
+}
+
+.art-video-player .hint--no-arrow:before {
+  display: none;
+}
+
+/* ===== Mobile Optimization ===== */
+@media (max-width: 768px) {
+  .art-video-player [class*='hint--']:after {
+    font-size: 11px;
+    padding: 6px 8px;
+  }
+
+  .art-video-player [class*='hint--']:before {
+    border-width: 5px;
+  }
+
+  /* Reduce animation on mobile for better performance */
+  .art-video-player [class*='hint--']:hover:before,
+  .art-video-player [class*='hint--']:hover:after {
+    transition-delay: 50ms;
+  }
+}
+
+/* ===== Touch Device Support ===== */
+@media (hover: none) {
+  /* Show tooltips on tap for touch devices */
+  .art-video-player [class*='hint--']:active:before,
+  .art-video-player [class*='hint--']:active:after {
+    visibility: visible;
+    opacity: 1;
+  }
+}
+
+/* ===== Performance: Reduce Motion Preference ===== */
+@media (prefers-reduced-motion: reduce) {
+  .art-video-player [class*='hint--']:before,
+  .art-video-player [class*='hint--']:after {
+    transition: none;
+  }
+}
