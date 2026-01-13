@@ -1,4 +1,8 @@
 @import 'tailwindcss';
+@import '../styles/artplayer-hints.css';
+@import '../styles/artplayer-controls.css';
+@import '../styles/artplayer-mobile.css';
+@import '../styles/artplayer-liquid-glass.css';
 
 /* Tailwind 4 Dark Mode Configuration - 使用 class 选择器而非媒体查询 */
 @custom-variant dark (&:where(.dark, .dark *));
@@ -241,128 +245,6 @@ html:not(.dark)::view-transition-new(root) {
 div[data-media-provider] video {
   height: 100%;
   object-fit: contain;
-}
-
-.art-poster {
-  background-size: contain !important; /* 使图片完整展示 */
-  background-position: center center !important; /* 居中显示 */
-  background-repeat: no-repeat !important; /* 防止重复 */
-  background-color: #000 !important; /* 其余区域填充为黑色 */
-}
-
-/* ============================================
-   移动端控制按钮优化
-   ⚠️ 重要：这些规则使用 !important 覆盖 ArtPlayer 内联样式
-   ============================================ */
-/* 使用liquid-glass插件 + 按钮自动缩小方案，所有按钮都能显示 */
-/* 调整媒体查询从1024px到768px，让平板设备可以使用更多功能 */
-@media (max-width: 768px) {
-  /* PiP按钮保留 - 移动端用户需要画中画功能 */
-  /* 通过flex-shrink: 1让按钮自动缩小，避免溢出 */
-
-  /* 网页全屏在移动端意义不大，继续隐藏节省空间 */
-  .art-control-fullscreenWeb {
-    display: none !important;
-  }
-
-  /* 音量控制在移动端有物理按键，隐藏以节省空间 */
-  .art-control-volume {
-    display: none !important;
-  }
-}
-
-/* 超小屏幕适配 - 确保控制按钮完整显示 */
-@media (max-width: 380px) {
-  /* 减小控制按钮的间距和尺寸 */
-  .art-controls button,
-  .art-control {
-    min-width: 28px !important;
-    padding: 0 4px !important;
-    font-size: 13px !important;
-  }
-
-  /* 减小控制栏的内边距 */
-  .art-controls {
-    padding: 0 4px !important;
-  }
-
-  /* 确保全屏按钮始终可见 */
-  .art-control-fullscreen {
-    display: flex !important;
-    min-width: 32px !important;
-  }
-
-  /* 调整播放器时间显示更紧凑 */
-  .art-control-time {
-    font-size: 11px !important;
-    padding: 0 2px !important;
-  }
-
-  /* 减小进度条高度以节省空间 */
-  .art-progress {
-    height: 3px !important;
-  }
-}
-
-/* 修复音量控制hover区域 - 精确控制触发范围 */
-@media (hover: hover) {
-  .art-control-volume {
-    position: relative !important;
-    padding: 3px; /* 和弹幕按钮一样的hover区域 */
-  }
-
-  /* 缩小hover检测区域，只稍微扩展到面板方向 */
-  .art-control-volume::before {
-    content: '';
-    position: absolute;
-    top: -20px; /* 只扩展20px，避免过早触发 */
-    left: -5px;
-    right: -5px;
-    bottom: -3px;
-    z-index: -1;
-    pointer-events: auto;
-  }
-
-  /* 按钮或面板hover时都显示音量面板 */
-  .art-control-volume:hover .art-volume-panel,
-  .art-volume-panel:hover {
-    opacity: 1 !important;
-    transform: translateY(0) !important;
-    pointer-events: auto !important;
-    transition: opacity 0.15s ease 0.1s, transform 0.15s ease 0.1s !important; /* 0.1s显示延迟 */
-  }
-
-  /* 音量面板默认隐藏状态，和弹幕一样的延迟 */
-  .art-volume-panel {
-    transition: opacity 0.15s ease 0.3s, transform 0.15s ease 0.3s !important; /* 0.3s隐藏延迟 */
-  }
-}
-
-/* ============================================
-   弹幕系统移动端优化
-   ⚠️ 重要：完全保留所有 !important 确保正确覆盖
-   ============================================ */
-/* 修复移动端弹幕面板定位问题 - 根据不同挂载位置处理 */
-@media (max-width: 768px) {
-  /* 当弹幕插件挂载到控制栏中心时（横屏，宽度>=512px） */
-  .art-controls-center .artplayer-plugin-danmuku .apd-config-panel,
-  .art-controls-center .artplayer-plugin-danmuku .apd-style-panel {
-    position: absolute !important; /* 加上这个关键属性！ */
-    left: 10% !important;
-    transform: translateX(-50%) !important;
-    right: auto !important;
-    max-width: calc(100vw - 40px) !important;
-  }
-
-  /* 当弹幕插件挂载到播放器容器时（竖屏，宽度<512px） */
-  .art-video-player .artplayer-plugin-danmuku .apd-config-panel,
-  .art-video-player .artplayer-plugin-danmuku .apd-style-panel {
-    position: absolute !important;
-    left: 50% !important; /* 竖屏时居中 */
-    transform: translateX(-50%) !important;
-    right: auto !important;
-    max-width: calc(100vw - 40px) !important;
-  }
 }
 
 /* VideoCard 光泽扫过动画 - 使用 @property 优化 */
