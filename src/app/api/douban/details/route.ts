@@ -32,6 +32,10 @@ async function _fetchMobileApiData(id: string): Promise<{
     // 先尝试 movie 端点
     let mobileApiUrl = `https://m.douban.com/rexxar/api/v2/movie/${id}`;
 
+    // 获取随机浏览器指纹
+    const { ua, browser, platform } = getRandomUserAgentWithInfo();
+    const secChHeaders = getSecChUaHeaders(browser, platform);
+
     // 创建 AbortController 用于超时控制
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15秒超时
@@ -39,13 +43,13 @@ async function _fetchMobileApiData(id: string): Promise<{
     let response = await fetch(mobileApiUrl, {
       signal: controller.signal,
       headers: {
-        // 2024-2025 最新 User-Agent（桌面版更不容易被限制）
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
+        'User-Agent': ua,
         'Referer': 'https://movie.douban.com/explore',  // 更具体的 Referer
         'Accept': 'application/json, text/plain, */*',
         'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
         'Accept-Encoding': 'gzip, deflate, br',
         'Origin': 'https://movie.douban.com',
+        ...secChHeaders,  // Chrome/Edge 的 Sec-CH-UA 头部
         'Sec-Fetch-Dest': 'empty',
         'Sec-Fetch-Mode': 'cors',
         'Sec-Fetch-Site': 'same-site',
@@ -66,12 +70,13 @@ async function _fetchMobileApiData(id: string): Promise<{
       response = await fetch(mobileApiUrl, {
         signal: tvController.signal,
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
+          'User-Agent': ua,
           'Referer': 'https://movie.douban.com/explore',
           'Accept': 'application/json, text/plain, */*',
           'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
           'Accept-Encoding': 'gzip, deflate, br',
           'Origin': 'https://movie.douban.com',
+          ...secChHeaders,  // Chrome/Edge 的 Sec-CH-UA 头部
           'Sec-Fetch-Dest': 'empty',
           'Sec-Fetch-Mode': 'cors',
           'Sec-Fetch-Site': 'same-site',
