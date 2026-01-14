@@ -460,24 +460,31 @@ async function parseEpg(
     const decoder = new TextDecoder();
     let buffer = '';
     let currentChannelId = '';
+    let inChannelTag = false;
     let currentProgram: { start: string; end: string; title: string } | null = null;
     let currentEpgChannelId = '';
-    
-    // Streaming parser logic - REIMPLEMENTED FROM ORIGINAL READ
+
+    // Streaming parser logic - Support both single-line and multi-line XML formats
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      
+
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split('\n');
       buffer = lines.pop() || '';
 
       for (const line of lines) {
         const trimmed = line.trim();
+
+        // Handle <channel> tag - support multi-line format
         if (trimmed.startsWith('<channel')) {
            const idMatch = trimmed.match(/id="([^"]*)"/);
-           if (idMatch) currentChannelId = idMatch[1];
-           
+           if (idMatch) {
+               currentChannelId = idMatch[1];
+               inChannelTag = true;
+           }
+
+           // Check if display-name is on the same line (single-line format)
            const nameMatch = trimmed.match(/<display-name[^>]*>(.*?)<\/display-name>/);
            if (currentChannelId && nameMatch) {
                epgNameToChannelId.set(normalizeChannelName(nameMatch[1]), currentChannelId);
@@ -486,7 +493,33 @@ async function parseEpg(
            if (currentChannelId && iconMatch) {
                epgChannelIdToLogo.set(currentChannelId, iconMatch[1]);
            }
+
+           // Check if it's a self-closing or closing on same line
+           if (trimmed.includes('</channel>')) {
+               inChannelTag = false;
+               currentChannelId = '';
+           }
         }
+        // Handle display-name in multi-line format (when inside channel tag)
+        else if (inChannelTag && trimmed.startsWith('<display-name')) {
+           const nameMatch = trimmed.match(/<display-name[^>]*>(.*?)<\/display-name>/);
+           if (currentChannelId && nameMatch) {
+               epgNameToChannelId.set(normalizeChannelName(nameMatch[1]), currentChannelId);
+           }
+        }
+        // Handle icon in multi-line format (when inside channel tag)
+        else if (inChannelTag && trimmed.startsWith('<icon')) {
+           const iconMatch = trimmed.match(/<icon\s+src="([^"]*)"/);
+           if (currentChannelId && iconMatch) {
+               epgChannelIdToLogo.set(currentChannelId, iconMatch[1]);
+           }
+        }
+        // Handle closing </channel> tag
+        else if (trimmed.startsWith('</channel>')) {
+           inChannelTag = false;
+           currentChannelId = '';
+        }
+        // Handle <programme> tag
         else if (trimmed.startsWith('<programme')) {
              const channelIdMatch = trimmed.match(/channel="([^"]*)"/);
              const epgChannelId = channelIdMatch ? channelIdMatch[1] : '';
@@ -495,6 +528,7 @@ async function parseEpg(
              if (epgChannelId && startMatch && endMatch) {
                  currentProgram = { start: startMatch[1], end: endMatch[1], title: '' };
                  currentEpgChannelId = epgChannelId;
+                 // Check if title is on the same line (single-line format)
                  const titleMatch = trimmed.match(/<title(?:\s+[^>]*)?>(.*?)<\/title>/);
                  if (titleMatch) {
                      currentProgram.title = titleMatch[1];
@@ -504,6 +538,7 @@ async function parseEpg(
                  }
              }
         }
+        // Handle <title> tag in multi-line format (when inside programme tag)
         else if (trimmed.startsWith('<title') && currentProgram) {
              const titleMatch = trimmed.match(/<title(?:\s+[^>]*)?>(.*?)<\/title>/);
              if (titleMatch) {

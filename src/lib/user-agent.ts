@@ -5,32 +5,32 @@
 
 // 2026年1月最新浏览器版本
 export const LATEST_USER_AGENTS = {
-  // Chrome 135 (2026最新)
+  // Chrome 143 (2026最新)
   chrome: {
-    windows: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
-    macos: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
-    linux: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
+    windows: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36',
+    macos: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36',
+    linux: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36',
   },
   // Firefox 146 (2026最新)
   firefox: {
     windows: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:146.0) Gecko/20100101 Firefox/146.0',
-    macos: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 15.7; rv:146.0) Gecko/20100101 Firefox/146.0',
+    macos: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:146.0) Gecko/20100101 Firefox/146.0',
     linux: 'Mozilla/5.0 (X11; Linux x86_64; rv:146.0) Gecko/20100101 Firefox/146.0',
   },
-  // Safari 26 (2026最新)
+  // Safari 26 (2026最新 - macOS版本冻结在10_15_7)
   safari: {
-    macos: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 15_7_3) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15',
+    macos: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15',
   },
-  // Edge 143 (2026最新)
+  // Edge 144 (2026最新 - 1月15日发布)
   edge: {
-    windows: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 Edg/143.0.3650.139',
-    macos: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 Edg/143.0.0.0',
+    windows: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36 Edg/144.0.0.0',
+    macos: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36 Edg/144.0.0.0',
   },
 };
 
 // User-Agent池（用于轮换）
 export const USER_AGENT_POOL = [
-  // Chrome 135
+  // Chrome 143
   LATEST_USER_AGENTS.chrome.windows,
   LATEST_USER_AGENTS.chrome.macos,
   LATEST_USER_AGENTS.chrome.linux,
@@ -40,7 +40,7 @@ export const USER_AGENT_POOL = [
   LATEST_USER_AGENTS.firefox.linux,
   // Safari 26
   LATEST_USER_AGENTS.safari.macos,
-  // Edge 143
+  // Edge 144
   LATEST_USER_AGENTS.edge.windows,
   LATEST_USER_AGENTS.edge.macos,
 ];
@@ -92,13 +92,13 @@ export function getRandomUserAgentWithInfo(): {
 export function getSecChUaHeaders(browser: 'chrome' | 'firefox' | 'safari' | 'edge', platform: string): Record<string, string> {
   if (browser === 'chrome') {
     return {
-      'Sec-CH-UA': '"Google Chrome";v="135", "Chromium";v="135", "Not(A:Brand";v="99"',
+      'Sec-CH-UA': '"Google Chrome";v="143", "Chromium";v="143", "Not(A:Brand";v="99"',
       'Sec-CH-UA-Mobile': '?0',
       'Sec-CH-UA-Platform': `"${platform}"`,
     };
   } else if (browser === 'edge') {
     return {
-      'Sec-CH-UA': '"Microsoft Edge";v="143", "Chromium";v="143", "Not(A:Brand";v="99"',
+      'Sec-CH-UA': '"Microsoft Edge";v="144", "Chromium";v="144", "Not(A:Brand";v="99"',
       'Sec-CH-UA-Mobile': '?0',
       'Sec-CH-UA-Platform': `"${platform}"`,
     };

@@ -11,6 +11,7 @@ import {
   getCache,
   setCache,
 } from './shortdrama-cache';
+import { DEFAULT_USER_AGENT } from './user-agent';
 
 const SHORTDRAMA_API_BASE = 'https://api.r2afosne.dpdns.org';
 
@@ -51,7 +52,7 @@ export async function getShortDramaCategories(): Promise<ShortDramaCategory[]> {
       // 移动端：让浏览器使用HTTP缓存，不添加破坏缓存的headers
     } : {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'User-Agent': DEFAULT_USER_AGENT,
         'Accept': 'application/json',
       },
     };
@@ -109,7 +110,7 @@ export async function getRecommendedShortDramas(
       // 移动端：让浏览器使用HTTP缓存，不添加破坏缓存的headers
     } : {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'User-Agent': DEFAULT_USER_AGENT,
         'Accept': 'application/json',
       },
     };
@@ -177,7 +178,7 @@ export async function getShortDramaList(
       // 移动端：让浏览器使用HTTP缓存，不添加破坏缓存的headers
     } : {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'User-Agent': DEFAULT_USER_AGENT,
         'Accept': 'application/json',
       },
     };
@@ -241,7 +242,7 @@ export async function searchShortDramas(
       // 移动端：让浏览器使用HTTP缓存，不添加破坏缓存的headers
     } : {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'User-Agent': DEFAULT_USER_AGENT,
         'Accept': 'application/json',
       },
     };
@@ -312,7 +313,7 @@ async function parseWithAlternativeApi(
 
     const searchResponse = await fetch(searchUrl, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'User-Agent': DEFAULT_USER_AGENT,
         'Accept': 'application/json',
       },
       signal: AbortSignal.timeout(15000), // 15秒超时
@@ -351,7 +352,7 @@ async function parseWithAlternativeApi(
     const episodesUrl = `${alternativeApiBase}/api/v1/drama/dramas?dramaId=${dramaId}`;
     const episodesResponse = await fetch(episodesUrl, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'User-Agent': DEFAULT_USER_AGENT,
         'Accept': 'application/json',
       },
       signal: AbortSignal.timeout(15000), // 15秒超时
@@ -439,7 +440,7 @@ async function parseWithAlternativeApi(
       try {
         const directResponse = await fetch(directUrl, {
           headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'User-Agent': DEFAULT_USER_AGENT,
             'Accept': 'application/json',
           },
           signal: AbortSignal.timeout(15000), // 15秒超时
@@ -580,7 +581,7 @@ export async function parseShortDramaEpisode(
       }
     } : {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'User-Agent': DEFAULT_USER_AGENT,
         'Accept': 'application/json',
       },
     };
@@ -674,7 +675,7 @@ export async function parseShortDramaBatch(
       }
     } : {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'User-Agent': DEFAULT_USER_AGENT,
         'Accept': 'application/json',
       },
     };
@@ -721,7 +722,7 @@ export async function parseShortDramaAll(
       }
     } : {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'User-Agent': DEFAULT_USER_AGENT,
         'Accept': 'application/json',
       },
     };

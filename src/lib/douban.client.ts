@@ -2,7 +2,7 @@
 
 import { ClientCache } from './client-cache';
 import { DoubanItem, DoubanResult, DoubanCommentsResult } from './types';
-import { getRandomUserAgent } from './user-agent';
+import { getRandomUserAgent, DEFAULT_USER_AGENT } from './user-agent';
 
 // 🔍 调试工具：在浏览器控制台使用
 if (typeof window !== 'undefined') {
@@ -841,7 +841,7 @@ export async function getDoubanActorMovies(
 
     const response = await fetch(searchUrl, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+        'User-Agent': DEFAULT_USER_AGENT,
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
         'Referer': 'https://www.douban.com/',

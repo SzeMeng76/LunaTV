@@ -186,7 +186,7 @@ export async function HEAD(request: Request) {
         'Referer': sourceOrigin + '/',
         'Origin': sourceOrigin,
         'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
+          DEFAULT_USER_AGENT,
         'Accept': 'video/webm,video/ogg,video/*;q=0.9,application/ogg;q=0.7,audio/*;q=0.6,*/*;q=0.5',
         'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
         'Accept-Encoding': 'identity;q=1, *;q=0',
