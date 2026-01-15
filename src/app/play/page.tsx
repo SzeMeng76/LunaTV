@@ -4296,6 +4296,7 @@ function PlayPageClient() {
             pointerEvents: 'none',
             transition: 'all 0.3s ease',
             letterSpacing: '0.5px',
+            display: 'none',//隐藏分辨率
           },
         });
         
