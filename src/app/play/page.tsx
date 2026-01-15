@@ -4297,7 +4297,7 @@ function PlayPageClient() {
             opacity: '1',
             transition: 'opacity 0.3s ease',
             letterSpacing: '0.5px',
-            display: 'none',//隐藏分辨率
+            //display: 'none',//隐藏分辨率
           },
         });
 
