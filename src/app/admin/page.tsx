@@ -2532,6 +2532,8 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
       {/* 删除用户确认弹窗 */}
       {showDeleteUserModal && deletingUser && createPortal(
         <div className='fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4' onClick={() => {
+          // 删除中禁止关闭弹窗
+          if (isLoading(`deleteUser_${deletingUser}`)) return;
           setShowDeleteUserModal(false);
           setDeletingUser(null);
         }}>
@@ -2546,7 +2548,8 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                     setShowDeleteUserModal(false);
                     setDeletingUser(null);
                   }}
-                  className='text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors'
+                  disabled={isLoading(`deleteUser_${deletingUser}`)}
+                  className='text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
                 >
                   <svg className='w-6 h-6' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
                     <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M6 18L18 6M6 6l12 12' />
@@ -2576,15 +2579,20 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                       setShowDeleteUserModal(false);
                       setDeletingUser(null);
                     }}
-                    className={`px-6 py-2.5 text-sm font-medium ${buttonStyles.secondary}`}
+                    disabled={isLoading(`deleteUser_${deletingUser}`)}
+                    className={`px-6 py-2.5 text-sm font-medium ${isLoading(`deleteUser_${deletingUser}`) ? buttonStyles.disabled : buttonStyles.secondary}`}
                   >
                     取消
                   </button>
                   <button
                     onClick={handleConfirmDeleteUser}
-                    className={`px-6 py-2.5 text-sm font-medium ${buttonStyles.danger}`}
+                    disabled={isLoading(`deleteUser_${deletingUser}`)}
+                    className={`px-6 py-2.5 text-sm font-medium flex items-center space-x-2 ${isLoading(`deleteUser_${deletingUser}`) ? buttonStyles.disabled : buttonStyles.danger}`}
                   >
-                    确认删除
+                    {isLoading(`deleteUser_${deletingUser}`) && (
+                      <div className='animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent'></div>
+                    )}
+                    <span>{isLoading(`deleteUser_${deletingUser}`) ? '删除中...' : '确认删除'}</span>
                   </button>
                 </div>
               </div>
