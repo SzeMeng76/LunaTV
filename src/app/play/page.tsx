@@ -4319,7 +4319,7 @@ function PlayPageClient() {
               if (badge) {
                 badge.style.opacity = '0';
               }
-            }, 3000);
+            }, 5000);
           }
         };
 
