@@ -414,24 +414,42 @@ ${config?.enableWebSearch && intent.needWebSearch ? '- 搜索最新影视资讯�
 
   // 4. 添加视频上下文（如果有）+ 豆瓣详情数据增强
   if (context?.title) {
-    systemPrompt += `\n## 【当前视频上下文】\n`;
-    systemPrompt += `用户正在浏览: ${context.title}`;
-    if (context.year) systemPrompt += ` (${context.year})`;
-    if (context.currentEpisode) {
-      systemPrompt += `，当前第 ${context.currentEpisode} 集`;
-    }
-    systemPrompt += '\n';
-
-    // 🔥 如果有豆瓣ID，获取详细信息增强AI上下文
+    // 🔥 如果有豆瓣ID，优先获取详细信息并自动修正类型
     if (context.douban_id) {
       console.log(`🎬 开始获取豆瓣详情 (ID: ${context.douban_id})...`);
       const doubanData = await fetchDoubanData(context.douban_id);
 
       if (doubanData) {
+        // 🆕 方案2: 使用豆瓣数据自动修正类型（防止前端传参错误）
+        if (doubanData.type && doubanData.type !== context.type) {
+          console.log(`🔧 类型自动修正: ${context.type} → ${doubanData.type} (来自豆瓣数据)`);
+          context.type = doubanData.type;
+        } else if (doubanData.type) {
+          console.log(`✅ 类型验证通过: ${context.type} (与豆瓣数据一致)`);
+        }
+
+        // 🆕 方案3: 增强系统提示词 - 明确标注类型
+        systemPrompt += `\n## 【当前视频上下文】\n`;
+        systemPrompt += `用户正在浏览: ${context.title}`;
+        if (context.year) systemPrompt += ` (${context.year})`;
+
+        // 明确标注影片类型，避免AI混淆
+        if (context.type === 'movie') {
+          systemPrompt += ` - **【电影】**\n`;
+        } else if (context.type === 'tv') {
+          systemPrompt += ` - **【电视剧/剧集】**\n`;
+          if (context.currentEpisode) {
+            systemPrompt += `当前观看第 ${context.currentEpisode} 集\n`;
+          }
+        }
+
         systemPrompt += `\n## 【豆瓣影片详情】（真实数据，优先参考）\n`;
         systemPrompt += `片名: ${doubanData.title}`;
         if (doubanData.year) systemPrompt += ` (${doubanData.year})`;
         systemPrompt += `\n`;
+
+        // 再次强调类型
+        systemPrompt += `影片类型: ${context.type === 'movie' ? '电影' : '电视剧/剧集'}\n`;
 
         if (doubanData.rate) {
           systemPrompt += `豆瓣评分: ${doubanData.rate}/10\n`;
@@ -472,10 +490,44 @@ ${config?.enableWebSearch && intent.needWebSearch ? '- 搜索最新影视资讯�
         systemPrompt += `3. 导演、演员、类型等信息都必须使用上述真实数据，不要凭记忆修改\n`;
         systemPrompt += `4. 如果某项数据不存在（如暂无评分），可以说"暂无评分"，但不要编造或推测\n`;
 
-        console.log(`✅ 豆瓣详情已注入AI上下文`);
+        // 🆕 针对电影的特殊强调
+        if (context.type === 'movie') {
+          systemPrompt += `5. **重要**: 这是一部【电影】，不是电视剧或剧集。回答时绝对不要提及"第X集"、"剧集"、"连续剧"等词汇\n`;
+          systemPrompt += `6. 如果用户询问剧情，请回答电影的完整剧情，而不是某一集的内容\n`;
+        }
+
+        console.log(`✅ 豆瓣详情已注入AI上下文 (类型: ${context.type})`);
       } else {
         console.log(`⚠️ 豆瓣详情获取失败，继续使用基础上下文`);
+
+        // 即使豆瓣数据获取失败，也要添加基础上下文
+        systemPrompt += `\n## 【当前视频上下文】\n`;
+        systemPrompt += `用户正在浏览: ${context.title}`;
+        if (context.year) systemPrompt += ` (${context.year})`;
+        if (context.type === 'movie') {
+          systemPrompt += ` - **【电影】**\n`;
+        } else if (context.type === 'tv') {
+          systemPrompt += ` - **【电视剧/剧集】**\n`;
+          if (context.currentEpisode) {
+            systemPrompt += `，当前第 ${context.currentEpisode} 集`;
+          }
+        }
+        systemPrompt += '\n';
       }
+    } else {
+      // 没有豆瓣ID时的基础上下文
+      systemPrompt += `\n## 【当前视频上下文】\n`;
+      systemPrompt += `用户正在浏览: ${context.title}`;
+      if (context.year) systemPrompt += ` (${context.year})`;
+      if (context.type === 'movie') {
+        systemPrompt += ` - **【电影】**\n`;
+      } else if (context.type === 'tv') {
+        systemPrompt += ` - **【电视剧/剧集】**\n`;
+        if (context.currentEpisode) {
+          systemPrompt += `，当前第 ${context.currentEpisode} 集`;
+        }
+      }
+      systemPrompt += '\n';
     }
 
     // 🔥 如果有video context且有type，尝试获取TMDB数据
