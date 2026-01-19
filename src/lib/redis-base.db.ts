@@ -293,8 +293,24 @@ export abstract class BaseRedisStorage implements IStorage {
 
   // 删除用户及其所有数据
   async deleteUser(userName: string): Promise<void> {
-    // 删除用户密码
+    // 删除用户密码 (V1)
     await this.withRetry(() => this.client.del(this.userPwdKey(userName)));
+
+    // 删除用户信息 (V2)
+    await this.withRetry(() => this.client.del(this.userInfoKey(userName)));
+
+    // 从用户列表中移除 (V2)
+    await this.withRetry(() => this.client.zRem(this.userListKey(), userName));
+
+    // 删除 OIDC 映射（如果存在）
+    try {
+      const userInfo = await this.getUserInfoV2(userName);
+      if (userInfo?.oidcSub) {
+        await this.withRetry(() => this.client.del(this.oidcSubKey(userInfo.oidcSub!)));
+      }
+    } catch (e) {
+      // 忽略错误，用户信息可能已被删除
+    }
 
     // 删除搜索历史
     await this.withRetry(() => this.client.del(this.shKey(userName)));
@@ -324,6 +340,15 @@ export abstract class BaseRedisStorage implements IStorage {
     );
     if (skipConfigKeys.length > 0) {
       await this.withRetry(() => this.client.del(skipConfigKeys));
+    }
+
+    // 删除剧集跳过配置
+    const episodeSkipPattern = `u:${userName}:episodeskip:*`;
+    const episodeSkipKeys = await this.withRetry(() =>
+      this.client.keys(episodeSkipPattern)
+    );
+    if (episodeSkipKeys.length > 0) {
+      await this.withRetry(() => this.client.del(episodeSkipKeys));
     }
 
     // 删除用户登入统计数据
