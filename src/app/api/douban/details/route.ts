@@ -656,26 +656,6 @@ function parseDoubanDetails(html: string, id: string) {
       }
     }
 
-    // 🎯 智能判断影片类型（电影 vs 剧集）- 多重判断确保准确性
-    let contentType: 'movie' | 'tv' = 'movie'; // 默认为电影
-
-    // 方法1: 检查是否有"首播"字段（只有剧集有首播，电影是"上映"）
-    const hasFirstAired = html.includes('<span class="pl">首播:</span>');
-
-    // 方法2: 检查是否有集数信息（只有剧集有集数）
-    const hasEpisodes = episodes && episodes > 0;
-
-    // 方法3: 检查是否有"单集片长"（只有剧集有单集片长，电影是"片长"）
-    const hasEpisodeLength = episode_length !== undefined;
-
-    // 综合判断：满足任一条件即为剧集
-    if (hasFirstAired || hasEpisodes || hasEpisodeLength) {
-      contentType = 'tv';
-      console.log(`[Douban] 识别为剧集: ${title} (首播:${hasFirstAired}, 集数:${hasEpisodes}, 单集片长:${hasEpisodeLength})`);
-    } else {
-      console.log(`[Douban] 识别为电影: ${title}`);
-    }
-
     return {
       code: 200,
       message: '获取成功',
@@ -704,8 +684,6 @@ function parseDoubanDetails(html: string, id: string) {
         backdrop: scenePhoto,
         // 🎬 预告片URL（由移动端API填充）
         trailerUrl: undefined,
-        // 🆕 影片类型（电影/剧集）- AI识别关键字段
-        type: contentType,
       }
     };
   } catch (error) {

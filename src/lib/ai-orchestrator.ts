@@ -420,12 +420,22 @@ ${config?.enableWebSearch && intent.needWebSearch ? '- 搜索最新影视资讯�
       const doubanData = await fetchDoubanData(context.douban_id);
 
       if (doubanData) {
-        // 🆕 方案2: 使用豆瓣数据自动修正类型（防止前端传参错误）
-        if (doubanData.type && doubanData.type !== context.type) {
-          console.log(`🔧 类型自动修正: ${context.type} → ${doubanData.type} (来自豆瓣数据)`);
-          context.type = doubanData.type;
-        } else if (doubanData.type) {
-          console.log(`✅ 类型验证通过: ${context.type} (与豆瓣数据一致)`);
+        // 🆕 智能判断影片类型：基于已提取的数据（集数/单集片长/电影时长）
+        let detectedType: 'movie' | 'tv' | undefined;
+
+        // 判断逻辑：有集数或单集片长 = 剧集，有电影时长 = 电影
+        if ((doubanData.episodes && doubanData.episodes > 0) || doubanData.episode_length !== undefined) {
+          detectedType = 'tv';
+        } else if (doubanData.movie_duration !== undefined) {
+          detectedType = 'movie';
+        }
+
+        // 使用检测到的类型自动修正前端传参错误
+        if (detectedType && detectedType !== context.type) {
+          console.log(`🔧 类型自动修正: ${context.type} → ${detectedType} (集数:${doubanData.episodes}, 单集片长:${doubanData.episode_length}, 电影时长:${doubanData.movie_duration})`);
+          context.type = detectedType;
+        } else if (detectedType) {
+          console.log(`✅ 类型验证通过: ${context.type}`);
         }
 
         // 🆕 方案3: 增强系统提示词 - 明确标注类型
