@@ -3044,12 +3044,41 @@ function PlayPageClient() {
   // 集数切换
   // ---------------------------------------------------------------------------
   // 处理集数切换
-  const handleEpisodeChange = (episodeNumber: number) => {
+  const handleEpisodeChange = async (episodeNumber: number) => {
     if (episodeNumber >= 0 && episodeNumber < totalEpisodes) {
       // 在更换集数前保存当前播放进度
       if (artPlayerRef.current && artPlayerRef.current.paused) {
         saveCurrentPlayProgress();
       }
+
+      // 🔥 优化：检查目标集数是否有历史播放记录
+      try {
+        const allRecords = await getAllPlayRecords();
+        const key = generateStorageKey(currentSourceRef.current, currentIdRef.current);
+        const record = allRecords[key];
+
+        // 如果历史记录的集数与目标集数匹配，且有播放进度
+        if (record && record.index - 1 === episodeNumber && record.play_time > 0) {
+          resumeTimeRef.current = record.play_time;
+          console.log(`🎯 切换到第${episodeNumber + 1}集，恢复历史进度: ${record.play_time.toFixed(2)}s`);
+        } else {
+          resumeTimeRef.current = 0;
+          console.log(`🔄 切换到第${episodeNumber + 1}集，从头播放`);
+        }
+      } catch (err) {
+        console.warn('读取历史记录失败:', err);
+        resumeTimeRef.current = 0;
+      }
+
+      // 🔥 优化：同步更新URL参数，保持URL与实际播放状态一致
+      try {
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.set('index', episodeNumber.toString());
+        window.history.replaceState({}, '', newUrl.toString());
+      } catch (err) {
+        console.warn('更新URL参数失败:', err);
+      }
+
       setCurrentEpisodeIndex(episodeNumber);
     }
   };
