@@ -684,11 +684,13 @@ export async function getDoubanDetails(id: string): Promise<{
 
     const result = await response.json();
 
-    // 保存到缓存（调试模式下不缓存）
-    if (result.code === 200 && !isDebugMode) {
+    // 🎯 只缓存有效数据（必须有 title）
+    if (result.code === 200 && result.data?.title && !isDebugMode) {
       const cacheKey = getCacheKey('details', { id });
       await setCache(cacheKey, result, DOUBAN_CACHE_EXPIRE.details);
       console.log(`豆瓣详情已缓存: ${id}`);
+    } else if (result.code === 200 && !result.data?.title) {
+      console.warn(`⚠️ 豆瓣详情数据无效（缺少标题），不缓存: ${id}`);
     }
 
     return result;
