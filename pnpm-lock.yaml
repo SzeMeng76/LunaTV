@@ -93,8 +93,8 @@ importers:
         specifier: ^0.4.6
         version: 0.4.6(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       puppeteer-core:
-        specifier: ^24.35.0
-        version: 24.35.0
+        specifier: ^24.36.0
+        version: 24.36.0
       react:
         specifier: ^19.0.0
         version: 19.2.3
@@ -2662,8 +2662,8 @@ packages:
     resolution: {integrity: sha512-rNjApaLzuwaOTjCiT8lSDdGN1APCiqkChLMJxJPWLunPAt5fy8xgU9/jNOchV84wfIxrA0lRQB7oCT8jrn/wrQ==}
     engines: {node: '>=6.0'}
 
-  chromium-bidi@12.0.1:
-    resolution: {integrity: sha512-fGg+6jr0xjQhzpy5N4ErZxQ4wF7KLEvhGZXD6EgvZKDhu7iOhZXnZhcDxPJDcwTcrD48NPzOCo84RP2lv3Z+Cg==}
+  chromium-bidi@13.0.1:
+    resolution: {integrity: sha512-c+RLxH0Vg2x2syS9wPw378oJgiJNXtYXUvnVAldUlt5uaHekn0CCU7gPksNgHjrH1qFhmjVXQj4esvuthuC7OQ==}
     peerDependencies:
       devtools-protocol: '*'
 
@@ -2946,8 +2946,8 @@ packages:
   devlop@1.1.0:
     resolution: {integrity: sha512-RWmIqhcFf1lRYBvNmr7qTNuyCt/7/ns2jbpp1+PalgE/rDQcBT0fioSMUpJ93irlUhC5hrg4cYqe6U+0ImW0rA==}
 
-  devtools-protocol@0.0.1534754:
-    resolution: {integrity: sha512-26T91cV5dbOYnXdJi5qQHoTtUoNEqwkHcAyu/IKtjIAxiEqPMrDiRkDOPWVsGfNZGmlQVHQbZRSjD8sxagWVsQ==}
+  devtools-protocol@0.0.1551306:
+    resolution: {integrity: sha512-CFx8QdSim8iIv+2ZcEOclBKTQY6BI1IEDa7Tm9YkwAXzEWFndTEzpTo5jAUhSnq24IC7xaDw0wvGcm96+Y3PEg==}
 
   diff-sequences@29.6.3:
     resolution: {integrity: sha512-EjePK1srD3P08o2j4f0ExnylqRs5B9tJjcp9t1krH2qRi8CCdsYfwe9JgSLurFBWwq4uOlipzfk5fHNvwFKr8Q==}
@@ -4869,8 +4869,8 @@ packages:
     resolution: {integrity: sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg==}
     engines: {node: '>=6'}
 
-  puppeteer-core@24.35.0:
-    resolution: {integrity: sha512-vt1zc2ME0kHBn7ZDOqLvgvrYD5bqNv5y2ZNXzYnCv8DEtZGw/zKhljlrGuImxptZ4rq+QI9dFGrUIYqG4/IQzA==}
+  puppeteer-core@24.36.0:
+    resolution: {integrity: sha512-P3Ou0MAFDCQ0dK1d9F9+8jTrg6JvXjUacgG0YkJQP4kbEnUOGokSDEMmMId5ZhXD5HwsHM202E9VwEpEjWfwxg==}
     engines: {node: '>=18'}
 
   pure-rand@6.1.0:
@@ -5672,8 +5672,8 @@ packages:
     resolution: {integrity: sha512-c5EGNOiyxxV5qmTtAB7rbiXxi1ooX1pQKMLX/MIabJjRA0SJBQOjKF+KSVfHkr9U1cADPon0mRiVe/riyaiDUA==}
     engines: {node: '>=10.13.0'}
 
-  webdriver-bidi-protocol@0.3.10:
-    resolution: {integrity: sha512-5LAE43jAVLOhB/QqX4bwSiv0Hg1HBfMmOuwBSXHdvg4GMGu9Y0lIq7p4R/yySu6w74WmaR4GM4H9t2IwLW7hgw==}
+  webdriver-bidi-protocol@0.4.0:
+    resolution: {integrity: sha512-U9VIlNRrq94d1xxR9JrCEAx5Gv/2W7ERSv8oWRoNe/QYbfccS0V3h/H6qeNeCRJxXGMhhnkqvwNrvPAYeuP9VA==}
 
   webpack-obfuscator@3.5.1:
     resolution: {integrity: sha512-vztsD8oNdkX9FY/K4GTuylNWLGlc0n07vt7sCa+SlixKe/8iGejlxb/ZiKARmaZ2c8AbiBZcB/5hYqeNPydVZA==}
@@ -5908,7 +5908,7 @@ snapshots:
       '@babel/core': 7.27.4
       '@babel/helper-compilation-targets': 7.27.2
       '@babel/helper-plugin-utils': 7.27.1
-      debug: 4.4.1(supports-color@9.4.0)
+      debug: 4.4.3
       lodash.debounce: 4.0.8
       resolve: 1.22.10
     transitivePeerDependencies:
@@ -6612,7 +6612,7 @@ snapshots:
       '@babel/parser': 7.27.5
       '@babel/template': 7.27.2
       '@babel/types': 7.27.6
-      debug: 4.4.1(supports-color@9.4.0)
+      debug: 4.4.3
       globals: 11.12.0
     transitivePeerDependencies:
       - supports-color
@@ -7977,7 +7977,7 @@ snapshots:
     dependencies:
       '@typescript-eslint/tsconfig-utils': 8.50.0(typescript@5.9.3)
       '@typescript-eslint/types': 8.50.0
-      debug: 4.4.1(supports-color@9.4.0)
+      debug: 4.4.3
       typescript: 5.9.3
     transitivePeerDependencies:
       - supports-color
@@ -8624,9 +8624,9 @@ snapshots:
 
   chrome-trace-event@1.0.4: {}
 
-  chromium-bidi@12.0.1(devtools-protocol@0.0.1534754):
+  chromium-bidi@13.0.1(devtools-protocol@0.0.1551306):
     dependencies:
-      devtools-protocol: 0.0.1534754
+      devtools-protocol: 0.0.1551306
       mitt: 3.0.1
       zod: 3.25.67
 
@@ -8896,7 +8896,7 @@ snapshots:
     dependencies:
       dequal: 2.0.3
 
-  devtools-protocol@0.0.1534754: {}
+  devtools-protocol@0.0.1551306: {}
 
   diff-sequences@29.6.3: {}
 
@@ -8969,7 +8969,7 @@ snapshots:
   engine.io-client@6.6.4:
     dependencies:
       '@socket.io/component-emitter': 3.1.2
-      debug: 4.4.1(supports-color@9.4.0)
+      debug: 4.4.3
       engine.io-parser: 5.2.3
       ws: 8.18.3
       xmlhttprequest-ssl: 2.1.2
@@ -9921,7 +9921,7 @@ snapshots:
 
   istanbul-lib-source-maps@4.0.1:
     dependencies:
-      debug: 4.4.1(supports-color@9.4.0)
+      debug: 4.4.3
       istanbul-lib-coverage: 3.2.2
       source-map: 0.6.1
     transitivePeerDependencies:
@@ -10931,7 +10931,7 @@ snapshots:
   micromark@4.0.2:
     dependencies:
       '@types/debug': 4.1.12
-      debug: 4.4.1(supports-color@9.4.0)
+      debug: 4.4.3
       decode-named-character-reference: 1.2.0
       devlop: 1.1.0
       micromark-core-commonmark: 2.0.3
@@ -11351,14 +11351,14 @@ snapshots:
 
   punycode@2.3.1: {}
 
-  puppeteer-core@24.35.0:
+  puppeteer-core@24.36.0:
     dependencies:
       '@puppeteer/browsers': 2.11.1
-      chromium-bidi: 12.0.1(devtools-protocol@0.0.1534754)
+      chromium-bidi: 13.0.1(devtools-protocol@0.0.1551306)
       debug: 4.4.3
-      devtools-protocol: 0.0.1534754
+      devtools-protocol: 0.0.1551306
       typed-query-selector: 2.12.0
-      webdriver-bidi-protocol: 0.3.10
+      webdriver-bidi-protocol: 0.4.0
       ws: 8.19.0
     transitivePeerDependencies:
       - bare-abort-controller
@@ -11775,7 +11775,7 @@ snapshots:
   socket.io-parser@4.2.5:
     dependencies:
       '@socket.io/component-emitter': 3.1.2
-      debug: 4.4.1(supports-color@9.4.0)
+      debug: 4.4.3
     transitivePeerDependencies:
       - supports-color
 
@@ -12366,7 +12366,7 @@ snapshots:
       glob-to-regexp: 0.4.1
       graceful-fs: 4.2.11
 
-  webdriver-bidi-protocol@0.3.10: {}
+  webdriver-bidi-protocol@0.4.0: {}
 
   webpack-obfuscator@3.5.1(javascript-obfuscator@4.1.1)(webpack@5.99.9):
     dependencies:
