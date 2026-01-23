@@ -4,7 +4,7 @@
 import { ChevronLeft, ChevronRight, Info, Play, Volume2, VolumeX } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, memo } from 'react';
 import { useAutoplay } from './hooks/useAutoplay';
 import { useSwipeGesture } from './hooks/useSwipeGesture';
 
@@ -29,7 +29,8 @@ interface HeroBannerProps {
   enableVideo?: boolean; // 是否启用视频自动播放
 }
 
-export default function HeroBanner({
+// 🚀 优化方案6：使用React.memo防止不必要的重渲染
+function HeroBanner({
   items,
   autoPlayInterval = 8000, // Netflix风格：更长的停留时间
   showControls = true,
@@ -478,3 +479,5 @@ export default function HeroBanner({
     </div>
   );
 }
+
+export default memo(HeroBanner);

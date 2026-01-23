@@ -176,6 +176,11 @@ function ScrollableRow({
         ref={containerRef}
         className='flex space-x-6 overflow-x-auto scrollbar-hide pt-3 pb-12 sm:pt-4 sm:pb-14 px-4 sm:px-6'
         onScroll={checkScroll}
+        style={{
+          WebkitOverflowScrolling: 'touch', // iOS 惯性滚动
+          willChange: 'scroll-position', // 提示浏览器优化滚动
+          transform: 'translateZ(0)', // 启用 GPU 硬件加速
+        }}
       >
         {enableAnimation ? (
           <AnimatedCardGrid className="flex space-x-6">

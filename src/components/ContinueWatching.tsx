@@ -2,7 +2,7 @@
 'use client';
 
 import { Clock, Trash2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, memo } from 'react';
 
 import type { PlayRecord } from '@/lib/db.client';
 import {
@@ -27,7 +27,8 @@ interface ContinueWatchingProps {
   className?: string;
 }
 
-export default function ContinueWatching({ className }: ContinueWatchingProps) {
+// 🚀 优化方案6：使用React.memo防止不必要的重渲染
+function ContinueWatching({ className }: ContinueWatchingProps) {
   const [playRecords, setPlayRecords] = useState<
     (PlayRecord & { key: string })[]
   >([]);
@@ -300,3 +301,5 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
     </section>
   );
 }
+
+export default memo(ContinueWatching);
