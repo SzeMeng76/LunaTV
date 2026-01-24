@@ -153,6 +153,7 @@ export default function SourceBrowserPage() {
           '里番',
           '理论片',
           '福利',
+          '倫理片',
         ];
 
         list = list.filter(
