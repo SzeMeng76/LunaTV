@@ -15,6 +15,11 @@ import AcgSearch from '@/components/AcgSearch';
 import PageLayout from '@/components/PageLayout';
 import SkipController, { SkipSettingsButton } from '@/components/SkipController';
 import VideoCard from '@/components/VideoCard';
+import CommentSection from '@/components/play/CommentSection';
+import DownloadButtons from '@/components/play/DownloadButtons';
+import FavoriteButton from '@/components/play/FavoriteButton';
+import BackToTopButton from '@/components/play/BackToTopButton';
+import LoadingScreen from '@/components/play/LoadingScreen';
 import artplayerPluginChromecast from '@/lib/artplayer-plugin-chromecast';
 import artplayerPluginLiquidGlass from '@/lib/artplayer-plugin-liquid-glass';
 import { ClientCache } from '@/lib/client-cache';
@@ -1846,10 +1851,22 @@ function PlayPageClient() {
       container.insertBefore(outputCanvas, video);
 
       if (isFirefox && sourceCtx && sourceCanvas) {
+        // 🚀 性能优化：添加帧率限制，降低 CPU 占用
+        let lastFrameTime = 0;
+        const targetFPS = 30; // 从 60fps 降到 30fps，降低约 50% CPU 占用
+        const frameInterval = 1000 / targetFPS;
+
         const captureVideoFrame = () => {
-          if (sourceCtx && sourceCanvas && video.readyState >= video.HAVE_CURRENT_DATA) {
-            sourceCtx.drawImage(video, 0, 0, sourceCanvas.width, sourceCanvas.height);
+          const now = performance.now();
+
+          // 只在达到目标帧间隔时才执行绘制
+          if (now - lastFrameTime >= frameInterval) {
+            if (sourceCtx && sourceCanvas && video.readyState >= video.HAVE_CURRENT_DATA) {
+              sourceCtx.drawImage(video, 0, 0, sourceCanvas.width, sourceCanvas.height);
+            }
+            lastFrameTime = now - ((now - lastFrameTime) % frameInterval);
           }
+
           frameRequestId = requestAnimationFrame(captureVideoFrame);
         };
         captureVideoFrame();
@@ -5286,154 +5303,11 @@ function PlayPageClient() {
 
   if (loading) {
     return (
-      <PageLayout activePath='/play'>
-        <div className='flex items-center justify-center min-h-screen bg-transparent'>
-          <div className='text-center max-w-md mx-auto px-6'>
-            {/* 动画影院图标 */}
-            <div className='relative mb-8'>
-              <div className='relative mx-auto w-24 h-24 bg-linear-to-r from-green-500 to-emerald-600 rounded-2xl shadow-2xl flex items-center justify-center transform hover:scale-105 transition-transform duration-300'>
-                <div className='text-white text-4xl'>
-                  {loadingStage === 'searching' && '🔍'}
-                  {loadingStage === 'preferring' && '⚡'}
-                  {loadingStage === 'fetching' && '🎬'}
-                  {loadingStage === 'ready' && '✨'}
-                </div>
-                {/* 旋转光环 */}
-                <div className='absolute -inset-2 bg-linear-to-r from-green-500 to-emerald-600 rounded-2xl opacity-20 animate-spin'></div>
-              </div>
-
-              {/* 浮动粒子效果 */}
-              <div className='absolute top-0 left-0 w-full h-full pointer-events-none'>
-                <div className='absolute top-2 left-2 w-2 h-2 bg-green-400 rounded-full animate-bounce'></div>
-                <div
-                  className='absolute top-4 right-4 w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce'
-                  style={{ animationDelay: '0.5s' }}
-                ></div>
-                <div
-                  className='absolute bottom-3 left-6 w-1 h-1 bg-lime-400 rounded-full animate-bounce'
-                  style={{ animationDelay: '1s' }}
-                ></div>
-              </div>
-            </div>
-
-            {/* 进度指示器 */}
-            <div className='mb-6 w-80 mx-auto'>
-              <div className='flex justify-center space-x-2 mb-4'>
-                <div
-                  className={`w-3 h-3 rounded-full transition-all duration-500 ${loadingStage === 'searching' || loadingStage === 'fetching'
-                    ? 'bg-green-500 scale-125'
-                    : loadingStage === 'preferring' ||
-                      loadingStage === 'ready'
-                      ? 'bg-green-500'
-                      : 'bg-gray-300'
-                    }`}
-                ></div>
-                <div
-                  className={`w-3 h-3 rounded-full transition-all duration-500 ${loadingStage === 'preferring'
-                    ? 'bg-green-500 scale-125'
-                    : loadingStage === 'ready'
-                      ? 'bg-green-500'
-                      : 'bg-gray-300'
-                    }`}
-                ></div>
-                <div
-                  className={`w-3 h-3 rounded-full transition-all duration-500 ${loadingStage === 'ready'
-                    ? 'bg-green-500 scale-125'
-                    : 'bg-gray-300'
-                    }`}
-                ></div>
-              </div>
-
-              {/* 进度条 */}
-              <div className='w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden'>
-                <div
-                  className='h-full bg-linear-to-r from-green-500 to-emerald-600 rounded-full transition-all duration-1000 ease-out'
-                  style={{
-                    width:
-                      loadingStage === 'searching' ||
-                        loadingStage === 'fetching'
-                        ? '33%'
-                        : loadingStage === 'preferring'
-                          ? '66%'
-                          : '100%',
-                  }}
-                ></div>
-              </div>
-            </div>
-
-            {/* 加载消息 */}
-            <div className='space-y-2'>
-              <p className='text-xl font-semibold text-gray-800 dark:text-gray-200 animate-pulse'>
-                {loadingMessage}
-              </p>
-
-              {/* Netflix风格测速进度显示 */}
-              {speedTestProgress && (
-                <div className='mt-6 space-y-3'>
-                  {/* 进度条容器 */}
-                  <div className='relative w-full'>
-                    {/* 背景进度条 */}
-                    <div className='h-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden'>
-                      {/* 动态进度条 - Netflix红色 */}
-                      <div
-                        className='h-full bg-gradient-to-r from-red-600 to-red-500 rounded-full transition-all duration-300 ease-out relative overflow-hidden'
-                        style={{
-                          width: `${(speedTestProgress.current / speedTestProgress.total) * 100}%`,
-                        }}
-                      >
-                        {/* 闪烁效果 */}
-                        <div className='absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer'></div>
-                      </div>
-                    </div>
-
-                    {/* 进度数字 - 靠右显示 */}
-                    <div className='absolute -top-6 right-0 text-xs font-medium text-gray-500 dark:text-gray-400'>
-                      {speedTestProgress.current}/{speedTestProgress.total}
-                    </div>
-                  </div>
-
-                  {/* 当前测试源信息卡片 */}
-                  <div className='bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 border border-gray-200 dark:border-gray-700'>
-                    <div className='flex items-center gap-2'>
-                      {/* 脉动指示器 */}
-                      <div className='relative'>
-                        <div className='w-2 h-2 bg-red-500 rounded-full animate-pulse'></div>
-                        <div className='absolute inset-0 w-2 h-2 bg-red-500 rounded-full animate-ping'></div>
-                      </div>
-
-                      {/* 源名称 */}
-                      <span className='text-sm font-semibold text-gray-700 dark:text-gray-300 truncate flex-1'>
-                        {speedTestProgress.currentSource}
-                      </span>
-                    </div>
-
-                    {/* 测试结果 */}
-                    {speedTestProgress.result && (
-                      <div className='mt-2 flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400 font-mono'>
-                        {speedTestProgress.result === '测速失败' ? (
-                          <span className='text-red-500 flex items-center gap-1'>
-                            <svg className='w-3 h-3' fill='currentColor' viewBox='0 0 20 20'>
-                              <path fillRule='evenodd' d='M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z' clipRule='evenodd' />
-                            </svg>
-                            连接失败
-                          </span>
-                        ) : (
-                          <span className='text-green-600 dark:text-green-400 flex items-center gap-1'>
-                            <svg className='w-3 h-3' fill='currentColor' viewBox='0 0 20 20'>
-                              <path fillRule='evenodd' d='M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z' clipRule='evenodd' />
-                            </svg>
-                            {speedTestProgress.result}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </PageLayout>
+      <LoadingScreen
+        loadingStage={loadingStage}
+        loadingMessage={loadingMessage}
+        speedTestProgress={speedTestProgress}
+      />
     );
   }
 
@@ -5564,41 +5438,12 @@ function PlayPageClient() {
               )}
             </button>
 
-            {/* 下载按钮 */}
-            {downloadEnabled && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowDownloadEpisodeSelector(true);
-                }}
-                className='flex group relative items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 min-h-[40px] sm:min-h-[44px] rounded-2xl bg-linear-to-br from-white/90 via-white/80 to-white/70 hover:from-white hover:via-white/95 hover:to-white/90 dark:from-gray-800/90 dark:via-gray-800/80 dark:to-gray-800/70 dark:hover:from-gray-800 dark:hover:via-gray-800/95 dark:hover:to-gray-800/90 backdrop-blur-md border border-white/60 dark:border-gray-700/60 shadow-[0_2px_8px_rgba(0,0,0,0.04),inset_0_1px_0_rgba(255,255,255,0.25)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.1)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.3)] dark:hover:shadow-[0_4px_12px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.15)] hover:scale-105 active:scale-95 transition-all duration-300 overflow-hidden'
-                title='下载视频'
-              >
-                <div className='absolute inset-0 bg-linear-to-r from-transparent via-white/0 to-transparent group-hover:via-white/30 dark:group-hover:via-white/10 transition-all duration-500'></div>
-                <Download className='relative z-10 w-3.5 sm:w-4 h-3.5 sm:h-4 text-gray-600 dark:text-gray-400' />
-                <span className='relative z-10 hidden sm:inline text-xs font-medium text-gray-600 dark:text-gray-300'>
-                  下载
-                </span>
-              </button>
-            )}
-
-            {/* 下载管理按钮 */}
-            {downloadEnabled && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowDownloadPanel(true);
-                }}
-                className='flex group relative items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 min-h-[40px] sm:min-h-[44px] rounded-2xl bg-linear-to-br from-white/90 via-white/80 to-white/70 hover:from-white hover:via-white/95 hover:to-white/90 dark:from-gray-800/90 dark:via-gray-800/80 dark:to-gray-800/70 dark:hover:from-gray-800 dark:hover:via-gray-800/95 dark:hover:to-gray-800/90 backdrop-blur-md border border-white/60 dark:border-gray-700/60 shadow-[0_2px_8px_rgba(0,0,0,0.04),inset_0_1px_0_rgba(255,255,255,0.25)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.1)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.3)] dark:hover:shadow-[0_4px_12px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.15)] hover:scale-105 active:scale-95 transition-all duration-300 overflow-hidden'
-                title='下载管理'
-              >
-                <div className='absolute inset-0 bg-linear-to-r from-transparent via-white/0 to-transparent group-hover:via-white/30 dark:group-hover:via-white/10 transition-all duration-500'></div>
-                <span className='relative z-10 text-sm sm:text-base'>📥</span>
-                <span className='relative z-10 hidden sm:inline text-xs font-medium text-gray-600 dark:text-gray-300'>
-                  管理
-                </span>
-              </button>
-            )}
+            {/* 下载按钮 - 使用独立组件优化性能 */}
+            <DownloadButtons
+              downloadEnabled={downloadEnabled}
+              onDownloadClick={() => setShowDownloadEpisodeSelector(true)}
+              onDownloadPanelClick={() => setShowDownloadPanel(true)}
+            />
 
             {/* 折叠控制按钮 - 仅在 lg 及以上屏幕显示 */}
             <button
@@ -5801,17 +5646,11 @@ function PlayPageClient() {
 
                   {/* 按钮组 */}
                   <div className='flex items-center justify-center md:justify-start gap-2 flex-wrap'>
-                    {/* 收藏按钮 */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleToggleFavorite();
-                      }}
-                      className='group relative shrink-0 transition-all duration-300 hover:scale-110'
-                    >
-                      <div className='absolute inset-0 bg-linear-to-r from-red-400 to-pink-400 rounded-full opacity-0 group-hover:opacity-20 blur-lg transition-opacity duration-300'></div>
-                      <FavoriteIcon filled={favorited} />
-                    </button>
+                    {/* 收藏按钮 - 使用独立组件优化性能 */}
+                    <FavoriteButton
+                      favorited={favorited}
+                      onToggle={handleToggleFavorite}
+                    />
                   </div>
                 </div>
               </div>
@@ -6369,107 +6208,13 @@ function PlayPageClient() {
                 </div>
               )}
 
-              {/* 豆瓣短评 */}
-              {movieComments && movieComments.length > 0 && (
-                <div className='mt-6 border-t border-gray-200 dark:border-gray-700 pt-6'>
-                  <h3 className='text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4 flex items-center gap-2'>
-                    <span>💬</span>
-                    <span>豆瓣短评</span>
-                  </h3>
-                  <div className='space-y-4'>
-                    {movieComments.slice(0, 10).map((comment: any, index: number) => (
-                      <div
-                        key={index}
-                        className='bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors'
-                      >
-                        <div className='flex items-start gap-3'>
-                          {/* 用户头像 */}
-                          <div className='shrink-0'>
-                            {comment.avatar ? (
-                              <img
-                                src={comment.avatar}
-                                alt={comment.username}
-                                className='w-10 h-10 rounded-full object-cover'
-                                onError={(e) => {
-                                  e.currentTarget.style.display = 'none';
-                                }}
-                              />
-                            ) : (
-                              <div className='w-10 h-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-gray-600 dark:text-gray-400'>
-                                {comment.username.charAt(0)}
-                              </div>
-                            )}
-                          </div>
-
-                          {/* 短评内容 */}
-                          <div className='flex-1 min-w-0'>
-                            <div className='flex items-center gap-2 mb-1 flex-wrap'>
-                              <span className='font-medium text-gray-800 dark:text-gray-200'>
-                                {comment.username}
-                              </span>
-
-                              {/* 评分星级 */}
-                              {comment.rating > 0 && (
-                                <div className='flex items-center'>
-                                  {[...Array(5)].map((_, i) => (
-                                    <svg
-                                      key={i}
-                                      className={`w-3 h-3 ${
-                                        i < comment.rating
-                                          ? 'text-yellow-400'
-                                          : 'text-gray-300 dark:text-gray-600'
-                                      }`}
-                                      fill='currentColor'
-                                      viewBox='0 0 20 20'
-                                    >
-                                      <path d='M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z' />
-                                    </svg>
-                                  ))}
-                                </div>
-                              )}
-
-                              {/* 时间和地点 */}
-                              <span className='text-xs text-gray-500 dark:text-gray-400'>
-                                {comment.time}
-                                {comment.location && ` · ${comment.location}`}
-                              </span>
-                            </div>
-
-                            {/* 短评正文 */}
-                            <p className='text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap'>
-                              {comment.content}
-                            </p>
-
-                            {/* 有用数 */}
-                            {comment.useful_count > 0 && (
-                              <div className='mt-2 text-xs text-gray-500 dark:text-gray-400'>
-                                {comment.useful_count} 人认为有用
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* 查看更多链接 */}
-                  {videoDoubanId && (
-                    <div className='mt-4 text-center'>
-                      <a
-                        href={`https://movie.douban.com/subject/${videoDoubanId}/comments?status=P`}
-                        target='_blank'
-                        rel='noopener noreferrer'
-                        className='inline-flex items-center gap-1 text-sm text-blue-600 dark:text-blue-400 hover:underline'
-                      >
-                        查看更多短评
-                        <svg className='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-                          <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14' />
-                        </svg>
-                      </a>
-                    </div>
-                  )}
-                </div>
-              )}
+              {/* 豆瓣短评 - 使用独立组件优化性能 */}
+              <CommentSection
+                comments={movieComments}
+                loading={loadingComments}
+                error={commentsError}
+                videoDoubanId={videoDoubanId}
+              />
 
             </div>
           </div>
@@ -6542,33 +6287,8 @@ function PlayPageClient() {
         </div>
       </div>
 
-      {/* 返回顶部悬浮按钮 */}
-      <button
-        onClick={scrollToTop}
-        className={`fixed z-500 w-12 h-12 rounded-full shadow-lg backdrop-blur-sm transition-all duration-300 ease-in-out flex items-center justify-center group relative overflow-hidden ${
-          showBackToTop
-            ? 'opacity-100 translate-y-0 pointer-events-auto'
-            : 'opacity-0 translate-y-4 pointer-events-none'
-        }`}
-        style={{
-          position: 'fixed',
-          right: '1.5rem',
-          bottom: typeof window !== 'undefined' && window.innerWidth < 768 ? '5rem' : '1.5rem',
-          left: 'auto'
-        }}
-        aria-label='返回顶部'
-      >
-        {/* 渐变背景 */}
-        <div className='absolute inset-0 bg-linear-to-r from-green-500 via-emerald-500 to-teal-500 group-hover:from-green-600 group-hover:via-emerald-600 group-hover:to-teal-600 transition-all duration-300'></div>
-
-        {/* 发光效果 */}
-        <div className='absolute inset-0 bg-linear-to-r from-green-400 to-emerald-400 opacity-0 group-hover:opacity-50 blur-md transition-all duration-300'></div>
-
-        {/* 脉冲光环 */}
-        <div className='absolute inset-0 rounded-full border-2 border-white/30 animate-ping group-hover:opacity-0 transition-opacity duration-300'></div>
-
-        <ChevronUp className='w-6 h-6 text-white relative z-10 transition-all duration-300 group-hover:scale-110 group-hover:-translate-y-1' />
-      </button>
+      {/* 返回顶部悬浮按钮 - 使用独立组件优化性能 */}
+      <BackToTopButton show={showBackToTop} onClick={scrollToTop} />
 
       {/* 观影室同步暂停提示条 */}
       {isInWatchRoom && !isWatchRoomOwner && syncPaused && !pendingOwnerChange && (
@@ -6881,30 +6601,6 @@ function PlayPageClient() {
   );
 }
 
-// FavoriteIcon 组件
-const FavoriteIcon = ({ filled }: { filled: boolean }) => {
-  if (filled) {
-    return (
-      <svg
-        className='h-7 w-7'
-        viewBox='0 0 24 24'
-        xmlns='http://www.w3.org/2000/svg'
-      >
-        <path
-          d='M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'
-          fill='#ef4444' /* Tailwind red-500 */
-          stroke='#ef4444'
-          strokeWidth='2'
-          strokeLinecap='round'
-          strokeLinejoin='round'
-        />
-      </svg>
-    );
-  }
-  return (
-    <Heart className='h-7 w-7 stroke-[1] text-gray-600 dark:text-gray-300' />
-  );
-};
 
 export default function PlayPage() {
   return (

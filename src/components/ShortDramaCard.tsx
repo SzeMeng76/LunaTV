@@ -2,9 +2,13 @@
 
 'use client';
 
-import { Play, Star, Heart } from 'lucide-react';
-import Link from 'next/link';
+import { Play, Star, Heart, ExternalLink, PlayCircle, Sparkles } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { memo, useEffect, useState, useCallback } from 'react';
+
+import { useLongPress } from '@/hooks/useLongPress';
+import MobileActionSheet from '@/components/MobileActionSheet';
+import AIRecommendModal from '@/components/AIRecommendModal';
 
 import { ShortDramaItem } from '@/lib/types';
 import {
@@ -25,17 +29,29 @@ interface ShortDramaCardProps {
   drama: ShortDramaItem;
   showDescription?: boolean;
   className?: string;
+  aiEnabled?: boolean; // AI功能是否启用
 }
 
 function ShortDramaCard({
   drama,
   showDescription = false,
   className = '',
+  aiEnabled: aiEnabledProp,
 }: ShortDramaCardProps) {
+  const router = useRouter();
   const [realEpisodeCount, setRealEpisodeCount] = useState<number>(drama.episode_count);
   const [showEpisodeCount, setShowEpisodeCount] = useState(drama.episode_count > 1); // 如果初始集数>1就显示
   const [imageLoaded, setImageLoaded] = useState(false); // 图片加载状态
   const [favorited, setFavorited] = useState(false); // 收藏状态
+  const [showMobileActions, setShowMobileActions] = useState(false); // 移动端操作面板
+  const [showAIChat, setShowAIChat] = useState(false); // AI问片弹窗
+
+  // AI功能状态：优先使用父组件传递的值，否则自己检测
+  const [aiEnabledLocal, setAiEnabledLocal] = useState(false);
+  const [aiCheckCompleteLocal, setAiCheckCompleteLocal] = useState(false);
+
+  // 实际使用的AI状态（优先父组件prop）
+  const aiEnabled = aiEnabledProp !== undefined ? aiEnabledProp : aiEnabledLocal;
 
   // 短剧的source固定为shortdrama
   const source = 'shortdrama';
@@ -66,6 +82,41 @@ function ShortDramaCard({
 
     return unsubscribe;
   }, [source, id]);
+
+  // 检查AI功能是否启用 - 只在没有父组件传递时才执行
+  useEffect(() => {
+    // 如果父组件已传递aiEnabled，跳过本地检测
+    if (aiEnabledProp !== undefined) {
+      return;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const response = await fetch('/api/ai-recommend', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            messages: [{ role: 'user', content: 'ping' }],
+          }),
+        });
+        if (!cancelled) {
+          setAiEnabledLocal(response.status !== 403);
+          setAiCheckCompleteLocal(true);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setAiEnabledLocal(false);
+          setAiCheckCompleteLocal(true);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [aiEnabledProp]);
 
   // 获取真实集数（优先使用备用API）
   useEffect(() => {
@@ -175,6 +226,33 @@ function ShortDramaCard({
     [favorited, source, id, drama.name, drama.cover, realEpisodeCount]
   );
 
+  // 处理长按事件
+  const handleLongPress = useCallback(() => {
+    setShowMobileActions(true);
+  }, []);
+
+  // 处理点击事件（跳转到播放页面）
+  const handleClick = useCallback(() => {
+    router.push(`/play?title=${encodeURIComponent(drama.name)}&shortdrama_id=${drama.id}`);
+  }, [router, drama.name, drama.id]);
+
+  // 处理播放（在操作面板中使用）
+  const handlePlay = useCallback(() => {
+    window.location.href = `/play?title=${encodeURIComponent(drama.name)}&shortdrama_id=${drama.id}`;
+  }, [drama.name, drama.id]);
+
+  // 处理新标签页播放
+  const handlePlayInNewTab = useCallback(() => {
+    window.open(`/play?title=${encodeURIComponent(drama.name)}&shortdrama_id=${drama.id}`, '_blank', 'noopener,noreferrer');
+  }, [drama.name, drama.id]);
+
+  // 配置长按功能
+  const longPressProps = useLongPress({
+    onLongPress: handleLongPress,
+    onClick: handleClick,
+    longPressDelay: 500,
+  });
+
   const formatScore = (score: number) => {
     return score > 0 ? score.toFixed(1) : '--';
   };
@@ -189,10 +267,29 @@ function ShortDramaCard({
   };
 
   return (
-    <div className={`group relative ${className} transition-all duration-300 ease-in-out hover:scale-[1.05] hover:z-30 hover:shadow-2xl`}>
-      <Link
-        href={`/play?title=${encodeURIComponent(drama.name)}&shortdrama_id=${drama.id}`}
-        className="block"
+    <>
+      <div
+        className={`group relative ${className} transition-all duration-300 ease-in-out hover:scale-[1.05] hover:z-30 hover:shadow-2xl cursor-pointer`}
+        onClick={handleClick}
+        {...longPressProps}
+        style={{
+          WebkitUserSelect: 'none',
+          userSelect: 'none',
+          WebkitTouchCallout: 'none',
+          WebkitTapHighlightColor: 'transparent',
+          touchAction: 'manipulation',
+          pointerEvents: 'auto',
+        } as React.CSSProperties}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setShowMobileActions(true);
+          return false;
+        }}
+        onDragStart={(e) => {
+          e.preventDefault();
+          return false;
+        }}
       >
         {/* 封面图片 */}
         <div className="relative aspect-[2/3] w-full overflow-hidden rounded-lg bg-gray-200 dark:bg-gray-800">
@@ -258,6 +355,42 @@ function ShortDramaCard({
               }`}
             />
           </button>
+
+          {/* AI问片按钮 - 桌面端hover显示 */}
+          {aiEnabled && (
+            <div
+              className="
+                hidden md:block absolute
+                bottom-2 left-2
+                opacity-0 group-hover:opacity-100
+                transition-all duration-300 ease-out
+                z-20
+              "
+            >
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setShowAIChat(true);
+                }}
+                className='
+                  flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg
+                  bg-black/60 backdrop-blur-md
+                  hover:bg-black/80 hover:scale-105 hover:shadow-[0_0_12px_rgba(168,85,247,0.4)]
+                  transition-all duration-300 ease-out
+                  border border-white/10'
+                aria-label='AI问片'
+                style={{
+                  WebkitUserSelect: 'none',
+                  userSelect: 'none',
+                  WebkitTouchCallout: 'none',
+                } as React.CSSProperties}
+              >
+                <Sparkles size={14} className='text-purple-400' />
+                <span className='text-xs font-medium whitespace-nowrap text-white'>AI问片</span>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* 信息区域 */}
@@ -294,8 +427,86 @@ function ShortDramaCard({
             </p>
           )}
         </div>
-      </Link>
-    </div>
+      </div>
+
+      {/* 移动端操作面板 */}
+      <MobileActionSheet
+        isOpen={showMobileActions}
+        onClose={() => setShowMobileActions(false)}
+        title={drama.name}
+        poster={drama.cover}
+        actions={[
+          {
+            id: 'play',
+            label: '播放',
+            icon: <PlayCircle size={20} />,
+            onClick: handlePlay,
+            color: 'primary' as const,
+          },
+          {
+            id: 'play-new-tab',
+            label: '新标签页播放',
+            icon: <ExternalLink size={20} />,
+            onClick: handlePlayInNewTab,
+            color: 'default' as const,
+          },
+          {
+            id: 'favorite',
+            label: favorited ? '取消收藏' : '添加收藏',
+            icon: favorited ? (
+              <Heart size={20} className="fill-red-600 stroke-red-600" />
+            ) : (
+              <Heart size={20} className="fill-transparent stroke-red-500" />
+            ),
+            onClick: async () => {
+              try {
+                if (favorited) {
+                  await deleteFavorite(source, id);
+                  setFavorited(false);
+                } else {
+                  await saveFavorite(source, id, {
+                    title: drama.name,
+                    source_name: '短剧',
+                    year: '',
+                    cover: drama.cover,
+                    total_episodes: realEpisodeCount,
+                    save_time: Date.now(),
+                    search_title: drama.name,
+                  });
+                  setFavorited(true);
+                }
+              } catch (err) {
+                console.error('切换收藏状态失败:', err);
+              }
+            },
+            color: favorited ? ('danger' as const) : ('default' as const),
+          },
+          ...(aiEnabled ? [{
+            id: 'ai-chat',
+            label: 'AI问片',
+            icon: <Sparkles size={20} />,
+            onClick: () => {
+              setShowMobileActions(false);
+              setShowAIChat(true);
+            },
+            color: 'default' as const,
+          }] : []),
+        ]}
+      />
+
+      {/* AI问片弹窗 */}
+      {aiEnabled && showAIChat && (
+        <AIRecommendModal
+          isOpen={showAIChat}
+          onClose={() => setShowAIChat(false)}
+          context={{
+            title: drama.name,
+            type: 'tv',
+          }}
+          welcomeMessage={`想了解《${drama.name}》的更多信息吗？我可以帮你查询剧情、演员、评价等。`}
+        />
+      )}
+    </>
   );
 }
 
