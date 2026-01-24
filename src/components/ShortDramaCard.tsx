@@ -427,7 +427,7 @@ function ShortDramaCard({
             </p>
           )}
         </div>
-      </Link>
+      </div>
 
       {/* 移动端操作面板 */}
       <MobileActionSheet
