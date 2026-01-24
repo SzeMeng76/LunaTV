@@ -295,6 +295,69 @@ export const VirtualSearchGrid = React.forwardRef<VirtualSearchGridRef, VirtualS
           }}
         />
       )}
+
+      {/* 搜索加载中指示器 - SSE流式接收数据时显示 */}
+      {containerWidth > 100 && isLoading && totalItemCount > 0 && (
+        <div className='flex justify-center mt-8 py-8'>
+          <div className='relative px-8 py-4 rounded-2xl bg-linear-to-r from-green-50 via-emerald-50 to-teal-50 dark:from-green-900/20 dark:via-emerald-900/20 dark:to-teal-900/20 border border-green-200/50 dark:border-green-700/50 shadow-lg backdrop-blur-sm overflow-hidden'>
+            {/* 动画背景 */}
+            <div className='absolute inset-0 bg-linear-to-r from-green-400/10 via-emerald-400/10 to-teal-400/10 animate-pulse'></div>
+
+            {/* 内容 */}
+            <div className='relative flex items-center gap-3'>
+              {/* 旋转圈 */}
+              <div className='relative'>
+                <div className='animate-spin rounded-full h-8 w-8 border-[3px] border-green-200 dark:border-green-800'></div>
+                <div className='absolute inset-0 animate-spin rounded-full h-8 w-8 border-[3px] border-transparent border-t-green-500 dark:border-t-green-400'></div>
+              </div>
+
+              {/* 文字和点动画 */}
+              <div className='flex items-center gap-1'>
+                <span className='text-sm font-medium text-gray-700 dark:text-gray-300'>正在搜索更多结果</span>
+                <span className='flex gap-0.5'>
+                  <span className='animate-bounce' style={{ animationDelay: '0ms' }}>.</span>
+                  <span className='animate-bounce' style={{ animationDelay: '150ms' }}>.</span>
+                  <span className='animate-bounce' style={{ animationDelay: '300ms' }}>.</span>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 搜索完成提示 */}
+      {containerWidth > 100 && !isLoading && totalItemCount > 0 && (
+        <div className='flex justify-center mt-8 py-8'>
+          <div className='relative px-8 py-5 rounded-2xl bg-linear-to-r from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-900/20 dark:via-indigo-900/20 dark:to-purple-900/20 border border-blue-200/50 dark:border-blue-700/50 shadow-lg backdrop-blur-sm overflow-hidden'>
+            {/* 装饰性背景 */}
+            <div className='absolute inset-0 bg-linear-to-br from-blue-100/20 to-purple-100/20 dark:from-blue-800/10 dark:to-purple-800/10'></div>
+
+            {/* 内容 */}
+            <div className='relative flex flex-col items-center gap-2'>
+              {/* 完成图标 */}
+              <div className='relative'>
+                <div className='w-12 h-12 rounded-full bg-linear-to-br from-blue-500 to-purple-500 flex items-center justify-center shadow-lg'>
+                  <svg className='w-7 h-7 text-white' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                    <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2.5' d='M5 13l4 4L19 7'></path>
+                  </svg>
+                </div>
+                {/* 光圈效果 */}
+                <div className='absolute inset-0 rounded-full bg-blue-400/30 animate-ping'></div>
+              </div>
+
+              {/* 文字 */}
+              <div className='text-center'>
+                <p className='text-base font-semibold text-gray-800 dark:text-gray-200 mb-1'>
+                  搜索完成
+                </p>
+                <p className='text-xs text-gray-600 dark:text-gray-400'>
+                  共找到 {totalItemCount} 个结果
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 });
