@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import React, { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, useTransition } from 'react';
+import React, { useCallback, useEffect, useImperativeHandle, useMemo, useRef } from 'react';
 import dynamic from 'next/dynamic';
 
 const Grid = dynamic(
@@ -44,10 +44,8 @@ interface VirtualSearchGridProps {
   computeGroupStats: (group: SearchResult[]) => any;
 }
 
-// 渐进式加载配置
-const INITIAL_BATCH_SIZE = 12;
-const LOAD_MORE_BATCH_SIZE = 8;
-const LOAD_MORE_THRESHOLD = 5; // 恢复原来的阈值，避免过度触发
+// 首屏优先加载配置 - 用于图片预加载优化
+const INITIAL_PRIORITY_COUNT = 24; // 首屏优先加载的卡片数量（约2-3屏）
 
 export const VirtualSearchGrid = React.forwardRef<VirtualSearchGridRef, VirtualSearchGridProps>(({
   allResults,
@@ -66,25 +64,15 @@ export const VirtualSearchGrid = React.forwardRef<VirtualSearchGridRef, VirtualS
   const gridRef = useRef<any>(null); // Grid ref for imperative scroll
   const { columnCount, itemWidth, itemHeight, containerWidth } = useResponsiveGrid(containerRef);
 
-  // 🚀 React 19 useTransition - 将渐进式加载标记为非紧急更新，避免阻塞用户交互
-  const [isPending, startTransition] = useTransition();
-
-  // 渐进式加载状态
-  const [visibleItemCount, setVisibleItemCount] = useState(INITIAL_BATCH_SIZE);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-
-  // 选择当前显示的数据
+  // 选择当前显示的数据 - 直接使用全部数据，让 react-window 处理虚拟化
   const currentData = viewMode === 'agg' ? filteredAggResults : filteredResults;
   const totalItemCount = currentData.length;
 
-  // 实际显示的项目数量（考虑渐进式加载）
-  const displayItemCount = Math.min(visibleItemCount, totalItemCount);
-  const displayData = currentData.slice(0, displayItemCount);
-
-  // 预加载图片 - 收集即将显示的图片 URLs
+  // 预加载图片 - 收集首屏及附近的图片 URLs
   const imagesToPreload = useMemo(() => {
     const urls: string[] = [];
-    const itemsToPreload = currentData.slice(displayItemCount, Math.min(displayItemCount + 20, totalItemCount));
+    // 预加载前 30 个项目的图片（约首屏+1-2屏）
+    const itemsToPreload = currentData.slice(0, Math.min(30, totalItemCount));
 
     itemsToPreload.forEach(item => {
       if (viewMode === 'agg') {
@@ -97,15 +85,9 @@ export const VirtualSearchGrid = React.forwardRef<VirtualSearchGridRef, VirtualS
     });
 
     return urls;
-  }, [currentData, displayItemCount, totalItemCount, viewMode]);
+  }, [currentData, totalItemCount, viewMode]);
 
   useImagePreload(imagesToPreload, totalItemCount > 0);
-
-  // 重置可见项目数量（当搜索或过滤变化时）
-  useEffect(() => {
-    setVisibleItemCount(INITIAL_BATCH_SIZE);
-    setIsLoadingMore(false);
-  }, [currentData, viewMode]);
 
   // 当搜索关键词或视图模式改变时，滚动到顶部
   useEffect(() => {
@@ -143,23 +125,6 @@ export const VirtualSearchGrid = React.forwardRef<VirtualSearchGridRef, VirtualS
     checkContainer();
   }, [containerWidth]);
 
-  // 检查是否还有更多项目可以加载
-  const hasNextPage = displayItemCount < totalItemCount;
-
-  // 🚀 使用 useTransition 优化加载更多 - React 19 新特性
-  const loadMoreItems = useCallback(() => {
-    if (isLoadingMore || !hasNextPage) return;
-
-    setIsLoadingMore(true);
-
-    // 🎯 将状态更新标记为 transition，让滚动和交互保持流畅
-    startTransition(() => {
-      // 立即更新可见项目数量，但不阻塞用户交互
-      setVisibleItemCount(prev => Math.min(prev + LOAD_MORE_BATCH_SIZE, totalItemCount));
-      setIsLoadingMore(false);
-    });
-  }, [isLoadingMore, hasNextPage, totalItemCount, startTransition]);
-
   // 暴露 scrollToTop 方法给父组件
   useImperativeHandle(ref, () => ({
     scrollToTop: () => {
@@ -178,42 +143,42 @@ export const VirtualSearchGrid = React.forwardRef<VirtualSearchGridRef, VirtualS
     }
   }), []);
 
-  // 网格行数计算
-  const rowCount = Math.ceil(displayItemCount / columnCount);
+  // 网格行数计算 - 基于全部数据
+  const rowCount = Math.ceil(totalItemCount / columnCount);
 
   // 单行网格优化：确保单行时布局正确（react-window 2.1.1修复了相关bug）
   const isSingleRow = rowCount === 1;
 
   // 渲染单个网格项 - 支持react-window v2.1.0的ariaAttributes
-  const CellComponent = useCallback(({ 
+  const CellComponent = useCallback(({
     ariaAttributes,
-    columnIndex, 
-    rowIndex, 
+    columnIndex,
+    rowIndex,
     style,
-    displayData: cellDisplayData,
+    currentData: cellCurrentData,
     viewMode: cellViewMode,
     searchQuery: cellSearchQuery,
     columnCount: cellColumnCount,
-    displayItemCount: cellDisplayItemCount,
+    totalItemCount: cellTotalItemCount,
     groupStatsRef: cellGroupStatsRef,
     getGroupRef: cellGetGroupRef,
     computeGroupStats: cellComputeGroupStats,
   }: any) => {
     const index = rowIndex * cellColumnCount + columnIndex;
-    
-    // 如果超出显示范围，返回隐藏的占位符
-    if (index >= cellDisplayItemCount) {
+
+    // 如果超出数据范围，返回隐藏的占位符
+    if (index >= cellTotalItemCount) {
       return <div style={{ ...style, visibility: 'hidden' }} />;
     }
 
-    const item = cellDisplayData[index];
+    const item = cellCurrentData[index];
 
     if (!item) {
       return <div style={{ ...style, visibility: 'hidden' }} />;
     }
 
-    // 🎯 图片加载优化：首屏12张卡片使用 priority 预加载
-    const isPriorityImage = index < INITIAL_BATCH_SIZE;
+    // 🎯 图片加载优化：首屏卡片使用 priority 预加载
+    const isPriorityImage = index < INITIAL_PRIORITY_COUNT;
 
     // 根据视图模式渲染不同内容
     if (cellViewMode === 'agg') {
@@ -298,11 +263,11 @@ export const VirtualSearchGrid = React.forwardRef<VirtualSearchGridRef, VirtualS
           gridRef={gridRef}
           cellComponent={CellComponent}
           cellProps={{
-            displayData,
+            currentData,
             viewMode,
             searchQuery,
             columnCount,
-            displayItemCount,
+            totalItemCount,
             groupStatsRef,
             getGroupRef,
             computeGroupStats,
@@ -314,7 +279,7 @@ export const VirtualSearchGrid = React.forwardRef<VirtualSearchGridRef, VirtualS
           overscanCount={5}
           // 添加ARIA支持提升无障碍体验
           role="grid"
-          aria-label={`搜索结果列表 "${searchQuery}"，共${displayItemCount}个结果，当前视图：${viewMode === 'agg' ? '聚合视图' : '全部结果'}`}
+          aria-label={`搜索结果列表 "${searchQuery}"，共${totalItemCount}个结果，当前视图：${viewMode === 'agg' ? '聚合视图' : '全部结果'}`}
           aria-rowcount={rowCount}
           aria-colcount={columnCount}
           style={{
@@ -328,35 +293,7 @@ export const VirtualSearchGrid = React.forwardRef<VirtualSearchGridRef, VirtualS
               maxHeight: itemHeight + 32,
             }),
           }}
-          onCellsRendered={(visibleCells, allCells) => {
-            // 使用react-window v2.1.2的API：
-            // 1. visibleCells: 真实可见的单元格范围
-            // 2. allCells: 包含overscan的所有渲染单元格范围
-            const { rowStopIndex: visibleRowStopIndex } = visibleCells;
-
-            // 简化逻辑：基于可见行检测
-            if (visibleRowStopIndex >= rowCount - LOAD_MORE_THRESHOLD && hasNextPage && !isLoadingMore) {
-              loadMoreItems();
-            }
-          }}
         />
-      )}
-      
-      {/* 加载更多指示器 - 显示 transition 状态 */}
-      {containerWidth > 100 && (isLoadingMore || isPending) && (
-        <div className='flex justify-center items-center py-4'>
-          <div className='animate-spin rounded-full h-6 w-6 border-b-2 border-green-500'></div>
-          <span className='ml-2 text-sm text-gray-500 dark:text-gray-400'>
-            加载更多...
-          </span>
-        </div>
-      )}
-      
-      {/* 已加载完所有内容的提示 */}
-      {containerWidth > 100 && !hasNextPage && displayItemCount > INITIAL_BATCH_SIZE && (
-        <div className='text-center py-4 text-sm text-gray-500 dark:text-gray-400'>
-          已显示全部 {displayItemCount} 个结果
-        </div>
       )}
     </div>
   );
