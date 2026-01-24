@@ -154,6 +154,7 @@ export default function SourceBrowserPage() {
           '理论片',
           '福利',
           '倫理片',
+          '倫理',
         ];
 
         list = list.filter(
