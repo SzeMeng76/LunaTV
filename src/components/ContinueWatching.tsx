@@ -1,8 +1,8 @@
 /* eslint-disable no-console */
 'use client';
 
-import { Clock } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Clock, Trash2 } from 'lucide-react';
+import { useEffect, useState, memo } from 'react';
 
 import type { PlayRecord } from '@/lib/db.client';
 import {
@@ -21,17 +21,31 @@ import {
 import ScrollableRow from '@/components/ScrollableRow';
 import SectionTitle from '@/components/SectionTitle';
 import VideoCard from '@/components/VideoCard';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 
 interface ContinueWatchingProps {
   className?: string;
 }
 
-export default function ContinueWatching({ className }: ContinueWatchingProps) {
+// 🚀 优化方案6：使用React.memo防止不必要的重渲染
+function ContinueWatching({ className }: ContinueWatchingProps) {
   const [playRecords, setPlayRecords] = useState<
     (PlayRecord & { key: string })[]
   >([]);
   const [loading, setLoading] = useState(true);
   const [watchingUpdates, setWatchingUpdates] = useState<WatchingUpdate | null>(null);
+  const [requireClearConfirmation, setRequireClearConfirmation] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+
+  // 读取清空确认设置
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedRequireClearConfirmation = localStorage.getItem('requireClearConfirmation');
+      if (savedRequireClearConfirmation !== null) {
+        setRequireClearConfirmation(JSON.parse(savedRequireClearConfirmation));
+      }
+    }
+  }, []);
 
   // 处理播放记录数据更新的函数
   const updatePlayRecords = (allRecords: Record<string, PlayRecord>) => {
@@ -187,22 +201,45 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
       : record.total_episodes;
   };
 
+  // 处理清空所有记录
+  const handleClearAll = async () => {
+    await clearAllPlayRecords();
+    setPlayRecords([]);
+  };
+
   return (
     <section className={`mb-8 ${className || ''}`}>
       <div className='mb-4 flex items-center justify-between'>
         <SectionTitle title="继续观看" icon={Clock} iconColor="text-green-500" />
         {!loading && playRecords.length > 0 && (
           <button
-            className='text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors'
-            onClick={async () => {
-              await clearAllPlayRecords();
-              setPlayRecords([]);
+            className='flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 hover:text-white hover:bg-red-600 dark:text-red-400 dark:hover:text-white dark:hover:bg-red-500 border border-red-300 dark:border-red-700 hover:border-red-600 dark:hover:border-red-500 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md'
+            onClick={() => {
+              // 根据用户设置决定是否显示确认对话框
+              if (requireClearConfirmation) {
+                setShowConfirmDialog(true);
+              } else {
+                handleClearAll();
+              }
             }}
           >
-            清空
+            <Trash2 className='w-4 h-4' />
+            <span>清空</span>
           </button>
         )}
       </div>
+
+      {/* 确认对话框 */}
+      <ConfirmDialog
+        isOpen={showConfirmDialog}
+        title="确认清空"
+        message={`确定要清空所有继续观看记录吗？\n\n这将删除 ${playRecords.length} 条播放记录，此操作无法撤销。`}
+        confirmText="确认清空"
+        cancelText="取消"
+        variant="danger"
+        onConfirm={handleClearAll}
+        onCancel={() => setShowConfirmDialog(false)}
+      />
       <ScrollableRow>
         {loading
           ? // 加载状态显示灰色占位数据
@@ -219,7 +256,7 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
               </div>
             ))
           : // 显示真实数据
-            playRecords.map((record) => {
+            playRecords.map((record, index) => {
               const { source, id } = parseKey(record.key);
               const newEpisodesCount = getNewEpisodesCount(record);
               const latestTotalEpisodes = getLatestTotalEpisodes(record);
@@ -228,7 +265,7 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
                   key={record.key}
                   className='min-w-[96px] w-24 sm:min-w-[180px] sm:w-44 relative group/card'
                 >
-                  <div className='relative group-hover/card:z-[5] transition-all duration-300'>
+                  <div className='relative group-hover/card:z-5 transition-all duration-300'>
                     <VideoCard
                       id={id}
                       title={record.title}
@@ -248,12 +285,13 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
                       }
                       type={latestTotalEpisodes > 1 ? 'tv' : ''}
                       remarks={record.remarks}
+                      priority={index < 4}
                     />
                   </div>
-                  {/* 新集数徽章 */}
+                  {/* 新集数徽章 - Netflix 统一风格 */}
                   {newEpisodesCount > 0 && (
-                    <div className='absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full shadow-lg z-10'>
-                      +{newEpisodesCount}集
+                    <div className='absolute -top-2 -right-2 bg-red-600 text-white text-xs px-2 py-0.5 rounded-md shadow-lg animate-pulse z-10 font-bold'>
+                      +{newEpisodesCount}
                     </div>
                   )}
                 </div>
@@ -263,3 +301,5 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
     </section>
   );
 }
+
+export default memo(ContinueWatching);

@@ -8,34 +8,30 @@ interface AnimatedCardGridProps {
   className?: string;
 }
 
-// 容器动画配置
+// 容器动画配置 - 简化以提升性能
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.08, // 每个子元素延迟 80ms
-      delayChildren: 0.1,    // 首个子元素延迟 100ms
+      staggerChildren: 0.03, // 减少延迟从 80ms 到 30ms
+      delayChildren: 0,      // 移除首个元素延迟
     },
   },
 };
 
-// 子元素动画配置
+// 子元素动画配置 - 使用简单的 duration 替代 spring 以提升性能
 const itemVariants = {
   hidden: {
     opacity: 0,
-    y: 20,
-    scale: 0.95,
+    y: 10, // 减少位移距离
   },
   visible: {
     opacity: 1,
     y: 0,
-    scale: 1,
     transition: {
-      type: 'spring' as const,
-      stiffness: 100,
-      damping: 15,
-      mass: 0.5,
+      duration: 0.2, // 使用简单的 duration 替代复杂的 spring 动画
+      ease: 'easeOut' as const,
     },
   },
 };

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getConfig } from '@/lib/config';
 import { db } from '@/lib/db';
 import { getSpiderJar, getCandidates } from '@/lib/spiderJar';
+import { DEFAULT_USER_AGENT } from '@/lib/user-agent';
 
 // Helper function to get base URL with SITE_BASE env support
 function getBaseUrl(request: NextRequest): string {
@@ -163,10 +164,12 @@ export async function GET(request: NextRequest) {
     const mode = (searchParams.get('mode') || '').toLowerCase(); // 支持safe|min模式
     const token = searchParams.get('token'); // 获取token参数
     const forceSpiderRefresh = searchParams.get('forceSpiderRefresh') === '1'; // 强制刷新spider缓存
+    const filterParam = searchParams.get('filter'); // 成人内容过滤控制参数
 
     // 读取当前配置
     const config = await getConfig();
     const securityConfig = config.TVBoxSecurityConfig;
+    const proxyConfig = config.TVBoxProxyConfig; // 🔑 读取代理配置
 
     // 🔑 新增：基于用户 Token 的身份识别
     let currentUser: { username: string; tvboxEnabledSources?: string[]; showAdultContent?: boolean } | null = null;
@@ -283,6 +286,8 @@ export async function GET(request: NextRequest) {
     let enabledSources = sourceConfigs.filter(source => !source.disabled && source.api && source.api.trim() !== '');
 
     // 🔑 成人内容过滤：确定成人内容显示权限，优先级：用户 > 用户组 > 全局
+    // 🛡️ 纵深防御第一层：filter 参数控制（默认启用过滤，只有显式传 filter=off 才关闭）
+    const shouldFilterAdult = filterParam !== 'off'; // 默认启用过滤
     let showAdultContent = config.SiteConfig.ShowAdultContent;
 
     if (currentUser) {
@@ -315,10 +320,14 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // 过滤成人内容源
-    if (!showAdultContent) {
+    // 应用过滤逻辑：filter 参数和用户权限都要满足
+    if (shouldFilterAdult && !showAdultContent) {
       enabledSources = enabledSources.filter(source => !source.is_adult);
-      console.log(`[TVBox] 成人内容过滤已启用，剩余源数量: ${enabledSources.length}`);
+      console.log(`[TVBox] 🛡️ 成人内容过滤已启用（filter=${filterParam || 'default'}, showAdultContent=${showAdultContent}），剩余源数量: ${enabledSources.length}`);
+    } else if (!shouldFilterAdult) {
+      console.log(`[TVBox] ⚠️ 成人内容过滤已通过 filter=off 显式关闭`);
+    } else if (showAdultContent) {
+      console.log(`[TVBox] ℹ️ 用户有成人内容访问权限，未过滤成人源`);
     }
 
     // 🔑 新增：应用用户的源限制（如果有）
@@ -427,7 +436,7 @@ export async function GET(request: NextRequest) {
           // 苹果CMS接口优化配置
           siteHeader = {
             'User-Agent':
-              'Mozilla/5.0 (Linux; Android 11; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Mobile Safari/537.36',
+              DEFAULT_USER_AGENT,
             Accept: 'application/json, text/plain, */*',
             'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
             'Cache-Control': 'no-cache',
@@ -492,11 +501,50 @@ export async function GET(request: NextRequest) {
           return ["电影", "电视剧", "综艺", "动漫", "纪录片", "短剧"];
         });
 
+        // 🔑 Cloudflare Worker 代理：为每个源生成唯一的代理路径
+        let finalApi = source.api;
+        if (proxyConfig?.enabled && proxyConfig.proxyUrl) {
+          // 🔍 检查并提取真实 API 地址（如果已有代理，先去除旧代理）
+          let realApiUrl = source.api;
+          const urlMatch = source.api.match(/[?&]url=([^&]+)/);
+          if (urlMatch) {
+            // 已有代理前缀，提取真实 URL
+            realApiUrl = decodeURIComponent(urlMatch[1]);
+            console.log(`[TVBox Proxy] ${source.name}: 检测到旧代理，替换为新代理`);
+          }
+
+          // 提取源的唯一标识符（从真实域名中提取）
+          const extractSourceId = (apiUrl: string): string => {
+            try {
+              const url = new URL(apiUrl);
+              const hostname = url.hostname;
+              const parts = hostname.split('.');
+
+              // 如果是 caiji.xxx.com 或 api.xxx.com 格式，取倒数第二部分
+              if (parts.length >= 3 && (parts[0] === 'caiji' || parts[0] === 'api' || parts[0] === 'cj' || parts[0] === 'www')) {
+                return parts[parts.length - 2].toLowerCase().replace(/[^a-z0-9]/g, '');
+              }
+
+              // 否则取第一部分（去掉 zyapi/zy 等后缀）
+              let name = parts[0].toLowerCase();
+              name = name.replace(/zyapi$/, '').replace(/zy$/, '').replace(/api$/, '');
+              return name.replace(/[^a-z0-9]/g, '') || 'source';
+            } catch {
+              return source.key || source.name.replace(/[^a-z0-9]/g, '');
+            }
+          };
+
+          const sourceId = extractSourceId(realApiUrl);
+          const proxyBaseUrl = proxyConfig.proxyUrl.replace(/\/$/, ''); // 去掉结尾的斜杠
+          finalApi = `${proxyBaseUrl}/p/${sourceId}?url=${encodeURIComponent(realApiUrl)}`;
+          console.log(`[TVBox Proxy] ${source.name}: ✓ 已应用代理`);
+        }
+
         return {
           key: source.key || source.name,
           name: source.name,
           type: type, // 使用智能判断的type
-          api: source.api,
+          api: finalApi, // 🔑 使用代理后的 API 地址（如果启用）
           searchable: 1, // 可搜索
           quickSearch: 1, // 支持快速搜索
           filterable: 1, // 支持分类筛选
@@ -759,7 +807,7 @@ export async function GET(request: NextRequest) {
           } else {
             fastSite.header = {
               'User-Agent':
-                'Mozilla/5.0 (Linux; Android 11) AppleWebKit/537.36',
+                DEFAULT_USER_AGENT,
               Connection: 'close',
             };
           }

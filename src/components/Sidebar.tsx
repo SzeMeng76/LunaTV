@@ -36,9 +36,9 @@ const Logo = () => {
     >
       <div className='relative'>
         {/* 发光背景效果 */}
-        <div className='absolute inset-0 bg-gradient-to-r from-green-400 via-emerald-500 to-teal-500 opacity-0 group-hover:opacity-20 blur-xl transition-opacity duration-300 rounded-lg scale-110'></div>
+        <div className='absolute inset-0 bg-linear-to-r from-green-400 via-emerald-500 to-teal-500 opacity-0 group-hover:opacity-20 blur-xl transition-opacity duration-300 rounded-lg scale-110'></div>
 
-        <span className='relative text-2xl font-bold bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 dark:from-green-400 dark:via-emerald-400 dark:to-teal-400 bg-clip-text text-transparent tracking-tight transition-all duration-300 group-hover:scale-105 inline-block group-hover:drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]'>
+        <span className='relative text-2xl font-bold bg-linear-to-r from-green-600 via-emerald-600 to-teal-600 dark:from-green-400 dark:via-emerald-400 dark:to-teal-400 bg-clip-text text-transparent tracking-tight transition-all duration-300 group-hover:scale-105 inline-block group-hover:drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]'>
           {siteName}
         </span>
       </div>
@@ -195,8 +195,8 @@ const Sidebar = ({ onToggle, activePath = '/' }: SidebarProps) => {
           }}
         >
           {/* 装饰性背景光晕 */}
-          <div className='absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-green-400/5 via-blue-400/5 to-transparent pointer-events-none'></div>
-          <div className='absolute bottom-0 left-0 w-full h-48 bg-gradient-to-t from-purple-400/5 via-pink-400/5 to-transparent pointer-events-none'></div>
+          <div className='absolute top-0 left-0 w-full h-32 bg-linear-to-b from-green-400/5 via-blue-400/5 to-transparent pointer-events-none'></div>
+          <div className='absolute bottom-0 left-0 w-full h-48 bg-linear-to-t from-purple-400/5 via-pink-400/5 to-transparent pointer-events-none'></div>
 
           <div className='flex h-full flex-col relative z-10'>
             {/* 顶部 Logo 区域 */}
@@ -215,7 +215,7 @@ const Sidebar = ({ onToggle, activePath = '/' }: SidebarProps) => {
                   }`}
               >
                 {/* 渐变边框效果 */}
-                <div className='absolute inset-0 rounded-full bg-gradient-to-r from-green-400 via-blue-400 to-purple-400 opacity-0 group-hover/toggle:opacity-100 transition-opacity duration-300 animate-pulse'></div>
+                <div className='absolute inset-0 rounded-full bg-linear-to-r from-green-400 via-blue-400 to-purple-400 opacity-0 group-hover/toggle:opacity-100 transition-opacity duration-300 animate-pulse'></div>
                 <div className='absolute inset-[2px] rounded-full bg-white dark:bg-gray-900 group-hover/toggle:bg-gray-50 dark:group-hover/toggle:bg-gray-800 transition-colors duration-300'></div>
 
                 <Menu className='h-4 w-4 relative z-10 transition-transform duration-300 group-hover/toggle:rotate-180' />
@@ -228,7 +228,7 @@ const Sidebar = ({ onToggle, activePath = '/' }: SidebarProps) => {
                 href='/'
                 onClick={() => setActive('/')}
                 data-active={active === '/'}
-                className={`group relative flex items-center rounded-lg px-2 py-2 pl-4 text-gray-700 hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 hover:text-green-600 data-[active=true]:bg-gradient-to-r data-[active=true]:from-green-500/20 data-[active=true]:to-emerald-500/20 data-[active=true]:text-green-700 font-medium transition-all duration-200 min-h-[40px] dark:text-gray-300 dark:hover:from-green-500/10 dark:hover:to-emerald-500/10 dark:hover:text-green-400 dark:data-[active=true]:from-green-500/15 dark:data-[active=true]:to-emerald-500/15 dark:data-[active=true]:text-green-400 ${isCollapsed ? 'w-full max-w-none mx-0' : 'mx-0'
+                className={`group relative flex items-center rounded-lg px-2 py-2 pl-4 text-gray-700 hover:bg-linear-to-r hover:from-green-50 hover:to-emerald-50 hover:text-green-600 data-[active=true]:bg-linear-to-r data-[active=true]:from-green-500/20 data-[active=true]:to-emerald-500/20 data-[active=true]:text-green-700 font-medium transition-all duration-200 min-h-[40px] dark:text-gray-300 dark:hover:from-green-500/10 dark:hover:to-emerald-500/10 dark:hover:text-green-400 dark:data-[active=true]:from-green-500/15 dark:data-[active=true]:to-emerald-500/15 dark:data-[active=true]:text-green-400 ${isCollapsed ? 'w-full max-w-none mx-0' : 'mx-0'
                   } gap-3 justify-start hover:shadow-md hover:shadow-green-500/10 data-[active=true]:shadow-lg data-[active=true]:shadow-green-500/20`}
               >
                 <div className='w-4 h-4 flex items-center justify-center relative z-10'>
@@ -240,7 +240,7 @@ const Sidebar = ({ onToggle, activePath = '/' }: SidebarProps) => {
                   </span>
                 )}
                 {/* 激活状态的左侧边框指示器 */}
-                <div className='absolute left-0 top-1/2 -translate-y-1/2 w-1 h-0 bg-gradient-to-b from-green-500 to-emerald-500 rounded-r-full transition-all duration-200 data-[active=true]:h-8 opacity-0 data-[active=true]:opacity-100' data-active={active === '/'}></div>
+                <div className='absolute left-0 top-1/2 -translate-y-1/2 w-1 h-0 bg-linear-to-b from-green-500 to-emerald-500 rounded-r-full transition-all duration-200 data-[active=true]:h-8 opacity-0 data-[active=true]:opacity-100' data-active={active === '/'}></div>
               </Link>
               <Link
                 href='/search'
@@ -250,7 +250,7 @@ const Sidebar = ({ onToggle, activePath = '/' }: SidebarProps) => {
                   setActive('/search');
                 }}
                 data-active={active === '/search'}
-                className={`group relative flex items-center rounded-lg px-2 py-2 pl-4 text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50 hover:text-blue-600 data-[active=true]:bg-gradient-to-r data-[active=true]:from-blue-500/20 data-[active=true]:to-cyan-500/20 data-[active=true]:text-blue-700 font-medium transition-all duration-200 min-h-[40px] dark:text-gray-300 dark:hover:from-blue-500/10 dark:hover:to-cyan-500/10 dark:hover:text-blue-400 dark:data-[active=true]:from-blue-500/15 dark:data-[active=true]:to-cyan-500/15 dark:data-[active=true]:text-blue-400 ${isCollapsed ? 'w-full max-w-none mx-0' : 'mx-0'
+                className={`group relative flex items-center rounded-lg px-2 py-2 pl-4 text-gray-700 hover:bg-linear-to-r hover:from-blue-50 hover:to-cyan-50 hover:text-blue-600 data-[active=true]:bg-linear-to-r data-[active=true]:from-blue-500/20 data-[active=true]:to-cyan-500/20 data-[active=true]:text-blue-700 font-medium transition-all duration-200 min-h-[40px] dark:text-gray-300 dark:hover:from-blue-500/10 dark:hover:to-cyan-500/10 dark:hover:text-blue-400 dark:data-[active=true]:from-blue-500/15 dark:data-[active=true]:to-cyan-500/15 dark:data-[active=true]:text-blue-400 ${isCollapsed ? 'w-full max-w-none mx-0' : 'mx-0'
                   } gap-3 justify-start hover:shadow-md hover:shadow-blue-500/10 data-[active=true]:shadow-lg data-[active=true]:shadow-blue-500/20`}
               >
                 <div className='w-4 h-4 flex items-center justify-center relative z-10'>
@@ -262,7 +262,7 @@ const Sidebar = ({ onToggle, activePath = '/' }: SidebarProps) => {
                   </span>
                 )}
                 {/* 激活状态的左侧边框指示器 */}
-                <div className='absolute left-0 top-1/2 -translate-y-1/2 w-1 h-0 bg-gradient-to-b from-blue-500 to-cyan-500 rounded-r-full transition-all duration-200 data-[active=true]:h-8 opacity-0 data-[active=true]:opacity-100' data-active={active === '/search'}></div>
+                <div className='absolute left-0 top-1/2 -translate-y-1/2 w-1 h-0 bg-linear-to-b from-blue-500 to-cyan-500 rounded-r-full transition-all duration-200 data-[active=true]:h-8 opacity-0 data-[active=true]:opacity-100' data-active={active === '/search'}></div>
               </Link>
             </nav>
 
@@ -303,7 +303,7 @@ const Sidebar = ({ onToggle, activePath = '/' }: SidebarProps) => {
                       href={item.href}
                       onClick={() => setActive(item.href)}
                       data-active={isActive}
-                      className={`group relative flex items-center rounded-lg px-2 py-2 pl-4 text-sm text-gray-700 hover:bg-gradient-to-r ${theme.hover} ${theme.active} ${theme.text} transition-all duration-200 min-h-[40px] dark:text-gray-300 ${isCollapsed ? 'w-full max-w-none mx-0' : 'mx-0'
+                      className={`group relative flex items-center rounded-lg px-2 py-2 pl-4 text-sm text-gray-700 hover:bg-linear-to-r ${theme.hover} ${theme.active} ${theme.text} transition-all duration-200 min-h-[40px] dark:text-gray-300 ${isCollapsed ? 'w-full max-w-none mx-0' : 'mx-0'
                         } gap-3 justify-start hover:shadow-md ${theme.shadow} animate-[slideInFromLeft_0.3s_ease-out] opacity-0`}
                       style={{
                         animation: `slideInFromLeft 0.3s ease-out ${index * 0.05}s forwards`,
@@ -318,7 +318,7 @@ const Sidebar = ({ onToggle, activePath = '/' }: SidebarProps) => {
                         </span>
                       )}
                       {/* 激活状态的左侧边框指示器 */}
-                      <div className={`absolute left-0 top-1/2 -translate-y-1/2 w-1 h-0 bg-gradient-to-b ${theme.border} rounded-r-full transition-all duration-200 data-[active=true]:h-8 opacity-0 data-[active=true]:opacity-100`} data-active={isActive}></div>
+                      <div className={`absolute left-0 top-1/2 -translate-y-1/2 w-1 h-0 bg-linear-to-b ${theme.border} rounded-r-full transition-all duration-200 data-[active=true]:h-8 opacity-0 data-[active=true]:opacity-100`} data-active={isActive}></div>
                     </Link>
                   );
                 })}

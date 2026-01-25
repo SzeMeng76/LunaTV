@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>StreamSaver Middleware</title>
+</head>
+<body>
+  <script>
+  // 中间人传输页面
+  // 用于在主页面和 Service Worker 之间传递消息
+  
+  if ('serviceWorker' in navigator) {
+    // 先设置消息处理器，再注册 Service Worker
+    let serviceWorkerReady = false;
+    const pendingMessages = []; // 消息队列
+    
+    window.onmessage = evt => {
+      // 过滤掉浏览器插件的消息
+      if (evt.data && typeof evt.data === 'object') {
+        // 检查是否是我们的消息（包含 transferringReadable 或 pathname）
+        if (evt.data.transferringReadable !== undefined || evt.data.pathname) {
+          if (!serviceWorkerReady) {
+            pendingMessages.push({ data: evt.data, ports: evt.ports });
+            return;
+          }
+          
+          if (navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage(evt.data, evt.ports)
+          }
+        }
+      }
+    }
+    
+    navigator.serviceWorker.register('/sw.js', { scope: '/' })
+      .then(reg => {
+        // 等待 Service Worker 激活
+        return navigator.serviceWorker.ready;
+      })
+      .then(reg => {
+        serviceWorkerReady = true;
+        
+        // 处理队列中的消息
+        if (pendingMessages.length > 0) {
+          pendingMessages.forEach(msg => {
+            if (navigator.serviceWorker.controller) {
+              navigator.serviceWorker.controller.postMessage(msg.data, msg.ports);
+            }
+          });
+          pendingMessages.length = 0; // 清空队列
+        }
+        
+        // 现在才发送 ready 信号
+        window.parent.postMessage('stream-saver-ready', '*')
+      })
+      .catch(err => {
+        console.error('Service Worker registration failed:', err)
+      })
+  }
+  </script>
+</body>
+</html>

@@ -1,0 +1,500 @@
+@import 'tailwindcss';
+
+/* Tailwind 4 Dark Mode Configuration - 使用 class 选择器而非媒体查询 */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Tailwind 4 Theme Configuration */
+@theme {
+  /* Font Family */
+  --font-primary:
+    'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
+    'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+
+  /* Primary Colors */
+  --color-primary-50: #f0f9ff;
+  --color-primary-100: #e0f2fe;
+  --color-primary-200: #bae6fd;
+  --color-primary-300: #7dd3fc;
+  --color-primary-400: #38bdf8;
+  --color-primary-500: #0ea5e9;
+  --color-primary-600: #0284c7;
+  --color-primary-700: #0369a1;
+  --color-primary-800: #075985;
+  --color-primary-900: #0c4a6e;
+  --color-dark: #222222;
+
+  /* 修复 Tailwind 4 亮色模式下灰色过淡的问题，恢复高对比度灰色 */
+  --color-gray-50: #f9fafb;
+  --color-gray-100: #f3f4f6;
+  --color-gray-200: #e5e7eb;
+  --color-gray-300: #d1d5db;
+  --color-gray-400: #9ca3af;
+  --color-gray-500: #6b7280;
+  --color-gray-600: #4b5563;
+  --color-gray-700: #374151;
+  --color-gray-800: #1f2937;
+  --color-gray-900: #111827;
+  --color-gray-950: #030712;
+}
+
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none; /* Chrome, Safari and Opera */
+  }
+
+  /* 源浏览器动画 */
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* 弹窗淡入动画 */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  /* 弹窗缩放进入动画 */
+  @keyframes scaleIn {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .animate-fadeIn {
+    animation: fadeIn 0.2s ease-out;
+  }
+
+  .animate-scaleIn {
+    animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+}
+
+:root {
+  --foreground-rgb: 255, 255, 255;
+}
+
+html,
+body {
+  height: 100%;
+  overflow-x: hidden;
+  /* 阻止 iOS Safari 拉动回弹 */
+  overscroll-behavior: none;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+}
+
+html:not(.dark) body {
+  background: linear-gradient(
+    180deg,
+    #e6f3fb 0%,
+    #eaf3f7 18%,
+    #f7f7f3 38%,
+    #e9ecef 60%,
+    #dbe3ea 80%,
+    #d3dde6 100%
+  );
+  background-attachment: fixed;
+}
+
+/* 自定义滚动条样式 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(31, 41, 55, 0.1);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(75, 85, 99, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(107, 114, 128, 0.5);
+}
+
+/* 视频卡片悬停效果 */
+.video-card-hover {
+  transition: transform 0.3s ease;
+}
+
+.video-card-hover:hover {
+  transform: scale(1.05);
+}
+
+/* 渐变遮罩 */
+.gradient-overlay {
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0) 0%,
+    rgba(0, 0, 0, 0.8) 100%
+  );
+}
+
+/* 隐藏移动端（<768px）垂直滚动条 */
+@media (max-width: 767px) {
+  html,
+  body {
+    -ms-overflow-style: none; /* IE & Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar {
+    display: none; /* Chrome Safari */
+  }
+}
+
+/* 隐藏所有滚动条（兼容 WebKit、Firefox、IE/Edge）- 排除ArtPlayer */
+*:not(.artplayer):not(.artplayer *) {
+  -ms-overflow-style: none; /* IE & Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+*:not(.artplayer):not(.artplayer *)::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+/* View Transitions API 动画 */
+@keyframes slide-from-top {
+  from {
+    clip-path: polygon(0 0, 100% 0, 100% 0, 0 0);
+  }
+  to {
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+  }
+}
+
+@keyframes slide-from-bottom {
+  from {
+    clip-path: polygon(0 100%, 100% 100%, 100% 100%, 0 100%);
+  }
+  to {
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+  }
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.8s;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  animation-fill-mode: both;
+}
+
+/*
+  切换时，旧的视图不应该有动画，它应该在下面，等待被新的视图覆盖。
+  这可以防止在动画完成前，页面底部提前变色。
+*/
+::view-transition-old(root) {
+  animation: none;
+}
+
+/* 从浅色到深色：新内容（深色）从顶部滑入 */
+html.dark::view-transition-new(root) {
+  animation-name: slide-from-top;
+}
+
+/* 从深色到浅色：新内容（浅色）从底部滑入 */
+html:not(.dark)::view-transition-new(root) {
+  animation-name: slide-from-bottom;
+}
+
+/* 强制播放器内部的 video 元素高度为 100%，并保持内容完整显示 */
+div[data-media-provider] video {
+  height: 100%;
+  object-fit: contain;
+}
+
+.art-poster {
+  background-size: contain !important; /* 使图片完整展示 */
+  background-position: center center !important; /* 居中显示 */
+  background-repeat: no-repeat !important; /* 防止重复 */
+  background-color: #000 !important; /* 其余区域填充为黑色 */
+}
+
+/* 移动端控制按钮优化 */
+/* 使用liquid-glass插件 + 按钮自动缩小方案，所有按钮都能显示 */
+/* 调整媒体查询从1024px到768px，让平板设备可以使用更多功能 */
+@media (max-width: 768px) {
+  /* PiP按钮保留 - 移动端用户需要画中画功能 */
+  /* 通过flex-shrink: 1让按钮自动缩小，避免溢出 */
+
+  /* 网页全屏在移动端意义不大，继续隐藏节省空间 */
+  .art-control-fullscreenWeb {
+    display: none !important;
+  }
+
+  /* 音量控制在移动端有物理按键，隐藏以节省空间 */
+  .art-control-volume {
+    display: none !important;
+  }
+}
+
+/* 超小屏幕适配 - 确保控制按钮完整显示 */
+@media (max-width: 380px) {
+  /* 减小控制按钮的间距和尺寸 */
+  .art-controls button,
+  .art-control {
+    min-width: 28px !important;
+    padding: 0 4px !important;
+    font-size: 13px !important;
+  }
+
+  /* 减小控制栏的内边距 */
+  .art-controls {
+    padding: 0 4px !important;
+  }
+
+  /* 确保全屏按钮始终可见 */
+  .art-control-fullscreen {
+    display: flex !important;
+    min-width: 32px !important;
+  }
+
+  /* 调整播放器时间显示更紧凑 */
+  .art-control-time {
+    font-size: 11px !important;
+    padding: 0 2px !important;
+  }
+
+  /* 减小进度条高度以节省空间 */
+  .art-progress {
+    height: 3px !important;
+  }
+}
+
+/* 修复音量控制hover区域 - 精确控制触发范围 */
+@media (hover: hover) {
+  .art-control-volume {
+    position: relative !important;
+    padding: 3px; /* 和弹幕按钮一样的hover区域 */
+  }
+
+  /* 缩小hover检测区域，只稍微扩展到面板方向 */
+  .art-control-volume::before {
+    content: '';
+    position: absolute;
+    top: -20px; /* 只扩展20px，避免过早触发 */
+    left: -5px;
+    right: -5px;
+    bottom: -3px;
+    z-index: -1;
+    pointer-events: auto;
+  }
+
+  /* 按钮或面板hover时都显示音量面板 */
+  .art-control-volume:hover .art-volume-panel,
+  .art-volume-panel:hover {
+    opacity: 1 !important;
+    transform: translateY(0) !important;
+    pointer-events: auto !important;
+    transition: opacity 0.15s ease 0.1s, transform 0.15s ease 0.1s !important; /* 0.1s显示延迟 */
+  }
+
+  /* 音量面板默认隐藏状态，和弹幕一样的延迟 */
+  .art-volume-panel {
+    transition: opacity 0.15s ease 0.3s, transform 0.15s ease 0.3s !important; /* 0.3s隐藏延迟 */
+  }
+}
+
+/* 修复移动端弹幕面板定位问题 - 根据不同挂载位置处理 */
+@media (max-width: 768px) {
+  /* 当弹幕插件挂载到控制栏中心时（横屏，宽度>=512px） */
+  .art-controls-center .artplayer-plugin-danmuku .apd-config-panel,
+  .art-controls-center .artplayer-plugin-danmuku .apd-style-panel {
+    position: absolute !important; /* 加上这个关键属性！ */
+    left: 10% !important;
+    transform: translateX(-50%) !important;
+    right: auto !important;
+    max-width: calc(100vw - 40px) !important;
+  }
+
+  /* 当弹幕插件挂载到播放器容器时（竖屏，宽度<512px） */
+  .art-video-player .artplayer-plugin-danmuku .apd-config-panel,
+  .art-video-player .artplayer-plugin-danmuku .apd-style-panel {
+    position: absolute !important;
+    left: 50% !important; /* 竖屏时居中 */
+    transform: translateX(-50%) !important;
+    right: auto !important;
+    max-width: calc(100vw - 40px) !important;
+  }
+}
+
+/* VideoCard 光泽扫过动画 */
+@keyframes card-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* 平滑动画效果 */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.4s ease-out;
+}
+
+/* 状态过渡动画 */
+.smooth-transition {
+  transition: all 0.3s ease-in-out;
+}
+
+/* 移动端隐藏弹幕配置按钮 - 使用设置面板简化配置 */
+/* 桌面端保留完整配置按钮 - 提供更多高级选项 */
+@media (max-width: 1080px), (hover: none) {
+  .artplayer-plugin-danmuku .apd-config {
+    display: none !important;
+  }
+}
+
+/* 修复桌面端弹幕配置弹窗hover不稳定问题 */
+@media (min-width: 1081px) and (hover: hover) {
+  /* 扩大按钮的实际hover区域，但不影响视觉 */
+  .artplayer-plugin-danmuku .apd-config {
+    position: relative;
+    padding: 3px; /* 增加一点内边距扩大hover区域 */
+  }
+
+  /* 按钮或面板hover时都显示面板 */
+  .artplayer-plugin-danmuku .apd-config:hover .apd-config-panel,
+  .artplayer-plugin-danmuku .apd-config .apd-config-panel:hover {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    visibility: visible !important;
+    transition: opacity 0.15s ease 0.1s !important; /* 添加0.1s显示延迟 */
+  }
+
+  /* 确保面板默认状态是隐藏的，隐藏时有延迟 */
+  .artplayer-plugin-danmuku .apd-config-panel {
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
+    transition: opacity 0.15s ease 0.3s, visibility 0s ease 0.45s; /* 0.3s隐藏延迟 */
+  }
+
+  /* 面板内部元素在显示时可交互 */
+  .artplayer-plugin-danmuku .apd-config-panel * {
+    pointer-events: auto;
+  }
+
+  /* 防止进度条拖拽时弹窗干扰 */
+  .artplayer[data-dragging="true"] .artplayer-plugin-danmuku .apd-config-panel {
+    opacity: 0 !important;
+    pointer-events: none !important;
+    visibility: hidden !important;
+    transition: none !important;
+  }
+}
+
+/* 亮色模式文字颜色强制覆盖 - 修复 Tailwind 4 OKLCH 灰色过淡问题 */
+html:not(.dark) {
+  /* 覆盖 Tailwind 4 OKLCH 灰色，使用传统高对比度 HEX 值 */
+  --tw-text-opacity: 1;
+}
+
+/* 强制使用深色文字 - 确保亮色模式下可读性 */
+html:not(.dark) .text-gray-900 {
+  color: #111827 !important;
+}
+
+html:not(.dark) .text-gray-800 {
+  color: #1f2937 !important;
+}
+
+html:not(.dark) .text-gray-700 {
+  color: #374151 !important;
+}
+
+html:not(.dark) .text-gray-600 {
+  color: #4b5563 !important;
+}
+
+html:not(.dark) .text-gray-500 {
+  color: #6b7280 !important;
+}
+
+html:not(.dark) .text-slate-900 {
+  color: #0f172a !important;
+}
+
+html:not(.dark) .text-slate-800 {
+  color: #1e293b !important;
+}
+
+html:not(.dark) .text-slate-700 {
+  color: #334155 !important;
+}
+
+html:not(.dark) .text-slate-600 {
+  color: #475569 !important;
+}
+
+html:not(.dark) .text-slate-500 {
+  color: #64748b !important;
+}
+
+/* 亮色模式背景颜色强制覆盖 */
+html:not(.dark) .bg-slate-50 {
+  background-color: #f8fafc !important;
+}
+
+html:not(.dark) .bg-slate-100 {
+  background-color: #f1f5f9 !important;
+}
+
+html:not(.dark) .border-slate-200 {
+  border-color: #e2e8f0 !important;
+}
+
+html:not(.dark) .from-slate-50 {
+  --tw-gradient-from: #f8fafc !important;
+}
+
+html:not(.dark) .to-slate-100 {
+  --tw-gradient-to: #f1f5f9 !important;
+}
+
+html:not(.dark) .hover\:bg-slate-100:hover {
+  background-color: #f1f5f9 !important;
+}
+
+html:not(.dark) .hover\:bg-slate-50:hover {
+  background-color: #f8fafc !important;
+}

@@ -25,6 +25,11 @@ const TVBoxSecurityConfig = ({ config, refreshConfig }: TVBoxSecurityConfigProps
     rateLimit: 60
   });
 
+  const [proxySettings, setProxySettings] = useState({
+    enabled: false,
+    proxyUrl: 'https://corsapi.smone.workers.dev'
+  });
+
   const [newIP, setNewIP] = useState('');
   const [showToken, setShowToken] = useState(false);
   const [isDiagnosing, setIsDiagnosing] = useState(false);
@@ -48,6 +53,14 @@ const TVBoxSecurityConfig = ({ config, refreshConfig }: TVBoxSecurityConfigProps
         token: prev.token || generateToken()
       }));
     }
+
+    // 加载代理配置
+    if (config?.TVBoxProxyConfig) {
+      setProxySettings({
+        enabled: config.TVBoxProxyConfig.enabled ?? false,
+        proxyUrl: config.TVBoxProxyConfig.proxyUrl || 'https://corsapi.smone.workers.dev'
+      });
+    }
   }, [config]);
 
   // 生成随机Token
@@ -69,7 +82,7 @@ const TVBoxSecurityConfig = ({ config, refreshConfig }: TVBoxSecurityConfigProps
   // 保存配置
   const handleSave = async () => {
     setIsLoading(true);
-    
+
     try {
       // 验证IP地址格式
       for (const ip of securitySettings.allowedIPs) {
@@ -84,7 +97,18 @@ const TVBoxSecurityConfig = ({ config, refreshConfig }: TVBoxSecurityConfigProps
         return;
       }
 
-      const response = await fetch('/api/admin/tvbox-security', {
+      // 验证代理URL
+      if (proxySettings.enabled && proxySettings.proxyUrl) {
+        try {
+          new URL(proxySettings.proxyUrl);
+        } catch {
+          showMessage('error', '代理URL格式不正确');
+          return;
+        }
+      }
+
+      // 保存安全配置
+      const securityResponse = await fetch('/api/admin/tvbox-security', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -92,12 +116,26 @@ const TVBoxSecurityConfig = ({ config, refreshConfig }: TVBoxSecurityConfigProps
         body: JSON.stringify(securitySettings),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || '保存失败');
+      if (!securityResponse.ok) {
+        const errorData = await securityResponse.json();
+        throw new Error(errorData.error || '保存安全配置失败');
       }
 
-      showMessage('success', 'TVBox安全配置保存成功！');
+      // 保存代理配置
+      const proxyResponse = await fetch('/api/admin/tvbox-proxy', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(proxySettings),
+      });
+
+      if (!proxyResponse.ok) {
+        const errorData = await proxyResponse.json();
+        throw new Error(errorData.error || '保存代理配置失败');
+      }
+
+      showMessage('success', 'TVBox配置保存成功！');
       await refreshConfig();
     } catch (error) {
       showMessage('error', error instanceof Error ? error.message : '保存失败');
@@ -400,6 +438,70 @@ const TVBoxSecurityConfig = ({ config, refreshConfig }: TVBoxSecurityConfigProps
               <p className='text-xs text-gray-500 dark:text-gray-400 mt-1'>
                 建议设置30-60次，过低可能影响正常使用
               </p>
+            </div>
+          )}
+        </div>
+
+        {/* CDN代理配置 */}
+        <div className='border border-gray-200 dark:border-gray-700 rounded-lg p-4'>
+          <div className='flex items-center justify-between mb-4'>
+            <div>
+              <h3 className='text-lg font-semibold text-gray-900 dark:text-gray-100'>
+                Cloudflare Worker 代理（TVBox专用）
+              </h3>
+              <p className='text-sm text-gray-600 dark:text-gray-400'>
+                为TVBox配置启用Cloudflare全球CDN加速，提升访问速度和稳定性
+              </p>
+            </div>
+            <label className='relative inline-flex items-center cursor-pointer'>
+              <input
+                type='checkbox'
+                checked={proxySettings.enabled}
+                onChange={(e) => setProxySettings(prev => ({ ...prev, enabled: e.target.checked }))}
+                className='sr-only peer'
+              />
+              <div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+            </label>
+          </div>
+
+          {proxySettings.enabled && (
+            <div className='space-y-3'>
+              <div>
+                <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1'>
+                  Cloudflare Worker 地址
+                </label>
+                <input
+                  type='text'
+                  value={proxySettings.proxyUrl}
+                  onChange={(e) => setProxySettings(prev => ({ ...prev, proxyUrl: e.target.value }))}
+                  placeholder='https://your-worker.workers.dev'
+                  className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100'
+                />
+                <p className='text-xs text-gray-500 dark:text-gray-400 mt-1'>
+                  默认地址：https://corsapi.smone.workers.dev（支持自定义部署）
+                </p>
+              </div>
+
+              <div className='bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3'>
+                <h4 className='text-sm font-semibold text-blue-900 dark:text-blue-300 mb-2'>
+                  💡 功能说明
+                </h4>
+                <ul className='text-xs text-blue-800 dark:text-blue-300 space-y-1'>
+                  <li>• 通过Cloudflare全球CDN加速视频源API访问</li>
+                  <li>• 自动转发TVBox的所有API参数（ac=list, ac=detail等）</li>
+                  <li>• 为每个源生成唯一路径，提升兼容性</li>
+                  <li>• 支持自定义Worker地址，可部署自己的代理服务</li>
+                </ul>
+              </div>
+
+              <div className='bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3'>
+                <h4 className='text-sm font-semibold text-yellow-900 dark:text-yellow-300 mb-2'>
+                  ⚠️ 部署说明
+                </h4>
+                <p className='text-xs text-yellow-800 dark:text-yellow-300'>
+                  如需自定义部署，请参考：<a href='https://github.com/SzeMeng76/CORSAPI' target='_blank' rel='noopener noreferrer' className='underline hover:text-yellow-600'>CORSAPI项目</a>
+                </p>
+              </div>
             </div>
           )}
         </div>

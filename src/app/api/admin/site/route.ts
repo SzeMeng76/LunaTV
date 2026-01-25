@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any,no-console */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 
 import { getAuthInfoFromCookie } from '@/lib/auth';
 import { clearConfigCache, getConfig } from '@/lib/config';
@@ -40,9 +41,12 @@ export async function POST(request: NextRequest) {
       DisableYellowFilter,
       ShowAdultContent,
       FluidSearch,
+      EnablePuppeteer,
+      DoubanCookies,
       TMDBApiKey,
       TMDBLanguage,
       EnableTMDBActorSearch,
+      cronConfig,
     } = body as {
       SiteName: string;
       Announcement: string;
@@ -55,9 +59,18 @@ export async function POST(request: NextRequest) {
       DisableYellowFilter: boolean;
       ShowAdultContent: boolean;
       FluidSearch: boolean;
+      EnablePuppeteer: boolean;
+      DoubanCookies?: string;
       TMDBApiKey?: string;
       TMDBLanguage?: string;
       EnableTMDBActorSearch?: boolean;
+      cronConfig?: {
+        enableAutoRefresh: boolean;
+        maxRecordsPerRun: number;
+        onlyRefreshRecent: boolean;
+        recentDays: number;
+        onlyRefreshOngoing: boolean;
+      };
     };
 
     // 参数校验
@@ -71,7 +84,8 @@ export async function POST(request: NextRequest) {
       typeof DoubanImageProxyType !== 'string' ||
       typeof DoubanImageProxy !== 'string' ||
       typeof DisableYellowFilter !== 'boolean' ||
-      typeof FluidSearch !== 'boolean'
+      typeof FluidSearch !== 'boolean' ||
+      typeof EnablePuppeteer !== 'boolean'
     ) {
       return NextResponse.json({ error: '参数格式错误' }, { status: 400 });
     }
@@ -89,8 +103,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 更新缓存中的站点设置
+    // 更新缓存中的站点设置，保留现有的自定义去广告配置
     adminConfig.SiteConfig = {
+      ...adminConfig.SiteConfig, // 保留所有现有字段
       SiteName,
       Announcement,
       SearchDownstreamMaxPage,
@@ -107,17 +122,53 @@ export async function POST(request: NextRequest) {
       EnableTMDBActorSearch: EnableTMDBActorSearch || false,
     };
 
+    // 更新豆瓣配置
+    if (!adminConfig.DoubanConfig) {
+      adminConfig.DoubanConfig = {
+        enablePuppeteer: false,
+      };
+    }
+    adminConfig.DoubanConfig.enablePuppeteer = EnablePuppeteer;
+    adminConfig.DoubanConfig.cookies = DoubanCookies || undefined;
+
+    // 更新 Cron 配置
+    if (cronConfig) {
+      if (!adminConfig.CronConfig) {
+        adminConfig.CronConfig = {
+          enableAutoRefresh: true,
+          maxRecordsPerRun: 100,
+          onlyRefreshRecent: true,
+          recentDays: 30,
+          onlyRefreshOngoing: true,
+        };
+      }
+      adminConfig.CronConfig = {
+        enableAutoRefresh: cronConfig.enableAutoRefresh,
+        maxRecordsPerRun: cronConfig.maxRecordsPerRun,
+        onlyRefreshRecent: cronConfig.onlyRefreshRecent,
+        recentDays: cronConfig.recentDays,
+        onlyRefreshOngoing: cronConfig.onlyRefreshOngoing,
+      };
+    }
+
     // 写入数据库
     await db.saveAdminConfig(adminConfig);
-    
+
     // 清除配置缓存，强制下次重新从数据库读取
     clearConfigCache();
 
+    // 🔥 刷新所有页面的缓存，使新配置立即生效（无需重启Docker）
+    revalidatePath('/', 'layout');
+
+    // 🔥 添加强制no-cache headers，防止Docker环境下Next.js Router Cache问题
+    // 参考：https://github.com/vercel/next.js/issues/62071
     return NextResponse.json(
-      { ok: true },
+      { ok: true, shouldReload: true }, // 添加shouldReload标志通知前端刷新页面
       {
         headers: {
-          'Cache-Control': 'no-store', // 不缓存结果
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
         },
       }
     );

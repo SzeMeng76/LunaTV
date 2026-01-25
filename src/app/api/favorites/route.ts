@@ -54,8 +54,37 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(fav, { status: 200 });
     }
 
-    // 查询全部收藏
+    // 查询全部收藏 - 开始性能监控
+    const startTime = Date.now();
     const favorites = await db.getAllFavorites(authInfo.username);
+    const duration = Date.now() - startTime;
+    const count = Object.keys(favorites).length;
+
+    // 性能监控日志
+    const durationSeconds = (duration / 1000).toFixed(2);
+    console.log(
+      `[收藏性能] 用户: ${authInfo.username} | 收藏数: ${count} | 耗时: ${durationSeconds}s (${duration}ms)`
+    );
+
+    // 性能警告 - 根据不同耗时输出不同级别的日志
+    if (duration > 25000) {
+      console.error(
+        `❌ [严重慢查询] 用户 ${authInfo.username} 的收藏查询耗时 ${durationSeconds}s，接近超时阈值！收藏数: ${count}`
+      );
+    } else if (duration > 15000) {
+      console.warn(
+        `⚠️  [慢查询警告] 用户 ${authInfo.username} 的收藏查询耗时 ${durationSeconds}s，建议优化。收藏数: ${count}`
+      );
+    } else if (duration > 5000) {
+      console.log(
+        `⏱️  [性能提示] 用户 ${authInfo.username} 的收藏查询耗时 ${durationSeconds}s，性能尚可。收藏数: ${count}`
+      );
+    } else {
+      console.log(
+        `✅ [性能良好] 用户 ${authInfo.username} 的收藏查询耗时 ${durationSeconds}s，性能优秀！收藏数: ${count}`
+      );
+    }
+
     return NextResponse.json(favorites, { status: 200 });
   } catch (err) {
     console.error('获取收藏失败', err);
@@ -179,7 +208,15 @@ export async function DELETE(request: NextRequest) {
       await db.deleteFavorite(username, source, id);
     } else {
       // 清空全部
+      const startTime = Date.now();
       const all = await db.getAllFavorites(username);
+      const duration = Date.now() - startTime;
+      const count = Object.keys(all).length;
+
+      console.log(
+        `[收藏性能-删除] 用户: ${username} | 待删除收藏数: ${count} | 查询耗时: ${(duration / 1000).toFixed(2)}s`
+      );
+
       await Promise.all(
         Object.keys(all).map(async (k) => {
           const [s, i] = k.split('+');

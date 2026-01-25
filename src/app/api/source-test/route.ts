@@ -24,23 +24,68 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    // 🔑 使用 getAvailableApiSites() 获取源列表，自动应用代理配置
+    // 注意：source-test 需要测试所有源（包括禁用的），所以直接用 getConfig
     const config = await getConfig();
 
-    // 查找指定的源（包括禁用的源）
-    const targetSource = config.SourceConfig.find(
+    // 先从原始配置查找源（支持测试禁用的源）
+    const sourceFromConfig = config.SourceConfig.find(
       (s: any) => s.key === sourceKey
     );
-    if (!targetSource) {
+
+    if (!sourceFromConfig) {
       return NextResponse.json(
         { error: `未找到源: ${sourceKey}` },
         { status: 404 }
       );
     }
 
+    // 🔑 应用视频代理配置到单个源
+    let targetSource = sourceFromConfig;
+    const proxyConfig = config.VideoProxyConfig;
+
+    if (proxyConfig?.enabled && proxyConfig.proxyUrl) {
+      const proxyBaseUrl = proxyConfig.proxyUrl.replace(/\/$/, '');
+      let realApiUrl = sourceFromConfig.api;
+
+      // 提取真实 API URL（移除旧代理）
+      const urlMatch = realApiUrl.match(/[?&]url=([^&]+)/);
+      if (urlMatch) {
+        realApiUrl = decodeURIComponent(urlMatch[1]);
+      }
+
+      // 提取 source ID
+      const extractSourceId = (apiUrl: string): string => {
+        try {
+          const url = new URL(apiUrl);
+          const hostname = url.hostname;
+          const parts = hostname.split('.');
+
+          if (parts.length >= 3 && (parts[0] === 'caiji' || parts[0] === 'api' || parts[0] === 'cj' || parts[0] === 'www')) {
+            return parts[parts.length - 2].toLowerCase().replace(/[^a-z0-9]/g, '');
+          }
+
+          let name = parts[0].toLowerCase();
+          name = name.replace(/zyapi$/, '').replace(/zy$/, '').replace(/api$/, '');
+          return name.replace(/[^a-z0-9]/g, '') || 'source';
+        } catch {
+          return sourceFromConfig.key || sourceFromConfig.name.replace(/[^a-z0-9]/g, '');
+        }
+      };
+
+      const sourceId = extractSourceId(realApiUrl);
+      const proxiedApi = `${proxyBaseUrl}/p/${sourceId}?url=${encodeURIComponent(realApiUrl)}`;
+
+      targetSource = {
+        ...sourceFromConfig,
+        api: proxiedApi,
+      };
+
+      console.log(`[Source Test] Applied proxy to ${sourceFromConfig.name}`);
+    }
+
     // 构建搜索URL（使用 videolist 更符合多数源的搜索接口）
-    const searchUrl = `${targetSource.api}?ac=videolist&wd=${encodeURIComponent(
-      query
-    )}`;
+    const searchUrl = `${targetSource.api}?ac=videolist&wd=${encodeURIComponent(query)}`;
 
     // 直接请求源接口，不使用缓存
     const controller = new AbortController();

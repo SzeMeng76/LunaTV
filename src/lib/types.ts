@@ -14,6 +14,7 @@ export interface PlayRecord {
   save_time: number; // 记录保存时间（时间戳）
   search_title: string; // 搜索时使用的标题
   remarks?: string; // 备注信息（如"已完结"、"更新至20集"等）
+  douban_id?: number; // 豆瓣ID（用于准确识别视频）
 }
 
 // 收藏数据结构
@@ -26,6 +27,7 @@ export interface Favorite {
   save_time: number; // 记录保存时间（时间戳）
   search_title: string; // 搜索时使用的标题
   origin?: 'vod' | 'live' | 'shortdrama';
+  type?: string; // 内容类型（movie/tv/variety/shortdrama等）
   releaseDate?: string; // 上映日期 (YYYY-MM-DD)，用于即将上映内容
   remarks?: string; // 备注信息（如"X天后上映"、"已上映"等）
 }
@@ -45,6 +47,10 @@ export interface ShortDramaItem {
   score: number;
   episode_count: number;
   description?: string;
+  author?: string;        // 演员/导演信息
+  backdrop?: string;      // 高清背景图
+  vote_average?: number;  // 用户评分 (0-10)
+  tmdb_id?: number;       // TMDB ID
 }
 
 // 短剧解析结果数据结构
@@ -64,7 +70,15 @@ export interface ShortDramaParseResult {
       index: number;
       label: string;
       parsedUrl: string;
+      proxyUrl?: string;
+      title?: string;
     };
+  };
+  metadata?: {
+    author?: string;
+    backdrop?: string;
+    vote_average?: number;
+    tmdb_id?: number;
   };
 }
 
@@ -173,6 +187,14 @@ export interface SearchResult {
   type_name?: string;
   douban_id?: number;
   remarks?: string; // 备注信息（如"已完结"、"更新至20集"等）
+  drama_name?: string; // 短剧名称（用于备用API fallback）
+  metadata?: {
+    // 备用API提供的额外元数据
+    author?: string;
+    backdrop?: string;
+    vote_average?: number;
+    tmdb_id?: number;
+  };
 }
 
 // 豆瓣数据结构
@@ -194,12 +216,38 @@ export interface DoubanItem {
   movie_duration?: number;
   first_aired?: string;
   plot_summary?: string;
+  // 🎬 Netflix风格字段
+  backdrop?: string;      // 高清背景图（用于HeroBanner）
+  trailerUrl?: string;    // 预告片视频URL
 }
 
 export interface DoubanResult {
   code: number;
   message: string;
   list: DoubanItem[];
+}
+
+// 豆瓣短评数据结构
+export interface DoubanComment {
+  username: string;
+  user_id: string;
+  avatar: string;
+  rating: number; // 0-5, 0表示未评分
+  time: string;
+  location: string;
+  content: string;
+  useful_count: number;
+}
+
+export interface DoubanCommentsResult {
+  code: number;
+  message: string;
+  data?: {
+    comments: DoubanComment[];
+    start: number;
+    limit: number;
+    count: number;
+  };
 }
 
 // ---- 跳过配置（多片段支持）----

@@ -4,6 +4,11 @@ import { API_CONFIG, ApiSite, getConfig } from '@/lib/config';
 import { getCachedSearchPage, setCachedSearchPage } from '@/lib/search-cache';
 import { SearchResult } from '@/lib/types';
 import { cleanHtmlTags } from '@/lib/utils';
+// 使用轻量级 switch-chinese 库（93.8KB vs opencc-js 5.6MB）
+import stcasc, { ChineseType } from 'switch-chinese';
+
+// 创建模块级别的繁简转换器实例
+const converter = stcasc();
 
 interface ApiSearchItem {
   vod_id: string;
@@ -102,7 +107,7 @@ async function searchWithCache(
       return {
         id: item.vod_id.toString(),
         title: item.vod_name.trim().replace(/\s+/g, ' '),
-        poster: item.vod_pic,
+        poster: item.vod_pic?.trim() || '', // 确保poster为有效字符串，过滤空白
         episodes,
         episodes_titles: titles,
         source: apiSite.key,
@@ -138,44 +143,58 @@ async function searchWithCache(
 
 export async function searchFromApi(
   apiSite: ApiSite,
-  query: string
+  query: string,
+  precomputedVariants?: string[] // 新增：预计算的变体
 ): Promise<SearchResult[]> {
   try {
     const apiBaseUrl = apiSite.api;
 
-    // 智能搜索：生成搜索变体
-    const searchVariants = generateSearchVariants(query);
+    // 智能搜索：使用预计算的变体或即时生成（优化：只生成最有用的变体）
+    const searchVariants = precomputedVariants || generateSearchVariants(query).slice(0, 2);
     let results: SearchResult[] = [];
     let pageCountFromFirst = 0;
 
     // 调试：输出搜索变体
-    if (searchVariants.length > 1) {
-      console.log(`[DEBUG] 搜索变体 for "${query}":`, searchVariants);
-    }
+    console.log(`[DEBUG] 搜索变体 for "${query}":`, searchVariants);
 
-    // 尝试所有搜索变体，收集所有结果，然后选择最相关的
-    const allVariantResults: Array<{variant: string, results: SearchResult[], relevanceScore: number}> = [];
+    // 快速策略：优先使用第一个变体（原始查询），如果找到足够结果就停止
+    const seenIds = new Set<string>(); // 用于去重
+    let foundEnoughResults = false;
 
-    for (const variant of searchVariants) {
+    for (let i = 0; i < searchVariants.length; i++) {
+      const variant = searchVariants[i];
       const apiUrl =
         apiBaseUrl + API_CONFIG.search.path + encodeURIComponent(variant);
 
-      console.log(`[DEBUG] 尝试搜索变体: "${variant}" on ${apiSite.name}`);
+      console.log(`[DEBUG] 尝试搜索变体 ${i + 1}/${searchVariants.length}: "${variant}"`);
 
       try {
         // 使用新的缓存搜索函数处理第一页
         const firstPageResult = await searchWithCache(apiSite, variant, 1, apiUrl, 8000);
 
         if (firstPageResult.results.length > 0) {
-          // 计算相关性分数
-          const relevanceScore = calculateRelevanceScore(query, variant, firstPageResult.results);
-          console.log(`[DEBUG] 变体 "${variant}" 找到 ${firstPageResult.results.length} 个结果, 相关性分数: ${relevanceScore}`);
+          console.log(`[DEBUG] 变体 "${variant}" 找到 ${firstPageResult.results.length} 个结果`);
 
-          allVariantResults.push({
-            variant,
-            results: firstPageResult.results,
-            relevanceScore
+          // 去重添加结果
+          firstPageResult.results.forEach(result => {
+            const uniqueKey = `${result.source}_${result.id}`;
+            if (!seenIds.has(uniqueKey)) {
+              seenIds.add(uniqueKey);
+              results.push(result);
+            }
           });
+
+          // 如果是第一个变体且找到了结果，记录页数
+          if (i === 0 && firstPageResult.pageCount) {
+            pageCountFromFirst = firstPageResult.pageCount;
+          }
+
+          // 优化：如果第一个变体找到了足够多的结果（≥5个），就停止搜索其他变体
+          if (i === 0 && results.length >= 5) {
+            console.log(`[DEBUG] 第一个变体找到足够结果，跳过其他变体`);
+            foundEnoughResults = true;
+            break;
+          }
         } else {
           console.log(`[DEBUG] 变体 "${variant}" 无结果`);
         }
@@ -185,20 +204,14 @@ export async function searchFromApi(
     }
 
     // 如果没有任何结果，返回空数组
-    if (allVariantResults.length === 0) {
+    if (results.length === 0) {
       return [];
     }
 
-    // 选择相关性分数最高的结果
-    const bestResult = allVariantResults.reduce((best, current) =>
-      current.relevanceScore > best.relevanceScore ? current : best
-    );
+    console.log(`[DEBUG] 最终找到 ${results.length} 个唯一结果`);
 
-    console.log(`[DEBUG] 选择最佳变体: "${bestResult.variant}", 分数: ${bestResult.relevanceScore}`);
-
-    results = bestResult.results;
-    query = bestResult.variant; // 用于后续分页
-    pageCountFromFirst = 1; // 重置页数
+    // 使用原始查询进行后续分页
+    query = searchVariants[0];
     
     // 如果所有变体都没有结果，直接返回空数组
     if (results.length === 0) {
@@ -330,7 +343,7 @@ const M3U8_PATTERN = /(https?:\/\/[^"'\s]+?\.m3u8)/g;
  * @param originalQuery 原始查询
  * @returns 按优先级排序的搜索变体数组
  */
-function generateSearchVariants(originalQuery: string): string[] {
+export function generateSearchVariants(originalQuery: string): string[] {
   const variants: string[] = [];
   const trimmed = originalQuery.trim();
 
@@ -345,7 +358,7 @@ function generateSearchVariants(originalQuery: string): string[] {
     }
   });
 
-  // 3. 移除数字变体生成（优化性能，依赖页面智能匹配逻辑处理数字差异）
+  // 4. 移除数字变体生成（优化性能，依赖页面智能匹配逻辑处理数字差异）
   // const numberVariants = generateNumberVariants(trimmed);
   // numberVariants.forEach(variant => {
   //   if (!variants.includes(variant)) {
@@ -355,19 +368,19 @@ function generateSearchVariants(originalQuery: string): string[] {
 
   // 如果包含空格，生成额外变体
   if (trimmed.includes(' ')) {
-    // 4. 去除所有空格
+    // 5. 去除所有空格
     const noSpaces = trimmed.replace(/\s+/g, '');
     if (noSpaces !== trimmed) {
       variants.push(noSpaces);
     }
 
-    // 5. 标准化空格（多个空格合并为一个）
+    // 6. 标准化空格（多个空格合并为一个）
     const normalizedSpaces = trimmed.replace(/\s+/g, ' ');
     if (normalizedSpaces !== trimmed && !variants.includes(normalizedSpaces)) {
       variants.push(normalizedSpaces);
     }
 
-    // 6. 提取关键词组合（针对"中餐厅 第九季"这种情况）
+    // 7. 提取关键词组合（针对"中餐厅 第九季"这种情况）
     const keywords = trimmed.split(/\s+/);
     if (keywords.length >= 2) {
       // 主要关键词 + 季/集等后缀
@@ -382,13 +395,13 @@ function generateSearchVariants(originalQuery: string): string[] {
         }
       }
 
-      // 7. 空格变冒号的变体（重要！针对"死神来了 血脉诅咒" -> "死神来了：血脉诅咒"）
+      // 8. 空格变冒号的变体（重要！针对"死神来了 血脉诅咒" -> "死神来了：血脉诅咒"）
       const withColon = trimmed.replace(/\s+/g, '：');
       if (!variants.includes(withColon)) {
         variants.push(withColon);
       }
 
-      // 8. 空格变英文冒号的变体
+      // 9. 空格变英文冒号的变体
       const withEnglishColon = trimmed.replace(/\s+/g, ':');
       if (!variants.includes(withEnglishColon)) {
         variants.push(withEnglishColon);
@@ -404,8 +417,31 @@ function generateSearchVariants(originalQuery: string): string[] {
     }
   }
 
-  // 去重并返回
-  return Array.from(new Set(variants));
+  // 去重
+  const uniqueVariants = Array.from(new Set(variants));
+
+  // 最后：只对前几个优先级高的变体进行繁体转简体处理
+  // 优化：使用 detect() 先检测，避免对简体输入进行无用转换（detect比simplized快1.5-3倍）
+  const finalVariants: string[] = [];
+  const MAX_VARIANTS_TO_CONVERT = 3; // 只转换前3个变体
+
+  uniqueVariants.forEach((variant, index) => {
+    finalVariants.push(variant);
+    // 只对前几个变体进行繁转简
+    if (index < MAX_VARIANTS_TO_CONVERT) {
+      // 优化：先用 detect() 检测，简体直接跳过（快1.5-3倍）
+      const type = converter.detect(variant);
+      if (type !== ChineseType.SIMPLIFIED) {
+        const simplifiedVariant = converter.simplized(variant);
+        if (simplifiedVariant !== variant && !finalVariants.includes(simplifiedVariant)) {
+          finalVariants.push(simplifiedVariant);
+          console.log(`[DEBUG] 添加繁转简变体: "${variant}" -> "${simplifiedVariant}"`);
+        }
+      }
+    }
+  });
+
+  return finalVariants;
 }
 
 /**
@@ -556,7 +592,7 @@ export async function getDetailFromApi(
   return {
     id: id.toString(),
     title: videoDetail.vod_name,
-    poster: videoDetail.vod_pic,
+    poster: videoDetail.vod_pic?.trim() || '', // 确保poster为有效字符串，过滤空白
     episodes,
     episodes_titles: titles,
     source: apiSite.key,

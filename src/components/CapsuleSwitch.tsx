@@ -62,14 +62,14 @@ const CapsuleSwitch: React.FC<CapsuleSwitchProps> = ({
   return (
     <div
       ref={containerRef}
-      className={`relative inline-flex bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 rounded-full p-1 shadow-lg ${
+      className={`relative inline-flex bg-linear-to-r from-gray-200 via-gray-300 to-gray-200 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 rounded-full p-1 shadow-lg ${
         className || ''
       }`}
     >
       {/* 滑动的渐变背景指示器 */}
       {indicatorStyle.width > 0 && (
         <div
-          className='absolute top-1 bottom-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 dark:from-blue-600 dark:via-purple-600 dark:to-pink-600 rounded-full shadow-xl transition-all duration-300 ease-out'
+          className='absolute top-1 bottom-1 bg-linear-to-r from-blue-500 via-purple-500 to-pink-500 dark:from-blue-600 dark:via-purple-600 dark:to-pink-600 rounded-full shadow-xl transition-all duration-300 ease-out'
           style={{
             left: `${indicatorStyle.left}px`,
             width: `${indicatorStyle.width}px`,

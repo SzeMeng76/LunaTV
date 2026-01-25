@@ -367,15 +367,25 @@ export default function SkipController({
         // 添加片头配置
         const openingStart = timeToSeconds(currentBatchSettings.openingStart);
         const openingEnd = timeToSeconds(currentBatchSettings.openingEnd);
-        if (openingStart < openingEnd) {
+
+        // 🔥 优化：对于短视频，智能调整片头检测范围
+        // 如果视频总长度小于 5 分钟（300秒），不启用默认片头检测
+        // 避免在短视频中频繁触发片头跳过
+        const isShortVideo = duration > 0 && duration < 300; // 5分钟以下算短视频
+        const shouldEnableOpening = openingStart < openingEnd && (!isShortVideo || openingEnd < duration * 0.3);
+
+        if (shouldEnableOpening) {
           tempSegments.push({
             type: 'opening',
             start: openingStart,
-            end: openingEnd,
+            end: Math.min(openingEnd, duration * 0.4), // 限制片头最多占视频40%
             autoSkip: currentBatchSettings.autoSkip,
           });
-          console.log(`✅ [SkipController] 添加片头配置: ${openingStart}s-${openingEnd}s, autoSkip=${currentBatchSettings.autoSkip}`);
+          console.log(`✅ [SkipController] 添加片头配置: ${openingStart}s-${Math.min(openingEnd, duration * 0.4)}s, autoSkip=${currentBatchSettings.autoSkip}`);
+        } else if (isShortVideo) {
+          console.log(`⏭️ [SkipController] 短视频(${duration}s)，跳过片头检测`);
         }
+
 
         // 添加片尾配置（如果设置了）
         if (duration > 0 && currentBatchSettings.endingStart) {
@@ -384,16 +394,25 @@ export default function SkipController({
             ? duration - endingStartSeconds
             : endingStartSeconds;
 
-          tempSegments.push({
-            type: 'ending',
-            start: endingStart,
-            end: duration,
-            autoSkip: currentBatchSettings.autoSkip,
-            autoNextEpisode: currentBatchSettings.autoNextEpisode,
-            mode: currentBatchSettings.endingMode as 'absolute' | 'remaining',
-            remainingTime: currentBatchSettings.endingMode === 'remaining' ? endingStartSeconds : undefined,
-          });
-          console.log(`✅ [SkipController] 添加片尾配置: ${endingStart}s-${duration}s, autoSkip=${currentBatchSettings.autoSkip}, autoNextEpisode=${currentBatchSettings.autoNextEpisode}`);
+          // 🔥 优化：对于短视频，确保片尾检测合理
+          // 如果片尾开始时间太早（超过视频60%），调整或跳过
+          const endingStartRatio = endingStart / duration;
+          const shouldEnableEnding = endingStart < duration && endingStartRatio > 0.6;
+
+          if (shouldEnableEnding) {
+            tempSegments.push({
+              type: 'ending',
+              start: endingStart,
+              end: duration,
+              autoSkip: currentBatchSettings.autoSkip,
+              autoNextEpisode: currentBatchSettings.autoNextEpisode,
+              mode: currentBatchSettings.endingMode as 'absolute' | 'remaining',
+              remainingTime: currentBatchSettings.endingMode === 'remaining' ? endingStartSeconds : undefined,
+            });
+            console.log(`✅ [SkipController] 添加片尾配置: ${endingStart}s-${duration}s, autoSkip=${currentBatchSettings.autoSkip}, autoNextEpisode=${currentBatchSettings.autoNextEpisode}`);
+          } else {
+            console.log(`⏭️ [SkipController] 片尾开始时间(${endingStart}s)太早(${(endingStartRatio * 100).toFixed(1)}%)，跳过片尾检测`);
+          }
         }
 
         segments = tempSegments;
@@ -869,7 +888,7 @@ export default function SkipController({
       {/* 设置模式面板 - 增强版批量设置 */}
       {isSettingMode && (
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 animate-fade-in"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-9999 p-4 animate-fade-in"
           onClick={handleCloseDialog}
         >
           <div
@@ -898,7 +917,7 @@ export default function SkipController({
             </div>
 
             {/* 全局开关 */}
-            <div className="bg-gradient-to-br from-blue-50/80 to-indigo-50/80 dark:from-blue-900/30 dark:to-indigo-900/30 p-5 rounded-xl mb-6 border border-blue-100/50 dark:border-blue-800/50 shadow-sm backdrop-blur-sm">
+            <div className="bg-linear-to-br from-blue-50/80 to-indigo-50/80 dark:from-blue-900/30 dark:to-indigo-900/30 p-5 rounded-xl mb-6 border border-blue-100/50 dark:border-blue-800/50 shadow-sm backdrop-blur-sm">
               <div className="flex items-center justify-between mb-2">
                 <label className="flex items-center space-x-2">
                   <input
@@ -946,7 +965,7 @@ export default function SkipController({
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* 片头设置 */}
-              <div className="space-y-4 bg-gradient-to-br from-green-50/50 to-emerald-50/50 dark:from-green-900/20 dark:to-emerald-900/20 p-4 rounded-xl border border-green-100/50 dark:border-green-800/50 backdrop-blur-sm">
+              <div className="space-y-4 bg-linear-to-br from-green-50/50 to-emerald-50/50 dark:from-green-900/20 dark:to-emerald-900/20 p-4 rounded-xl border border-green-100/50 dark:border-green-800/50 backdrop-blur-sm">
                 <h4 className="font-semibold text-gray-900 dark:text-gray-100 border-b border-green-200/50 dark:border-green-700/50 pb-2 flex items-center gap-2">
                   <span className="text-xl">🎬</span>
                   片头设置
@@ -979,7 +998,7 @@ export default function SkipController({
                   />
                   <button
                     onClick={markCurrentAsOpeningEnd}
-                    className="w-full px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg text-sm font-medium transition-all shadow-md hover:shadow-lg hover:scale-105 backdrop-blur-sm"
+                    className="w-full px-4 py-2 bg-linear-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg text-sm font-medium transition-all shadow-md hover:shadow-lg hover:scale-105 backdrop-blur-sm"
                     title="标记当前播放时间为片头结束时间"
                   >
                       📍 标记当前时间
@@ -989,7 +1008,7 @@ export default function SkipController({
               </div>
 
               {/* 片尾设置 */}
-              <div className="space-y-4 bg-gradient-to-br from-purple-50/50 to-pink-50/50 dark:from-purple-900/20 dark:to-pink-900/20 p-4 rounded-xl border border-purple-100/50 dark:border-purple-800/50 backdrop-blur-sm">
+              <div className="space-y-4 bg-linear-to-br from-purple-50/50 to-pink-50/50 dark:from-purple-900/20 dark:to-pink-900/20 p-4 rounded-xl border border-purple-100/50 dark:border-purple-800/50 backdrop-blur-sm">
                 <h4 className="font-semibold text-gray-900 dark:text-gray-100 border-b border-purple-200/50 dark:border-purple-700/50 pb-2 flex items-center gap-2">
                   <span className="text-xl">🎭</span>
                   片尾设置
@@ -1045,7 +1064,7 @@ export default function SkipController({
                   />
                   <button
                     onClick={markCurrentAsEndingStart}
-                    className="w-full px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg text-sm font-medium transition-all shadow-md hover:shadow-lg hover:scale-105 backdrop-blur-sm"
+                    className="w-full px-4 py-2 bg-linear-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg text-sm font-medium transition-all shadow-md hover:shadow-lg hover:scale-105 backdrop-blur-sm"
                     title="标记当前播放时间为片尾开始时间"
                   >
                     📍 标记当前时间
@@ -1074,7 +1093,7 @@ export default function SkipController({
               </div>
             </div>
 
-            <div className="mt-6 p-5 bg-gradient-to-br from-gray-50/80 to-slate-50/80 dark:from-gray-700/80 dark:to-slate-700/80 rounded-xl border border-gray-200/50 dark:border-gray-600/50 backdrop-blur-sm shadow-inner">
+            <div className="mt-6 p-5 bg-linear-to-br from-gray-50/80 to-slate-50/80 dark:from-gray-700/80 dark:to-slate-700/80 rounded-xl border border-gray-200/50 dark:border-gray-600/50 backdrop-blur-sm shadow-inner">
               <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
                 <p><strong>当前播放时间:</strong> {secondsToTime(currentTime)}</p>
                 {duration > 0 && (
@@ -1096,13 +1115,13 @@ export default function SkipController({
             <div className="flex space-x-3 mt-6">
               <button
                 onClick={handleSaveBatchSettings}
-                className="flex-1 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl hover:scale-105 backdrop-blur-sm"
+                className="flex-1 px-6 py-3 bg-linear-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl hover:scale-105 backdrop-blur-sm"
               >
                 💾 保存智能配置
               </button>
               <button
                 onClick={handleCloseDialog}
-                className="flex-1 px-6 py-3 bg-gradient-to-r from-gray-400 to-gray-500 hover:from-gray-500 hover:to-gray-600 text-white rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl hover:scale-105 backdrop-blur-sm"
+                className="flex-1 px-6 py-3 bg-linear-to-r from-gray-400 to-gray-500 hover:from-gray-500 hover:to-gray-600 text-white rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl hover:scale-105 backdrop-blur-sm"
               >
                 ❌ 取消
               </button>
@@ -1183,7 +1202,7 @@ export default function SkipController({
             cursor: isDragging ? 'grabbing' : 'default',
             userSelect: isDragging ? 'none' : 'auto',
           }}
-          className="z-[9998] max-w-sm bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-lg shadow-lg border border-gray-200 dark:border-gray-600 animate-fade-in"
+          className="z-9998 max-w-sm bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-lg shadow-lg border border-gray-200 dark:border-gray-600 animate-fade-in"
         >
           <div className="p-3">
             <h4 className="drag-handle font-medium mb-2 text-gray-900 dark:text-gray-100 text-sm flex items-center cursor-move select-none">
@@ -1215,7 +1234,7 @@ export default function SkipController({
                   </span>
                   <button
                     onClick={() => handleDeleteSegment(index)}
-                    className="px-1.5 py-0.5 bg-red-500 hover:bg-red-600 text-white rounded text-xs transition-colors flex-shrink-0"
+                    className="px-1.5 py-0.5 bg-red-500 hover:bg-red-600 text-white rounded text-xs transition-colors shrink-0"
                     title="删除"
                   >
                     ×
@@ -1272,13 +1291,29 @@ export function SkipSettingsButton({ onClick }: { onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="flex items-center space-x-1 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded text-sm text-gray-700 dark:text-gray-300 transition-colors"
-      title="设置跳过片头片尾"
+      className='group flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 backdrop-blur-xl rounded-xl border border-white/30 hover:border-white/50 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)] hover:shadow-[0_8px_32px_0_rgba(255,255,255,0.18)] hover:scale-105 transition-all duration-300 ease-out'
+      title='跳过设置'
+      style={{
+        backdropFilter: 'blur(20px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+      }}
     >
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+      <svg
+        className='w-5 h-5 text-white drop-shadow-lg group-hover:rotate-90 transition-all duration-300'
+        fill='none'
+        stroke='currentColor'
+        viewBox='0 0 24 24'
+      >
+        <path
+          strokeLinecap='round'
+          strokeLinejoin='round'
+          strokeWidth={2}
+          d='M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4'
+        />
       </svg>
-      <span>跳过设置</span>
+      <span className='text-sm font-medium text-white drop-shadow-lg transition-all duration-300 hidden sm:inline'>
+        跳过设置
+      </span>
     </button>
   );
 }

@@ -875,7 +875,7 @@ export default function SourceTestModule() {
           <>
             {/* 遮罩层 */}
             <div
-              className={`fixed inset-0 bg-black z-[998] transition-opacity duration-300 ${
+              className={`fixed inset-0 bg-black z-998 transition-opacity duration-300 ${
                 isDrawerAnimating ? 'bg-opacity-50' : 'bg-opacity-0'
               }`}
               onClick={handleCloseDrawer}
@@ -883,7 +883,7 @@ export default function SourceTestModule() {
 
             {/* 侧边抽屉 */}
             <div
-              className={`fixed inset-y-0 right-0 z-[1000] w-full sm:w-3/4 md:w-2/3 lg:w-3/5 xl:w-1/2 bg-white dark:bg-gray-800 shadow-2xl transition-transform duration-300 ease-in-out flex flex-col ${
+              className={`fixed inset-y-0 right-0 z-1000 w-full sm:w-3/4 md:w-2/3 lg:w-3/5 xl:w-1/2 bg-white dark:bg-gray-800 shadow-2xl transition-transform duration-300 ease-in-out flex flex-col ${
                 isDrawerAnimating ? 'translate-x-0' : 'translate-x-full'
               }`}
             >
@@ -912,7 +912,7 @@ export default function SourceTestModule() {
                 </div>
                 <button
                   onClick={handleCloseDrawer}
-                  className='flex-shrink-0 p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors'
+                  className='shrink-0 p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors'
                   title='关闭 (ESC)'
                 >
                   <XMarkIcon className='w-6 h-6' />

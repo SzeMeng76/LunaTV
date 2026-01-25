@@ -43,3 +43,9 @@ sitemap-*.xml
 # generated files
 src/lib/runtime.ts
 public/manifest.json
+
+# local dev files
+AGENT.md
+TVBOX_DEV.md
+docker-compose.yml
+package-lock.json

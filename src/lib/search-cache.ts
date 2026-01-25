@@ -13,7 +13,7 @@ export interface CachedPageEntry {
 
 // 缓存配置
 const SEARCH_CACHE_TTL_MS = 10 * 60 * 1000; // 10分钟
-const CACHE_CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // 5分钟清理一次
+const CACHE_CLEANUP_INTERVAL_MS = 60 * 60 * 1000; // 1小时清理一次
 const MAX_CACHE_SIZE = 1000; // 最大缓存条目数量
 const SEARCH_CACHE: Map<string, CachedPageEntry> = new Map();
 

@@ -93,18 +93,18 @@ export default function ImportExportModal({
   };
 
   const modalContent = (
-    <div className='fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4'>
+    <div className='fixed inset-0 bg-black/60 backdrop-blur-sm z-9999 flex items-center justify-center p-4'>
       <div className='bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-xl w-full max-h-[90vh] flex flex-col overflow-hidden'>
         {/* 头部 - 更紧凑的设计 */}
         <div
           className={`relative px-5 py-4 ${
             mode === 'import'
-              ? 'bg-gradient-to-r from-blue-600 to-cyan-600'
+              ? 'bg-linear-to-r from-blue-600 to-cyan-600'
               : mode === 'export'
-              ? 'bg-gradient-to-r from-green-600 to-emerald-600'
+              ? 'bg-linear-to-r from-green-600 to-emerald-600'
               : result && result.failed > 0
-              ? 'bg-gradient-to-r from-yellow-600 to-orange-600'
-              : 'bg-gradient-to-r from-green-600 to-emerald-600'
+              ? 'bg-linear-to-r from-yellow-600 to-orange-600'
+              : 'bg-linear-to-r from-green-600 to-emerald-600'
           }`}
         >
           <div className='flex items-center justify-between'>
@@ -365,10 +365,10 @@ export default function ImportExportModal({
                       }`}
                     >
                       {item.status === 'success' ? (
-                        <CheckCircle className='w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5' />
+                        <CheckCircle className='w-4 h-4 text-green-600 dark:text-green-400 shrink-0 mt-0.5' />
                       ) : (
                         <AlertCircle
-                          className={`w-4 h-4 flex-shrink-0 mt-0.5 ${
+                          className={`w-4 h-4 shrink-0 mt-0.5 ${
                             item.status === 'skipped'
                               ? 'text-yellow-600 dark:text-yellow-400'
                               : 'text-red-600 dark:text-red-400'
@@ -399,11 +399,11 @@ export default function ImportExportModal({
         </div>
 
         {/* 底部按钮 - 更紧凑 */}
-        <div className='flex-shrink-0 px-5 py-3 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end space-x-2.5'>
+        <div className='shrink-0 px-5 py-3 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end space-x-2.5'>
           {mode === 'export' && (
             <button
               onClick={() => onExport?.(exportFormat)}
-              className='px-4 py-2 text-sm bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-md hover:shadow-lg font-medium'
+              className='px-4 py-2 text-sm bg-linear-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-md hover:shadow-lg font-medium'
             >
               确认导出
             </button>

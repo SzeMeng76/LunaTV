@@ -41,10 +41,10 @@ const getVideoThumbnail = (videoId: string): string => {
   return `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
 };
 
-// 获取YouTube视频信息（使用公开的oEmbed API）
+// 获取YouTube视频信息（通过代理避免CORS问题）
 const getVideoInfo = async (videoId: string): Promise<{title: string; author_name: string} | null> => {
   try {
-    const response = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`);
+    const response = await fetch(`/api/proxy/youtube?videoId=${videoId}`);
     if (response.ok) {
       const data = await response.json();
       return {

@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getAvailableApiSites, getCacheTime, getConfig } from '@/lib/config';
 import { searchFromApi } from '@/lib/downstream';
+import { generateSearchVariants } from '@/lib/downstream';
 import { yellowWords } from '@/lib/yellow';
 
 export const runtime = 'nodejs';
@@ -36,11 +37,14 @@ export async function GET(request: NextRequest) {
   const config = await getConfig();
   const apiSites = await getAvailableApiSites(authInfo.username);
 
+  // 优化：预计算搜索变体，避免每个源重复计算（43个源 × 3次转换 = 129次转换）
+  const searchVariants = generateSearchVariants(query).slice(0, 2);
+
   // 添加超时控制和错误处理，避免慢接口拖累整体响应
   // 移除数字变体后，统一使用智能搜索变体
   const searchPromises = apiSites.map((site) =>
     Promise.race([
-      searchFromApi(site, query),
+      searchFromApi(site, query, searchVariants), // 传入预计算的变体
       new Promise((_, reject) =>
         setTimeout(() => reject(new Error(`${site.name} timeout`)), 20000)
       ),

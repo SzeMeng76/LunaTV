@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ClipboardIcon, EyeIcon, EyeSlashIcon, LinkIcon } from '@heroicons/react/24/outline';
 
 interface NetDiskLink {
@@ -41,6 +41,17 @@ export default function NetDiskSearchResults({ results, loading, error, total }:
   const [selectedFilter, setSelectedFilter] = useState<string[]>([]);
   const [filterMode, setFilterMode] = useState<'all' | 'selected'>('all');
   const [expandedTitles, setExpandedTitles] = useState<{ [key: string]: boolean }>({});
+  const [isLargeScreen, setIsLargeScreen] = useState(false);
+
+  // 检测屏幕尺寸用于响应式 sticky top
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(min-width: 640px)');
+    setIsLargeScreen(mediaQuery.matches);
+
+    const handler = (e: MediaQueryListEvent) => setIsLargeScreen(e.matches);
+    mediaQuery.addEventListener('change', handler);
+    return () => mediaQuery.removeEventListener('change', handler);
+  }, []);
 
   const togglePasswordVisibility = (key: string) => {
     setVisiblePasswords(prev => ({ ...prev, [key]: !prev[key] }));
@@ -111,7 +122,7 @@ export default function NetDiskSearchResults({ results, loading, error, total }:
     return (
       <div className={`${isFunctionDisabled ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800' : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'} border rounded-lg p-4 animate-fade-in`}>
         <div className="flex items-start">
-          <div className="flex-shrink-0 mt-0.5">
+          <div className="shrink-0 mt-0.5">
             {isFunctionDisabled ? (
               <svg className="h-5 w-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
@@ -170,10 +181,21 @@ export default function NetDiskSearchResults({ results, loading, error, total }:
   }
 
   return (
-    <div className="space-y-6">
-      {/* 快速筛选和导航栏 */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 sticky top-4 z-10">
-        <div className="p-4">
+    <div className="relative">
+      {/* 快速筛选和导航栏 - 使用负top值消除空隙 */}
+      <div
+        className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-md shadow-lg border-b border-gray-200 dark:border-gray-700 sticky z-10 mb-6"
+        style={{
+          top: isLargeScreen ? '-25px' : '-17px', // sm: 24px padding + 1px border = 25px; mobile: 16px + 1px = 17px
+          marginLeft: isLargeScreen ? '-1.5rem' : '-1rem',
+          marginRight: isLargeScreen ? '-1.5rem' : '-1rem',
+          paddingLeft: isLargeScreen ? '1.5rem' : '1rem',
+          paddingRight: isLargeScreen ? '1.5rem' : '1rem',
+          paddingTop: '1rem',
+          paddingBottom: '1rem',
+        }}
+      >
+        <div>
           {/* 筛选模式切换 */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 space-y-3 sm:space-y-0">
             <div className="flex items-center space-x-2">
@@ -285,7 +307,7 @@ export default function NetDiskSearchResults({ results, loading, error, total }:
         </div>
       </div>
       {/* 搜索结果统计 */}
-      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
         <div className="flex items-center">
           <svg className="h-5 w-5 text-blue-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
             <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
@@ -301,11 +323,12 @@ export default function NetDiskSearchResults({ results, loading, error, total }:
       </div>
 
       {/* 按网盘类型分组展示 */}
-      {Object.entries(filteredResults || {}).map(([type, links]) => {
-        const cloudType = CLOUD_TYPES[type as keyof typeof CLOUD_TYPES] || CLOUD_TYPES.others;
-        
-        return (
-          <div key={type} id={`cloud-type-${type}`} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 scroll-mt-20">
+      <div className="space-y-6">
+        {Object.entries(filteredResults || {}).map(([type, links]) => {
+          const cloudType = CLOUD_TYPES[type as keyof typeof CLOUD_TYPES] || CLOUD_TYPES.others;
+
+          return (
+            <div key={type} id={`cloud-type-${type}`} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 scroll-mt-24">
             {/* 网盘类型头部 */}
             <div className={`${cloudType.color} text-white px-4 py-3 rounded-t-lg`}>
               <div className="flex items-center justify-between">
@@ -395,7 +418,7 @@ export default function NetDiskSearchResults({ results, loading, error, total }:
                         {/* 链接和密码 */}
                         <div className="space-y-2">
                           <div className="flex items-start space-x-2">
-                            <LinkIcon className="h-4 w-4 text-gray-400 flex-shrink-0 mt-0.5" />
+                            <LinkIcon className="h-4 w-4 text-gray-400 shrink-0 mt-0.5" />
                             <div className="flex-1 min-w-0">
                               <code className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded font-mono break-all block w-full">
                                 <span className="block sm:hidden">
@@ -408,7 +431,7 @@ export default function NetDiskSearchResults({ results, loading, error, total }:
                             </div>
                             <button
                               onClick={() => copyToClipboard(link.url, `url-${linkKey}`)}
-                              className={`p-1 transition-colors flex-shrink-0 ${
+                              className={`p-1 transition-colors shrink-0 ${
                                 copiedItems[`url-${linkKey}`]
                                   ? 'text-green-500'
                                   : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
@@ -427,7 +450,7 @@ export default function NetDiskSearchResults({ results, loading, error, total }:
 
                           {link.password && (
                             <div className="flex items-start space-x-2">
-                              <svg className="h-4 w-4 text-gray-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                              <svg className="h-4 w-4 text-gray-400 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
                               </svg>
                               <div className="flex-1 min-w-0">
@@ -435,7 +458,7 @@ export default function NetDiskSearchResults({ results, loading, error, total }:
                                   {isPasswordVisible ? link.password : '****'}
                                 </code>
                               </div>
-                              <div className="flex items-center space-x-1 flex-shrink-0">
+                              <div className="flex items-center space-x-1 shrink-0">
                                 <button
                                   onClick={() => togglePasswordVisibility(linkKey)}
                                   className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
@@ -477,7 +500,7 @@ export default function NetDiskSearchResults({ results, loading, error, total }:
                       </div>
 
                       {/* 操作按钮 */}
-                      <div className="sm:ml-4 flex-shrink-0">
+                      <div className="sm:ml-4 shrink-0">
                         <a
                           href={link.url}
                           target="_blank"
@@ -493,8 +516,9 @@ export default function NetDiskSearchResults({ results, loading, error, total }:
               })}
             </div>
           </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }

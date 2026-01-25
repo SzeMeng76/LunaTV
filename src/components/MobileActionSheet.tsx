@@ -41,11 +41,35 @@ const MobileActionSheet: React.FC<MobileActionSheetProps> = ({
 }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
+  // Portal 容器（独立容器，避免多实例冲突和 z-index 问题）
+  const [portalEl, setPortalEl] = useState<HTMLElement | null>(null);
+
+  // 创建独立的 Portal 容器
+  useEffect(() => {
+    // 仅在客户端创建 portal 容器
+    if (typeof window === 'undefined') return;
+
+    const el = document.createElement('div');
+    el.setAttribute('data-mobile-action-sheet-root', '');
+    // 使用极高 z-index 保证覆盖任意层级
+    el.style.zIndex = '2147483647';
+    el.style.position = 'relative';
+    document.body.appendChild(el);
+    setPortalEl(el);
+
+    return () => {
+      try {
+        document.body.removeChild(el);
+      } catch {
+        /* noop - 容器可能已被移除 */
+      }
+    };
+  }, []);
 
   // 控制动画状态
   useEffect(() => {
-    let animationId: number;
-    let timer: NodeJS.Timeout;
+    let animationId: number | undefined;
+    let timer: NodeJS.Timeout | undefined;
 
     if (isOpen) {
       setIsVisible(true);
@@ -64,10 +88,10 @@ const MobileActionSheet: React.FC<MobileActionSheetProps> = ({
     }
 
     return () => {
-      if (animationId) {
+      if (animationId !== undefined) {
         cancelAnimationFrame(animationId);
       }
-      if (timer) {
+      if (timer !== undefined) {
         clearTimeout(timer);
       }
     };
@@ -106,19 +130,22 @@ const MobileActionSheet: React.FC<MobileActionSheetProps> = ({
       body.style.paddingRight = `${scrollBarWidth}px`;
 
       return () => {
-        // 恢复所有原始样式
-        body.style.position = originalBodyStyle.position;
-        body.style.top = originalBodyStyle.top;
-        body.style.left = originalBodyStyle.left;
-        body.style.right = originalBodyStyle.right;
-        body.style.width = originalBodyStyle.width;
-        body.style.paddingRight = originalBodyStyle.paddingRight;
-        body.style.overflow = originalBodyStyle.overflow;
+        // 添加检查，避免在组件卸载后操作已不存在的页面
+        if (document.body.style.position === 'fixed') {
+          // 恢复所有原始样式
+          body.style.position = originalBodyStyle.position;
+          body.style.top = originalBodyStyle.top;
+          body.style.left = originalBodyStyle.left;
+          body.style.right = originalBodyStyle.right;
+          body.style.width = originalBodyStyle.width;
+          body.style.paddingRight = originalBodyStyle.paddingRight;
+          body.style.overflow = originalBodyStyle.overflow;
 
-        // 使用 requestAnimationFrame 确保样式恢复后再滚动
-        requestAnimationFrame(() => {
-          window.scrollTo(scrollX, scrollY);
-        });
+          // 使用 requestAnimationFrame 确保样式恢复后再滚动
+          requestAnimationFrame(() => {
+            window.scrollTo(scrollX, scrollY);
+          });
+        }
       };
     }
   }, [isVisible]);
@@ -137,11 +164,11 @@ const MobileActionSheet: React.FC<MobileActionSheetProps> = ({
     }
   }, [isVisible, onClose]);
 
-  if (!isVisible) return null;
+  if (!isVisible || !portalEl) return null;
 
   const renderContent = () => (
     <div
-      className="fixed inset-0 z-[9999] flex items-end justify-center"
+      className="fixed inset-0 flex items-end justify-center"
       onTouchMove={(e) => {
         // 阻止最外层容器的触摸移动，防止背景滚动
         e.preventDefault();
@@ -193,7 +220,7 @@ const MobileActionSheet: React.FC<MobileActionSheetProps> = ({
         <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800">
           <div className="flex items-center gap-3 flex-1 min-w-0">
             {poster && (
-              <div className="relative w-12 h-16 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 flex-shrink-0">
+              <div className="relative w-12 h-16 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 shrink-0">
                 <Image
                   src={poster}
                   alt={title}
@@ -209,7 +236,7 @@ const MobileActionSheet: React.FC<MobileActionSheetProps> = ({
                   {title}
                 </h3>
                 {sourceName && (
-                  <span className="flex-shrink-0 text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800">
+                  <span className="shrink-0 text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800">
                     {origin === 'live' && (
                       <Radio size={12} className="inline-block text-gray-500 dark:text-gray-400 mr-1.5" />
                     )}
@@ -251,7 +278,7 @@ const MobileActionSheet: React.FC<MobileActionSheetProps> = ({
                 style={{ willChange: 'transform, background-color' }}
               >
                 {/* 图标 - 使用线条风格 */}
-                <div className="w-6 h-6 flex items-center justify-center flex-shrink-0">
+                <div className="w-6 h-6 flex items-center justify-center shrink-0">
                   <span className={`transition-colors duration-150 ${action.disabled
                     ? 'text-gray-400 dark:text-gray-600'
                     : getActionColor(action.color)
@@ -310,7 +337,7 @@ const MobileActionSheet: React.FC<MobileActionSheetProps> = ({
                     key={index}
                     className="flex items-center gap-2 py-2 px-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/30 dark:bg-gray-800/30"
                   >
-                    <div className="w-1 h-1 bg-gray-400 dark:bg-gray-500 rounded-full flex-shrink-0" />
+                    <div className="w-1 h-1 bg-gray-400 dark:bg-gray-500 rounded-full shrink-0" />
                     <span className="text-xs text-gray-600 dark:text-gray-400 truncate">
                       {source}
                     </span>
@@ -346,10 +373,8 @@ const MobileActionSheet: React.FC<MobileActionSheetProps> = ({
     }
   };
 
-  // 使用Portal将菜单渲染到body外层，避免被虚拟滚动容器的overflow限制
-  return typeof window !== 'undefined' 
-    ? createPortal(renderContent(), document.body) 
-    : null;
+  // 通过独立 Portal 容器渲染，彻底避免受父级样式影响和 z-index 冲突
+  return createPortal(renderContent(), portalEl);
 };
 
 export default MobileActionSheet;

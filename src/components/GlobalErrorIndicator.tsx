@@ -59,7 +59,7 @@ export function GlobalErrorIndicator() {
   }
 
   return (
-    <div className='fixed top-4 right-4 z-[2000]'>
+    <div className='fixed top-4 right-4 z-2000'>
       {/* 错误卡片 */}
       <div
         className={`bg-red-500 text-white px-4 py-3 rounded-lg shadow-lg flex items-center justify-between min-w-[300px] max-w-[400px] transition-all duration-300 ${
@@ -71,7 +71,7 @@ export function GlobalErrorIndicator() {
         </span>
         <button
           onClick={handleClose}
-          className='text-white hover:text-red-100 transition-colors flex-shrink-0'
+          className='text-white hover:text-red-100 transition-colors shrink-0'
           aria-label='关闭错误提示'
         >
           <svg

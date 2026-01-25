@@ -163,15 +163,18 @@ function RegisterPageClient() {
       });
 
       if (res.ok) {
-        await res.json(); // 读取响应但不使用
+        const data = await res.json();
         // 显示成功消息，稍等一下再跳转
         setError(null);
         setSuccess('注册成功！正在跳转...');
-        // 给用户一个成功提示，然后再跳转
+
+        // Upstash 需要额外延迟等待数据同步
+        const delay = data.needDelay ? 2500 : 1500;
+
         setTimeout(() => {
           const redirect = searchParams.get('redirect') || '/';
           router.replace(redirect);
-        }, 1500); // 1.5秒后跳转，让用户看到成功消息
+        }, delay);
       } else {
         const data = await res.json();
         setError(data.error ?? '注册失败');
@@ -206,7 +209,19 @@ function RegisterPageClient() {
         <div className='absolute top-4 right-4 z-20'>
           <ThemeToggle />
         </div>
-        <div className='relative z-10 w-full max-w-md rounded-3xl bg-gradient-to-br from-white/95 via-white/85 to-white/75 dark:from-zinc-900/95 dark:via-zinc-900/85 dark:to-zinc-900/75 backdrop-blur-2xl shadow-[0_20px_80px_rgba(0,0,0,0.3)] dark:shadow-[0_20px_80px_rgba(0,0,0,0.6)] p-10 border border-white/50 dark:border-zinc-700/50 animate-fade-in hover:shadow-[0_25px_100px_rgba(0,0,0,0.4)] transition-shadow duration-500'>
+        <div className='relative z-10 w-full max-w-md rounded-3xl bg-gradient-to-br from-white/95 via-white/85 to-white/75 dark:from-zinc-900/95 dark:via-zinc-900/85 dark:to-zinc-900/75 backdrop-blur-2xl shadow-[0_20px_80px_rgba(0,0,0,0.3)] dark:shadow-[0_20px_80px_rgba(0,0,0,0.6)] p-10 border border-white/50 dark:border-zinc-700/50 animate-fade-in hover:shadow-[0_25px_100px_rgba(0,0,0,0.4)] transition-shadow duration-500'
+          style={{
+            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+          }}
+        >
+          {/* Fallback for browsers without backdrop-filter support */}
+          <style jsx>{`
+            @supports (backdrop-filter: blur(24px)) or (-webkit-backdrop-filter: blur(24px)) {
+              div {
+                background-color: transparent !important;
+              }
+            }
+          `}</style>
           {/* 装饰性光效 */}
           <div className='absolute -top-20 -left-20 w-40 h-40 bg-gradient-to-br from-yellow-400/30 to-orange-400/30 rounded-full blur-3xl animate-pulse' />
           <div className='absolute -bottom-20 -right-20 w-40 h-40 bg-gradient-to-br from-blue-400/30 to-purple-400/30 rounded-full blur-3xl animate-pulse' style={{ animationDelay: '1s' }} />
@@ -246,7 +261,7 @@ function RegisterPageClient() {
   }
 
   return (
-    <div className='relative min-h-screen flex items-center justify-center px-4 overflow-hidden'>
+    <div className='relative min-h-screen flex items-center justify-center px-3 sm:px-4 py-8 sm:py-0 overflow-hidden'>
       {/* Bing 每日壁纸背景 */}
       {bingWallpaper && (
         <div
@@ -259,26 +274,38 @@ function RegisterPageClient() {
       <div className='absolute inset-0 bg-gradient-to-br from-purple-600/40 via-blue-600/30 to-pink-500/40 dark:from-purple-900/50 dark:via-blue-900/40 dark:to-pink-900/50' />
       <div className='absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/30' />
 
-      <div className='absolute top-4 right-4 z-20'>
+      <div className='absolute top-3 right-3 sm:top-4 sm:right-4 z-20'>
         <ThemeToggle />
       </div>
-      <div className='relative z-10 w-full max-w-md rounded-3xl bg-gradient-to-br from-white/95 via-white/85 to-white/75 dark:from-zinc-900/95 dark:via-zinc-900/85 dark:to-zinc-900/75 backdrop-blur-2xl shadow-[0_20px_80px_rgba(0,0,0,0.3)] dark:shadow-[0_20px_80px_rgba(0,0,0,0.6)] p-10 border border-white/50 dark:border-zinc-700/50 animate-fade-in hover:shadow-[0_25px_100px_rgba(0,0,0,0.4)] transition-shadow duration-500'>
+      <div className='relative z-10 w-full max-w-md rounded-2xl sm:rounded-3xl bg-gradient-to-br from-white/95 via-white/85 to-white/75 dark:from-zinc-900/95 dark:via-zinc-900/85 dark:to-zinc-900/75 backdrop-blur-2xl shadow-[0_20px_80px_rgba(0,0,0,0.3)] dark:shadow-[0_20px_80px_rgba(0,0,0,0.6)] p-6 sm:p-10 border border-white/50 dark:border-zinc-700/50 animate-fade-in hover:shadow-[0_25px_100px_rgba(0,0,0,0.4)] transition-shadow duration-500'
+        style={{
+          backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        }}
+      >
+        {/* Fallback for browsers without backdrop-filter support */}
+        <style jsx>{`
+          @supports (backdrop-filter: blur(24px)) or (-webkit-backdrop-filter: blur(24px)) {
+            div {
+              background-color: transparent !important;
+            }
+          }
+        `}</style>
         {/* 装饰性光效 */}
         <div className='absolute -top-20 -left-20 w-40 h-40 bg-gradient-to-br from-blue-400/30 to-cyan-400/30 rounded-full blur-3xl animate-pulse' />
         <div className='absolute -bottom-20 -right-20 w-40 h-40 bg-gradient-to-br from-purple-400/30 to-pink-400/30 rounded-full blur-3xl animate-pulse' style={{ animationDelay: '1s' }} />
 
         {/* 标题区域 */}
-        <div className='text-center mb-8'>
-          <div className='inline-flex items-center justify-center w-16 h-16 mb-4 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/50 dark:shadow-blue-500/30'>
-            <UserPlus className='w-8 h-8 text-white' />
+        <div className='text-center mb-6 sm:mb-8'>
+          <div className='inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 mb-3 sm:mb-4 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/50 dark:shadow-blue-500/30'>
+            <UserPlus className='w-6 h-6 sm:w-8 sm:h-8 text-white' />
           </div>
-          <h1 className='text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 dark:from-blue-400 dark:via-indigo-400 dark:to-purple-400 tracking-tight text-4xl font-extrabold mb-2 drop-shadow-sm'>
+          <h1 className='text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 dark:from-blue-400 dark:via-indigo-400 dark:to-purple-400 tracking-tight text-3xl sm:text-4xl font-extrabold mb-2 drop-shadow-sm'>
             {siteName}
           </h1>
-          <p className='text-gray-600 dark:text-gray-400 text-sm font-medium'>创建您的新账户</p>
+          <p className='text-gray-600 dark:text-gray-400 text-xs sm:text-sm font-medium'>创建您的新账户</p>
         </div>
 
-        <form onSubmit={handleSubmit} className='space-y-5'>
+        <form onSubmit={handleSubmit} className='space-y-4 sm:space-y-5'>
           <div className='group'>
             <label htmlFor='username' className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
               用户名
@@ -341,14 +368,14 @@ function RegisterPageClient() {
 
           {error && (
             <div className='flex items-center gap-2 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 animate-slide-down'>
-              <AlertCircle className='h-4 w-4 text-red-600 dark:text-red-400 flex-shrink-0' />
+              <AlertCircle className='h-4 w-4 text-red-600 dark:text-red-400 shrink-0' />
               <p className='text-sm text-red-600 dark:text-red-400'>{error}</p>
             </div>
           )}
 
           {success && (
             <div className='flex items-center gap-2 p-3 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/50 animate-slide-down'>
-              <CheckCircle className='h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0' />
+              <CheckCircle className='h-4 w-4 text-green-600 dark:text-green-400 shrink-0' />
               <p className='text-sm text-green-600 dark:text-green-400'>{success}</p>
             </div>
           )}
