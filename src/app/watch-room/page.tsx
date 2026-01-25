@@ -65,8 +65,8 @@ export default function WatchRoomPage() {
   useEffect(() => {
     if (activeTab === 'list') {
       loadRooms();
-      // 每5秒刷新一次
-      const interval = setInterval(loadRooms, 5000);
+      // 每1小时刷新一次
+      const interval = setInterval(loadRooms, 60 * 60 * 1000);
       return () => clearInterval(interval);
     }
   }, [activeTab, isConnected]);

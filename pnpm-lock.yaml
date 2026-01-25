@@ -111,8 +111,8 @@ importers:
         specifier: ^2.2.3
         version: 2.2.3(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       react-window-infinite-loader:
-        specifier: ^1.0.10
-        version: 1.0.10(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+        specifier: ^2.0.1
+        version: 2.0.1(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       redis:
         specifier: ^4.6.7
         version: 4.7.1
@@ -4928,12 +4928,11 @@ packages:
       react: '>=16.6.0'
       react-dom: '>=16.6.0'
 
-  react-window-infinite-loader@1.0.10:
-    resolution: {integrity: sha512-NO/csdHlxjWqA2RJZfzQgagAjGHspbO2ik9GtWZb0BY1Nnapq0auG8ErI+OhGCzpjYJsCYerqUlK6hkq9dfAAA==}
-    engines: {node: '>8.0.0'}
+  react-window-infinite-loader@2.0.1:
+    resolution: {integrity: sha512-+Deq2JkxfDr5N6WAwKQJLECiBARZ1yvVv9rElSXPO6yaMt3YTIs2y8TpsH67lIWGYFMnESvO6mgvETEZuCCjuw==}
     peerDependencies:
-      react: ^15.3.0 || ^16.0.0-alpha || ^17.0.0 || ^18.0.0 || ^19.0.0
-      react-dom: ^15.3.0 || ^16.0.0-alpha || ^17.0.0 || ^18.0.0 || ^19.0.0
+      react: ^18.0.0 || ^19.0.0
+      react-dom: ^18.0.0 || ^19.0.0
 
   react-window@2.2.3:
     resolution: {integrity: sha512-gTRqQYC8ojbiXyd9duYFiSn2TJw0ROXCgYjenOvNKITWzK0m0eCvkUsEUM08xvydkMh7ncp+LE0uS3DeNGZxnQ==}
@@ -11424,7 +11423,7 @@ snapshots:
       react: 19.2.3
       react-dom: 19.2.3(react@19.2.3)
 
-  react-window-infinite-loader@1.0.10(react-dom@19.2.3(react@19.2.3))(react@19.2.3):
+  react-window-infinite-loader@2.0.1(react-dom@19.2.3(react@19.2.3))(react@19.2.3):
     dependencies:
       react: 19.2.3
       react-dom: 19.2.3(react@19.2.3)

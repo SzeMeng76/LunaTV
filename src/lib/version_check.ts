@@ -19,7 +19,7 @@ const VERSION_CHECK_URLS = [
 // ========== 缓存机制 ==========
 
 // 缓存配置
-const CACHE_TTL = 5 * 60 * 1000; // 5分钟缓存时间
+const CACHE_TTL = 60 * 60 * 1000; // 1小时缓存时间
 const SESSION_STORAGE_KEY = 'lunatv_version_check_cache';
 
 // 内存缓存

@@ -166,8 +166,8 @@ async function initTMDBCache(): Promise<void> {
   // 立即清理一次过期缓存
   await cleanExpiredCache();
 
-  // 每10分钟清理一次过期缓存
-  setInterval(() => cleanExpiredCache(), 10 * 60 * 1000);
+  // 每1小时清理一次过期缓存
+  setInterval(() => cleanExpiredCache(), 60 * 60 * 1000);
 
   console.log('TMDB缓存系统已初始化');
 }
