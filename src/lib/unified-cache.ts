@@ -222,7 +222,7 @@ class UnifiedCache {
   private startAutoCleanup(): void {
     if (typeof window === 'undefined') return;
 
-    // 每5分钟清理一次
+    // 每1小时清理一次
     this.cleanupInterval = setInterval(() => {
       this.cleanupLocalStorage();
 
@@ -233,7 +233,7 @@ class UnifiedCache {
           this.memoryCache.delete(key);
         }
       }
-    }, 5 * 60 * 1000);
+    }, 60 * 60 * 1000);
 
     // 避免阻止 Node.js 进程退出
     if (this.cleanupInterval.unref) {

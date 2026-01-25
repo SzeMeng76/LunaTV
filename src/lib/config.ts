@@ -467,6 +467,24 @@ export async function configSelfCheck(adminConfig: AdminConfig): Promise<AdminCo
     };
   }
 
+  // 确保豆瓣配置有默认值
+  if (!adminConfig.DoubanConfig) {
+    adminConfig.DoubanConfig = {
+      enablePuppeteer: false,                           // 默认关闭 Puppeteer（省资源）
+    };
+  }
+
+  // 确保 Cron 配置有默认值
+  if (!adminConfig.CronConfig) {
+    adminConfig.CronConfig = {
+      enableAutoRefresh: true,                          // 默认启用自动刷新
+      maxRecordsPerRun: 100,                            // 每次最多处理 100 条记录
+      onlyRefreshRecent: true,                          // 仅刷新最近活跃的记录
+      recentDays: 30,                                   // 最近 30 天内活跃
+      onlyRefreshOngoing: true,                         // 仅刷新连载中的剧集
+    };
+  }
+
   // 🔥 OIDC 配置迁移：从单 Provider 迁移到多 Provider
   if (adminConfig.OIDCAuthConfig && !adminConfig.OIDCProviders) {
     // 自动识别 Provider ID

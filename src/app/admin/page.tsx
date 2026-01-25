@@ -22,6 +22,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import {
+  Activity,
   AlertCircle,
   AlertTriangle,
   Brain,
@@ -62,6 +63,7 @@ import ShortDramaConfig from '@/components/ShortDramaConfig';
 import DownloadConfig from '@/components/OfflineDownloadConfig';
 import CustomAdFilterConfig from '@/components/CustomAdFilterConfig';
 import WatchRoomConfig from '@/components/WatchRoomConfig';
+import PerformanceMonitor from '@/components/admin/PerformanceMonitor';
 import PageLayout from '@/components/PageLayout';
 
 // 统一按钮样式系统
@@ -285,10 +287,21 @@ interface SiteConfig {
   DisableYellowFilter: boolean;
   ShowAdultContent: boolean;
   FluidSearch: boolean;
+  EnablePuppeteer: boolean; // 豆瓣 Puppeteer 开关
+  DoubanCookies?: string; // 豆瓣认证 Cookies
   // TMDB配置
   TMDBApiKey?: string;
   TMDBLanguage?: string;
   EnableTMDBActorSearch?: boolean;
+}
+
+// Cron 配置类型
+interface CronConfig {
+  enableAutoRefresh: boolean;
+  maxRecordsPerRun: number;
+  onlyRefreshRecent: boolean;
+  recentDays: number;
+  onlyRefreshOngoing: boolean;
 }
 
 // 视频源数据类型
@@ -4711,6 +4724,8 @@ const SiteConfigComponent = ({ config, refreshConfig }: { config: AdminConfig | 
     DoubanProxy: '',
     DoubanImageProxyType: 'direct',
     DoubanImageProxy: '',
+    EnablePuppeteer: false, // 默认关闭 Puppeteer
+    DoubanCookies: '', // 默认无 Cookies
     DisableYellowFilter: false,
     ShowAdultContent: false,
     FluidSearch: true,
@@ -4718,6 +4733,15 @@ const SiteConfigComponent = ({ config, refreshConfig }: { config: AdminConfig | 
     TMDBApiKey: '',
     TMDBLanguage: 'zh-CN',
     EnableTMDBActorSearch: false,
+  });
+
+  // Cron 配置状态
+  const [cronSettings, setCronSettings] = useState<CronConfig>({
+    enableAutoRefresh: true,
+    maxRecordsPerRun: 100,
+    onlyRefreshRecent: true,
+    recentDays: 30,
+    onlyRefreshOngoing: true,
   });
 
   // 豆瓣数据源相关状态
@@ -4779,6 +4803,8 @@ const SiteConfigComponent = ({ config, refreshConfig }: { config: AdminConfig | 
         DoubanImageProxyType:
           config.SiteConfig.DoubanImageProxyType || 'direct',
         DoubanImageProxy: config.SiteConfig.DoubanImageProxy || '',
+        EnablePuppeteer: config.DoubanConfig?.enablePuppeteer || false,
+        DoubanCookies: config.DoubanConfig?.cookies || '',
         DisableYellowFilter: config.SiteConfig.DisableYellowFilter || false,
         ShowAdultContent: config.SiteConfig.ShowAdultContent || false,
         FluidSearch: config.SiteConfig.FluidSearch || true,
@@ -4786,6 +4812,19 @@ const SiteConfigComponent = ({ config, refreshConfig }: { config: AdminConfig | 
         TMDBApiKey: config.SiteConfig.TMDBApiKey || '',
         TMDBLanguage: config.SiteConfig.TMDBLanguage || 'zh-CN',
         EnableTMDBActorSearch: config.SiteConfig.EnableTMDBActorSearch || false,
+      });
+    }
+  }, [config]);
+
+  // 加载 Cron 配置
+  useEffect(() => {
+    if (config?.CronConfig) {
+      setCronSettings({
+        enableAutoRefresh: config.CronConfig.enableAutoRefresh ?? true,
+        maxRecordsPerRun: config.CronConfig.maxRecordsPerRun ?? 100,
+        onlyRefreshRecent: config.CronConfig.onlyRefreshRecent ?? true,
+        recentDays: config.CronConfig.recentDays ?? 30,
+        onlyRefreshOngoing: config.CronConfig.onlyRefreshOngoing ?? true,
       });
     }
   }, [config]);
@@ -4848,7 +4887,10 @@ const SiteConfigComponent = ({ config, refreshConfig }: { config: AdminConfig | 
         const resp = await fetch('/api/admin/site', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...siteSettings }),
+          body: JSON.stringify({
+            ...siteSettings,
+            cronConfig: cronSettings, // 添加 Cron 配置
+          }),
         });
 
         if (!resp.ok) {
@@ -5142,6 +5184,203 @@ const SiteConfigComponent = ({ config, refreshConfig }: { config: AdminConfig | 
             </p>
           </div>
         )}
+      </div>
+
+      {/* 豆瓣 Puppeteer 设置 */}
+      <div>
+        <label className='flex items-center justify-between text-sm font-medium text-gray-700 dark:text-gray-300'>
+          <span>启用 Puppeteer 绕过反爬虫</span>
+          <button
+            type='button'
+            onClick={() =>
+              setSiteSettings((prev) => ({
+                ...prev,
+                EnablePuppeteer: !prev.EnablePuppeteer,
+              }))
+            }
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${
+              siteSettings.EnablePuppeteer
+                ? 'bg-green-600'
+                : 'bg-gray-300 dark:bg-gray-600'
+            }`}
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${
+                siteSettings.EnablePuppeteer ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
+          </button>
+        </label>
+        <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
+          开启后可获取完整数据（演员图片、相关推荐、评论），但会增加服务器 CPU 占用。默认关闭以节省资源。
+        </p>
+      </div>
+
+      {/* 豆瓣 Cookies 设置 */}
+      <div>
+        <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+          豆瓣认证 Cookies（推荐）
+        </label>
+        <textarea
+          value={siteSettings.DoubanCookies || ''}
+          onChange={(e) =>
+            setSiteSettings((prev) => ({
+              ...prev,
+              DoubanCookies: e.target.value,
+            }))
+          }
+          placeholder='bid=xxx; dbcl2="xxx"; ck=xxx; frodotk_db="xxx"; ...'
+          rows={3}
+          className='w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 shadow-sm hover:border-gray-400 dark:hover:border-gray-500 font-mono'
+        />
+        <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
+          配置豆瓣认证 Cookies 后可直接访问 Web 页面，无需 Puppeteer。需包含 <code className='px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded'>dbcl2</code>、<code className='px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded'>frodotk_db</code>、<code className='px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded'>ck</code> 等关键字段。
+        </p>
+      </div>
+
+      {/* Cron 定时任务配置 */}
+      <div className='border-t border-gray-200 dark:border-gray-700 pt-6 mt-6'>
+        <h3 className='text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4'>
+          定时任务配置
+        </h3>
+
+        {/* 启用自动刷新 */}
+        <div className='mb-4'>
+          <label className='flex items-center justify-between text-sm font-medium text-gray-700 dark:text-gray-300'>
+            <span>启用自动刷新播放记录和收藏</span>
+            <button
+              type='button'
+              onClick={() =>
+                setCronSettings((prev) => ({
+                  ...prev,
+                  enableAutoRefresh: !prev.enableAutoRefresh,
+                }))
+              }
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${
+                cronSettings.enableAutoRefresh
+                  ? 'bg-green-600'
+                  : 'bg-gray-300 dark:bg-gray-600'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${
+                  cronSettings.enableAutoRefresh ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </label>
+          <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
+            每天凌晨 1 点自动更新播放记录和收藏的剧集信息。关闭可减少服务器出站流量。
+          </p>
+        </div>
+
+        {/* 每次最多处理记录数 */}
+        <div className='mb-4'>
+          <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+            每次最多处理记录数
+          </label>
+          <input
+            type='number'
+            min={10}
+            max={1000}
+            value={cronSettings.maxRecordsPerRun}
+            onChange={(e) =>
+              setCronSettings((prev) => ({
+                ...prev,
+                maxRecordsPerRun: Number(e.target.value),
+              }))
+            }
+            className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent'
+          />
+          <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
+            限制每次 Cron 任务处理的记录数量，避免一次性请求过多。
+          </p>
+        </div>
+
+        {/* 仅刷新最近活跃记录 */}
+        <div className='mb-4'>
+          <label className='flex items-center justify-between text-sm font-medium text-gray-700 dark:text-gray-300'>
+            <span>仅刷新最近活跃的记录</span>
+            <button
+              type='button'
+              onClick={() =>
+                setCronSettings((prev) => ({
+                  ...prev,
+                  onlyRefreshRecent: !prev.onlyRefreshRecent,
+                }))
+              }
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${
+                cronSettings.onlyRefreshRecent
+                  ? 'bg-green-600'
+                  : 'bg-gray-300 dark:bg-gray-600'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${
+                  cronSettings.onlyRefreshRecent ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </label>
+          <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
+            只更新最近活跃的播放记录和收藏，跳过长时间未观看的内容。
+          </p>
+        </div>
+
+        {/* 最近活跃天数 */}
+        {cronSettings.onlyRefreshRecent && (
+          <div className='mb-4 ml-4'>
+            <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+              最近活跃天数
+            </label>
+            <input
+              type='number'
+              min={1}
+              max={365}
+              value={cronSettings.recentDays}
+              onChange={(e) =>
+                setCronSettings((prev) => ({
+                  ...prev,
+                  recentDays: Number(e.target.value),
+                }))
+              }
+              className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent'
+            />
+            <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
+              定义"最近活跃"的天数范围，只更新此时间范围内的记录。
+            </p>
+          </div>
+        )}
+
+        {/* 仅刷新连载中剧集 */}
+        <div className='mb-4'>
+          <label className='flex items-center justify-between text-sm font-medium text-gray-700 dark:text-gray-300'>
+            <span>仅刷新连载中的剧集</span>
+            <button
+              type='button'
+              onClick={() =>
+                setCronSettings((prev) => ({
+                  ...prev,
+                  onlyRefreshOngoing: !prev.onlyRefreshOngoing,
+                }))
+              }
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${
+                cronSettings.onlyRefreshOngoing
+                  ? 'bg-green-600'
+                  : 'bg-gray-300 dark:bg-gray-600'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${
+                  cronSettings.onlyRefreshOngoing ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </label>
+          <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
+            跳过已完结的剧集，只更新正在连载的内容，大幅减少不必要的请求。
+          </p>
+        </div>
       </div>
 
       {/* 搜索接口可拉取最大页数 */}
@@ -6377,6 +6616,7 @@ function AdminPageClient() {
     configFile: false,
     cacheManager: false,
     dataMigration: false,
+    performanceMonitor: false,
   });
 
   // 获取管理员配置
@@ -6475,7 +6715,7 @@ function AdminPageClient() {
   return (
     <PageLayout activePath='/admin'>
       <div className='-mt-6 md:mt-0'>
-        <div className='max-w-[95%] mx-auto'>
+        <div className='max-w-[95%] mx-auto pb-32 md:pb-safe-bottom'>
           {/* 标题 + 重置配置按钮 */}
           <div className='flex items-center gap-2 mb-8'>
             <h1 className='text-2xl font-bold text-gray-900 dark:text-gray-100'>
@@ -6491,39 +6731,40 @@ function AdminPageClient() {
             )}
           </div>
 
-          {/* 配置文件标签 - 仅站长可见 */}
-          {role === 'owner' && (
+          {/* 所有配置标签容器 */}
+          <div className='space-y-6'>
+            {/* 配置文件标签 - 仅站长可见 */}
+            {role === 'owner' && (
+              <CollapsibleTab
+                title='配置文件'
+                icon={
+                  <FileText
+                    size={20}
+                    className='text-gray-600 dark:text-gray-400'
+                  />
+                }
+                isExpanded={expandedTabs.configFile}
+                onToggle={() => toggleTab('configFile')}
+              >
+                <ConfigFileComponent config={config} refreshConfig={fetchConfig} />
+              </CollapsibleTab>
+            )}
+
+            {/* 站点配置标签 */}
             <CollapsibleTab
-              title='配置文件'
+              title='站点配置'
               icon={
-                <FileText
+                <Settings
                   size={20}
                   className='text-gray-600 dark:text-gray-400'
                 />
               }
-              isExpanded={expandedTabs.configFile}
-              onToggle={() => toggleTab('configFile')}
+              isExpanded={expandedTabs.siteConfig}
+              onToggle={() => toggleTab('siteConfig')}
             >
-              <ConfigFileComponent config={config} refreshConfig={fetchConfig} />
+              <SiteConfigComponent config={config} refreshConfig={fetchConfig} />
             </CollapsibleTab>
-          )}
 
-          {/* 站点配置标签 */}
-          <CollapsibleTab
-            title='站点配置'
-            icon={
-              <Settings
-                size={20}
-                className='text-gray-600 dark:text-gray-400'
-              />
-            }
-            isExpanded={expandedTabs.siteConfig}
-            onToggle={() => toggleTab('siteConfig')}
-          >
-            <SiteConfigComponent config={config} refreshConfig={fetchConfig} />
-          </CollapsibleTab>
-
-          <div className='space-y-4'>
             {/* 用户配置标签 */}
             <CollapsibleTab
               title='用户配置'
@@ -6850,6 +7091,23 @@ function AdminPageClient() {
                 onToggle={() => toggleTab('dataMigration')}
               >
                 <DataMigration onRefreshConfig={fetchConfig} />
+              </CollapsibleTab>
+            )}
+
+            {/* 性能监控标签 - 仅站长可见 */}
+            {role === 'owner' && (
+              <CollapsibleTab
+                title='性能监控'
+                icon={
+                  <Activity
+                    size={20}
+                    className='text-gray-600 dark:text-gray-400'
+                  />
+                }
+                isExpanded={expandedTabs.performanceMonitor}
+                onToggle={() => toggleTab('performanceMonitor')}
+              >
+                <PerformanceMonitor />
               </CollapsibleTab>
             )}
           </div>

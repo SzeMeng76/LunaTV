@@ -3,13 +3,33 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getAvailableApiSites, getCacheTime } from '@/lib/config';
 import { getDetailFromApi } from '@/lib/downstream';
+import { recordRequest, getDbQueryCount, resetDbQueryCount } from '@/lib/performance-monitor';
 
 export const runtime = 'nodejs';
 
 export async function GET(request: NextRequest) {
+  const startTime = Date.now();
+  const startMemory = process.memoryUsage().heapUsed;
+  resetDbQueryCount();
+
   const authInfo = getAuthInfoFromCookie(request);
   if (!authInfo || !authInfo.username) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const errorResponse = { error: 'Unauthorized' };
+    const errorSize = Buffer.byteLength(JSON.stringify(errorResponse), 'utf8');
+
+    await recordRequest({
+      timestamp: startTime,
+      method: 'GET',
+      path: '/api/detail',
+      statusCode: 401,
+      duration: Date.now() - startTime,
+      memoryUsed: (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
+      dbQueries: getDbQueryCount(),
+      requestSize: 0,
+      responseSize: errorSize,
+    });
+
+    return NextResponse.json(errorResponse, { status: 401 });
   }
 
   const { searchParams } = new URL(request.url);
@@ -17,11 +37,42 @@ export async function GET(request: NextRequest) {
   const sourceCode = searchParams.get('source');
 
   if (!id || !sourceCode) {
-    return NextResponse.json({ error: '缺少必要参数' }, { status: 400 });
+    const errorResponse = { error: '缺少必要参数' };
+    const errorSize = Buffer.byteLength(JSON.stringify(errorResponse), 'utf8');
+
+    await recordRequest({
+      timestamp: startTime,
+      method: 'GET',
+      path: '/api/detail',
+      statusCode: 400,
+      duration: Date.now() - startTime,
+      memoryUsed: (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
+      dbQueries: getDbQueryCount(),
+      requestSize: 0,
+      responseSize: errorSize,
+    });
+
+    return NextResponse.json(errorResponse, { status: 400 });
   }
 
   if (!/^[\w-]+$/.test(id)) {
-    return NextResponse.json({ error: '无效的视频ID格式' }, { status: 400 });
+    const errorResponse = { error: '无效的视频ID格式' };
+    const errorSize = Buffer.byteLength(JSON.stringify(errorResponse), 'utf8');
+
+    await recordRequest({
+      timestamp: startTime,
+      method: 'GET',
+      path: '/api/detail',
+      statusCode: 400,
+      duration: Date.now() - startTime,
+      memoryUsed: (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
+      dbQueries: getDbQueryCount(),
+      requestSize: 0,
+      responseSize: errorSize,
+      filter: `id:${id}`,
+    });
+
+    return NextResponse.json(errorResponse, { status: 400 });
   }
 
   try {
@@ -29,7 +80,23 @@ export async function GET(request: NextRequest) {
     const apiSite = apiSites.find((site) => site.key === sourceCode);
 
     if (!apiSite) {
-      return NextResponse.json({ error: '无效的API来源' }, { status: 400 });
+      const errorResponse = { error: '无效的API来源' };
+      const errorSize = Buffer.byteLength(JSON.stringify(errorResponse), 'utf8');
+
+      await recordRequest({
+        timestamp: startTime,
+        method: 'GET',
+        path: '/api/detail',
+        statusCode: 400,
+        duration: Date.now() - startTime,
+        memoryUsed: (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
+        dbQueries: getDbQueryCount(),
+        requestSize: 0,
+        responseSize: errorSize,
+        filter: `source:${sourceCode}`,
+      });
+
+      return NextResponse.json(errorResponse, { status: 400 });
     }
 
     const result = await getDetailFromApi(apiSite, id);
@@ -44,13 +111,40 @@ export async function GET(request: NextRequest) {
       'Expires': '0'
     };
 
+    const responseSize = Buffer.byteLength(JSON.stringify(result), 'utf8');
+
+    await recordRequest({
+      timestamp: startTime,
+      method: 'GET',
+      path: '/api/detail',
+      statusCode: 200,
+      duration: Date.now() - startTime,
+      memoryUsed: (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
+      dbQueries: getDbQueryCount(),
+      requestSize: 0,
+      responseSize,
+      filter: `source:${sourceCode}|id:${id}`,
+    });
+
     return NextResponse.json(result, {
       headers: responseHeaders,
     });
   } catch (error) {
-    return NextResponse.json(
-      { error: (error as Error).message },
-      { status: 500 }
-    );
+    const errorResponse = { error: (error as Error).message };
+    const errorSize = Buffer.byteLength(JSON.stringify(errorResponse), 'utf8');
+
+    await recordRequest({
+      timestamp: startTime,
+      method: 'GET',
+      path: '/api/detail',
+      statusCode: 500,
+      duration: Date.now() - startTime,
+      memoryUsed: (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
+      dbQueries: getDbQueryCount(),
+      requestSize: 0,
+      responseSize: errorSize,
+    });
+
+    return NextResponse.json(errorResponse, { status: 500 });
   }
 }

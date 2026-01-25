@@ -6,7 +6,7 @@ import { getAllPlayRecords, PlayRecord, generateStorageKey, forceRefreshPlayReco
 const WATCHING_UPDATES_CACHE_KEY = 'moontv_watching_updates';
 const LAST_CHECK_TIME_KEY = 'moontv_last_update_check';
 const ORIGINAL_EPISODES_CACHE_KEY = 'moontv_original_episodes'; // 新增：记录观看时的总集数
-const CACHE_DURATION = 5 * 60 * 1000; // 5分钟缓存
+const CACHE_DURATION = 60 * 60 * 1000; // 1小时缓存
 
 // 防重复修复标记
 const fixingRecords = new Set<string>();
@@ -534,7 +534,7 @@ function notifyListeners(hasUpdates: boolean): void {
  * 设置定期检查
  * @param intervalMinutes 检查间隔（分钟）
  */
-export function setupPeriodicUpdateCheck(intervalMinutes = 30): () => void {
+export function setupPeriodicUpdateCheck(intervalMinutes = 60): () => void {
   console.log(`设置定期更新检查，间隔: ${intervalMinutes} 分钟`);
 
   // 立即执行一次检查

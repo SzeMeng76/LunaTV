@@ -6,11 +6,14 @@ import dynamic from 'next/dynamic';
 
 const Grid = dynamic(
   () => import('react-window').then(mod => ({ default: mod.Grid })),
-  { 
+  {
     ssr: false,
     loading: () => <div className="animate-pulse h-96 bg-gray-200 dark:bg-gray-800 rounded-lg" />
   }
 );
+
+// @ts-ignore - useInfiniteLoader exists at runtime but type definitions are incomplete
+import { useInfiniteLoader } from 'react-window-infinite-loader';
 
 import { DoubanItem } from '@/lib/types';
 import { useResponsiveGrid } from '@/hooks/useResponsiveGrid';
@@ -45,10 +48,9 @@ interface VirtualDoubanGridProps {
   aiCheckComplete?: boolean;
 }
 
-// 渐进式加载配置
-const INITIAL_BATCH_SIZE = 25;
-const LOAD_MORE_BATCH_SIZE = 25;
-const LOAD_MORE_THRESHOLD = 3; // 恢复原来的阈值，避免过度触发
+// 首屏优先加载配置 - 用于图片预加载优化
+const INITIAL_PRIORITY_COUNT = 30; // 首屏优先加载的卡片数量
+const LOAD_MORE_THRESHOLD = 2; // 距离底部多少行时触发加载更多
 
 export const VirtualDoubanGrid = React.forwardRef<VirtualDoubanGridRef, VirtualDoubanGridProps>(({
   doubanData,
@@ -66,36 +68,23 @@ export const VirtualDoubanGrid = React.forwardRef<VirtualDoubanGridRef, VirtualD
   const gridRef = useRef<any>(null); // Grid ref for imperative scroll
   const { columnCount, itemWidth, itemHeight, containerWidth } = useResponsiveGrid(containerRef);
 
-  // 渐进式加载状态
-  const [visibleItemCount, setVisibleItemCount] = useState(INITIAL_BATCH_SIZE);
-  const [isVirtualLoadingMore, setIsVirtualLoadingMore] = useState(false);
-
-  // 总数据数量
+  // 总数据数量 - 直接使用全部数据，让 react-window 处理虚拟化
   const totalItemCount = doubanData.length;
 
-  // 实际显示的项目数量（考虑渐进式加载）
-  const displayItemCount = Math.min(visibleItemCount, totalItemCount);
-  const displayData = doubanData.slice(0, displayItemCount);
-
-  // 预加载图片 - 收集即将显示的图片 URLs
+  // 预加载图片 - 收集首屏及附近的图片 URLs
   const imagesToPreload = useMemo(() => {
     const urls: string[] = [];
-    const itemsToPreload = doubanData.slice(displayItemCount, Math.min(displayItemCount + 20, totalItemCount));
+    // 预加载前 30 个项目的图片（约首屏+1-2屏）
+    const itemsToPreload = doubanData.slice(0, Math.min(30, totalItemCount));
 
     itemsToPreload.forEach(item => {
       if (item.poster) urls.push(item.poster);
     });
 
     return urls;
-  }, [doubanData, displayItemCount, totalItemCount]);
+  }, [doubanData, totalItemCount]);
 
   useImagePreload(imagesToPreload, totalItemCount > 0);
-
-  // 重置可见项目数量（当数据变化时）
-  useEffect(() => {
-    setVisibleItemCount(INITIAL_BATCH_SIZE);
-    setIsVirtualLoadingMore(false);
-  }, [doubanData, type, primarySelection]);
 
   // 当类型或筛选条件改变时，滚动到顶部
   useEffect(() => {
@@ -133,36 +122,51 @@ export const VirtualDoubanGrid = React.forwardRef<VirtualDoubanGridRef, VirtualD
     checkContainer();
   }, [containerWidth]);
 
-  // 检查是否还有更多项目可以加载（虚拟层面）
-  const hasNextVirtualPage = displayItemCount < totalItemCount;
-  
   // 检查是否需要从服务器加载更多数据
-  const needsServerData = displayItemCount >= totalItemCount * 0.8 && hasMore && !isLoadingMore;
+  const needsServerData = totalItemCount > 0 && hasMore && !isLoadingMore;
 
-  // 防止重复调用onLoadMore的ref
-  const lastLoadMoreCallRef = useRef<number>(0);
+  // InfiniteLoader 需要的函数
+  // 检查某个索引的项是否已加载
+  const isItemLoaded = useCallback((index: number) => {
+    // 如果索引小于当前数据量，说明已加载
+    return index < totalItemCount;
+  }, [totalItemCount]);
 
-  // 加载更多项目（虚拟层面）
-  const loadMoreVirtualItems = useCallback(() => {
-    if (isVirtualLoadingMore) return;
+  // 加载更多项的函数 - 返回 Promise
+  const loadMoreItems = useCallback((startIndex: number, stopIndex: number): Promise<void> => {
+    // 如果正在加载或没有更多数据，直接返回
+    if (isLoadingMore || !hasMore) {
+      return Promise.resolve();
+    }
 
-    setIsVirtualLoadingMore(true);
+    // 触发加载
+    onLoadMore();
 
-    // 模拟异步加载
-    setTimeout(() => {
-      setVisibleItemCount(prev => {
-        const newCount = Math.min(prev + LOAD_MORE_BATCH_SIZE, totalItemCount);
+    // 返回一个 Promise，等待加载完成
+    return new Promise((resolve) => {
+      // 使用 setTimeout 轮询检查加载状态
+      const checkLoading = () => {
+        // 注意：这里无法直接访问最新的 isLoadingMore 状态
+        // 所以我们简单地延迟 1 秒后 resolve
+        setTimeout(() => resolve(), 1000);
+      };
+      checkLoading();
+    });
+  }, [isLoadingMore, hasMore, onLoadMore]);
 
-        // 如果虚拟数据即将用完，触发服务器数据加载
-        if (newCount >= totalItemCount * 0.8 && hasMore && !isLoadingMore) {
-          onLoadMore();
-        }
+  // 🔥 关键修复：计算总项数
+  // 如果还有更多数据，需要增加 columnCount 个占位项来触发加载
+  // 这样可以确保最后一行被渲染时能触发 InfiniteLoader
+  const itemCount = hasMore ? totalItemCount + columnCount : totalItemCount;
 
-        return newCount;
-      });
-      setIsVirtualLoadingMore(false);
-    }, 100);
-  }, [isVirtualLoadingMore, totalItemCount, hasMore, isLoadingMore, onLoadMore]);
+  // 使用 useInfiniteLoader hook
+  const onRowsRendered = useInfiniteLoader({
+    isRowLoaded: isItemLoaded,
+    loadMoreRows: loadMoreItems,
+    rowCount: itemCount,
+    threshold: 15,
+    minimumBatchSize: 10
+  });
 
   // 暴露 scrollToTop 方法给父组件
   useImperativeHandle(ref, () => ({
@@ -182,8 +186,8 @@ export const VirtualDoubanGrid = React.forwardRef<VirtualDoubanGridRef, VirtualD
     }
   }), []);
 
-  // 网格行数计算
-  const rowCount = Math.ceil(displayItemCount / columnCount);
+  // 网格行数计算 - 基于全部数据（包括占位项）
+  const rowCount = Math.ceil(itemCount / columnCount);
 
   // 单行网格优化：确保单行时布局正确（react-window 2.1.1修复了相关bug）
   const isSingleRow = rowCount === 1;
@@ -199,14 +203,14 @@ export const VirtualDoubanGrid = React.forwardRef<VirtualDoubanGridRef, VirtualD
     primarySelection: cellPrimarySelection,
     isBangumi: cellIsBangumi,
     columnCount: cellColumnCount,
-    displayItemCount: cellDisplayItemCount,
+    totalItemCount: cellTotalItemCount,
     aiEnabled: cellAiEnabled,
     aiCheckComplete: cellAiCheckComplete,
   }: any) => {
     const index = rowIndex * cellColumnCount + columnIndex;
-    
-    // 如果超出显示范围，返回隐藏的占位符
-    if (index >= cellDisplayItemCount) {
+
+    // 如果超出数据范围，返回隐藏的占位符
+    if (index >= cellTotalItemCount) {
       return <div style={{ ...style, visibility: 'hidden' }} />;
     }
 
@@ -216,8 +220,8 @@ export const VirtualDoubanGrid = React.forwardRef<VirtualDoubanGridRef, VirtualD
       return <div style={{ ...style, visibility: 'hidden' }} />;
     }
 
-    // 🎯 图片加载优化：首屏25张卡片使用 priority 预加载
-    const isPriorityImage = index < INITIAL_BATCH_SIZE;
+    // 🎯 图片加载优化：首屏卡片使用 priority 预加载
+    const isPriorityImage = index < INITIAL_PRIORITY_COUNT;
 
     return (
       <div style={{ ...style, padding: '8px' }} {...ariaAttributes}>
@@ -301,12 +305,12 @@ export const VirtualDoubanGrid = React.forwardRef<VirtualDoubanGridRef, VirtualD
           gridRef={gridRef}
           cellComponent={CellComponent}
           cellProps={{
-            displayData,
+            displayData: doubanData,
             type,
             primarySelection,
             isBangumi,
             columnCount,
-            displayItemCount,
+            totalItemCount,
             aiEnabled,
             aiCheckComplete,
           }}
@@ -315,51 +319,47 @@ export const VirtualDoubanGrid = React.forwardRef<VirtualDoubanGridRef, VirtualD
           rowCount={rowCount}
           rowHeight={itemHeight + 16}
           overscanCount={5}
-          // 添加ARIA支持提升无障碍体验
           role="grid"
-          aria-label={`豆瓣${type}列表，共${displayItemCount}个结果`}
+          aria-label={`豆瓣${type}列表，共${totalItemCount}个结果`}
           aria-rowcount={rowCount}
           aria-colcount={columnCount}
           style={{
-            // 确保不创建新的stacking context，让菜单能正确显示在最顶层
             isolation: 'auto',
-            // 平滑滚动优化
             scrollBehavior: 'smooth',
-            // 单行网格优化：防止高度异常
             ...(isSingleRow && {
               minHeight: itemHeight + 16,
               maxHeight: itemHeight + 32,
             }),
           }}
           onCellsRendered={(visibleCells, allCells) => {
-            // 使用react-window v2.1.2的API：
-            // 1. visibleCells: 真实可见的单元格范围
-            // 2. allCells: 包含overscan的所有渲染单元格范围
-            const { rowStopIndex: visibleRowStopIndex } = visibleCells;
+                // 🔥 关键修复：将 Grid 的二维索引转换为一维索引
+                // 使用 overscan 索引（allCells）来确保提前触发加载
+                const { rowStartIndex, rowStopIndex } = allCells;
 
-            // 简化逻辑：基于可见行检测
-            if (visibleRowStopIndex >= rowCount - LOAD_MORE_THRESHOLD) {
-              if (hasNextVirtualPage && !isVirtualLoadingMore) {
-                loadMoreVirtualItems();
-              } else if (needsServerData) {
-                // 防止重复调用onLoadMore
-                const now = Date.now();
-                if (now - lastLoadMoreCallRef.current > 1000) {
-                  lastLoadMoreCallRef.current = now;
-                  onLoadMore();
-                }
-              }
-            }
-          }}
-        />
+                // 计算一维索引范围 - 使用整行范围
+                // startIndex: 该行第一个元素的索引
+                // stopIndex: 该行最后一个元素的索引（即下一行第一个元素 - 1）
+                const startIndex = rowStartIndex * columnCount;
+                const stopIndex = Math.min(
+                  (rowStopIndex + 1) * columnCount - 1,
+                  itemCount - 1
+                );
+
+                // 调用 InfiniteLoader 的 onRowsRendered
+                onRowsRendered({
+                  startIndex,
+                  stopIndex
+                });
+              }}
+            />
       )}
-      
+
       {/* 加载更多指示器 */}
-      {containerWidth > 100 && (isVirtualLoadingMore || isLoadingMore) && (
+      {isLoadingMore && (
         <div className='flex justify-center mt-8 py-8'>
-          <div className='relative px-8 py-4 rounded-2xl bg-linear-to-r from-green-50 via-emerald-50 to-teal-50 dark:from-green-900/20 dark:via-emerald-900/20 dark:to-teal-900/20 border border-green-200/50 dark:border-green-700/50 shadow-lg backdrop-blur-sm overflow-hidden'>
+          <div className='relative px-8 py-4 rounded-2xl bg-gradient-to-r from-green-50 via-emerald-50 to-teal-50 dark:from-green-900/20 dark:via-emerald-900/20 dark:to-teal-900/20 border border-green-200/50 dark:border-green-700/50 shadow-lg overflow-hidden'>
             {/* 动画背景 */}
-            <div className='absolute inset-0 bg-linear-to-r from-green-400/10 via-emerald-400/10 to-teal-400/10 animate-pulse'></div>
+            <div className='absolute inset-0 bg-gradient-to-r from-green-400/10 via-emerald-400/10 to-teal-400/10 animate-pulse'></div>
 
             {/* 内容 */}
             <div className='relative flex items-center gap-3'>
@@ -369,7 +369,7 @@ export const VirtualDoubanGrid = React.forwardRef<VirtualDoubanGridRef, VirtualD
                 <div className='absolute inset-0 animate-spin rounded-full h-8 w-8 border-[3px] border-transparent border-t-green-500 dark:border-t-green-400'></div>
               </div>
 
-              {/* 文字和点动画 */}
+              {/* 文字 */}
               <div className='flex items-center gap-1'>
                 <span className='text-sm font-medium text-gray-700 dark:text-gray-300'>加载中</span>
                 <span className='flex gap-0.5'>
@@ -382,19 +382,19 @@ export const VirtualDoubanGrid = React.forwardRef<VirtualDoubanGridRef, VirtualD
           </div>
         </div>
       )}
-      
+
       {/* 已加载完所有内容的提示 */}
-      {containerWidth > 100 && !hasMore && !hasNextVirtualPage && displayItemCount > 0 && (
+      {!hasMore && totalItemCount > 0 && !isLoadingMore && (
         <div className='flex justify-center mt-8 py-8'>
-          <div className='relative px-8 py-5 rounded-2xl bg-linear-to-r from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-900/20 dark:via-indigo-900/20 dark:to-purple-900/20 border border-blue-200/50 dark:border-blue-700/50 shadow-lg backdrop-blur-sm overflow-hidden'>
-            {/* 装饰性背景 */}
-            <div className='absolute inset-0 bg-linear-to-br from-blue-100/20 to-purple-100/20 dark:from-blue-800/10 dark:to-purple-800/10'></div>
+          <div className='relative px-8 py-5 rounded-2xl bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-900/20 dark:via-indigo-900/20 dark:to-purple-900/20 border border-blue-200/50 dark:border-blue-700/50 shadow-lg overflow-hidden'>
+            {/* 装饰背景 */}
+            <div className='absolute inset-0 bg-gradient-to-br from-blue-100/20 to-purple-100/20 dark:from-blue-800/10 dark:to-purple-800/10'></div>
 
             {/* 内容 */}
             <div className='relative flex flex-col items-center gap-2'>
               {/* 完成图标 */}
               <div className='relative'>
-                <div className='w-12 h-12 rounded-full bg-linear-to-br from-blue-500 to-purple-500 flex items-center justify-center shadow-lg'>
+                <div className='w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center shadow-lg'>
                   {isBangumi ? (
                     <svg className='w-7 h-7 text-white' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
                       <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z'></path>
@@ -405,7 +405,6 @@ export const VirtualDoubanGrid = React.forwardRef<VirtualDoubanGridRef, VirtualD
                     </svg>
                   )}
                 </div>
-                {/* 光圈效果 */}
                 <div className='absolute inset-0 rounded-full bg-blue-400/30 animate-ping'></div>
               </div>
 
@@ -415,7 +414,7 @@ export const VirtualDoubanGrid = React.forwardRef<VirtualDoubanGridRef, VirtualD
                   {isBangumi ? '本日番剧已全部显示' : '已加载全部内容'}
                 </p>
                 <p className='text-xs text-gray-600 dark:text-gray-400'>
-                  {isBangumi ? `今日共 ${displayItemCount} 部` : `共 ${displayItemCount} 项`}
+                  {isBangumi ? `今日共 ${totalItemCount} 部` : `共 ${totalItemCount} 项`}
                 </p>
               </div>
             </div>

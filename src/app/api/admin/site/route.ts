@@ -41,9 +41,12 @@ export async function POST(request: NextRequest) {
       DisableYellowFilter,
       ShowAdultContent,
       FluidSearch,
+      EnablePuppeteer,
+      DoubanCookies,
       TMDBApiKey,
       TMDBLanguage,
       EnableTMDBActorSearch,
+      cronConfig,
     } = body as {
       SiteName: string;
       Announcement: string;
@@ -56,9 +59,18 @@ export async function POST(request: NextRequest) {
       DisableYellowFilter: boolean;
       ShowAdultContent: boolean;
       FluidSearch: boolean;
+      EnablePuppeteer: boolean;
+      DoubanCookies?: string;
       TMDBApiKey?: string;
       TMDBLanguage?: string;
       EnableTMDBActorSearch?: boolean;
+      cronConfig?: {
+        enableAutoRefresh: boolean;
+        maxRecordsPerRun: number;
+        onlyRefreshRecent: boolean;
+        recentDays: number;
+        onlyRefreshOngoing: boolean;
+      };
     };
 
     // 参数校验
@@ -72,7 +84,8 @@ export async function POST(request: NextRequest) {
       typeof DoubanImageProxyType !== 'string' ||
       typeof DoubanImageProxy !== 'string' ||
       typeof DisableYellowFilter !== 'boolean' ||
-      typeof FluidSearch !== 'boolean'
+      typeof FluidSearch !== 'boolean' ||
+      typeof EnablePuppeteer !== 'boolean'
     ) {
       return NextResponse.json({ error: '参数格式错误' }, { status: 400 });
     }
@@ -108,6 +121,35 @@ export async function POST(request: NextRequest) {
       TMDBLanguage: TMDBLanguage || 'zh-CN',
       EnableTMDBActorSearch: EnableTMDBActorSearch || false,
     };
+
+    // 更新豆瓣配置
+    if (!adminConfig.DoubanConfig) {
+      adminConfig.DoubanConfig = {
+        enablePuppeteer: false,
+      };
+    }
+    adminConfig.DoubanConfig.enablePuppeteer = EnablePuppeteer;
+    adminConfig.DoubanConfig.cookies = DoubanCookies || undefined;
+
+    // 更新 Cron 配置
+    if (cronConfig) {
+      if (!adminConfig.CronConfig) {
+        adminConfig.CronConfig = {
+          enableAutoRefresh: true,
+          maxRecordsPerRun: 100,
+          onlyRefreshRecent: true,
+          recentDays: 30,
+          onlyRefreshOngoing: true,
+        };
+      }
+      adminConfig.CronConfig = {
+        enableAutoRefresh: cronConfig.enableAutoRefresh,
+        maxRecordsPerRun: cronConfig.maxRecordsPerRun,
+        onlyRefreshRecent: cronConfig.onlyRefreshRecent,
+        recentDays: cronConfig.recentDays,
+        onlyRefreshOngoing: cronConfig.onlyRefreshOngoing,
+      };
+    }
 
     // 写入数据库
     await db.saveAdminConfig(adminConfig);
