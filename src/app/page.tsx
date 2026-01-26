@@ -5,6 +5,7 @@
 import { ChevronRight, Film, Tv, Calendar, Sparkles, Play, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { Suspense, useEffect, useState, useRef, useMemo, useReducer } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
   BangumiCalendarData,
@@ -110,6 +111,9 @@ const homeReducer = (state: HomeState, action: HomeAction): HomeState => {
 };
 
 function HomeClient() {
+  // 🚀 TanStack Query - 全局缓存管理
+  const queryClient = useQueryClient();
+
   // 🎯 优化：使用 useReducer 合并 11 个 useState，减少重渲染
   const [state, dispatch] = useReducer(homeReducer, {
     activeTab: 'home',
@@ -198,6 +202,22 @@ function HomeClient() {
     }
   }, [announcement]);
 
+  // 🚀 TanStack Query - 使用 useQuery 获取收藏数据（自动缓存，跨页面持久化）
+  const { data: allFavorites = {} } = useQuery({
+    queryKey: ['favorites'],
+    queryFn: () => getAllFavorites(),
+    staleTime: 5 * 60 * 1000, // 5分钟内数据保持新鲜
+    gcTime: 10 * 60 * 1000, // 10分钟后垃圾回收
+  });
+
+  // 🚀 TanStack Query - 使用 useQuery 获取播放记录（自动缓存，跨页面持久化）
+  const { data: allPlayRecords = {} } = useQuery({
+    queryKey: ['playRecords'],
+    queryFn: () => getAllPlayRecords(),
+    staleTime: 5 * 60 * 1000, // 5分钟内数据保持新鲜
+    gcTime: 10 * 60 * 1000, // 10分钟后垃圾回收
+  });
+
   // 收藏夹数据
   type FavoriteItem = {
     id: string;
@@ -214,7 +234,38 @@ function HomeClient() {
     remarks?: string;
   };
 
-  const [favoriteItems, setFavoriteItems] = useState<FavoriteItem[]>([]);
+  // 🚀 TanStack Query - 使用 useMemo 计算收藏列表（自动响应数据变化）
+  const favoriteItems = useMemo(() => {
+    // 根据保存时间排序（从近到远）
+    return Object.entries(allFavorites)
+      .sort(([, a], [, b]) => b.save_time - a.save_time)
+      .map(([key, fav]) => {
+        const plusIndex = key.indexOf('+');
+        const source = key.slice(0, plusIndex);
+        const id = key.slice(plusIndex + 1);
+
+        // 查找对应的播放记录，获取当前集数
+        const playRecord = allPlayRecords[key];
+        const currentEpisode = playRecord?.index;
+
+        return {
+          id,
+          source,
+          title: fav.title,
+          year: fav.year,
+          poster: fav.cover,
+          episodes: fav.total_episodes,
+          source_name: fav.source_name,
+          currentEpisode,
+          search_title: fav?.search_title,
+          origin: fav?.origin,
+          type: fav?.type,
+          releaseDate: fav?.releaseDate,
+          remarks: fav?.remarks,
+        } as FavoriteItem;
+      });
+  }, [allFavorites, allPlayRecords]);
+
   const [favoriteFilter, setFavoriteFilter] = useState<'all' | 'movie' | 'tv' | 'anime' | 'shortdrama' | 'live' | 'variety'>('all');
   const [favoriteSortBy, setFavoriteSortBy] = useState<'recent' | 'title' | 'rating'>('recent');
   const [upcomingFilter, setUpcomingFilter] = useState<'all' | 'movie' | 'tv'>('all');
@@ -518,68 +569,38 @@ function HomeClient() {
     };
   }, []);
 
-  // 处理收藏数据更新的函数
-  const updateFavoriteItems = async (allFavorites: Record<string, any>) => {
-    const allPlayRecords = await getAllPlayRecords();
-
-    // 根据保存时间排序（从近到远）
-    const sorted = Object.entries(allFavorites)
-      .sort(([, a], [, b]) => b.save_time - a.save_time)
-      .map(([key, fav]) => {
-        const plusIndex = key.indexOf('+');
-        const source = key.slice(0, plusIndex);
-        const id = key.slice(plusIndex + 1);
-
-        // 查找对应的播放记录，获取当前集数
-        const playRecord = allPlayRecords[key];
-        const currentEpisode = playRecord?.index;
-
-        return {
-          id,
-          source,
-          title: fav.title,
-          year: fav.year,
-          poster: fav.cover,
-          episodes: fav.total_episodes,
-          source_name: fav.source_name,
-          currentEpisode,
-          search_title: fav?.search_title,
-          origin: fav?.origin,
-          type: fav?.type,
-          releaseDate: fav?.releaseDate,
-          remarks: fav?.remarks,
-        } as FavoriteItem;
-      });
-    setFavoriteItems(sorted);
-  };
-
-  // 处理清空所有收藏
+  // 🚀 TanStack Query - 处理清空所有收藏（使用 queryClient 刷新缓存）
   const handleClearFavorites = async () => {
     await clearAllFavorites();
-    setFavoriteItems([]);
+    // 刷新收藏数据缓存
+    queryClient.invalidateQueries({ queryKey: ['favorites'] });
   };
 
-  // 当切换到收藏夹时加载收藏数据
+  // 🚀 TanStack Query - 监听数据更新事件，自动刷新缓存
   useEffect(() => {
-    if (activeTab !== 'favorites') return;
-
-    const loadFavorites = async () => {
-      const allFavorites = await getAllFavorites();
-      await updateFavoriteItems(allFavorites);
-    };
-
-    loadFavorites();
-
     // 监听收藏更新事件
-    const unsubscribe = subscribeToDataUpdates(
+    const unsubscribeFavorites = subscribeToDataUpdates(
       'favoritesUpdated',
-      (newFavorites: Record<string, any>) => {
-        updateFavoriteItems(newFavorites);
+      () => {
+        // 刷新收藏数据缓存
+        queryClient.invalidateQueries({ queryKey: ['favorites'] });
       }
     );
 
-    return unsubscribe;
-  }, [activeTab]);
+    // 监听播放记录更新事件
+    const unsubscribePlayRecords = subscribeToDataUpdates(
+      'playRecordsUpdated',
+      () => {
+        // 刷新播放记录缓存
+        queryClient.invalidateQueries({ queryKey: ['playRecords'] });
+      }
+    );
+
+    return () => {
+      unsubscribeFavorites();
+      unsubscribePlayRecords();
+    };
+  }, [queryClient]); // 依赖 queryClient
 
   const handleCloseAnnouncement = (announcement: string) => {
     dispatch({ type: 'SET_SHOW_ANNOUNCEMENT', payload: false });

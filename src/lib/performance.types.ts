@@ -13,6 +13,7 @@ export interface RequestMetrics {
   dbQueries: number;           // 数据库查询次数
   requestSize: number;         // 请求大小（字节）
   responseSize: number;        // 响应大小（字节）
+  filter?: string;             // 过滤条件（如用户名、资源ID等）
 }
 
 // 每小时聚合的性能数据

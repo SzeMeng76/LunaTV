@@ -34,12 +34,20 @@ interface PerformanceData {
     avgResponseTime: number;
     trafficPerMinute: number;
   };
+  externalTraffic: {
+    totalRequests: number;
+    totalTraffic: number;
+    requestTraffic: number;
+    responseTraffic: number;
+    avgDuration: number;
+    byDomain: Record<string, { requests: number; traffic: number }>;
+  };
 }
 
 export default function PerformanceMonitor() {
   const [data, setData] = useState<PerformanceData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [timeRange, setTimeRange] = useState<'1' | '24'>('24');
+  const [timeRange, setTimeRange] = useState<'1' | '24'>('1'); // 默认显示最近1小时
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [apiFilter, setApiFilter] = useState<string>('all');
 
@@ -54,6 +62,12 @@ export default function PerformanceMonitor() {
       '/api/cron': 'Cron 任务',
       '/api/series': '剧集管理',
       '/api/favorites': '收藏管理',
+      '/api/playrecords': '播放记录',
+      '/api/skipconfigs': '跳过配置',
+      '/api/search': '视频搜索',
+      '/api/source-browser/list': '视频列表',
+      '/api/detail': '视频详情',
+      '/api/danmu-external': '弹幕获取',
       '/api/admin': '管理后台',
     };
 
@@ -65,25 +79,159 @@ export default function PerformanceMonitor() {
       if (path.startsWith(prefix)) return name;
     }
 
+    // 短剧 API 统一显示
+    if (path.startsWith('/api/shortdrama')) return '短剧 API';
+
     return path;
   };
 
-  // 过滤请求列表
-  const filterRequests = (requests: any[]) => {
+  // 格式化流量显示（自动选择 KB/MB/GB）
+  const formatTraffic = (bytes: number): string => {
+    if (bytes < 1024) {
+      return `${bytes.toFixed(2)} B`;
+    } else if (bytes < 1024 * 1024) {
+      return `${(bytes / 1024).toFixed(2)} KB`;
+    } else if (bytes < 1024 * 1024 * 1024) {
+      return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+    } else {
+      return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`;
+    }
+  };
+
+  // 过滤请求列表（用于统计，不限制条数）
+  const filterRequestsForStats = (requests: any[]) => {
     if (apiFilter === 'all') return requests;
 
     return requests.filter((req) => {
       if (apiFilter === 'douban') return req.path.startsWith('/api/douban');
+      if (apiFilter === 'shortdrama') return req.path.startsWith('/api/shortdrama');
       if (apiFilter === 'cron') return req.path === '/api/cron';
       if (apiFilter === 'admin') return req.path.startsWith('/api/admin');
       if (apiFilter === 'series') return req.path.startsWith('/api/series');
       if (apiFilter === 'favorites') return req.path.startsWith('/api/favorites');
+      if (apiFilter === 'playrecords') return req.path.startsWith('/api/playrecords');
+      if (apiFilter === 'skipconfigs') return req.path.startsWith('/api/skipconfigs');
+      if (apiFilter === 'search') return req.path.startsWith('/api/search');
+      if (apiFilter === 'list') return req.path.startsWith('/api/source-browser/list');
+      if (apiFilter === 'detail') return req.path.startsWith('/api/detail');
+      if (apiFilter === 'danmu') return req.path.startsWith('/api/danmu-external');
       return true;
     });
   };
 
+  // 过滤请求列表（用于显示，最多显示100条）
+  const filterRequestsForDisplay = (requests: any[]) => {
+    const filtered = filterRequestsForStats(requests);
+    // 限制最多显示100条（取最新的100条）
+    return filtered.slice(0, 100);
+  };
+
+  // 计算过滤后的统计数据
+  const getFilteredStats = () => {
+    if (!data) return null;
+
+    // 应用API筛选（用于统计，不限制条数）
+    const filteredRequests = filterRequestsForStats(data.recentRequests);
+
+    if (filteredRequests.length === 0) {
+      return {
+        requestsPerMinute: 0,
+        avgResponseTime: 0,
+        dbQueriesPerMinute: 0,
+        trafficPerMinute: 0,
+      };
+    }
+
+    // 计算时间范围内的分钟数
+    const minutes = parseInt(timeRange) * 60;
+
+    // 计算平均每分钟请求数（保留2位小数）
+    const requestsPerMinute = Number((filteredRequests.length / minutes).toFixed(2));
+
+    // 计算平均响应时间（保留整数）
+    const avgResponseTime = Math.round(
+      filteredRequests.reduce((sum: number, r: any) => sum + r.duration, 0) / filteredRequests.length
+    );
+
+    // 计算平均每分钟DB查询数（保留2位小数）
+    const totalDbQueries = filteredRequests.reduce((sum: number, r: any) => sum + r.dbQueries, 0);
+    const dbQueriesPerMinute = Number((totalDbQueries / minutes).toFixed(2));
+
+    // 计算平均每分钟流量（保留2位小数，单位：字节）
+    const totalTraffic = filteredRequests.reduce(
+      (sum: number, r: any) => sum + r.requestSize + r.responseSize,
+      0
+    );
+    const trafficPerMinute = Number((totalTraffic / minutes).toFixed(2));
+
+    return {
+      requestsPerMinute,
+      avgResponseTime,
+      dbQueriesPerMinute,
+      trafficPerMinute,
+    };
+  };
+
+  // 性能评估函数 - 响应时间
+  const getResponseTimeRating = (avgResponseTime: number) => {
+    if (avgResponseTime < 100) {
+      return { level: 'excellent', label: '优秀', color: 'text-green-600 dark:text-green-400', tip: '< 100ms' };
+    } else if (avgResponseTime < 200) {
+      return { level: 'good', label: '良好', color: 'text-blue-600 dark:text-blue-400', tip: '100-200ms' };
+    } else if (avgResponseTime < 2000) {
+      return { level: 'fair', label: '可接受', color: 'text-yellow-600 dark:text-yellow-400', tip: '200-2000ms' };
+    } else {
+      return { level: 'poor', label: '需优化', color: 'text-red-600 dark:text-red-400', tip: '> 2000ms' };
+    }
+  };
+
+  // 性能评估函数 - 每请求DB查询数
+  const getDbQueriesRating = (requestsPerMinute: number, dbQueriesPerMinute: number) => {
+    if (requestsPerMinute === 0) return { level: 'unknown', label: '无数据', color: 'text-gray-500', tip: '' };
+
+    const queriesPerRequest = dbQueriesPerMinute / requestsPerMinute;
+    if (queriesPerRequest < 5) {
+      return { level: 'excellent', label: '优秀', color: 'text-green-600 dark:text-green-400', tip: '< 5次/请求' };
+    } else if (queriesPerRequest < 10) {
+      return { level: 'good', label: '良好', color: 'text-blue-600 dark:text-blue-400', tip: '5-10次/请求' };
+    } else if (queriesPerRequest < 20) {
+      return { level: 'fair', label: '可接受', color: 'text-yellow-600 dark:text-yellow-400', tip: '10-20次/请求' };
+    } else {
+      return { level: 'poor', label: '需优化', color: 'text-red-600 dark:text-red-400', tip: '> 20次/请求' };
+    }
+  };
+
+  // 性能评估函数 - API 流量（返回给用户的流量）
+  const getTrafficRating = (trafficPerMinute: number) => {
+    const trafficKB = trafficPerMinute / 1024; // 转换为 KB
+    if (trafficKB < 10) {
+      return { level: 'excellent', label: '非常轻量', color: 'text-green-600 dark:text-green-400', tip: '< 10 KB/分钟' };
+    } else if (trafficKB < 50) {
+      return { level: 'good', label: '轻量', color: 'text-blue-600 dark:text-blue-400', tip: '10-50 KB/分钟' };
+    } else if (trafficKB < 200) {
+      return { level: 'fair', label: '中等', color: 'text-yellow-600 dark:text-yellow-400', tip: '50-200 KB/分钟' };
+    } else {
+      return { level: 'poor', label: '较重', color: 'text-orange-600 dark:text-orange-400', tip: '> 200 KB/分钟' };
+    }
+  };
+
+  // 性能评估函数 - 外部流量（调用外部 API 的流量）
+  const getExternalTrafficRating = (trafficPerMinute: number) => {
+    const trafficMB = trafficPerMinute / 1024 / 1024; // 转换为 MB
+    if (trafficMB < 1) {
+      return { level: 'excellent', label: '正常', color: 'text-green-600 dark:text-green-400', tip: '< 1 MB/分钟' };
+    } else if (trafficMB < 3) {
+      return { level: 'good', label: '中等', color: 'text-blue-600 dark:text-blue-400', tip: '1-3 MB/分钟' };
+    } else if (trafficMB < 5) {
+      return { level: 'fair', label: '较高', color: 'text-yellow-600 dark:text-yellow-400', tip: '3-5 MB/分钟' };
+    } else {
+      return { level: 'poor', label: '异常高', color: 'text-red-600 dark:text-red-400', tip: '> 5 MB/分钟' };
+    }
+  };
+
   // 获取性能数据
   const fetchData = async () => {
+    setLoading(true);
     try {
       const response = await fetch(`/api/admin/performance?hours=${timeRange}`);
       if (response.ok) {
@@ -142,6 +290,9 @@ export default function PerformanceMonitor() {
     );
   }
 
+  // 获取过滤后的统计数据
+  const filteredStats = getFilteredStats();
+
   return (
     <div className='space-y-6 pb-safe-bottom'>
       {/* 标题和控制按钮 */}
@@ -168,10 +319,17 @@ export default function PerformanceMonitor() {
           >
             <option value='all'>全部 API</option>
             <option value='douban'>豆瓣 API</option>
-            <option value='cron'>Cron 任务</option>
-            <option value='admin'>管理后台</option>
-            <option value='series'>剧集管理</option>
+            <option value='shortdrama'>短剧 API</option>
+            <option value='search'>视频搜索</option>
+            <option value='list'>视频列表</option>
+            <option value='detail'>视频详情</option>
+            <option value='danmu'>弹幕获取</option>
             <option value='favorites'>收藏管理</option>
+            <option value='playrecords'>播放记录</option>
+            <option value='skipconfigs'>跳过配置</option>
+            <option value='cron'>Cron 任务</option>
+            <option value='series'>剧集管理</option>
+            <option value='admin'>管理后台</option>
           </select>
 
           {/* 自动刷新 */}
@@ -208,7 +366,7 @@ export default function PerformanceMonitor() {
       </div>
 
       {/* 实时状态卡片 */}
-      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4'>
+      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4'>
         {/* CPU 使用率 */}
         <div className='bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700'>
           <div className='flex items-center justify-between mb-2'>
@@ -227,10 +385,10 @@ export default function PerformanceMonitor() {
             <HardDrive className='w-5 h-5 text-blue-500' />
           </div>
           <div className='text-2xl font-bold text-gray-800 dark:text-gray-200'>
-            {data.currentStatus.system.memoryUsage.systemUsed.toFixed(0)} MB
+            {formatTraffic(data.currentStatus.system.memoryUsage.systemUsed * 1024 * 1024)}
           </div>
           <div className='text-xs text-gray-500 dark:text-gray-400 mt-1'>
-            已用 / 总共 {data.currentStatus.system.memoryUsage.systemTotal.toFixed(0)} MB
+            已用 / 总共 {formatTraffic(data.currentStatus.system.memoryUsage.systemTotal * 1024 * 1024)}
             <span className='ml-2 text-blue-600 dark:text-blue-400'>
               ({((data.currentStatus.system.memoryUsage.systemUsed / data.currentStatus.system.memoryUsage.systemTotal) * 100).toFixed(1)}%)
             </span>
@@ -244,10 +402,15 @@ export default function PerformanceMonitor() {
             <Activity className='w-5 h-5 text-green-500' />
           </div>
           <div className='text-2xl font-bold text-gray-800 dark:text-gray-200'>
-            {data.currentStatus.requestsPerMinute}
+            {filteredStats?.requestsPerMinute ?? 0}
           </div>
           <div className='text-xs text-gray-500 dark:text-gray-400 mt-1'>
-            平均响应: {data.currentStatus.avgResponseTime}ms
+            平均响应: {filteredStats?.avgResponseTime ?? 0}ms
+            {filteredStats && (
+              <span className={`ml-2 font-semibold ${getResponseTimeRating(filteredStats.avgResponseTime).color}`}>
+                ({getResponseTimeRating(filteredStats.avgResponseTime).label})
+              </span>
+            )}
           </div>
         </div>
 
@@ -258,29 +421,126 @@ export default function PerformanceMonitor() {
             <Database className='w-5 h-5 text-purple-500' />
           </div>
           <div className='text-2xl font-bold text-gray-800 dark:text-gray-200'>
-            {data.currentStatus.dbQueriesPerMinute}
+            {filteredStats?.dbQueriesPerMinute ?? 0}
+          </div>
+          <div className='text-xs text-gray-500 dark:text-gray-400 mt-1'>
+            {filteredStats && filteredStats.requestsPerMinute > 0 && (
+              <>
+                平均: {(filteredStats.dbQueriesPerMinute / filteredStats.requestsPerMinute).toFixed(1)} 次/请求
+                <span className={`ml-2 font-semibold ${getDbQueriesRating(filteredStats.requestsPerMinute, filteredStats.dbQueriesPerMinute).color}`}>
+                  ({getDbQueriesRating(filteredStats.requestsPerMinute, filteredStats.dbQueriesPerMinute).label})
+                </span>
+              </>
+            )}
           </div>
         </div>
 
         {/* 流量/分钟 */}
         <div className='bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700'>
           <div className='flex items-center justify-between mb-2'>
-            <span className='text-sm text-gray-600 dark:text-gray-400'>流量/分钟</span>
+            <span className='text-sm text-gray-600 dark:text-gray-400'>API 流量/分钟</span>
             <Activity className='w-5 h-5 text-orange-500' />
           </div>
           <div className='text-2xl font-bold text-gray-800 dark:text-gray-200'>
-            {(data.currentStatus.trafficPerMinute / 1024).toFixed(2)} KB
+            {((filteredStats?.trafficPerMinute ?? 0) / 1024).toFixed(2)} KB
+          </div>
+          <div className='text-xs text-gray-500 dark:text-gray-400 mt-1'>
+            {filteredStats && (
+              <span className={`font-semibold ${getTrafficRating(filteredStats.trafficPerMinute).color}`}>
+                ({getTrafficRating(filteredStats.trafficPerMinute).label})
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* 外部流量/分钟 */}
+        <div className='bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700'>
+          <div className='flex items-center justify-between mb-2'>
+            <span className='text-sm text-gray-600 dark:text-gray-400'>外部流量/分钟</span>
+            <Zap className='w-5 h-5 text-purple-500' />
+          </div>
+          <div className='text-2xl font-bold text-gray-800 dark:text-gray-200'>
+            {data?.externalTraffic ?
+              formatTraffic(data.externalTraffic.totalTraffic / parseInt(timeRange) / 60) :
+              '0.00 B'
+            }
+          </div>
+          <div className='text-xs text-gray-500 dark:text-gray-400 mt-1'>
+            {data?.externalTraffic && data.externalTraffic.totalRequests > 0 ? (
+              <>
+                {data.externalTraffic.totalRequests} 次外部请求
+                <span className={`ml-2 font-semibold ${getExternalTrafficRating(data.externalTraffic.totalTraffic / parseInt(timeRange) / 60).color}`}>
+                  ({getExternalTrafficRating(data.externalTraffic.totalTraffic / parseInt(timeRange) / 60).label})
+                </span>
+              </>
+            ) : (
+              <span className='text-gray-400'>暂无外部请求</span>
+            )}
           </div>
         </div>
       </div>
 
+      {/* 外部流量详情（按域名分组） */}
+      {data?.externalTraffic && data.externalTraffic.totalRequests > 0 && (
+        <details className='bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden mt-6'>
+          <summary className='px-4 sm:px-6 py-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors'>
+            <h3 className='text-lg font-semibold text-gray-800 dark:text-gray-200 inline'>
+              外部流量详情（按域名）
+            </h3>
+          </summary>
+          <div className='border-t border-gray-200 dark:border-gray-700'>
+            <div className='overflow-x-auto'>
+            <table className='min-w-full divide-y divide-gray-200 dark:divide-gray-700'>
+              <thead className='bg-gray-50 dark:bg-gray-700'>
+                <tr>
+                  <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase'>
+                    域名
+                  </th>
+                  <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase'>
+                    请求次数
+                  </th>
+                  <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase'>
+                    总流量
+                  </th>
+                  <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase'>
+                    平均流量/请求
+                  </th>
+                </tr>
+              </thead>
+              <tbody className='bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700'>
+                {Object.entries(data.externalTraffic.byDomain)
+                  .sort((a, b) => b[1].traffic - a[1].traffic)
+                  .map(([domain, stats]) => (
+                    <tr key={domain}>
+                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100'>
+                        {domain}
+                      </td>
+                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100'>
+                        {stats.requests}
+                      </td>
+                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100'>
+                        {formatTraffic(stats.traffic)}
+                      </td>
+                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100'>
+                        {formatTraffic(stats.traffic / stats.requests)}
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+            </div>
+          </div>
+        </details>
+      )}
+
       {/* 最近请求列表 */}
-      <div className='bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden'>
-        <div className='px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700'>
-          <h3 className='text-lg font-semibold text-gray-800 dark:text-gray-200'>
+      <details className='bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden'>
+        <summary className='px-4 sm:px-6 py-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors'>
+          <h3 className='text-lg font-semibold text-gray-800 dark:text-gray-200 inline'>
             最近请求（最新 100 条）
           </h3>
-        </div>
+        </summary>
+        <div className='border-t border-gray-200 dark:border-gray-700'>
         <div className='overflow-x-auto -mx-4 sm:mx-0'>
           <div className='inline-block min-w-full align-middle'>
             <table className='min-w-full divide-y divide-gray-200 dark:divide-gray-700'>
@@ -310,7 +570,7 @@ export default function PerformanceMonitor() {
               </tr>
             </thead>
             <tbody className='bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700'>
-              {filterRequests(data.recentRequests).map((request: any, index: number) => {
+              {filterRequestsForDisplay(data.recentRequests).map((request: any, index: number) => {
                 const responseSizeKB = (request.responseSize / 1024).toFixed(2);
                 const isSuccess = request.statusCode >= 200 && request.statusCode < 300;
                 const isError = request.statusCode >= 400;
@@ -359,7 +619,8 @@ export default function PerformanceMonitor() {
           </table>
           </div>
         </div>
-      </div>
+        </div>
+      </details>
     </div>
   );
 }

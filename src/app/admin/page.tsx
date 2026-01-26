@@ -6715,7 +6715,7 @@ function AdminPageClient() {
   return (
     <PageLayout activePath='/admin'>
       <div className='-mt-6 md:mt-0'>
-        <div className='max-w-[95%] mx-auto pb-safe-bottom'>
+        <div className='max-w-[95%] mx-auto pb-32 md:pb-safe-bottom'>
           {/* 标题 + 重置配置按钮 */}
           <div className='flex items-center gap-2 mb-8'>
             <h1 className='text-2xl font-bold text-gray-900 dark:text-gray-100'>
@@ -6731,39 +6731,40 @@ function AdminPageClient() {
             )}
           </div>
 
-          {/* 配置文件标签 - 仅站长可见 */}
-          {role === 'owner' && (
+          {/* 所有配置标签容器 */}
+          <div className='space-y-6'>
+            {/* 配置文件标签 - 仅站长可见 */}
+            {role === 'owner' && (
+              <CollapsibleTab
+                title='配置文件'
+                icon={
+                  <FileText
+                    size={20}
+                    className='text-gray-600 dark:text-gray-400'
+                  />
+                }
+                isExpanded={expandedTabs.configFile}
+                onToggle={() => toggleTab('configFile')}
+              >
+                <ConfigFileComponent config={config} refreshConfig={fetchConfig} />
+              </CollapsibleTab>
+            )}
+
+            {/* 站点配置标签 */}
             <CollapsibleTab
-              title='配置文件'
+              title='站点配置'
               icon={
-                <FileText
+                <Settings
                   size={20}
                   className='text-gray-600 dark:text-gray-400'
                 />
               }
-              isExpanded={expandedTabs.configFile}
-              onToggle={() => toggleTab('configFile')}
+              isExpanded={expandedTabs.siteConfig}
+              onToggle={() => toggleTab('siteConfig')}
             >
-              <ConfigFileComponent config={config} refreshConfig={fetchConfig} />
+              <SiteConfigComponent config={config} refreshConfig={fetchConfig} />
             </CollapsibleTab>
-          )}
 
-          {/* 站点配置标签 */}
-          <CollapsibleTab
-            title='站点配置'
-            icon={
-              <Settings
-                size={20}
-                className='text-gray-600 dark:text-gray-400'
-              />
-            }
-            isExpanded={expandedTabs.siteConfig}
-            onToggle={() => toggleTab('siteConfig')}
-          >
-            <SiteConfigComponent config={config} refreshConfig={fetchConfig} />
-          </CollapsibleTab>
-
-          <div className='space-y-4'>
             {/* 用户配置标签 */}
             <CollapsibleTab
               title='用户配置'
