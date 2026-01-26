@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+import { recordRequest, getDbQueryCount, resetDbQueryCount } from '@/lib/performance-monitor';
+
 // 强制动态路由，禁用所有缓存
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -44,6 +46,10 @@ async function searchShortDramasInternal(
 }
 
 export async function GET(request: NextRequest) {
+  const startTime = Date.now();
+  const startMemory = process.memoryUsage().heapUsed;
+  resetDbQueryCount();
+
   try {
     const { searchParams } = request.nextUrl;
     const query = searchParams.get('query');
@@ -51,20 +57,44 @@ export async function GET(request: NextRequest) {
     const size = searchParams.get('size');
 
     if (!query) {
-      return NextResponse.json(
-        { error: '缺少必要参数: query' },
-        { status: 400 }
-      );
+      const errorResponse = { error: '缺少必要参数: query' };
+      const responseSize = Buffer.byteLength(JSON.stringify(errorResponse), 'utf8');
+
+      recordRequest({
+        timestamp: startTime,
+        method: 'GET',
+        path: '/api/shortdrama/search',
+        statusCode: 400,
+        duration: Date.now() - startTime,
+        memoryUsed: (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
+        dbQueries: getDbQueryCount(),
+        requestSize: 0,
+        responseSize,
+      });
+
+      return NextResponse.json(errorResponse, { status: 400 });
     }
 
     const pageNum = page ? parseInt(page) : 1;
     const pageSize = size ? parseInt(size) : 20;
 
     if (isNaN(pageNum) || isNaN(pageSize)) {
-      return NextResponse.json(
-        { error: '参数格式错误' },
-        { status: 400 }
-      );
+      const errorResponse = { error: '参数格式错误' };
+      const responseSize = Buffer.byteLength(JSON.stringify(errorResponse), 'utf8');
+
+      recordRequest({
+        timestamp: startTime,
+        method: 'GET',
+        path: '/api/shortdrama/search',
+        statusCode: 400,
+        duration: Date.now() - startTime,
+        memoryUsed: (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
+        dbQueries: getDbQueryCount(),
+        requestSize: 0,
+        responseSize,
+      });
+
+      return NextResponse.json(errorResponse, { status: 400 });
     }
 
     const result = await searchShortDramasInternal(query, pageNum, pageSize);
@@ -88,12 +118,39 @@ export async function GET(request: NextRequest) {
     // Vary头确保不同设备有不同缓存
     response.headers.set('Vary', 'Accept-Encoding, User-Agent');
 
+    // 记录性能指标
+    const responseSize = Buffer.byteLength(JSON.stringify(result), 'utf8');
+    recordRequest({
+      timestamp: startTime,
+      method: 'GET',
+      path: '/api/shortdrama/search',
+      statusCode: 200,
+      duration: Date.now() - startTime,
+      memoryUsed: (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
+      dbQueries: getDbQueryCount(),
+      requestSize: 0,
+      responseSize,
+    });
+
     return response;
   } catch (error) {
     console.error('搜索短剧失败:', error);
-    return NextResponse.json(
-      { error: '服务器内部错误' },
-      { status: 500 }
-    );
+
+    const errorResponse = { error: '服务器内部错误' };
+    const responseSize = Buffer.byteLength(JSON.stringify(errorResponse), 'utf8');
+
+    recordRequest({
+      timestamp: startTime,
+      method: 'GET',
+      path: '/api/shortdrama/search',
+      statusCode: 500,
+      duration: Date.now() - startTime,
+      memoryUsed: (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
+      dbQueries: getDbQueryCount(),
+      requestSize: 0,
+      responseSize,
+    });
+
+    return NextResponse.json(errorResponse, { status: 500 });
   }
 }

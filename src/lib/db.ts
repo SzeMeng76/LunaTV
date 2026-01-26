@@ -13,6 +13,7 @@ import {
   UserPlayStat,
 } from './types';
 import { UpstashRedisStorage } from './upstash.db';
+import { incrementDbQuery } from './performance-monitor';
 
 // storage type 常量: 'localstorage' | 'redis' | 'upstash'，默认 'localstorage'
 const STORAGE_TYPE =
@@ -67,6 +68,7 @@ export class DbManager {
     source: string,
     id: string
   ): Promise<PlayRecord | null> {
+    incrementDbQuery();
     const key = generateStorageKey(source, id);
     return this.storage.getPlayRecord(userName, key);
   }
@@ -77,6 +79,7 @@ export class DbManager {
     id: string,
     record: PlayRecord
   ): Promise<void> {
+    incrementDbQuery();
     const key = generateStorageKey(source, id);
     await this.storage.setPlayRecord(userName, key, record);
   }
@@ -84,6 +87,7 @@ export class DbManager {
   async getAllPlayRecords(userName: string): Promise<{
     [key: string]: PlayRecord;
   }> {
+    incrementDbQuery();
     return this.storage.getAllPlayRecords(userName);
   }
 
@@ -92,6 +96,7 @@ export class DbManager {
     source: string,
     id: string
   ): Promise<void> {
+    incrementDbQuery();
     const key = generateStorageKey(source, id);
     await this.storage.deletePlayRecord(userName, key);
   }
@@ -102,6 +107,7 @@ export class DbManager {
     source: string,
     id: string
   ): Promise<Favorite | null> {
+    incrementDbQuery();
     const key = generateStorageKey(source, id);
     return this.storage.getFavorite(userName, key);
   }
@@ -112,6 +118,7 @@ export class DbManager {
     id: string,
     favorite: Favorite
   ): Promise<void> {
+    incrementDbQuery();
     const key = generateStorageKey(source, id);
     await this.storage.setFavorite(userName, key, favorite);
   }
@@ -119,6 +126,7 @@ export class DbManager {
   async getAllFavorites(
     userName: string
   ): Promise<{ [key: string]: Favorite }> {
+    incrementDbQuery();
     return this.storage.getAllFavorites(userName);
   }
 
@@ -127,6 +135,7 @@ export class DbManager {
     source: string,
     id: string
   ): Promise<void> {
+    incrementDbQuery();
     const key = generateStorageKey(source, id);
     await this.storage.deleteFavorite(userName, key);
   }
@@ -136,29 +145,35 @@ export class DbManager {
     source: string,
     id: string
   ): Promise<boolean> {
+    incrementDbQuery();
     const favorite = await this.getFavorite(userName, source, id);
     return favorite !== null;
   }
 
   // ---------- 用户相关 ----------
   async registerUser(userName: string, password: string): Promise<void> {
+    incrementDbQuery();
     await this.storage.registerUser(userName, password);
   }
 
   async verifyUser(userName: string, password: string): Promise<boolean> {
+    incrementDbQuery();
     return this.storage.verifyUser(userName, password);
   }
 
   // 检查用户是否已存在
   async checkUserExist(userName: string): Promise<boolean> {
+    incrementDbQuery();
     return this.storage.checkUserExist(userName);
   }
 
   async changePassword(userName: string, newPassword: string): Promise<void> {
+    incrementDbQuery();
     await this.storage.changePassword(userName, newPassword);
   }
 
   async deleteUser(userName: string): Promise<void> {
+    incrementDbQuery();
     await this.storage.deleteUser(userName);
   }
 
@@ -171,12 +186,14 @@ export class DbManager {
     oidcSub?: string,
     enabledApis?: string[]
   ): Promise<void> {
+    incrementDbQuery();
     if (typeof (this.storage as any).createUserV2 === 'function') {
       await (this.storage as any).createUserV2(userName, password, role, tags, oidcSub, enabledApis);
     }
   }
 
   async verifyUserV2(userName: string, password: string): Promise<boolean> {
+    incrementDbQuery();
     if (typeof (this.storage as any).verifyUserV2 === 'function') {
       return (this.storage as any).verifyUserV2(userName, password);
     }
@@ -184,6 +201,7 @@ export class DbManager {
   }
 
   async checkUserExistV2(userName: string): Promise<boolean> {
+    incrementDbQuery();
     if (typeof (this.storage as any).checkUserExistV2 === 'function') {
       return (this.storage as any).checkUserExistV2(userName);
     }
@@ -191,6 +209,7 @@ export class DbManager {
   }
 
   async getUserByOidcSub(oidcSub: string): Promise<string | null> {
+    incrementDbQuery();
     if (typeof (this.storage as any).getUserByOidcSub === 'function') {
       return (this.storage as any).getUserByOidcSub(oidcSub);
     }
@@ -206,6 +225,7 @@ export class DbManager {
     createdAt?: number;
     oidcSub?: string;
   } | null> {
+    incrementDbQuery();
     if (typeof (this.storage as any).getUserInfoV2 === 'function') {
       return (this.storage as any).getUserInfoV2(userName);
     }
@@ -214,19 +234,23 @@ export class DbManager {
 
   // ---------- 搜索历史 ----------
   async getSearchHistory(userName: string): Promise<string[]> {
+    incrementDbQuery();
     return this.storage.getSearchHistory(userName);
   }
 
   async addSearchHistory(userName: string, keyword: string): Promise<void> {
+    incrementDbQuery();
     await this.storage.addSearchHistory(userName, keyword);
   }
 
   async deleteSearchHistory(userName: string, keyword?: string): Promise<void> {
+    incrementDbQuery();
     await this.storage.deleteSearchHistory(userName, keyword);
   }
 
   // 获取全部用户名
   async getAllUsers(): Promise<string[]> {
+    incrementDbQuery();
     if (typeof (this.storage as any).getAllUsers === 'function') {
       return (this.storage as any).getAllUsers();
     }
@@ -235,6 +259,7 @@ export class DbManager {
 
   // ---------- 管理员配置 ----------
   async getAdminConfig(): Promise<AdminConfig | null> {
+    incrementDbQuery();
     if (typeof (this.storage as any).getAdminConfig === 'function') {
       return (this.storage as any).getAdminConfig();
     }
@@ -242,6 +267,7 @@ export class DbManager {
   }
 
   async saveAdminConfig(config: AdminConfig): Promise<void> {
+    incrementDbQuery();
     if (typeof (this.storage as any).setAdminConfig === 'function') {
       await (this.storage as any).setAdminConfig(config);
     }
@@ -253,6 +279,7 @@ export class DbManager {
     source: string,
     id: string
   ): Promise<EpisodeSkipConfig | null> {
+    incrementDbQuery();
     if (typeof (this.storage as any).getSkipConfig === 'function') {
       return (this.storage as any).getSkipConfig(userName, source, id);
     }
@@ -265,6 +292,7 @@ export class DbManager {
     id: string,
     config: EpisodeSkipConfig
   ): Promise<void> {
+    incrementDbQuery();
     if (typeof (this.storage as any).setSkipConfig === 'function') {
       await (this.storage as any).setSkipConfig(userName, source, id, config);
     }
@@ -275,6 +303,7 @@ export class DbManager {
     source: string,
     id: string
   ): Promise<void> {
+    incrementDbQuery();
     if (typeof (this.storage as any).deleteSkipConfig === 'function') {
       await (this.storage as any).deleteSkipConfig(userName, source, id);
     }
@@ -283,6 +312,7 @@ export class DbManager {
   async getAllSkipConfigs(
     userName: string
   ): Promise<{ [key: string]: EpisodeSkipConfig }> {
+    incrementDbQuery();
     if (typeof (this.storage as any).getAllSkipConfigs === 'function') {
       return (this.storage as any).getAllSkipConfigs(userName);
     }
@@ -295,6 +325,7 @@ export class DbManager {
     source: string,
     id: string
   ): Promise<EpisodeSkipConfig | null> {
+    incrementDbQuery();
     if (typeof (this.storage as any).getEpisodeSkipConfig === 'function') {
       return (this.storage as any).getEpisodeSkipConfig(userName, source, id);
     }
@@ -307,6 +338,7 @@ export class DbManager {
     id: string,
     config: EpisodeSkipConfig
   ): Promise<void> {
+    incrementDbQuery();
     if (typeof (this.storage as any).saveEpisodeSkipConfig === 'function') {
       await (this.storage as any).saveEpisodeSkipConfig(userName, source, id, config);
     }
@@ -317,6 +349,7 @@ export class DbManager {
     source: string,
     id: string
   ): Promise<void> {
+    incrementDbQuery();
     if (typeof (this.storage as any).deleteEpisodeSkipConfig === 'function') {
       await (this.storage as any).deleteEpisodeSkipConfig(userName, source, id);
     }
@@ -325,6 +358,7 @@ export class DbManager {
   async getAllEpisodeSkipConfigs(
     userName: string
   ): Promise<{ [key: string]: EpisodeSkipConfig }> {
+    incrementDbQuery();
     if (typeof (this.storage as any).getAllEpisodeSkipConfigs === 'function') {
       return (this.storage as any).getAllEpisodeSkipConfigs(userName);
     }
@@ -333,6 +367,7 @@ export class DbManager {
 
   // ---------- 数据清理 ----------
   async clearAllData(): Promise<void> {
+    incrementDbQuery();
     if (typeof (this.storage as any).clearAllData === 'function') {
       await (this.storage as any).clearAllData();
     } else {
@@ -342,6 +377,7 @@ export class DbManager {
 
   // ---------- 通用缓存方法 ----------
   async getCache(key: string): Promise<any | null> {
+    incrementDbQuery();
     if (typeof this.storage.getCache === 'function') {
       return await this.storage.getCache(key);
     }
@@ -349,18 +385,21 @@ export class DbManager {
   }
 
   async setCache(key: string, data: any, expireSeconds?: number): Promise<void> {
+    incrementDbQuery();
     if (typeof this.storage.setCache === 'function') {
       await this.storage.setCache(key, data, expireSeconds);
     }
   }
 
   async deleteCache(key: string): Promise<void> {
+    incrementDbQuery();
     if (typeof this.storage.deleteCache === 'function') {
       await this.storage.deleteCache(key);
     }
   }
 
   async clearExpiredCache(prefix?: string): Promise<void> {
+    incrementDbQuery();
     if (typeof this.storage.clearExpiredCache === 'function') {
       await this.storage.clearExpiredCache(prefix);
     }
@@ -368,6 +407,7 @@ export class DbManager {
 
   // ---------- 播放统计相关 ----------
   async getPlayStats(): Promise<PlayStatsResult> {
+    incrementDbQuery();
     if (typeof (this.storage as any).getPlayStats === 'function') {
       return (this.storage as any).getPlayStats();
     }
@@ -398,6 +438,7 @@ export class DbManager {
   }
 
   async getUserPlayStat(userName: string): Promise<UserPlayStat> {
+    incrementDbQuery();
     if (typeof (this.storage as any).getUserPlayStat === 'function') {
       return (this.storage as any).getUserPlayStat(userName);
     }
@@ -415,6 +456,7 @@ export class DbManager {
   }
 
   async getContentStats(limit = 10): Promise<ContentStat[]> {
+    incrementDbQuery();
     if (typeof (this.storage as any).getContentStats === 'function') {
       return (this.storage as any).getContentStats(limit);
     }
@@ -429,6 +471,7 @@ export class DbManager {
     _id: string,
     _watchTime: number
   ): Promise<void> {
+    incrementDbQuery();
     if (typeof (this.storage as any).updatePlayStatistics === 'function') {
       await (this.storage as any).updatePlayStatistics(_userName, _source, _id, _watchTime);
     }
@@ -439,6 +482,7 @@ export class DbManager {
     loginTime: number,
     isFirstLogin?: boolean
   ): Promise<void> {
+    incrementDbQuery();
     if (typeof (this.storage as any).updateUserLoginStats === 'function') {
       await (this.storage as any).updateUserLoginStats(userName, loginTime, isFirstLogin);
     }
@@ -446,6 +490,7 @@ export class DbManager {
 
   // 删除 V1 用户密码数据（用于 V1→V2 迁移）
   async deleteV1Password(userName: string): Promise<void> {
+    incrementDbQuery();
     if (typeof (this.storage as any).client !== 'undefined') {
       await (this.storage as any).client.del(`u:${userName}:pwd`);
     }

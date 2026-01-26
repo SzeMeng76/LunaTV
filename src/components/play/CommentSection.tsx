@@ -21,38 +21,8 @@ const CommentSection = memo(function CommentSection({
   error,
   videoDoubanId,
 }: CommentSectionProps) {
-  // 如果正在加载，显示加载状态
-  if (loading) {
-    return (
-      <div className='mt-6 border-t border-gray-200 dark:border-gray-700 pt-6'>
-        <h3 className='text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4 flex items-center gap-2'>
-          <span>💬</span>
-          <span>豆瓣短评</span>
-        </h3>
-        <div className='text-center py-8 text-gray-500 dark:text-gray-400'>
-          加载中...
-        </div>
-      </div>
-    );
-  }
-
-  // 如果有错误，显示错误信息
-  if (error) {
-    return (
-      <div className='mt-6 border-t border-gray-200 dark:border-gray-700 pt-6'>
-        <h3 className='text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4 flex items-center gap-2'>
-          <span>💬</span>
-          <span>豆瓣短评</span>
-        </h3>
-        <div className='text-center py-8 text-red-500 dark:text-red-400'>
-          {error}
-        </div>
-      </div>
-    );
-  }
-
-  // 如果没有评论，不显示
-  if (!comments || comments.length === 0) {
+  // 如果正在加载、有错误或没有评论，不显示
+  if (loading || error || !comments || comments.length === 0) {
     return null;
   }
 

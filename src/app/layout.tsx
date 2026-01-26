@@ -16,6 +16,7 @@ import { WatchRoomProvider } from '../components/WatchRoomProvider';
 import { DownloadProvider } from '../contexts/DownloadContext';
 import { DownloadPanel } from '../components/download/DownloadPanel';
 import ChatFloatingWindow from '../components/watch-room/ChatFloatingWindow';
+import QueryProvider from '../components/QueryProvider';
 
 const inter = Inter({ subsets: ['latin'] });
 export const dynamic = 'force-dynamic';
@@ -128,17 +129,19 @@ export default async function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <DownloadProvider>
-            <WatchRoomProvider>
-              <SiteProvider siteName={siteName} announcement={announcement}>
-                <SessionTracker />
-                {children}
-                <GlobalErrorIndicator />
-              </SiteProvider>
-              <DownloadPanel />
-              <ChatFloatingWindow />
-            </WatchRoomProvider>
-          </DownloadProvider>
+          <QueryProvider>
+            <DownloadProvider>
+              <WatchRoomProvider>
+                <SiteProvider siteName={siteName} announcement={announcement}>
+                  <SessionTracker />
+                  {children}
+                  <GlobalErrorIndicator />
+                </SiteProvider>
+                <DownloadPanel />
+                <ChatFloatingWindow />
+              </WatchRoomProvider>
+            </DownloadProvider>
+          </QueryProvider>
         </ThemeProvider>
       </body>
     </html>

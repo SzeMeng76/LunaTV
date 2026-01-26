@@ -204,8 +204,8 @@ const WatchRoomConfig = ({ config, refreshConfig }: WatchRoomConfigProps) => {
   useEffect(() => {
     if (savedConfig?.enabled && savedConfig.serverUrl && savedConfig.authKey) {
       fetchStats(true); // 使用已保存的配置
-      // 每30秒自动刷新
-      const interval = setInterval(() => fetchStats(true), 30000);
+      // 每1小时自动刷新
+      const interval = setInterval(() => fetchStats(true), 60 * 60 * 1000);
       return () => clearInterval(interval);
     }
   }, [savedConfig?.enabled, savedConfig?.serverUrl, savedConfig?.authKey]);

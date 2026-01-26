@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCacheTime } from '@/lib/config';
 import { fetchDoubanData } from '@/lib/douban';
 import { DoubanResult } from '@/lib/types';
+import { recordRequest } from '@/lib/performance-monitor';
 
 interface DoubanRecommendApiResponse {
   total: number;
@@ -26,6 +27,9 @@ interface DoubanRecommendApiResponse {
 export const runtime = 'nodejs';
 
 export async function GET(request: NextRequest) {
+  const startTime = Date.now();
+  const startMemory = process.memoryUsage().heapUsed;
+
   const { searchParams } = new URL(request.url);
 
   // 获取参数
@@ -47,7 +51,22 @@ export async function GET(request: NextRequest) {
     searchParams.get('label') === 'all' ? '' : searchParams.get('label');
 
   if (!kind) {
-    return NextResponse.json({ error: '缺少必要参数: kind' }, { status: 400 });
+    const errorResponse = { error: '缺少必要参数: kind' };
+    const errorSize = Buffer.byteLength(JSON.stringify(errorResponse), 'utf8');
+
+    recordRequest({
+      timestamp: startTime,
+      method: 'GET',
+      path: '/api/douban/recommends',
+      statusCode: 400,
+      duration: Date.now() - startTime,
+      memoryUsed: (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
+      dbQueries: 0,
+      requestSize: 0,
+      responseSize: errorSize,
+    });
+
+    return NextResponse.json(errorResponse, { status: 400 });
   }
 
   const selectedCategories = { 类型: category } as any;
@@ -112,6 +131,20 @@ export async function GET(request: NextRequest) {
       list: list,
     };
 
+    const responseSize = Buffer.byteLength(JSON.stringify(response), 'utf8');
+
+    recordRequest({
+      timestamp: startTime,
+      method: 'GET',
+      path: '/api/douban/recommends',
+      statusCode: 200,
+      duration: Date.now() - startTime,
+      memoryUsed: (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
+      dbQueries: 0,
+      requestSize: 0,
+      responseSize,
+    });
+
     const cacheTime = await getCacheTime();
     return NextResponse.json(response, {
       headers: {
@@ -122,9 +155,21 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    return NextResponse.json(
-      { error: '获取豆瓣数据失败', details: (error as Error).message },
-      { status: 500 }
-    );
+    const errorResponse = { error: '获取豆瓣数据失败', details: (error as Error).message };
+    const errorSize = Buffer.byteLength(JSON.stringify(errorResponse), 'utf8');
+
+    recordRequest({
+      timestamp: startTime,
+      method: 'GET',
+      path: '/api/douban/recommends',
+      statusCode: 500,
+      duration: Date.now() - startTime,
+      memoryUsed: (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
+      dbQueries: 0,
+      requestSize: 0,
+      responseSize: errorSize,
+    });
+
+    return NextResponse.json(errorResponse, { status: 500 });
   }
 }

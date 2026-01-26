@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getCacheTime } from '@/lib/config';
+import { recordRequest, getDbQueryCount, resetDbQueryCount } from '@/lib/performance-monitor';
 
 // 强制动态路由，禁用所有缓存
 export const dynamic = 'force-dynamic';
@@ -46,6 +47,10 @@ async function getShortDramaListInternal(
 }
 
 export async function GET(request: NextRequest) {
+  const startTime = Date.now();
+  const startMemory = process.memoryUsage().heapUsed;
+  resetDbQueryCount();
+
   try {
     const { searchParams } = request.nextUrl;
     const categoryId = searchParams.get('categoryId');
@@ -64,10 +69,22 @@ export async function GET(request: NextRequest) {
     });
 
     if (!categoryId) {
-      return NextResponse.json(
-        { error: '缺少必要参数: categoryId' },
-        { status: 400 }
-      );
+      const errorResponse = { error: '缺少必要参数: categoryId' };
+      const responseSize = Buffer.byteLength(JSON.stringify(errorResponse), 'utf8');
+
+      recordRequest({
+        timestamp: startTime,
+        method: 'GET',
+        path: '/api/shortdrama/list',
+        statusCode: 400,
+        duration: Date.now() - startTime,
+        memoryUsed: (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
+        dbQueries: getDbQueryCount(),
+        requestSize: 0,
+        responseSize,
+      });
+
+      return NextResponse.json(errorResponse, { status: 400 });
     }
 
     const category = parseInt(categoryId);
@@ -75,10 +92,22 @@ export async function GET(request: NextRequest) {
     const pageSize = size ? parseInt(size) : 20;
 
     if (isNaN(category) || isNaN(pageNum) || isNaN(pageSize)) {
-      return NextResponse.json(
-        { error: '参数格式错误' },
-        { status: 400 }
-      );
+      const errorResponse = { error: '参数格式错误' };
+      const responseSize = Buffer.byteLength(JSON.stringify(errorResponse), 'utf8');
+
+      recordRequest({
+        timestamp: startTime,
+        method: 'GET',
+        path: '/api/shortdrama/list',
+        statusCode: 400,
+        duration: Date.now() - startTime,
+        memoryUsed: (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
+        dbQueries: getDbQueryCount(),
+        requestSize: 0,
+        responseSize,
+      });
+
+      return NextResponse.json(errorResponse, { status: 400 });
     }
 
     const result = await getShortDramaListInternal(category, pageNum, pageSize);
@@ -114,12 +143,40 @@ export async function GET(request: NextRequest) {
     // Vary头确保不同设备有不同缓存
     response.headers.set('Vary', 'Accept-Encoding, User-Agent');
 
+    // 记录性能指标
+    const responseSize = Buffer.byteLength(JSON.stringify(result), 'utf8');
+    recordRequest({
+      timestamp: startTime,
+      method: 'GET',
+      path: '/api/shortdrama/list',
+      statusCode: 200,
+      duration: Date.now() - startTime,
+      memoryUsed: (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
+      dbQueries: getDbQueryCount(),
+      requestSize: 0,
+      responseSize,
+      filter: `category:${categoryId}|page:${pageNum}|size:${pageSize}|count:${result.list?.length || 0}`,
+    });
+
     return response;
   } catch (error) {
     console.error('获取短剧列表失败:', error);
-    return NextResponse.json(
-      { error: '服务器内部错误' },
-      { status: 500 }
-    );
+
+    const errorResponse = { error: '服务器内部错误' };
+    const responseSize = Buffer.byteLength(JSON.stringify(errorResponse), 'utf8');
+
+    recordRequest({
+      timestamp: startTime,
+      method: 'GET',
+      path: '/api/shortdrama/list',
+      statusCode: 500,
+      duration: Date.now() - startTime,
+      memoryUsed: (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
+      dbQueries: getDbQueryCount(),
+      requestSize: 0,
+      responseSize,
+    });
+
+    return NextResponse.json(errorResponse, { status: 500 });
   }
 }
