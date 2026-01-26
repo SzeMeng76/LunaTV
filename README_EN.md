@@ -69,6 +69,14 @@ This project is a deeply customized version based on **MoonTV**, continuously de
 - **Auto-Retry Mechanism**: 403 error auto-retry, ensures trailer continuous availability
 - **Performance Logging**: Complete trailer loading performance monitoring and logging
 - **TV Series Support**: Extended trailer support to TV series and non-movie content
+- **🚀 Video Cache Optimization (Kvrocks)**: Two-layer cache architecture dramatically reduces traffic consumption
+  - **Kvrocks Metadata Cache**: URL mapping and file info (15-minute TTL)
+  - **File System Video Cache**: Local storage of video content (12-hour TTL, max 500MB)
+  - **Smart Cache Hit**: After first download, subsequent requests served from local files
+  - **96% Traffic Savings**: 28 requests reduced from 932MB to 33MB (real data)
+  - **Response Speed Boost**: From seconds to milliseconds
+  - **Auto Expiration Cleanup**: Scheduled cleanup of expired cache, freeing storage space
+  - **Cache Stats API**: `GET /api/video-cache/stats` to view cache usage
 
 #### 🔧 Proxy Configuration System
 - **Dual-Layer Proxy Architecture**: TVBox and video playback independent proxy configs, no interference
@@ -361,6 +369,31 @@ This project is licensed under **CC BY-NC-SA 4.0**, with the following terms:
 
 ## 🚀 Deployment
 
+### 💻 Minimum System Requirements
+
+To ensure smooth operation, your server should meet the following minimum specifications:
+
+#### Docker Self-Hosted Deployment
+- **CPU**: 2 cores (4 cores recommended)
+- **RAM**: 2GB (4GB recommended)
+- **Storage**: 10GB available space (20GB recommended for video cache and database)
+- **Network**: 10Mbps upload bandwidth (100Mbps recommended)
+
+#### Zeabur / Vercel Cloud Deployment
+- **No Server Required**: Platform automatically allocates resources
+- **Zeabur**: Developer Plan provides up to 2 vCPU and 4GB RAM ($5/month with $5 credit, free if usage doesn't exceed credit)
+- **Vercel**: Serverless architecture with automatic scaling
+
+#### ⚠️ Common Performance Issues
+- ❌ **Insufficient CPU**: Single-core or low-frequency CPU causes slow video transcoding and search
+- ❌ **Low Memory**: Less than 2GB RAM leads to frequent OOM (Out of Memory) errors
+- ❌ **Low Bandwidth**: Upload bandwidth below 5Mbps causes video playback stuttering
+- ❌ **Slow Disk I/O**: Using HDD affects database and cache performance
+
+**💡 Tip**: If you experience lag, please check if your server meets the minimum requirements first!
+
+---
+
 ### ⚡ One-Click Deploy to Zeabur (Easiest)
 
 Click the button below for one-click deployment, automatically configures LunaTV + Kvrocks database:
@@ -400,9 +433,12 @@ services:
       - PASSWORD=your_secure_password
       - NEXT_PUBLIC_STORAGE_TYPE=kvrocks
       - KVROCKS_URL=redis://moontv-kvrocks:6666
+      - VIDEO_CACHE_DIR=/app/video-cache  # Video cache directory
       # Optional: Site configuration
       - SITE_BASE=https://your-domain.com
       - NEXT_PUBLIC_SITE_NAME=LunaTV Enhanced
+    volumes:
+      - video-cache:/app/video-cache  # Video cache persistence
     networks:
       - moontv-network
     depends_on:
@@ -423,6 +459,7 @@ networks:
 
 volumes:
   kvrocks-data:
+  video-cache:  # Video cache volume
 ```
 
 ### 🔴 Redis Storage (Risk of Data Loss)
@@ -589,6 +626,7 @@ Zeabur is a one-stop cloud deployment platform. Using pre-built Docker images al
    # Required: Storage Configuration
    NEXT_PUBLIC_STORAGE_TYPE=kvrocks
    KVROCKS_URL=redis://apachekvrocks:6666
+   VIDEO_CACHE_DIR=/app/video-cache
 
    # Optional: Site Configuration
    SITE_BASE=https://your-domain.zeabur.app
@@ -727,6 +765,7 @@ Perfect for users without servers. Completely free deployment (Vercel Free Tier 
 - **Serverless Constraints**: Vercel free tier has 10-second function execution time limit, some time-consuming operations may timeout
 - **Traffic Limit**: Vercel free tier provides 100GB monthly bandwidth, sufficient for personal use
 - **Cold Start**: First visit after long inactivity may be slower (approximately 1-3 seconds)
+- **No Video Caching**: Vercel has no persistent file system, video caching feature is unavailable (videos still play normally, just require proxy requests each time)
 - **Limited Features**: Due to serverless architecture, the following features may be restricted:
   - High concurrent search requests
   - Long video danmaku loading

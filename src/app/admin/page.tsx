@@ -5186,36 +5186,6 @@ const SiteConfigComponent = ({ config, refreshConfig }: { config: AdminConfig | 
         )}
       </div>
 
-      {/* 豆瓣 Puppeteer 设置 */}
-      <div>
-        <label className='flex items-center justify-between text-sm font-medium text-gray-700 dark:text-gray-300'>
-          <span>启用 Puppeteer 绕过反爬虫</span>
-          <button
-            type='button'
-            onClick={() =>
-              setSiteSettings((prev) => ({
-                ...prev,
-                EnablePuppeteer: !prev.EnablePuppeteer,
-              }))
-            }
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${
-              siteSettings.EnablePuppeteer
-                ? 'bg-green-600'
-                : 'bg-gray-300 dark:bg-gray-600'
-            }`}
-          >
-            <span
-              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${
-                siteSettings.EnablePuppeteer ? 'translate-x-6' : 'translate-x-1'
-              }`}
-            />
-          </button>
-        </label>
-        <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
-          开启后可获取完整数据（演员图片、相关推荐、评论），但会增加服务器 CPU 占用。默认关闭以节省资源。
-        </p>
-      </div>
-
       {/* 豆瓣 Cookies 设置 */}
       <div>
         <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
@@ -5234,7 +5204,7 @@ const SiteConfigComponent = ({ config, refreshConfig }: { config: AdminConfig | 
           className='w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 shadow-sm hover:border-gray-400 dark:hover:border-gray-500 font-mono'
         />
         <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
-          配置豆瓣认证 Cookies 后可直接访问 Web 页面，无需 Puppeteer。需包含 <code className='px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded'>dbcl2</code>、<code className='px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded'>frodotk_db</code>、<code className='px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded'>ck</code> 等关键字段。
+          配置豆瓣认证 Cookies 后可直接访问 Web 页面获取完整数据。需包含 <code className='px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded'>dbcl2</code>、<code className='px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded'>frodotk_db</code>、<code className='px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded'>ck</code> 等关键字段。
         </p>
       </div>
 

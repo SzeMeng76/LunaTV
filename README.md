@@ -69,6 +69,14 @@
 - **自动重试机制**：403错误自动重试，确保预告片持续可用
 - **性能日志追踪**：完整的预告片加载性能监控和日志记录
 - **电视剧内容支持**：扩展预告片支持到电视剧等非电影内容
+- **🚀 视频缓存优化（Kvrocks）**：两层缓存架构大幅减少流量消耗
+  - **Kvrocks元数据缓存**：URL映射和文件信息（15分钟TTL）
+  - **文件系统视频缓存**：本地存储视频内容（12小时TTL，最大500MB）
+  - **智能缓存命中**：首次下载后，后续请求直接从本地返回
+  - **流量节省96%**：28次请求从932MB降至33MB（实测数据）
+  - **响应速度提升**：从秒级降至毫秒级
+  - **自动过期清理**：定时清理过期缓存，释放存储空间
+  - **缓存统计API**：`GET /api/video-cache/stats` 查看缓存使用情况
 
 #### 🔧 代理配置系统
 - **双层代理架构**：TVBox和视频播放独立代理配置，互不干扰
@@ -347,6 +355,31 @@
 
 ## 🚀 部署
 
+### 💻 最低配置要求
+
+为确保流畅运行，建议服务器满足以下最低配置：
+
+#### Docker 自托管部署
+- **CPU**: 2 核心（推荐 4 核心）
+- **内存**: 2GB RAM（推荐 4GB）
+- **存储**: 10GB 可用空间（推荐 20GB，用于视频缓存和数据库）
+- **网络**: 10Mbps 上行带宽（推荐 100Mbps）
+
+#### Zeabur / Vercel 云端部署
+- **无需自备服务器**：平台自动分配资源
+- **Zeabur**: Developer Plan 提供最多 2 vCPU 和 4GB RAM（$5/月含 $5 credit，用量不超过则免费）
+- **Vercel**: 无服务器架构，按需自动扩容
+
+#### ⚠️ 常见卡顿原因
+- ❌ **CPU 不足**：单核或低频 CPU 会导致视频转码和搜索缓慢
+- ❌ **内存不足**：少于 2GB 内存会导致频繁 OOM（内存溢出）
+- ❌ **网络带宽低**：上行带宽低于 5Mbps 会导致视频播放卡顿
+- ❌ **磁盘 I/O 慢**：使用机械硬盘会影响数据库和缓存性能
+
+**💡 提示**：如果遇到卡顿问题，请先检查服务器配置是否满足最低要求！
+
+---
+
 ### ⚡ 一键部署到 Zeabur（最简单）
 
 点击下方按钮即可一键部署，自动配置 LunaTV + Kvrocks 数据库：
@@ -386,9 +419,12 @@ services:
       - PASSWORD=your_secure_password
       - NEXT_PUBLIC_STORAGE_TYPE=kvrocks
       - KVROCKS_URL=redis://moontv-kvrocks:6666
+      - VIDEO_CACHE_DIR=/app/video-cache  # 视频缓存目录
       # 可选：站点配置
       - SITE_BASE=https://your-domain.com
       - NEXT_PUBLIC_SITE_NAME=LunaTV Enhanced
+    volumes:
+      - video-cache:/app/video-cache  # 视频缓存持久化
     networks:
       - moontv-network
     depends_on:
@@ -409,6 +445,7 @@ networks:
 
 volumes:
   kvrocks-data:
+  video-cache:  # 视频缓存 volume
 ```
 
 ### 🔴 Redis 存储（有数据丢失风险）
@@ -575,6 +612,7 @@ Zeabur 是一站式云端部署平台，使用预构建的 Docker 镜像可以�
    # 必填：存储配置
    NEXT_PUBLIC_STORAGE_TYPE=kvrocks
    KVROCKS_URL=redis://apachekvrocks:6666
+   VIDEO_CACHE_DIR=/app/video-cache
 
    # 可选：站点配置
    SITE_BASE=https://your-domain.zeabur.app
@@ -713,6 +751,7 @@ Zeabur 是一站式云端部署平台，使用预构建的 Docker 镜像可以�
 - **无服务器限制**：Vercel 免费版有 10 秒函数执行时间限制，某些耗时操作可能超时
 - **流量限制**：Vercel 免费版每月 100GB 流量，个人使用足够
 - **冷启动**：长时间无访问后首次访问会较慢（约 1-3 秒）
+- **不支持视频缓存**：Vercel 无持久化文件系统，无法使用视频缓存功能（视频仍可正常播放，只是每次都需要代理请求）
 - **不支持功能**：由于无服务器架构限制，以下功能可能受限：
   - 大量并发搜索请求
   - 超长视频的弹幕加载

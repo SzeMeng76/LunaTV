@@ -7,9 +7,15 @@ import { DEFAULT_USER_AGENT } from '@/lib/user-agent';
 
 export const runtime = 'nodejs';
 
+const pickText = (value: any): string => {
+  if (value === undefined || value === null) return '';
+  if (Array.isArray(value)) return String(value[0] ?? '');
+  return String(value);
+};
+
 /**
- * POST /api/acg/search
- * 搜索 ACG 磁力资源（需要登录）
+ * POST /api/acg/mikan
+ * 搜索 Mikan RSS（需要登录，不支持分页）
  */
 export async function POST(req: NextRequest) {
   // 权限检查：需要登录
@@ -36,7 +42,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 验证页码
+    // 验证页码（Mikan RSS 不支持分页，这里仍接收 page 以保持接口一致）
     const pageNum = parseInt(String(page), 10);
     if (isNaN(pageNum) || pageNum < 1) {
       return NextResponse.json(
@@ -45,22 +51,28 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 请求 acg.rip API
-    const acgUrl = `https://acg.rip/page/${pageNum}.xml?term=${encodeURIComponent(trimmedKeyword)}`;
+    if (pageNum > 1) {
+      return NextResponse.json({
+        keyword: trimmedKeyword,
+        page: pageNum,
+        total: 0,
+        items: [],
+      });
+    }
 
-    const response = await fetch(acgUrl, {
+    const searchUrl = `https://mikanani.me/RSS/Search?searchstr=${encodeURIComponent(trimmedKeyword)}`;
+
+    const response = await fetch(searchUrl, {
       headers: {
         'User-Agent': DEFAULT_USER_AGENT,
       },
     });
 
     if (!response.ok) {
-      throw new Error(`ACG.RIP API 请求失败: ${response.status}`);
+      throw new Error(`Mikan API 请求失败: ${response.status}`);
     }
 
     const xmlData = await response.text();
-
-    // 解析 XML
     const parsed = await parseStringPromise(xmlData);
 
     if (!parsed?.rss?.channel?.[0]?.item) {
@@ -74,12 +86,29 @@ export async function POST(req: NextRequest) {
 
     const items = parsed.rss.channel[0].item;
 
-    // 转换为标准格式
     const results = items.map((item: any) => {
+      const title = pickText(item.title);
+      const link = pickText(item.link);
+      const guid = pickText(item.guid) || link || `${title}-${pickText(item.torrent?.[0]?.pubDate)}`;
+      const pubDate =
+        pickText(item.pubDate) ||
+        pickText(item.torrent?.[0]?.pubDate) ||
+        pickText(item['dc:date']);
+
+      const description =
+        pickText(item.description) ||
+        pickText(item['content:encoded']) ||
+        '';
+
+      const torrentUrl =
+        pickText(item.enclosure?.[0]?.$?.url) ||
+        pickText(item.enclosure?.[0]?.$?.href) ||
+        '';
+
       // 提取描述中的图片（如果有）
       let images: string[] = [];
-      if (item.description?.[0]) {
-        const imgMatches = item.description[0].match(/src="([^"]+)"/g);
+      if (description) {
+        const imgMatches = description.match(/src="([^"]+)"/g);
         if (imgMatches) {
           images = imgMatches.map((match: string) => {
             const urlMatch = match.match(/src="([^"]+)"/);
@@ -89,12 +118,12 @@ export async function POST(req: NextRequest) {
       }
 
       return {
-        title: item.title?.[0] || '',
-        link: item.link?.[0] || '',
-        guid: item.guid?.[0] || '',
-        pubDate: item.pubDate?.[0] || '',
-        torrentUrl: item.enclosure?.[0]?.$?.url || '',
-        description: item.description?.[0] || '',
+        title,
+        link,
+        guid,
+        pubDate,
+        torrentUrl,
+        description,
         images,
       };
     });
@@ -105,9 +134,8 @@ export async function POST(req: NextRequest) {
       total: results.length,
       items: results,
     });
-
   } catch (error: any) {
-    console.error('ACG 搜索失败:', error);
+    console.error('Mikan 搜索失败:', error);
     return NextResponse.json(
       { error: error.message || '搜索失败' },
       { status: 500 }
