@@ -5338,9 +5338,15 @@ function PlayPageClient() {
 
               {/* 资源类型切换器 - 仅当是动漫时显示 */}
               {(() => {
-                const isAnime = detail?.type_name?.toLowerCase().includes('动漫') ||
-                               detail?.type_name?.toLowerCase().includes('动画') ||
-                               detail?.type_name?.toLowerCase().includes('anime');
+                const typeName = detail?.type_name?.toLowerCase() || '';
+                const isAnime = typeName.includes('动漫') ||
+                               typeName.includes('动画') ||
+                               typeName.includes('anime') ||
+                               typeName.includes('番剧') ||
+                               typeName.includes('日剧') ||
+                               typeName.includes('韩剧');
+
+                console.log('[NetDisk] type_name:', detail?.type_name, 'isAnime:', isAnime);
 
                 return isAnime && (
                   <div className='flex items-center gap-2'>

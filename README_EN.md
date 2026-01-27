@@ -25,7 +25,7 @@
 ![HLS.js](https://img.shields.io/badge/HLS.js-1.6.15-ec407a)
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Docker Ready](https://img.shields.io/badge/Docker-ready-blue?logo=docker)
-![Version](https://img.shields.io/badge/Version-6.0.0-orange)
+![Version](https://img.shields.io/badge/Version-6.1.0-orange)
 
 </div>
 
@@ -33,7 +33,7 @@
 
 ## 📢 Project Overview
 
-This project is a deeply customized version based on **MoonTV**, continuously developed from **v4.3.1** to the current **v6.0.0**, with **60+ major feature modules** and **400+ detailed optimizations** added. See [CHANGELOG](CHANGELOG) for all new features.
+This project is a deeply customized version based on **MoonTV**, continuously developed from **v4.3.1** to the current **v6.1.0**, with **60+ major feature modules** and **400+ detailed optimizations** added. See [CHANGELOG](CHANGELOG) for all new features.
 
 ### 💡 Core Enhancement Highlights
 
@@ -41,6 +41,7 @@ This project is a deeply customized version based on **MoonTV**, continuously de
 - **YouTube Integration**: Complete YouTube search, playback, live streaming with cookieless domain support
 - **Cloud Drive Search (PanSou)**: Integrated advanced filtering and cache management
 - **ACG Torrent Search**: Integrated ACG anime torrent resource search for rich anime content access
+- **Mikan Project Integration**: ACG search dual-source system (ACG.RIP and Mikan Project), supports source switching, unified response format, and complete torrent metadata
 - **Short Drama Features**: Search, playback, dedicated detail pages, mobile API proxy, auto-skip to next episode when backup API unavailable
 - **IPTV Live TV**: m3u/m3u8 subscriptions, EPG program guide (multi-source & url-tvg support), source aggregation, logo proxy, channel search within current source, live source tab quick search, long channel name click-to-expand
 - **Bangumi Anime**: Intelligent anime detection, API integration, caching mechanism
@@ -49,11 +50,13 @@ This project is a deeply customized version based on **MoonTV**, continuously de
 
 #### 🤖 AI Recommendation System
 - **AI Smart Assistant**: Global AI recommendation button (ModernNav header), GPT-5/o series support, dynamic prompts, 85-90% input latency optimization, streaming transmission, orchestrator, video context support, integrated Douban and TMDB data, auto TMDB search when ID missing
+- **Short Drama AI Chat**: AI chat functionality for ShortDramaCard component, intelligent recommendations and content analysis
 - **Tavily Search Mode**: Supports Tavily search mode without AI API requirement, flexible API verification, SSE streaming, friendly user guidance
 - **Multiple Card Types**: Video recommendations, YouTube videos, video link parsing
 - **TMDB Actor Search**: Complete actor search, filtering, and caching
 - **Interactive Actor Works Viewer**: Inline actor works display in play page, 2-hour cache, TMDB fallback source
 - **Release Calendar & Upcoming Releases**: Upcoming content preview and tracking, support favoriting upcoming releases, automatically becomes playable after release, 2026 release data crawler
+- **TanStack Query State Management**: Implement TanStack Query for global state management, optimized data fetching and caching
 
 #### 💬 Danmaku Ecosystem
 - **Third-party Danmaku API**: Integrated Tencent Video, iQiyi, Youku, Bilibili platforms, smart content matching prevents trailers
@@ -77,6 +80,14 @@ This project is a deeply customized version based on **MoonTV**, continuously de
   - **Response Speed Boost**: From seconds to milliseconds
   - **Auto Expiration Cleanup**: Scheduled cleanup of expired cache, freeing storage space
   - **Cache Stats API**: `GET /api/video-cache/stats` to view cache usage
+
+#### 📊 Performance & Monitoring System
+- **Performance Monitoring Dashboard**: Complete performance monitoring system supporting all APIs (Douban, search, list, details, playback records, favorites, skip config, short dramas)
+- **Industry Benchmark Rating**: Built-in industry benchmark rating system for real-time API performance evaluation
+- **Traffic Monitoring System**: Real-time traffic monitoring, external traffic domain breakdown, request list display with collapsible sections
+- **Cron Task Monitoring**: Cron monitoring with API filtering and 48-hour auto-cleanup
+- **Configurable Task Optimization**: Configurable cron task optimization to reduce outbound traffic
+- **Kvrocks Persistence**: Kvrocks persistence for cron, Douban search API, and external traffic monitoring
 
 #### 🔧 Proxy Configuration System
 - **Dual-Layer Proxy Architecture**: TVBox and video playback independent proxy configs, no interference
@@ -202,6 +213,8 @@ This project is a deeply customized version based on **MoonTV**, continuously de
 - **Enhanced Storage Modes**: Full Kvrocks/Redis/Upstash support, memory cache prevents QuotaExceededError, handles Redis tag serialization
 - **User Registration System** (configurable toggle)
 - **Image Proxy Optimization**: Improved image proxy performance and caching strategy, supports Baidu image proxy option, provides more proxy methods
+- **Douban Anti-Crawler Verification**: Douban anti-crawler verification mechanism with Cookies authentication support, improving data acquisition stability
+- **Enhanced Ad Filtering**: Keyword-based intelligent ad detection, automatic identification and filtering of ad content
 
 ---
 
@@ -235,6 +248,7 @@ This project is licensed under **CC BY-NC-SA 4.0**, with the following terms:
 - ✅ Multi-source video aggregation search (streaming output, smart variants, language-aware filtering, fallback API support, Traditional Chinese support)
 - ✅ YouTube integration (search, live streaming, iframe playback, time filtering & sorting)
 - ✅ Cloud drive search (PanSou integration, advanced filtering, cache management)
+- ✅ ACG torrent search (ACG.RIP and Mikan Project dual-source system, source switching, unified response format, complete torrent metadata)
 - ✅ Short drama features (search, playback, dedicated detail pages, mobile API proxy)
 - ✅ IPTV live TV (m3u subscriptions, EPG guide, multi-source support, url-tvg, source aggregation, channel search, long channel name click-to-expand)
 - ✅ Bangumi anime (info detection, API integration, 3-6 digit ID support)
@@ -244,6 +258,8 @@ This project is licensed under **CC BY-NC-SA 4.0**, with the following terms:
 
 ### 🤖 Smart Recommendations
 - ✅ AI recommendation system (GPT-5/o support, dynamic prompts)
+- ✅ Short Drama AI Chat (ShortDramaCard component AI chat functionality, intelligent recommendations and content analysis)
+- ✅ TanStack Query state management (global state management, optimized data fetching and caching)
 - ✅ Release calendar (upcoming content preview)
 - ✅ Douban details enhancement (complete cast & crew info, user reviews display)
 - ✅ Smart search optimization (language-aware, fuzzy matching)
@@ -296,6 +312,7 @@ This project is licensed under **CC BY-NC-SA 4.0**, with the following terms:
 - ✅ Completed series badges (based on vod_remarks, search API priority)
 - ✅ Search result filtering (source, title, year filtering, year sorting)
 - ✅ Video card right-click/long-press menu (new tab play, favorites, etc.)
+- ✅ Short drama card right-click/long-press menu (context menu with quick actions support)
 - ✅ z-index hierarchy optimization (cards, badges, modals display correctly)
 
 ### 🔐 Security & Storage
@@ -326,6 +343,11 @@ This project is licensed under **CC BY-NC-SA 4.0**, with the following terms:
 - ✅ Semantic versioning (Git tag-based, CHANGELOG auto-extraction)
 - ✅ HLS.js mobile optimization (buffer strategy, memory management, ABR optimization)
 - ✅ Douban details engine refactor (accurate parsing based on real HTML structure)
+- ✅ Performance monitoring system (complete performance monitoring dashboard, all API support, industry benchmark rating system)
+- ✅ Traffic monitoring system (real-time traffic monitoring, external traffic domain breakdown, request list display with collapsible sections)
+- ✅ Cron task monitoring (cron monitoring, API filtering, 48-hour auto-cleanup)
+- ✅ Kvrocks persistence (for cron, Douban search API, and external traffic monitoring)
+- ✅ Video caching system (12-hour TTL video cache, Kvrocks metadata cache, filesystem video cache, smart cache hits)
 
 ---
 
@@ -1093,30 +1115,61 @@ This project works with [OrionTV](https://github.com/zimplexing/OrionTV) on Andr
 
 For complete feature updates and bug fixes, see [CHANGELOG](CHANGELOG).
 
-### Latest Version: v6.0.0 (2026-01-22)
+### Latest Version: v6.1.0 (2026-01-26)
 
 #### Added
-- ✨ User Experience Enhancement: Delete user loading state indicator and auto-hide quality badge functionality
-- 🚀 Puppeteer Anti-Scraping System: Comprehensive Douban anti-scraping bypass support (including Docker/Vercel environments and Comments API), integrated anti-bot detection, retry mechanism, and page load stability enhancements
-- 📱 Douban Mobile API Fallback: Added backup data source and detailed logging for fallback tracking
+- 🤖 Short Drama Card AI Chat: Add AI chat functionality for ShortDramaCard component
+- 📱 Short Drama Card Context Menu: Add right-click and long-press context menu functionality for short drama cards
+- 📊 Performance Monitoring System: Add complete performance monitoring dashboard to admin backend, supporting all APIs (Douban, search, list, details, playback records, favorites, skip config, short dramas) with filtering support and industry benchmark rating system
+- 📈 Traffic Monitoring System: Add real-time traffic monitoring, external traffic domain breakdown, request list display with collapsible sections
+- 🍪 Douban Cookies Authentication: Add Douban Cookies authentication support for details and comment APIs
+- 💾 Kvrocks Persistence and Monitoring: Add Kvrocks persistence for cron, Douban search API, and external traffic monitoring
+- 🔍 Cron Monitoring and API Filtering: Add cron monitoring, API filtering, and 48-hour auto-cleanup functionality
+- ⚙️ Configurable Cron Task Optimization: Add configurable cron task optimization to reduce outbound traffic
+- 🔍 TanStack Query Global State Management: Implement TanStack Query for global state management
+- 🛡️ Douban Anti-Crawler Verification: Add Douban anti-crawler verification mechanism
+- 🎯 Enhanced Ad Filtering: Keyword-based ad detection functionality
+- 🌸 Mikan Project Integration: Add ACG search dual-source system (ACG.RIP and Mikan Project), support source switching, unified response format and complete torrent metadata, improved speed test accuracy to prevent browser cache impact
+- 💾 Video Caching System: Implement 12-hour TTL video caching system and add minimum system requirements
 
-#### Performance Optimizations
-- ⚡ Homepage Loading Performance Optimization: Implemented batch loading strategy (7 requests in 3 batches), deferred non-critical data loading, Web Worker for upcoming releases processing, React.memo component optimization, CPU usage reduced from 200-300% to 50-80%
-- ⚡ Algorithm Optimization: Upcoming releases algorithm complexity optimized from O(n²) to O(n), using Map instead of reduce+find
-- 🚀 User-Agent Management Refactor: Unified management and restored legacy User-Agent for mobile short drama API compatibility
-- ⬆️ Dependency Upgrade: puppeteer-core upgraded from 24.35.0 to 24.36.0
-- 🔧 Architecture Optimization: MobileActionSheet uses isolated Portal container, content type detection moved from scraper to AI orchestrator to prevent timeout
-- ⚡ Playback Progress Restore: Auto-restore playback progress when switching episodes
+#### Changed
+- ⚡ Optimize Mobile Scrolling Performance: Use GPU acceleration and iOS momentum scrolling to optimize mobile scrolling experience
+- ⚡ Optimize Homepage Performance: Use useReducer to optimize state management, use useMemo to optimize expensive computation operations
+- ⚡ Optimize All Periodic Tasks: Optimize all periodic tasks to 1-hour intervals
+- ⚡ Optimize Performance Monitoring: Optimize performance monitoring with real data collection, improve accuracy and optimize homepage API requests
+- ⚡ Optimize Data Loading: Remove manual virtual batching, use react-window native virtualization
+- ⚡ Optimize Anime4K requestAnimationFrame: Reduce CPU usage, improve video super-resolution performance
+- 🔨 Refactor Play Page Components: Extract comments section, loading screen, back-to-top button, favorite button, download button and VideoInfoSection as independent components, improve code maintainability
+- 🔨 Refactor Danmaku Logic: Extract danmaku logic to useDanmu custom Hook
+- 🔨 Refactor Docker Configuration: Remove Puppeteer/Chromium and hide admin UI configuration
+- 🔨 Refactor Search Page: Remove progressive loading, optimize virtual scrolling performance and loading indicators
+- 🔧 Update user-agent Strings: Update to latest browser versions
 
 #### Fixed
-- 🐛 Fixed User Deletion: Improved deletion workflow and corrected Redis method naming errors
-- 🐛 Fixed AI Type Detection: Improved movie/TV series type detection algorithm to prevent misidentification
-- 🐛 Fixed Resolution Detection: Use video width instead of height for resolution detection
-- 🐛 Fixed Husky Hooks Compatibility: Updated shebang for Windows system support
-- 🐛 Fixed Douban API Issues: Handled 302 redirects, 429 rate limiting, mobile API response format, TV series episode data, request headers, preventing retry loops and invalid data loops
+
+- 🐛 Fixed Video Caching System: Add debug logs and Docker directory permissions, support Range request caching, handle ReadableStream consumption errors, use douban_id instead of URL hash for optimization
+- 🐛 Fixed Cron Task Timeout: Increase cron task timeout from 30 seconds to 5 minutes
+- 🐛 Fixed Homepage Bottom Padding: Add bottom padding to prevent content truncation
+- 🐛 Fixed External Traffic Rating Standards: Adjust external traffic rating standards and fix ShortDramaCard truncation issue
+- 🐛 Fixed Kvrocks Data Management: Apply formatTraffic to all traffic displays, correctly clean up old data in monitoring modules
+- 🐛 Fixed Statistics Calculation and Display Limit Separation: Separate statistics calculation from display limits
+- 🐛 Fixed Request List Return Limit: Return all requests within time range instead of limiting to 100
+- 🐛 Fixed Cache Cleanup Snapshot Creation: Create snapshot before cache cleanup to prevent data loss
+- 🐛 Fixed Performance Monitoring Data Persistence: Resolve race condition issues, ensure data persistence and real-time statistics after Docker restart, prevent data loss
+- 🐛 Fixed Performance Monitoring CPU Usage Percentage Calculation: Correct CPU usage percentage calculation method
+- 🐛 Fixed Admin Backend Mobile Layout: Improve mobile layout and add API performance monitoring, last two tabs now accessible
+- 🐛 Fixed Hide Actors and Comments When Data Unavailable: Hide actors and comments sections when data is unavailable
+- 🐛 Fixed Zero Duration Display: Hide zero duration and add performance monitoring
+- 🐛 Fixed Bangumi Calendar Loading Issue: Resolve bangumi calendar loading issue and add mobile responsive design for performance monitoring
+- 🐛 Fixed VirtualDoubanGrid Infinite Scroll Trigger: Resolve scroll loading anomalies
+- 🐛 Fixed Short Drama Card Context Menu: Add poster and more actions to context menu
+- 🐛 Fixed ShortDramaCard Mobile Long Press Conflict: Use div and router navigation instead of Link to prevent mobile long press conflicts
+- 🐛 Fixed Transform translateZ Modal Stacking Context Issue: Remove transform property causing modal display anomalies
+- 🐛 Fixed Announcement Modal z-index Issue: Resolve mobile dialog invisibility issue
 
 ### Major Milestone Versions
 
+- **v6.1.0**: Performance monitoring system, traffic monitoring system, TanStack Query state management, Kvrocks persistence, Douban anti-crawler verification, Mikan Project integration, video caching system, short drama AI chat, enhanced ad filtering
 - **v6.0.0**: Homepage performance drastically optimized (CPU reduced to 50-80%), Puppeteer anti-scraping system, Douban mobile API fallback, Web Worker optimization, playback progress restore, dependency upgrades
 - **v5.9.3**: Traditional Chinese search support, download feature enhancement, TVBox source management enhancement, User-Agent comprehensive upgrade to 2026 latest versions, Baidu image proxy, fnOS deployment guide
 - **v5.9.2**: Douban Trailer System Enhancement, Proxy Configuration System, M3U8 Downloader 6x Speed Boost, EPG System Enhancement, Live Direct Connect Mode, Mobile Navigation Netflix-style Redesign

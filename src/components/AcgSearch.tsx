@@ -210,19 +210,6 @@ export default function AcgSearch({
     );
   }
 
-  if (allItems.length === 0) {
-    return (
-      <div className='flex items-center justify-center py-12'>
-        <div className='text-center'>
-          <AlertCircle className='mx-auto h-12 w-12 text-gray-400 dark:text-gray-600' />
-          <p className='mt-4 text-sm text-gray-600 dark:text-gray-400'>
-            未找到相关资源
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className='space-y-6'>
       {/* 源切换器 */}
@@ -261,6 +248,18 @@ export default function AcgSearch({
           </button>
         </div>
       </div>
+
+      {/* 未找到资源提示 */}
+      {allItems.length === 0 && (
+        <div className='flex items-center justify-center py-12'>
+          <div className='text-center'>
+            <AlertCircle className='mx-auto h-12 w-12 text-gray-400 dark:text-gray-600' />
+            <p className='mt-4 text-sm text-gray-600 dark:text-gray-400'>
+              未找到相关资源，请尝试切换其他搜索源
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* 结果列表 */}
       <div className='space-y-3'>
