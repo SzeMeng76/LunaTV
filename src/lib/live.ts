@@ -7,6 +7,42 @@ import { db } from "@/lib/db";
 const defaultUA = 'AptvPlayer/1.4.10';
 const TVBOX_UA = 'okhttp/4.1.0';
 
+// 🚀 优化：超时控制
+const FETCH_TIMEOUT = 10000; // 10秒超时
+const EPG_CACHE_TTL = 24 * 60 * 60 * 1000; // EPG缓存24小时
+
+/**
+ * 带超时的 fetch 请求
+ */
+async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs: number = FETCH_TIMEOUT): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if ((error as Error).name === 'AbortError') {
+      throw new Error(`请求超时 (${timeoutMs}ms): ${url}`);
+    }
+    throw error;
+  }
+}
+
+// 🚀 优化：EPG 缓存
+interface EpgCache {
+  epgs: { [key: string]: { start: string; end: string; title: string }[] };
+  logos: { [key: string]: string };
+  timestamp: number;
+}
+
+const epgCache = new Map<string, EpgCache>();
+
 export interface LiveChannels {
   channelNumber: number;
   channels: {
@@ -97,14 +133,14 @@ export async function refreshLiveChannels(liveInfo: {
   let content = '';
   
   try {
-    // 第一次 Fetch
+    // 第一次 Fetch - 使用超时控制
     console.log(`[Live] Fetching URL: ${liveInfo.url} with UA: ${isTvBox ? TVBOX_UA : ua}`);
-    const response = await fetch(liveInfo.url, {
+    const response = await fetchWithTimeout(liveInfo.url, {
       headers: {
         'User-Agent': isTvBox ? TVBOX_UA : ua,
       },
-    });
-    
+    }, FETCH_TIMEOUT);
+
     if (!response.ok) {
         console.error(`[Live] Failed to fetch live source: ${response.status} ${response.statusText}`);
         return 0;
@@ -431,11 +467,18 @@ async function parseEpg(
     }[]
   };
   logos: {
-    [key: string]: string; 
+    [key: string]: string;
   };
 }> {
   if (!epgUrl) {
     return { epgs: {}, logos: {} };
+  }
+
+  // 🚀 优化：检查缓存
+  const cached = epgCache.get(epgUrl);
+  if (cached && (Date.now() - cached.timestamp) < EPG_CACHE_TTL) {
+    console.log(`[Live] Using cached EPG for ${epgUrl} (age: ${Math.round((Date.now() - cached.timestamp) / 1000 / 60)}min)`);
+    return { epgs: cached.epgs, logos: cached.logos };
   }
 
   const tvgs = new Set(tvgIds);
@@ -449,10 +492,16 @@ async function parseEpg(
   const epgChannelIdToLogo = new Map<string, string>();
 
   try {
-    const response = await fetch(epgUrl, {
+    // 🚀 优化：使用超时控制
+    console.log(`[Live] Fetching EPG from ${epgUrl} with ${FETCH_TIMEOUT}ms timeout...`);
+    const response = await fetchWithTimeout(epgUrl, {
       headers: { 'User-Agent': ua },
-    });
-    if (!response.ok) return { epgs: {}, logos: {} };
+    }, FETCH_TIMEOUT);
+
+    if (!response.ok) {
+      console.warn(`[Live] EPG fetch failed: ${response.status}, skipping EPG`);
+      return { epgs: {}, logos: {} };
+    }
 
     const reader = response.body?.getReader();
     if (!reader) return { epgs: {}, logos: {} };
@@ -551,7 +600,15 @@ async function parseEpg(
       }
     }
   } catch (e) {
-      // ignore
+      // 🚀 优化：超时或错误时优雅降级
+      const error = e as Error;
+      if (error.message?.includes('请求超时')) {
+        console.warn(`[Live] EPG fetch timeout (${FETCH_TIMEOUT}ms), skipping EPG: ${epgUrl}`);
+      } else {
+        console.warn(`[Live] EPG parsing error, skipping EPG: ${error.message}`);
+      }
+      // 返回空 EPG，不影响直播源正常使用
+      return { epgs: {}, logos: {} };
   }
 
   // Map back to M3U channels
@@ -574,7 +631,15 @@ async function parseEpg(
       }
     }
   }
-  
+
+  // 🚀 优化：保存到缓存
+  epgCache.set(epgUrl, {
+    epgs: result,
+    logos,
+    timestamp: Date.now()
+  });
+  console.log(`[Live] EPG cached for ${epgUrl} (TTL: 24h)`);
+
   return { epgs: result, logos };
 }
 

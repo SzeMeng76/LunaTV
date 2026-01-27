@@ -265,62 +265,128 @@ async function cronJob() {
     dbQueries: 0,
   };
 
-  // 优先执行用户清理任务，避免被其他任务阻塞
-  try {
-    console.log('🧹 执行用户清理任务...');
-    const cleanupStart = Date.now();
-    await cleanupInactiveUsers();
-    const cleanupDuration = Date.now() - cleanupStart;
-    console.log(`✅ 用户清理任务完成 (耗时: ${cleanupDuration}ms)`);
-  } catch (err) {
-    console.error('❌ 用户清理任务失败:', err);
-  }
+  // 🚀 阶段4优化：并行执行互不依赖的任务组
+  // 第一组：用户清理、配置刷新、视频缓存任务（并行执行）
+  console.log('🔄 开始执行第一组并行任务...');
+  const [cleanupResult, , ,] = await Promise.allSettled([
+    // 用户清理任务
+    (async () => {
+      try {
+        console.log('🧹 执行用户清理任务...');
+        const cleanupStart = Date.now();
+        const result = await cleanupInactiveUsers();
+        const cleanupDuration = Date.now() - cleanupStart;
 
-  try {
-    console.log('📝 刷新配置...');
-    await refreshConfig();
-    console.log('✅ 配置刷新完成');
-  } catch (err) {
-    console.error('❌ 配置刷新失败:', err);
-  }
+        if (currentCronStats) {
+          currentCronStats.tasks.userCleanup = {
+            checked: result.checked,
+            deleted: result.deleted,
+            errors: result.errors,
+            duration: cleanupDuration
+          };
+        }
 
-  // 视频缓存迁移（只在第一次运行时执行）
-  try {
-    console.log('🔄 检查并迁移旧视频缓存...');
-    await migrateOldCache();
-    console.log('✅ 视频缓存迁移完成');
-  } catch (err) {
-    console.error('❌ 视频缓存迁移失败:', err);
-  }
+        console.log(`✅ 用户清理任务完成 (耗时: ${cleanupDuration}ms)`);
+        return result;
+      } catch (err) {
+        console.error('❌ 用户清理任务失败:', err);
+        throw err;
+      }
+    })(),
 
-  // 清理过期的视频缓存
-  try {
-    console.log('🧹 清理过期视频缓存...');
-    await cleanupExpiredCache();
-    console.log('✅ 视频缓存清理完成');
-  } catch (err) {
-    console.error('❌ 视频缓存清理失败:', err);
-  }
+    // 刷新配置
+    (async () => {
+      try {
+        console.log('📝 刷新配置...');
+        await refreshConfig();
+        console.log('✅ 配置刷新完成');
+      } catch (err) {
+        console.error('❌ 配置刷新失败:', err);
+      }
+    })(),
 
-  try {
-    console.log('📺 刷新直播频道...');
-    const liveStart = Date.now();
-    await refreshAllLiveChannels();
-    const liveDuration = Date.now() - liveStart;
-    console.log(`✅ 直播频道刷新完成 (耗时: ${liveDuration}ms)`);
-  } catch (err) {
-    console.error('❌ 直播频道刷新失败:', err);
-  }
+    // 视频缓存迁移
+    (async () => {
+      try {
+        console.log('🔄 检查并迁移旧视频缓存...');
+        await migrateOldCache();
+        console.log('✅ 视频缓存迁移完成');
+      } catch (err) {
+        console.error('❌ 视频缓存迁移失败:', err);
+      }
+    })(),
 
-  try {
-    console.log('📊 刷新播放记录和收藏...');
-    const recordsStart = Date.now();
-    await refreshRecordAndFavorites();
-    const recordsDuration = Date.now() - recordsStart;
-    console.log(`✅ 播放记录和收藏刷新完成 (耗时: ${recordsDuration}ms)`);
-  } catch (err) {
-    console.error('❌ 播放记录和收藏刷新失败:', err);
-  }
+    // 清理过期视频缓存
+    (async () => {
+      try {
+        console.log('🧹 清理过期视频缓存...');
+        await cleanupExpiredCache();
+        console.log('✅ 视频缓存清理完成');
+      } catch (err) {
+        console.error('❌ 视频缓存清理失败:', err);
+      }
+    })()
+  ]);
+
+  console.log('✅ 第一组并行任务完成');
+
+  // 第二组：直播频道刷新 + 播放记录和收藏刷新（并行执行）
+  console.log('🔄 开始执行第二组并行任务...');
+  const [liveResult, recordsResult] = await Promise.allSettled([
+    // 直播频道刷新
+    (async () => {
+      try {
+        console.log('📺 刷新直播频道...');
+        const liveStart = Date.now();
+        const result = await refreshAllLiveChannels();
+        const liveDuration = Date.now() - liveStart;
+
+        if (currentCronStats) {
+          currentCronStats.tasks.liveChannels = {
+            total: result.total,
+            success: result.success,
+            errors: result.errors,
+            duration: liveDuration
+          };
+        }
+
+        console.log(`✅ 直播频道刷新完成 (耗时: ${liveDuration}ms)`);
+        return result;
+      } catch (err) {
+        console.error('❌ 直播频道刷新失败:', err);
+        throw err;
+      }
+    })(),
+
+    // 播放记录和收藏刷新
+    (async () => {
+      try {
+        console.log('📊 刷新播放记录和收藏...');
+        const recordsStart = Date.now();
+        const result = await refreshRecordAndFavorites();
+        const recordsDuration = Date.now() - recordsStart;
+
+        if (currentCronStats) {
+          currentCronStats.tasks.recordsAndFavorites = {
+            users: result.users,
+            recordsProcessed: result.recordsProcessed,
+            recordsErrors: result.recordsErrors,
+            favoritesProcessed: result.favoritesProcessed,
+            favoritesErrors: result.favoritesErrors,
+            duration: recordsDuration
+          };
+        }
+
+        console.log(`✅ 播放记录和收藏刷新完成 (耗时: ${recordsDuration}ms)`);
+        return result;
+      } catch (err) {
+        console.error('❌ 播放记录和收藏刷新失败:', err);
+        throw err;
+      }
+    })()
+  ]);
+
+  console.log('✅ 第二组并行任务完成');
 
   // 🚀 阶段2优化：完成性能统计
   if (currentCronStats) {
@@ -376,6 +442,13 @@ async function refreshAllLiveChannels() {
 
   // 保存配置
   await db.saveAdminConfig(config);
+
+  // 返回统计数据
+  return {
+    total: liveChannels.length,
+    success: results.length,
+    errors: errors.length
+  };
 }
 
 async function refreshConfig() {
@@ -432,6 +505,12 @@ async function refreshConfig() {
 }
 
 async function refreshRecordAndFavorites() {
+  // 统计数据
+  let totalRecordsProcessed = 0;
+  let totalRecordsErrors = 0;
+  let totalFavoritesProcessed = 0;
+  let totalFavoritesErrors = 0;
+
   try {
     // 获取配置
     const config = await getConfig();
@@ -446,19 +525,25 @@ async function refreshRecordAndFavorites() {
     // 检查是否启用自动刷新
     if (!cronConfig.enableAutoRefresh) {
       console.log('⏸️ 自动刷新已禁用，跳过播放记录和收藏刷新');
-      return;
+      return {
+        users: 0,
+        recordsProcessed: 0,
+        recordsErrors: 0,
+        favoritesProcessed: 0,
+        favoritesErrors: 0
+      };
     }
 
     console.log('📊 Cron 配置:', cronConfig);
 
     const users = await db.getAllUsers();
     console.log('📋 数据库中的用户列表:', users);
-    
+
     if (process.env.USERNAME && !users.includes(process.env.USERNAME)) {
       users.push(process.env.USERNAME);
       console.log(`➕ 添加环境变量用户: ${process.env.USERNAME}`);
     }
-    
+
     console.log('📋 最终处理用户列表:', users);
     // 函数级缓存：key 为 `${source}+${id}`，值为 Promise<VideoDetail | null>
     const detailCache = new Map<string, Promise<SearchResult | null>>();
@@ -596,9 +681,12 @@ async function refreshRecordAndFavorites() {
         );
 
         const processedRecords = recordResults.filter(r => r !== null).length;
+        totalRecordsProcessed += processedRecords;
+        totalRecordsErrors += recordErrors.length;
         console.log(`播放记录处理完成: ${processedRecords}/${totalRecords}, 错误: ${recordErrors.length}`);
       } catch (err) {
         console.error(`获取用户播放记录失败 (${user}):`, err);
+        totalRecordsErrors++;
       }
 
       // 收藏
@@ -675,15 +763,35 @@ async function refreshRecordAndFavorites() {
         );
 
         const processedFavorites = favResults.filter(r => r !== null).length;
+        totalFavoritesProcessed += processedFavorites;
+        totalFavoritesErrors += favErrors.length;
         console.log(`收藏处理完成: ${processedFavorites}/${totalFavorites}, 错误: ${favErrors.length}`);
       } catch (err) {
         console.error(`获取用户收藏失败 (${user}):`, err);
+        totalFavoritesErrors++;
       }
     }
 
     console.log('刷新播放记录/收藏任务完成');
+
+    // 返回统计数据
+    return {
+      users: users.length,
+      recordsProcessed: totalRecordsProcessed,
+      recordsErrors: totalRecordsErrors,
+      favoritesProcessed: totalFavoritesProcessed,
+      favoritesErrors: totalFavoritesErrors
+    };
   } catch (err) {
     console.error('刷新播放记录/收藏任务启动失败', err);
+    // 出错时返回空统计
+    return {
+      users: 0,
+      recordsProcessed: totalRecordsProcessed,
+      recordsErrors: totalRecordsErrors,
+      favoritesProcessed: totalFavoritesProcessed,
+      favoritesErrors: totalFavoritesErrors
+    };
   }
 }
 
@@ -713,7 +821,11 @@ async function cleanupInactiveUsers() {
 
     if (!autoCleanupEnabled) {
       console.log('⏭️ 自动清理非活跃用户功能已禁用，跳过清理任务');
-      return;
+      return {
+        checked: 0,
+        deleted: 0,
+        errors: 0
+      };
     }
 
     console.log('🧹 开始清理非活跃用户...');
@@ -862,8 +974,21 @@ async function cleanupInactiveUsers() {
     console.log('🎯 开始优化活跃用户等级显示...');
     await optimizeActiveUserLevels();
 
+    // 返回统计数据
+    return {
+      checked: allUsers.length,
+      deleted: deletedCount,
+      errors: userCheckErrors.length
+    };
+
   } catch (err) {
     console.error('🚫 清理非活跃用户任务失败:', err);
+    // 出错时返回空统计
+    return {
+      checked: 0,
+      deleted: 0,
+      errors: 1
+    };
   }
 }
 
