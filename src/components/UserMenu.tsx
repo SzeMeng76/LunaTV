@@ -190,6 +190,28 @@ export const UserMenu: React.FC = () => {
     setMounted(true);
   }, []);
 
+  // 🚀 预加载导航页面 - 当菜单打开时预加载所有可能访问的页面
+  useEffect(() => {
+    if (isOpen) {
+      // 预加载管理面板（仅 owner/admin 有权限）
+      if (authInfo?.role === 'owner' || authInfo?.role === 'admin') {
+        router.prefetch('/admin');
+      }
+      // 预加载播放统计（所有登录用户，且非 localstorage 存储）
+      if (authInfo?.username && storageType !== 'localstorage') {
+        router.prefetch('/play-stats');
+      }
+      // 预加载 TVBox 配置（所有人都能访问）
+      router.prefetch('/tvbox');
+      // 预加载观影室（如果功能启用，所有人都能访问）
+      if (showWatchRoom) {
+        router.prefetch('/watch-room');
+      }
+      // 预加载发布日历（所有人都能访问）
+      router.prefetch('/release-calendar');
+    }
+  }, [isOpen, authInfo, storageType, showWatchRoom, router]);
+
   // 获取认证信息
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -633,26 +655,32 @@ export const UserMenu: React.FC = () => {
   };
 
   const handleAdminPanel = () => {
+    setIsOpen(false);
+    router.refresh();
     router.push('/admin');
   };
 
   const handlePlayStats = () => {
     setIsOpen(false);
+    router.refresh();
     router.push('/play-stats');
   };
 
   const handleTVBoxConfig = () => {
     setIsOpen(false);
+    router.refresh();
     router.push('/tvbox');
   };
 
   const handleWatchRoom = () => {
     setIsOpen(false);
+    router.refresh();
     router.push('/watch-room');
   };
 
   const handleReleaseCalendar = () => {
     setIsOpen(false);
+    router.refresh();
     router.push('/release-calendar');
   };
 
