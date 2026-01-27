@@ -8,6 +8,7 @@ import { fetchVideoDetail } from '@/lib/fetchVideoDetail';
 import { refreshLiveChannels } from '@/lib/live';
 import { SearchResult } from '@/lib/types';
 import { recordRequest, getDbQueryCount, resetDbQueryCount } from '@/lib/performance-monitor';
+import { migrateOldCache, cleanupExpiredCache } from '@/lib/video-cache';
 
 export const runtime = 'nodejs';
 
@@ -120,6 +121,24 @@ async function cronJob() {
     console.log('✅ 配置刷新完成');
   } catch (err) {
     console.error('❌ 配置刷新失败:', err);
+  }
+
+  // 视频缓存迁移（只在第一次运行时执行）
+  try {
+    console.log('🔄 检查并迁移旧视频缓存...');
+    await migrateOldCache();
+    console.log('✅ 视频缓存迁移完成');
+  } catch (err) {
+    console.error('❌ 视频缓存迁移失败:', err);
+  }
+
+  // 清理过期的视频缓存
+  try {
+    console.log('🧹 清理过期视频缓存...');
+    await cleanupExpiredCache();
+    console.log('✅ 视频缓存清理完成');
+  } catch (err) {
+    console.error('❌ 视频缓存清理失败:', err);
   }
 
   try {

@@ -216,16 +216,17 @@ export default function PerformanceMonitor() {
   };
 
   // 性能评估函数 - 外部流量（调用外部 API 的流量）
+  // 注意：包含图片代理流量，标准相对宽松
   const getExternalTrafficRating = (trafficPerMinute: number) => {
     const trafficMB = trafficPerMinute / 1024 / 1024; // 转换为 MB
-    if (trafficMB < 1) {
-      return { level: 'excellent', label: '正常', color: 'text-green-600 dark:text-green-400', tip: '< 1 MB/分钟' };
-    } else if (trafficMB < 3) {
-      return { level: 'good', label: '中等', color: 'text-blue-600 dark:text-blue-400', tip: '1-3 MB/分钟' };
-    } else if (trafficMB < 5) {
-      return { level: 'fair', label: '较高', color: 'text-yellow-600 dark:text-yellow-400', tip: '3-5 MB/分钟' };
+    if (trafficMB < 5) {
+      return { level: 'excellent', label: '正常', color: 'text-green-600 dark:text-green-400', tip: '< 5 MB/分钟' };
+    } else if (trafficMB < 15) {
+      return { level: 'good', label: '中等', color: 'text-blue-600 dark:text-blue-400', tip: '5-15 MB/分钟' };
+    } else if (trafficMB < 30) {
+      return { level: 'fair', label: '较高', color: 'text-yellow-600 dark:text-yellow-400', tip: '15-30 MB/分钟' };
     } else {
-      return { level: 'poor', label: '异常高', color: 'text-red-600 dark:text-red-400', tip: '> 5 MB/分钟' };
+      return { level: 'poor', label: '异常高', color: 'text-red-600 dark:text-red-400', tip: '> 30 MB/分钟' };
     }
   };
 
