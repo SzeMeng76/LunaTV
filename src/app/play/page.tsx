@@ -3848,6 +3848,10 @@ function PlayPageClient() {
                   html: '弹幕类型',
                   tooltip: '选择显示的弹幕类型',
                   selector: [
+                    // 新增：顶部一行弹幕预设（约 93% 下边距，仅显示顶部一行）
+                    { html: '一行', value: [10, '93%'], default: JSON.stringify(savedMargin) === JSON.stringify([10, '93%']) },
+                    // 新增：顶部两行弹幕预设（约 86% 下边距，显示顶部两行）
+                    { html: '两行', value: [10, '86%'], default: JSON.stringify(savedMargin) === JSON.stringify([10, '86%']) },
                     { html: '全部显示', value: [0, 1, 2], default: JSON.stringify(savedModes) === JSON.stringify([0, 1, 2]) },
                     { html: '仅滚动', value: [0], default: JSON.stringify(savedModes) === JSON.stringify([0]) },
                     { html: '滚动+顶部', value: [0, 1], default: JSON.stringify(savedModes) === JSON.stringify([0, 1]) },
