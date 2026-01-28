@@ -3858,7 +3858,16 @@ function PlayPageClient() {
                 },
                 {
                   html: '弹幕类型',
-                  tooltip: '选择显示的弹幕类型',
+                  tooltip: (() => {
+                    // 根据 savedModes 返回对应的文本
+                    const modesStr = JSON.stringify(savedModes);
+                    if (modesStr === JSON.stringify([0, 1, 2])) return '全部显示';
+                    if (modesStr === JSON.stringify([0])) return '仅滚动';
+                    if (modesStr === JSON.stringify([0, 1])) return '滚动+顶部';
+                    if (modesStr === JSON.stringify([0, 2])) return '滚动+底部';
+                    if (modesStr === JSON.stringify([1, 2])) return '仅固定';
+                    return '全部显示'; // 默认值
+                  })(),
                   selector: [
                     { html: '全部显示', value: [0, 1, 2], default: JSON.stringify(savedModes) === JSON.stringify([0, 1, 2]) },
                     { html: '仅滚动', value: [0], default: JSON.stringify(savedModes) === JSON.stringify([0]) },
@@ -3878,17 +3887,19 @@ function PlayPageClient() {
                 },
                 {
                   html: '防重叠',
-                  tooltip: savedAntiOverlap ? '已开启（弹幕不重叠，性能消耗较高）' : '已关闭（弹幕可能重叠，性能更好）',
-                  switch: savedAntiOverlap,
-                  onSwitch: function (item: any) {
-                    const newValue = !item.switch;
-                    localStorage.setItem('danmaku_antiOverlap', String(newValue));
+                  tooltip: savedAntiOverlap ? '开启' : '关闭',
+                  selector: [
+                    { html: '开启', value: true, default: savedAntiOverlap === true },
+                    { html: '关闭', value: false, default: savedAntiOverlap === false },
+                  ],
+                  onSelect: function (item: any) {
+                    localStorage.setItem('danmaku_antiOverlap', String(item.value));
                     if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
                       artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
-                        antiOverlap: newValue,
+                        antiOverlap: item.value,
                       });
                     }
-                    return newValue;
+                    return item.html;
                   },
                 },
               ];
