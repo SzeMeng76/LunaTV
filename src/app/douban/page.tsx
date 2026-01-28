@@ -7,6 +7,7 @@ import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { isAIRecommendFeatureDisabled } from '@/lib/ai-recommend.client';
 import { GetBangumiCalendarData } from '@/lib/bangumi.client';
 import {
   getDoubanCategories,
@@ -129,6 +130,12 @@ function DoubanPageClient() {
 
   // 页面级别的AI权限检测 - 只检测一次
   useEffect(() => {
+    if (isAIRecommendFeatureDisabled()) {
+      setAiEnabled(false);
+      setAiCheckComplete(true);
+      return;
+    }
+
     let cancelled = false;
     (async () => {
       try {

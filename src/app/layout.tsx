@@ -68,6 +68,7 @@ export default async function RootLayout({
     process.env.NEXT_PUBLIC_DISABLE_YELLOW_FILTER === 'true';
   let fluidSearch = process.env.NEXT_PUBLIC_FLUID_SEARCH !== 'false';
   let customAdFilterVersion = 0;
+  let aiRecommendEnabled = false;
   let customCategories = [] as {
     name: string;
     type: 'movie' | 'tv';
@@ -92,6 +93,7 @@ export default async function RootLayout({
     }));
     fluidSearch = config.SiteConfig.FluidSearch;
     customAdFilterVersion = config.SiteConfig?.CustomAdFilterVersion || 0;
+    aiRecommendEnabled = config.AIRecommendConfig?.enabled ?? false;
   }
 
   // 将运行时配置注入到全局 window 对象，供客户端在运行时读取
@@ -105,6 +107,7 @@ export default async function RootLayout({
     CUSTOM_CATEGORIES: customCategories,
     FLUID_SEARCH: fluidSearch,
     CUSTOM_AD_FILTER_VERSION: customAdFilterVersion,
+    AI_RECOMMEND_ENABLED: aiRecommendEnabled,
   };
 
   return (

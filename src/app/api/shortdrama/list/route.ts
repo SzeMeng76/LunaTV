@@ -1,28 +1,61 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { getCacheTime } from '@/lib/config';
+import { getCacheTime, getConfig } from '@/lib/config';
 import { recordRequest, getDbQueryCount, resetDbQueryCount } from '@/lib/performance-monitor';
+import { DEFAULT_USER_AGENT } from '@/lib/user-agent';
 
 // 强制动态路由，禁用所有缓存
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const fetchCache = 'force-no-store';
 
-// 服务端专用函数，直接调用外部API
-async function getShortDramaListInternal(
-  category: number,
-  page = 1,
-  size = 20
+// 从单个短剧源获取数据（通过分类名称查找）
+async function fetchListFromSource(
+  api: string,
+  page: number,
+  size: number
 ) {
-  const response = await fetch(
-    `https://api.r2afosne.dpdns.org/vod/list?categoryId=${category}&page=${page}&size=${size}`,
-    {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept': 'application/json',
-      },
-    }
+  // Step 1: 获取分类列表，找到"短剧"分类的ID
+  const listUrl = `${api}?ac=list`;
+
+  const listResponse = await fetch(listUrl, {
+    headers: {
+      'User-Agent': DEFAULT_USER_AGENT,
+      'Accept': 'application/json',
+    },
+    signal: AbortSignal.timeout(10000),
+  });
+
+  if (!listResponse.ok) {
+    throw new Error(`HTTP error! status: ${listResponse.status}`);
+  }
+
+  const listData = await listResponse.json();
+  const categories = listData.class || [];
+
+  // 查找"短剧"分类（只要包含"短剧"两个字即可）
+  const shortDramaCategory = categories.find((cat: any) =>
+    cat.type_name && cat.type_name.includes('短剧')
   );
+
+  if (!shortDramaCategory) {
+    console.log(`该源没有短剧分类`);
+    return { list: [], hasMore: false };
+  }
+
+  const categoryId = shortDramaCategory.type_id;
+  console.log(`找到短剧分类ID: ${categoryId}`);
+
+  // Step 2: 获取该分类的短剧列表
+  const apiUrl = `${api}?ac=detail&t=${categoryId}&pg=${page}`;
+
+  const response = await fetch(apiUrl, {
+    headers: {
+      'User-Agent': DEFAULT_USER_AGENT,
+      'Accept': 'application/json',
+    },
+    signal: AbortSignal.timeout(10000),
+  });
 
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`);
@@ -30,20 +63,96 @@ async function getShortDramaListInternal(
 
   const data = await response.json();
   const items = data.list || [];
-  const list = items.map((item: any) => ({
-    id: item.id,
-    name: item.name,
-    cover: item.cover,
-    update_time: item.update_time || new Date().toISOString(),
-    score: item.score || 0,
-    episode_count: 1, // 分页API没有集数信息，ShortDramaCard会自动获取
-    description: item.description || '',
+
+  const limitedItems = items.slice(0, size);
+
+  const list = limitedItems.map((item: any) => ({
+    id: item.vod_id,
+    name: item.vod_name,
+    cover: item.vod_pic || '',
+    update_time: item.vod_time || new Date().toISOString(),
+    score: parseFloat(item.vod_score) || 0,
+    episode_count: parseInt(item.vod_remarks?.replace(/[^\d]/g, '') || '1'),
+    description: item.vod_content || item.vod_blurb || '',
+    author: item.vod_actor || '',
+    backdrop: item.vod_pic_slide || item.vod_pic || '',
+    vote_average: parseFloat(item.vod_score) || 0,
   }));
 
   return {
     list,
-    hasMore: data.currentPage < data.totalPages,
+    hasMore: data.page < data.pagecount,
   };
+}
+
+// 服务端专用函数，从所有短剧源聚合数据
+async function getShortDramaListInternal(
+  category: number,
+  page = 1,
+  size = 20
+) {
+  try {
+    const config = await getConfig();
+
+    // 筛选出所有启用的短剧源
+    const shortDramaSources = config.SourceConfig.filter(
+      source => source.type === 'shortdrama' && !source.disabled
+    );
+
+    // 如果没有配置短剧源，使用默认源
+    if (shortDramaSources.length === 0) {
+      return await fetchListFromSource(
+        'https://wwzy.tv/api.php/provide/vod',
+        page,
+        size
+      );
+    }
+
+    // 有配置短剧源，聚合所有源的数据
+    const results = await Promise.allSettled(
+      shortDramaSources.map(source => {
+        return fetchListFromSource(source.api, page, size);
+      })
+    );
+
+    // 合并所有成功的结果
+    const allItems: any[] = [];
+    let hasMore = false;
+
+    results.forEach((result) => {
+      if (result.status === 'fulfilled') {
+        allItems.push(...result.value.list);
+        hasMore = hasMore || result.value.hasMore;
+      }
+    });
+
+    // 去重
+    const uniqueItems = Array.from(
+      new Map(allItems.map(item => [item.name, item])).values()
+    );
+
+    // 按更新时间排序
+    uniqueItems.sort((a, b) =>
+      new Date(b.update_time).getTime() - new Date(a.update_time).getTime()
+    );
+
+    return {
+      list: uniqueItems.slice(0, size),
+      hasMore,
+    };
+  } catch (error) {
+    console.error('获取短剧列表失败:', error);
+    // fallback到默认源
+    try {
+      return await fetchListFromSource(
+        'https://wwzy.tv/api.php/provide/vod',
+        page,
+        size
+      );
+    } catch (fallbackError) {
+      return { list: [], hasMore: false };
+    }
+  }
 }
 
 export async function GET(request: NextRequest) {

@@ -36,10 +36,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Key is required' }, { status: 400 });
     }
 
+    console.log(`📝 API缓存写入: ${key}, 过期时间: ${expireSeconds}秒`);
+
     await db.setCache(key, data, expireSeconds);
+
+    console.log(`✅ API缓存写入成功: ${key}`);
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Set cache error:', error);
+    console.error('❌ API缓存写入失败:', error);
+    console.error('错误详情:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : undefined
+    });
     return NextResponse.json({ error: 'Failed to set cache' }, { status: 500 });
   }
 }

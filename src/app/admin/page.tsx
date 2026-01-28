@@ -313,6 +313,7 @@ interface DataSource {
   disabled?: boolean;
   from: 'config' | 'custom';
   is_adult?: boolean;
+  type?: 'vod' | 'shortdrama'; // 视频源类型：vod=普通视频，shortdrama=短剧
 }
 
 // 直播源数据类型
@@ -2757,6 +2758,9 @@ const VideoSourceConfig = ({
     from: 'config',
   });
 
+  // 编辑视频源状态
+  const [editingSource, setEditingSource] = useState<DataSource | null>(null);
+
   // 🔑 普通视频源代理配置
   const [videoProxySettings, setVideoProxySettings] = useState({
     enabled: false,
@@ -3026,6 +3030,39 @@ const VideoSourceConfig = ({
     }
   };
 
+  const handleBatchMarkType = async (type: 'vod' | 'shortdrama') => {
+    if (selectedSources.size === 0) {
+      showAlert({
+        type: 'warning',
+        title: '提示',
+        message: '请先选择要操作的视频源'
+      });
+      return;
+    }
+
+    const keys = Array.from(selectedSources);
+    const action = type === 'shortdrama' ? 'batch_mark_shortdrama' : 'batch_mark_vod';
+    const typeName = type === 'shortdrama' ? '短剧' : '视频';
+
+    try {
+      await withLoading(`batchSource_${action}`, () => callSourceApi({ action, keys, type }));
+      showAlert({
+        type: 'success',
+        title: '操作成功',
+        message: `标记为${typeName}类型成功！共处理 ${keys.length} 个视频源`,
+        timer: 2000
+      });
+      setSelectedSources(new Set());
+    } catch {
+      showAlert({
+        type: 'error',
+        title: '操作失败',
+        message: `标记为${typeName}类型失败，请重试`,
+        showConfirm: true
+      });
+    }
+  };
+
   const handleAddSource = () => {
     if (!newSource.name || !newSource.key || !newSource.api) return;
     withLoading('addSource', async () => {
@@ -3036,6 +3073,7 @@ const VideoSourceConfig = ({
         api: newSource.api,
         detail: newSource.detail,
         is_adult: newSource.is_adult,
+        type: newSource.type,
       });
       setNewSource({
         name: '',
@@ -3045,10 +3083,35 @@ const VideoSourceConfig = ({
         disabled: false,
         from: 'custom',
         is_adult: false,
+        type: 'vod',
       });
       setShowAddForm(false);
     }).catch(() => {
       console.error('操作失败', 'add', newSource);
+    });
+  };
+
+  // 编辑视频源
+  const handleEditSource = (source: DataSource) => {
+    setEditingSource({ ...source });
+  };
+
+  // 保存编辑的视频源
+  const handleSaveEditSource = () => {
+    if (!editingSource || !editingSource.name || !editingSource.key || !editingSource.api) return;
+    withLoading(`editSource_${editingSource.key}`, async () => {
+      await callSourceApi({
+        action: 'update',
+        key: editingSource.key,
+        name: editingSource.name,
+        api: editingSource.api,
+        detail: editingSource.detail,
+        is_adult: editingSource.is_adult,
+        type: editingSource.type,
+      });
+      setEditingSource(null);
+    }).catch(() => {
+      console.error('编辑视频源失败', editingSource);
     });
   };
 
@@ -3284,6 +3347,17 @@ const VideoSourceConfig = ({
             <span className='ml-2 text-xs text-red-600 dark:text-red-400'>🔞</span>
           )}
         </td>
+        <td className='px-6 py-4 whitespace-nowrap text-center'>
+          {source.type === 'shortdrama' ? (
+            <span className='inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-200'>
+              📺 短剧源
+            </span>
+          ) : (
+            <span className='inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200'>
+              普通源
+            </span>
+          )}
+        </td>
         <td className='px-6 py-4 whitespace-nowrap max-w-[1rem]'>
           {(() => {
             const status = getValidationStatus(source.key);
@@ -3311,6 +3385,12 @@ const VideoSourceConfig = ({
               } transition-colors ${isLoading(`toggleSource_${source.key}`) ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             {!source.disabled ? '禁用' : '启用'}
+          </button>
+          <button
+            onClick={() => handleEditSource(source)}
+            className={buttonStyles.roundedPrimary}
+          >
+            编辑
           </button>
           {source.from !== 'config' && (
             <button
@@ -3802,6 +3882,22 @@ const VideoSourceConfig = ({
                 >
                   {isLoading('batchSource_batch_unmark_adult') ? '取消中...' : '取消标记'}
                 </button>
+                <button
+                  onClick={() => handleBatchMarkType('shortdrama')}
+                  disabled={isLoading('batchSource_batch_mark_shortdrama')}
+                  className={`px-3 py-1 text-sm ${isLoading('batchSource_batch_mark_shortdrama') ? buttonStyles.disabled : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-lg transition-colors'}`}
+                  title='将选中的视频源标记为短剧类型'
+                >
+                  {isLoading('batchSource_batch_mark_shortdrama') ? '标记中...' : '标记短剧'}
+                </button>
+                <button
+                  onClick={() => handleBatchMarkType('vod')}
+                  disabled={isLoading('batchSource_batch_mark_vod')}
+                  className={`px-3 py-1 text-sm ${isLoading('batchSource_batch_mark_vod') ? buttonStyles.disabled : buttonStyles.secondary}`}
+                  title='将选中的视频源标记为普通视频类型'
+                >
+                  {isLoading('batchSource_batch_mark_vod') ? '标记中...' : '标记视频'}
+                </button>
               </div>
               <div className='hidden sm:block w-px h-6 bg-gray-300 dark:bg-gray-600 order-2'></div>
             </>
@@ -3923,6 +4019,49 @@ const VideoSourceConfig = ({
               </span>
             )}
           </div>
+          {/* 源类型选择 */}
+          <div className='p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700'>
+            <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+              源类型
+            </label>
+            <div className='flex items-center space-x-4'>
+              <label className='flex items-center space-x-2 cursor-pointer'>
+                <input
+                  type='radio'
+                  name='sourceType'
+                  value='vod'
+                  checked={!newSource.type || newSource.type === 'vod'}
+                  onChange={(e) =>
+                    setNewSource((prev) => ({ ...prev, type: e.target.value as 'vod' }))
+                  }
+                  className='w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600'
+                />
+                <span className='text-sm text-gray-700 dark:text-gray-300'>
+                  普通视频源
+                </span>
+              </label>
+              <label className='flex items-center space-x-2 cursor-pointer'>
+                <input
+                  type='radio'
+                  name='sourceType'
+                  value='shortdrama'
+                  checked={newSource.type === 'shortdrama'}
+                  onChange={(e) =>
+                    setNewSource((prev) => ({ ...prev, type: e.target.value as 'shortdrama' }))
+                  }
+                  className='w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 focus:ring-purple-500 dark:focus:ring-purple-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600'
+                />
+                <span className='text-sm text-gray-700 dark:text-gray-300'>
+                  短剧源 📺
+                </span>
+              </label>
+            </div>
+            {newSource.type === 'shortdrama' && (
+              <div className='mt-2 p-2 bg-purple-50 dark:bg-purple-900/20 rounded text-xs text-purple-700 dark:text-purple-300'>
+                💡 系统会自动查找该源的"短剧"或"微短剧"分类
+              </div>
+            )}
+          </div>
           <div className='flex justify-end'>
             <button
               onClick={handleAddSource}
@@ -3933,6 +4072,134 @@ const VideoSourceConfig = ({
             </button>
           </div>
         </div>
+      )}
+
+      {/* 编辑视频源弹窗 */}
+      {editingSource && createPortal(
+        <div className='fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4'>
+          <div className='bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto'>
+            <div className='p-6 border-b border-gray-200 dark:border-gray-700'>
+              <h3 className='text-lg font-semibold text-gray-900 dark:text-gray-100'>
+                编辑视频源: {editingSource.name}
+              </h3>
+            </div>
+            <div className='p-6 space-y-4'>
+              {/* 基本信息 */}
+              <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
+                <div>
+                  <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+                    名称
+                  </label>
+                  <input
+                    type='text'
+                    value={editingSource.name}
+                    onChange={(e) => setEditingSource(prev => prev ? { ...prev, name: e.target.value } : null)}
+                    className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
+                  />
+                </div>
+                <div>
+                  <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+                    Key（不可修改）
+                  </label>
+                  <input
+                    type='text'
+                    value={editingSource.key}
+                    disabled
+                    className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                  />
+                </div>
+              </div>
+
+              {/* API 地址 */}
+              <div>
+                <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+                  API 地址
+                </label>
+                <input
+                  type='text'
+                  value={editingSource.api}
+                  onChange={(e) => setEditingSource(prev => prev ? { ...prev, api: e.target.value } : null)}
+                  className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
+                />
+              </div>
+
+              {/* Detail 地址 */}
+              <div>
+                <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+                  Detail 地址（选填）
+                </label>
+                <input
+                  type='text'
+                  value={editingSource.detail || ''}
+                  onChange={(e) => setEditingSource(prev => prev ? { ...prev, detail: e.target.value } : null)}
+                  className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
+                />
+              </div>
+
+              {/* 成人资源标记 */}
+              <div className='flex items-center space-x-3 p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700'>
+                <label className='flex items-center space-x-2 cursor-pointer'>
+                  <input
+                    type='checkbox'
+                    checked={editingSource.is_adult || false}
+                    onChange={(e) => setEditingSource(prev => prev ? { ...prev, is_adult: e.target.checked } : null)}
+                    className='w-4 h-4 text-red-600 bg-gray-100 border-gray-300 rounded focus:ring-red-500'
+                  />
+                  <span className='text-sm font-medium text-gray-700 dark:text-gray-300'>
+                    标记为成人资源 <span className='text-red-600'>🔞</span>
+                  </span>
+                </label>
+              </div>
+
+              {/* 源类型选择 */}
+              <div className='p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700'>
+                <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+                  源类型
+                </label>
+                <div className='flex items-center space-x-4'>
+                  <label className='flex items-center space-x-2 cursor-pointer'>
+                    <input
+                      type='radio'
+                      name='editSourceType'
+                      checked={editingSource.type !== 'shortdrama'}
+                      onChange={() => setEditingSource(prev => prev ? { ...prev, type: 'vod' } : null)}
+                      className='w-4 h-4 text-blue-600'
+                    />
+                    <span className='text-sm text-gray-700 dark:text-gray-300'>普通视频源</span>
+                  </label>
+                  <label className='flex items-center space-x-2 cursor-pointer'>
+                    <input
+                      type='radio'
+                      name='editSourceType'
+                      checked={editingSource.type === 'shortdrama'}
+                      onChange={() => setEditingSource(prev => prev ? { ...prev, type: 'shortdrama' } : null)}
+                      className='w-4 h-4 text-purple-600'
+                    />
+                    <span className='text-sm text-gray-700 dark:text-gray-300'>📺 短剧源</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* 操作按钮 */}
+              <div className='flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700'>
+                <button
+                  onClick={() => setEditingSource(null)}
+                  className={buttonStyles.secondary}
+                >
+                  取消
+                </button>
+                <button
+                  onClick={handleSaveEditSource}
+                  disabled={!editingSource.name || !editingSource.api || isLoading(`editSource_${editingSource.key}`)}
+                  className={!editingSource.name || !editingSource.api || isLoading(`editSource_${editingSource.key}`) ? buttonStyles.disabled : buttonStyles.primary}
+                >
+                  {isLoading(`editSource_${editingSource.key}`) ? '保存中...' : '保存'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
 
 
@@ -3968,6 +4235,9 @@ const VideoSourceConfig = ({
               </th>
               <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
                 成人资源
+              </th>
+              <th className='px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
+                源类型
               </th>
               <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
                 有效性

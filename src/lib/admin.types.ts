@@ -57,6 +57,7 @@ export interface AdminConfig {
     from: 'config' | 'custom';
     disabled?: boolean;
     is_adult?: boolean;
+    type?: 'vod' | 'shortdrama'; // 视频源类型：vod=普通视频，shortdrama=短剧（系统会自动查找"短剧"分类）
   }[];
   CustomCategories: {
     name?: string;
