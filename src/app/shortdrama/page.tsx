@@ -18,7 +18,7 @@ import ShortDramaCard from '@/components/ShortDramaCard';
 
 export default function ShortDramaPage() {
   const [categories, setCategories] = useState<ShortDramaCategory[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<number>(1);
+  const [selectedCategory, setSelectedCategory] = useState<number>(46); // 新API的短剧分类ID是46
   const [dramas, setDramas] = useState<ShortDramaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(true);

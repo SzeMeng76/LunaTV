@@ -44,6 +44,15 @@ export interface AIRecommendHistory {
   response: string;
 }
 
+export function isAIRecommendFeatureDisabled(): boolean {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
+  const runtimeConfig = (window as any).RUNTIME_CONFIG;
+  return runtimeConfig?.AI_RECOMMEND_ENABLED === false;
+}
+
 /**
  * 发送AI推荐请求（支持流式响应）
  */
@@ -181,6 +190,10 @@ export async function getAIRecommendHistory(): Promise<{
  * 检查AI推荐功能是否可用
  */
 export async function checkAIRecommendAvailable(): Promise<boolean> {
+  if (isAIRecommendFeatureDisabled()) {
+    return false;
+  }
+
   try {
     const response = await fetch('/api/ai-recommend', {
       method: 'POST',

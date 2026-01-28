@@ -9,7 +9,7 @@ import { db } from '@/lib/db';
 export const runtime = 'nodejs';
 
 // 支持的操作类型
-type Action = 'add' | 'disable' | 'enable' | 'delete' | 'sort' | 'batch_disable' | 'batch_enable' | 'batch_delete' | 'update_adult' | 'batch_mark_adult' | 'batch_unmark_adult';
+type Action = 'add' | 'update' | 'disable' | 'enable' | 'delete' | 'sort' | 'batch_disable' | 'batch_enable' | 'batch_delete' | 'update_adult' | 'batch_mark_adult' | 'batch_unmark_adult' | 'batch_mark_shortdrama' | 'batch_mark_vod';
 
 interface BaseBody {
   action?: Action;
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     const username = authInfo.username;
 
     // 基础校验
-    const ACTIONS: Action[] = ['add', 'disable', 'enable', 'delete', 'sort', 'batch_disable', 'batch_enable', 'batch_delete', 'update_adult', 'batch_mark_adult', 'batch_unmark_adult'];
+    const ACTIONS: Action[] = ['add', 'update', 'disable', 'enable', 'delete', 'sort', 'batch_disable', 'batch_enable', 'batch_delete', 'update_adult', 'batch_mark_adult', 'batch_unmark_adult', 'batch_mark_shortdrama', 'batch_mark_vod'];
     if (!username || !action || !ACTIONS.includes(action)) {
       return NextResponse.json({ error: '参数格式错误' }, { status: 400 });
     }
@@ -57,12 +57,13 @@ export async function POST(request: NextRequest) {
 
     switch (action) {
       case 'add': {
-        const { key, name, api, detail, is_adult } = body as {
+        const { key, name, api, detail, is_adult, type } = body as {
           key?: string;
           name?: string;
           api?: string;
           detail?: string;
           is_adult?: boolean;
+          type?: 'vod' | 'shortdrama';
         };
         if (!key || !name || !api) {
           return NextResponse.json({ error: '缺少必要参数' }, { status: 400 });
@@ -78,7 +79,31 @@ export async function POST(request: NextRequest) {
           from: 'custom',
           disabled: false,
           is_adult: is_adult || false,
+          type: type || 'vod',
         });
+        break;
+      }
+      case 'update': {
+        const { key, name, api, detail, is_adult, type } = body as {
+          key?: string;
+          name?: string;
+          api?: string;
+          detail?: string;
+          is_adult?: boolean;
+          type?: 'vod' | 'shortdrama';
+        };
+        if (!key) {
+          return NextResponse.json({ error: '缺少 key 参数' }, { status: 400 });
+        }
+        const entry = adminConfig.SourceConfig.find((s) => s.key === key);
+        if (!entry) {
+          return NextResponse.json({ error: '源不存在' }, { status: 404 });
+        }
+        if (name) entry.name = name;
+        if (api) entry.api = api;
+        if (detail !== undefined) entry.detail = detail;
+        if (is_adult !== undefined) entry.is_adult = is_adult;
+        if (type !== undefined) entry.type = type;
         break;
       }
       case 'disable': {
@@ -255,6 +280,32 @@ export async function POST(request: NextRequest) {
           const entry = adminConfig.SourceConfig.find((s) => s.key === key);
           if (entry) {
             entry.is_adult = false;
+          }
+        });
+        break;
+      }
+      case 'batch_mark_shortdrama': {
+        const { keys } = body as { keys?: string[] };
+        if (!Array.isArray(keys) || keys.length === 0) {
+          return NextResponse.json({ error: '缺少 keys 参数或为空' }, { status: 400 });
+        }
+        keys.forEach(key => {
+          const entry = adminConfig.SourceConfig.find((s) => s.key === key);
+          if (entry) {
+            entry.type = 'shortdrama';
+          }
+        });
+        break;
+      }
+      case 'batch_mark_vod': {
+        const { keys } = body as { keys?: string[] };
+        if (!Array.isArray(keys) || keys.length === 0) {
+          return NextResponse.json({ error: '缺少 keys 参数或为空' }, { status: 400 });
+        }
+        keys.forEach(key => {
+          const entry = adminConfig.SourceConfig.find((s) => s.key === key);
+          if (entry) {
+            entry.type = 'vod';
           }
         });
         break;

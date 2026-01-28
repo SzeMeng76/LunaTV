@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { getCacheTime } from '@/lib/config';
+import { DEFAULT_USER_AGENT } from '@/lib/user-agent';
 
 // 强制动态路由，禁用所有缓存
 export const dynamic = 'force-dynamic';
@@ -9,9 +10,9 @@ export const fetchCache = 'force-no-store';
 
 // 服务端专用函数，直接调用外部API
 async function getShortDramaCategoriesInternal() {
-  const response = await fetch('https://api.r2afosne.dpdns.org/vod/categories', {
+  const response = await fetch('https://cj.rycjapi.com/api.php/provide/vod?ac=list', {
     headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      'User-Agent': DEFAULT_USER_AGENT,
       'Accept': 'application/json',
     },
   });
@@ -21,11 +22,14 @@ async function getShortDramaCategoriesInternal() {
   }
 
   const data = await response.json();
-  const categories = data.categories || [];
-  return categories.map((item: any) => ({
-    type_id: item.type_id,
-    type_name: item.type_name,
-  }));
+
+  // 新API返回所有分类，我们只返回短剧分类
+  return [
+    {
+      type_id: 46,
+      type_name: '全部短剧',
+    }
+  ];
 }
 
 export async function GET() {

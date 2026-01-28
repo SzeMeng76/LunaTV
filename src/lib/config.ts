@@ -71,22 +71,21 @@ export function refineConfig(adminConfig: AdminConfig): AdminConfig {
   // 合并文件中的源信息
   const apiSitesFromFile = Object.entries(fileConfig.api_site || []);
 
-  // 只保留 from='custom' 的源（用户手动添加的），删除旧的 from='config' 的源
+  // 保留所有现有源（包括 custom 和 config），以便保留用户的手动修改
   const currentApiSites = new Map(
     (adminConfig.SourceConfig || [])
-      .filter((s) => s.from === 'custom')
       .map((s) => [s.key, s])
   );
 
-  // 添加新订阅中的所有源
+  // 添加或更新订阅中的所有源
   apiSitesFromFile.forEach(([key, site]) => {
     const existingSource = currentApiSites.get(key);
     if (existingSource) {
-      // 如果 custom 源的 key 和订阅源冲突，保留 custom 源，但更新其信息
+      // 如果源已存在，更新基本信息但保留用户手动设置的字段
       existingSource.name = site.name;
       existingSource.api = site.api;
       existingSource.detail = site.detail;
-      // 保持 from='custom'，因为用户手动添加过
+      // 保留用户手动设置的 from、type、is_adult、disabled 等字段
     } else {
       // 添加新的订阅源
       currentApiSites.set(key, {
@@ -96,6 +95,7 @@ export function refineConfig(adminConfig: AdminConfig): AdminConfig {
         detail: site.detail,
         from: 'config',
         disabled: false,
+        type: 'vod', // 默认为普通视频类型
       });
     }
   });
