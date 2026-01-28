@@ -8,7 +8,7 @@ import { fetchVideoDetail } from '@/lib/fetchVideoDetail';
 import { refreshLiveChannels } from '@/lib/live';
 import { SearchResult } from '@/lib/types';
 import { recordRequest, getDbQueryCount, resetDbQueryCount } from '@/lib/performance-monitor';
-import { migrateOldCache, cleanupExpiredCache } from '@/lib/video-cache';
+import { migrateOldCache, cleanupExpiredCache, validateCacheSize } from '@/lib/video-cache';
 
 export const runtime = 'nodejs';
 
@@ -324,6 +324,17 @@ async function cronJob() {
         console.log('✅ 视频缓存清理完成');
       } catch (err) {
         console.error('❌ 视频缓存清理失败:', err);
+      }
+    })(),
+
+    // 校验缓存大小
+    (async () => {
+      try {
+        console.log('🔍 校验视频缓存大小...');
+        await validateCacheSize();
+        console.log('✅ 缓存大小校验完成');
+      } catch (err) {
+        console.error('❌ 缓存大小校验失败:', err);
       }
     })()
   ]);
