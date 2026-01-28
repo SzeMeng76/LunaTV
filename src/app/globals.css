@@ -3,6 +3,7 @@
 @import '../styles/artplayer-controls.css';
 @import '../styles/artplayer-mobile.css';
 @import '../styles/artplayer-liquid-glass.css';
+@import '../styles/artplayer-range-slider.css';
 
 /* Tailwind 4 Dark Mode Configuration - 使用 class 选择器而非媒体查询 */
 @custom-variant dark (&:where(.dark, .dark *));

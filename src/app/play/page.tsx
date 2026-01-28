@@ -3760,13 +3760,16 @@ function PlayPageClient() {
               const savedOpacity = parseFloat(localStorage.getItem('danmaku_opacity') || '0.8');
               const savedMargin = JSON.parse(localStorage.getItem('danmaku_margin') || '[10, "75%"]');
               const savedModes = JSON.parse(localStorage.getItem('danmaku_modes') || '[0, 1, 2]');
+              const savedAntiOverlap = localStorage.getItem('danmaku_antiOverlap') !== null
+                ? localStorage.getItem('danmaku_antiOverlap') === 'true'
+                : !isMobile; // 默认值：桌面端开启，移动端关闭
 
               return [
                 {
                   html: '字号',
                   tooltip: `${savedFontSize}px`,
                   range: [savedFontSize, 12, 40, 1],
-                  onRange: function (item: any) {
+                  onChange: function (item: any) {
                     const value = Math.round(item.range[0]);
                     localStorage.setItem('danmaku_fontSize', String(value));
                     if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
@@ -3781,7 +3784,7 @@ function PlayPageClient() {
                   html: '速度',
                   tooltip: `${savedSpeed.toFixed(1)}`,
                   range: [savedSpeed, 1, 10, 0.5],
-                  onRange: function (item: any) {
+                  onChange: function (item: any) {
                     const value = Math.round(item.range[0] * 2) / 2; // 保留0.5精度
                     localStorage.setItem('danmaku_speed', String(value));
                     if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
@@ -3796,7 +3799,7 @@ function PlayPageClient() {
                   html: '透明度',
                   tooltip: `${Math.round(savedOpacity * 100)}%`,
                   range: [savedOpacity, 0.1, 1.0, 0.05],
-                  onRange: function (item: any) {
+                  onChange: function (item: any) {
                     const value = Math.round(item.range[0] * 20) / 20; // 保留0.05精度
                     localStorage.setItem('danmaku_opacity', String(value));
                     if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
@@ -3816,7 +3819,7 @@ function PlayPageClient() {
                     100,
                     5
                   ],
-                  onRange: function (item: any) {
+                  onChange: function (item: any) {
                     const topValue = Math.round(item.range[0] / 5) * 5; // 5%步长
                     const topMargin = topValue === 0 ? 10 : `${topValue}%`;
                     const currentMargin = JSON.parse(localStorage.getItem('danmaku_margin') || '[10, "75%"]');
@@ -3839,7 +3842,7 @@ function PlayPageClient() {
                     100,
                     5
                   ],
-                  onRange: function (item: any) {
+                  onChange: function (item: any) {
                     const bottomValue = Math.round(item.range[0] / 5) * 5; // 5%步长
                     const bottomMargin = bottomValue === 0 ? 10 : `${bottomValue}%`;
                     const currentMargin = JSON.parse(localStorage.getItem('danmaku_margin') || '[10, "75%"]');
@@ -3855,7 +3858,16 @@ function PlayPageClient() {
                 },
                 {
                   html: '弹幕类型',
-                  tooltip: '选择显示的弹幕类型',
+                  tooltip: (() => {
+                    // 根据 savedModes 返回对应的文本
+                    const modesStr = JSON.stringify(savedModes);
+                    if (modesStr === JSON.stringify([0, 1, 2])) return '全部显示';
+                    if (modesStr === JSON.stringify([0])) return '仅滚动';
+                    if (modesStr === JSON.stringify([0, 1])) return '滚动+顶部';
+                    if (modesStr === JSON.stringify([0, 2])) return '滚动+底部';
+                    if (modesStr === JSON.stringify([1, 2])) return '仅固定';
+                    return '全部显示'; // 默认值
+                  })(),
                   selector: [
                     { html: '全部显示', value: [0, 1, 2], default: JSON.stringify(savedModes) === JSON.stringify([0, 1, 2]) },
                     { html: '仅滚动', value: [0], default: JSON.stringify(savedModes) === JSON.stringify([0]) },
@@ -3868,6 +3880,23 @@ function PlayPageClient() {
                     if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
                       artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
                         modes: item.value,
+                      });
+                    }
+                    return item.html;
+                  },
+                },
+                {
+                  html: '防重叠',
+                  tooltip: savedAntiOverlap ? '开启' : '关闭',
+                  selector: [
+                    { html: '开启', value: true, default: savedAntiOverlap === true },
+                    { html: '关闭', value: false, default: savedAntiOverlap === false },
+                  ],
+                  onSelect: function (item: any) {
+                    localStorage.setItem('danmaku_antiOverlap', String(item.value));
+                    if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
+                      artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
+                        antiOverlap: item.value,
                       });
                     }
                     return item.html;
@@ -3992,7 +4021,9 @@ function PlayPageClient() {
                 width: 300,
 
                 // 🎯 激进优化配置 - 保持功能完整性
-                antiOverlap: devicePerformance === 'high', // 只有高性能设备开启防重叠，避免重叠计算
+                antiOverlap: localStorage.getItem('danmaku_antiOverlap') !== null
+                  ? localStorage.getItem('danmaku_antiOverlap') === 'true'
+                  : (devicePerformance === 'high'), // 默认值：高性能设备开启防重叠
                 synchronousPlayback: true, // ✅ 必须保持true！确保弹幕与视频播放速度同步
                 heatmap: false, // 关闭热力图，减少DOM计算开销
                 

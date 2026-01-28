@@ -1,0 +1,126 @@
+/* ============================================
+   ArtPlayer Range Slider Mobile Optimizations
+   移动端滑块触摸优化
+   ============================================ */
+
+/* 滑块容器优化 */
+.art-setting-item-right-input {
+  /* 防止触摸时页面滚动 */
+  touch-action: manipulation !important;
+  /* 增加触摸区域 */
+  padding: 12px 0 !important;
+}
+
+/* 滑块输入框优化 */
+.art-setting-item-right-input input[type="range"] {
+  /* 重置默认样式 */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+
+  /* 基础样式 */
+  width: 100%;
+  height: 6px;
+  background: transparent;
+  outline: none;
+  cursor: pointer;
+
+  /* 防止触摸时页面滚动 */
+  touch-action: manipulation !important;
+}
+
+/* 滑块轨道样式 - WebKit (Chrome, Safari, Edge) */
+.art-setting-item-right-input input[type="range"]::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+/* 滑块轨道样式 - Firefox */
+.art-setting-item-right-input input[type="range"]::-moz-range-track {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+/* 滑块拖动按钮 - WebKit */
+.art-setting-item-right-input input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  background: #fff;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  transition: transform 0.15s ease;
+}
+
+/* 滑块拖动按钮 - Firefox */
+.art-setting-item-right-input input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  background: #fff;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  transition: transform 0.15s ease;
+}
+
+/* 移动端触摸优化 */
+@media (max-width: 768px) {
+  /* 增大滑块容器的触摸区域 */
+  .art-setting-item-right-input {
+    padding: 16px 0 !important;
+    min-height: 48px !important;
+  }
+
+  /* 增大滑块拖动按钮的尺寸 - 符合 44x44px 最小触摸目标 */
+  .art-setting-item-right-input input[type="range"]::-webkit-slider-thumb {
+    width: 24px;
+    height: 24px;
+  }
+
+  .art-setting-item-right-input input[type="range"]::-moz-range-thumb {
+    width: 24px;
+    height: 24px;
+  }
+
+  /* 增大轨道高度，更容易点击 */
+  .art-setting-item-right-input input[type="range"] {
+    height: 8px;
+  }
+
+  .art-setting-item-right-input input[type="range"]::-webkit-slider-runnable-track {
+    height: 8px;
+  }
+
+  .art-setting-item-right-input input[type="range"]::-moz-range-track {
+    height: 8px;
+  }
+}
+
+/* 激活状态 - 提供视觉反馈 */
+.art-setting-item-right-input input[type="range"]:active::-webkit-slider-thumb {
+  transform: scale(1.2);
+}
+
+.art-setting-item-right-input input[type="range"]:active::-moz-range-thumb {
+  transform: scale(1.2);
+}
+
+/* 焦点状态 */
+.art-setting-item-right-input input[type="range"]:focus {
+  outline: none;
+}
+
+.art-setting-item-right-input input[type="range"]:focus::-webkit-slider-thumb {
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.2);
+}
+
+.art-setting-item-right-input input[type="range"]:focus::-moz-range-thumb {
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.2);
+}
