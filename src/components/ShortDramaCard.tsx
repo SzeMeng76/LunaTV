@@ -331,22 +331,25 @@ function ShortDramaCard({
             </div>
           </div>
 
-          {/* 集数标识 - Netflix 统一风格 - 只在集数>1时显示 */}
-          {showEpisodeCount && (
-            <div className="absolute top-2 left-2 flex items-center overflow-hidden rounded-md shadow-lg transition-all duration-300 ease-out group-hover:scale-105 bg-black/70 backdrop-blur-sm px-2 py-0.5">
-              <span className="flex items-center text-[10px] font-medium text-white/80">
-                {realEpisodeCount} 集
-              </span>
-            </div>
-          )}
+          {/* 左上角标识组 - 垂直堆叠避免重叠 */}
+          <div className="absolute top-2 left-2 flex flex-col gap-1.5 z-10">
+            {/* 集数标识 - Netflix 统一风格 - 只在集数>1时显示 */}
+            {showEpisodeCount && (
+              <div className="flex items-center overflow-hidden rounded-md shadow-lg transition-all duration-300 ease-out group-hover:scale-105 bg-black/70 backdrop-blur-sm px-2 py-0.5">
+                <span className="flex items-center text-[10px] font-medium text-white/80">
+                  {realEpisodeCount} 集
+                </span>
+              </div>
+            )}
 
-          {/* 评分 - 使用vote_average字段 */}
-          {drama.vote_average && drama.vote_average > 0 && (
-            <div className="absolute top-2 right-2 flex items-center rounded-lg bg-linear-to-br from-yellow-400 to-orange-500 px-2.5 py-1.5 text-xs font-bold text-white shadow-lg backdrop-blur-sm ring-2 ring-white/30 transition-all duration-300 group-hover:scale-110">
-              <Star className="h-3 w-3 mr-1 fill-current" />
-              {drama.vote_average.toFixed(1)}
-            </div>
-          )}
+            {/* 评分 - 使用vote_average字段 */}
+            {drama.vote_average && drama.vote_average > 0 && (
+              <div className="flex items-center rounded-lg bg-linear-to-br from-yellow-400 to-orange-500 px-2 py-1 text-[10px] font-bold text-white shadow-lg backdrop-blur-sm ring-2 ring-white/30 transition-all duration-300 group-hover:scale-105">
+                <Star className="h-3 w-3 mr-0.5 fill-current" />
+                {drama.vote_average.toFixed(1)}
+              </div>
+            )}
+          </div>
 
           {/* 收藏按钮 - 右下角 */}
           <button
