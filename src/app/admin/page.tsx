@@ -36,6 +36,7 @@ import {
   FileText,
   FolderOpen,
   Settings,
+  Shield,
   TestTube,
   Tv,
   Upload,
@@ -57,6 +58,7 @@ import SourceTestModule from '@/components/SourceTestModule';
 import { TelegramAuthConfig } from '@/components/TelegramAuthConfig';
 import { OIDCAuthConfig } from '@/components/OIDCAuthConfig';
 import TVBoxSecurityConfig from '@/components/TVBoxSecurityConfig';
+import TrustedNetworkConfig from '@/components/TrustedNetworkConfig';
 import { TVBoxTokenCell, TVBoxTokenModal } from '@/components/TVBoxTokenManager';
 import YouTubeConfig from '@/components/YouTubeConfig';
 import ShortDramaConfig from '@/components/ShortDramaConfig';
@@ -6878,6 +6880,7 @@ function AdminPageClient() {
     customAdFilter: false,
     watchRoomConfig: false,
     tvboxSecurityConfig: false,
+    trustedNetworkConfig: false,
     telegramAuthConfig: false,
     oidcAuthConfig: false,
     configFile: false,
@@ -7218,6 +7221,23 @@ function AdminPageClient() {
             >
               <TVBoxSecurityConfig config={config} refreshConfig={fetchConfig} />
             </CollapsibleTab>
+
+            {/* 信任网络配置 - 仅站长可见 */}
+            {role === 'owner' && (
+              <CollapsibleTab
+                title='信任网络配置'
+                icon={
+                  <Shield
+                    size={20}
+                    className='text-green-600 dark:text-green-400'
+                  />
+                }
+                isExpanded={expandedTabs.trustedNetworkConfig}
+                onToggle={() => toggleTab('trustedNetworkConfig')}
+              >
+                <TrustedNetworkConfig config={config} refreshConfig={fetchConfig} />
+              </CollapsibleTab>
+            )}
 
             {/* Telegram 登录配置 - 仅站长可见 */}
             {role === 'owner' && (

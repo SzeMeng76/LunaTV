@@ -7,6 +7,8 @@ export function getAuthInfoFromCookie(request: NextRequest): {
   signature?: string;
   timestamp?: number;
   loginTime?: number;
+  trustedNetwork?: boolean;
+  role?: 'owner' | 'admin' | 'user';
 } | null {
   // 尝试新的 cookie 名称 user_auth，如果没有则尝试旧的 auth
   const authCookie = request.cookies.get('user_auth') || request.cookies.get('auth');
@@ -31,6 +33,7 @@ export function getAuthInfoFromBrowserCookie(): {
   signature?: string;
   timestamp?: number;
   loginTime?: number;
+  trustedNetwork?: boolean;
   role?: 'owner' | 'admin' | 'user';
 } | null {
   if (typeof window === 'undefined') {

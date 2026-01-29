@@ -181,6 +181,10 @@ export interface AdminConfig {
     recentDays: number;                  // 最近活跃的天数定义（默认 30）
     onlyRefreshOngoing: boolean;         // 仅刷新连载中的剧集（默认 true）
   };
+  TrustedNetworkConfig?: {
+    enabled: boolean;                    // 是否启用信任网络模式（内网免登录）
+    trustedIPs: string[];               // 信任的IP/CIDR列表（如 192.168.0.0/16, 10.0.0.0/8）
+  };
 }
 
 export interface AdminConfigResult {
