@@ -10,7 +10,7 @@ export const fetchCache = 'force-no-store';
 
 // 服务端专用函数，直接调用外部API
 async function getShortDramaCategoriesInternal() {
-  const response = await fetch('https://cj.rycjapi.com/api.php/provide/vod?ac=list', {
+  const response = await fetch('https://wwzy.tv/api.php/provide/vod?ac=list', {
     headers: {
       'User-Agent': DEFAULT_USER_AGENT,
       'Accept': 'application/json',

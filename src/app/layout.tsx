@@ -14,6 +14,7 @@ import { SiteProvider } from '../components/SiteProvider';
 import { ThemeProvider } from '../components/ThemeProvider';
 import { WatchRoomProvider } from '../components/WatchRoomProvider';
 import { DownloadProvider } from '../contexts/DownloadContext';
+import { GlobalCacheProvider } from '../contexts/GlobalCacheContext';
 import { DownloadPanel } from '../components/download/DownloadPanel';
 import ChatFloatingWindow from '../components/watch-room/ChatFloatingWindow';
 import QueryProvider from '../components/QueryProvider';
@@ -136,17 +137,19 @@ export default async function RootLayout({
           disableTransitionOnChange
         >
           <QueryProvider>
-            <DownloadProvider>
-              <WatchRoomProvider>
-                <SiteProvider siteName={siteName} announcement={announcement}>
-                  <SessionTracker />
-                  {children}
-                  <GlobalErrorIndicator />
-                </SiteProvider>
-                <DownloadPanel />
-                <ChatFloatingWindow />
-              </WatchRoomProvider>
-            </DownloadProvider>
+            <GlobalCacheProvider>
+              <DownloadProvider>
+                <WatchRoomProvider>
+                  <SiteProvider siteName={siteName} announcement={announcement}>
+                    <SessionTracker />
+                    {children}
+                    <GlobalErrorIndicator />
+                  </SiteProvider>
+                  <DownloadPanel />
+                  <ChatFloatingWindow />
+                </WatchRoomProvider>
+              </DownloadProvider>
+            </GlobalCacheProvider>
           </QueryProvider>
         </ThemeProvider>
       </body>

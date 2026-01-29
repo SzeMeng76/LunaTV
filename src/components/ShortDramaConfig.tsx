@@ -17,7 +17,7 @@ const ShortDramaConfig = ({ config, refreshConfig }: ShortDramaConfigProps) => {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const [shortDramaSettings, setShortDramaSettings] = useState({
-    primaryApiUrl: 'https://api.r2afosne.dpdns.org',
+    primaryApiUrl: 'https://wwzy.tv/api.php/provide/vod',
     alternativeApiUrl: '',
     enableAlternative: false,
   });
@@ -26,7 +26,7 @@ const ShortDramaConfig = ({ config, refreshConfig }: ShortDramaConfigProps) => {
   useEffect(() => {
     if (config?.ShortDramaConfig) {
       setShortDramaSettings({
-        primaryApiUrl: config.ShortDramaConfig.primaryApiUrl || 'https://api.r2afosne.dpdns.org',
+        primaryApiUrl: config.ShortDramaConfig.primaryApiUrl || 'https://wwzy.tv/api.php/provide/vod',
         alternativeApiUrl: config.ShortDramaConfig.alternativeApiUrl || '',
         enableAlternative: config.ShortDramaConfig.enableAlternative ?? false,
       });
@@ -114,7 +114,7 @@ const ShortDramaConfig = ({ config, refreshConfig }: ShortDramaConfigProps) => {
             value={shortDramaSettings.primaryApiUrl}
             onChange={(e) => setShortDramaSettings(prev => ({ ...prev, primaryApiUrl: e.target.value }))}
             className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
-            placeholder='https://api.r2afosne.dpdns.org'
+            placeholder='https://wwzy.tv/api.php/provide/vod'
           />
           <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
             主要的短剧视频解析API地址，默认优先使用此API

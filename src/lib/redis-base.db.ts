@@ -163,6 +163,29 @@ export abstract class BaseRedisStorage implements IStorage {
     this.withRetry = createRetryWrapper(config.clientName, () => this.client);
   }
 
+  // 🚀 使用 SCAN 替代 KEYS，避免阻塞 Redis
+  // SCAN 是渐进式遍历，不会阻塞服务器
+  protected async scanKeys(pattern: string): Promise<string[]> {
+    const keys = new Set<string>(); // 使用 Set 去重（SCAN 可能返回重复 key）
+    let cursor = 0;
+
+    do {
+      const result = await this.withRetry(() =>
+        this.client.scan(cursor, {
+          MATCH: pattern,
+          COUNT: 100, // 每次扫描 100 个 key
+        })
+      );
+
+      cursor = result.cursor;
+      for (const key of result.keys) {
+        keys.add(key);
+      }
+    } while (cursor !== 0);
+
+    return Array.from(keys);
+  }
+
   // ---------- 播放记录 ----------
   private prKey(user: string, key: string) {
     return `u:${user}:pr:${key}`; // u:username:pr:source+id
@@ -192,7 +215,7 @@ export abstract class BaseRedisStorage implements IStorage {
     userName: string
   ): Promise<Record<string, PlayRecord>> {
     const pattern = `u:${userName}:pr:*`;
-    const keys: string[] = await this.withRetry(() => this.client.keys(pattern));
+    const keys = await this.scanKeys(pattern);
     if (keys.length === 0) return {};
     const values = await this.withRetry(() => this.client.mGet(keys));
     const result: Record<string, PlayRecord> = {};
@@ -236,7 +259,7 @@ export abstract class BaseRedisStorage implements IStorage {
 
   async getAllFavorites(userName: string): Promise<Record<string, Favorite>> {
     const pattern = `u:${userName}:fav:*`;
-    const keys: string[] = await this.withRetry(() => this.client.keys(pattern));
+    const keys = await this.scanKeys(pattern);
     if (keys.length === 0) return {};
     const values = await this.withRetry(() => this.client.mGet(keys));
     const result: Record<string, Favorite> = {};
@@ -317,36 +340,28 @@ export abstract class BaseRedisStorage implements IStorage {
 
     // 删除播放记录
     const playRecordPattern = `u:${userName}:pr:*`;
-    const playRecordKeys = await this.withRetry(() =>
-      this.client.keys(playRecordPattern)
-    );
+    const playRecordKeys = await this.scanKeys(playRecordPattern);
     if (playRecordKeys.length > 0) {
       await this.withRetry(() => this.client.del(playRecordKeys));
     }
 
     // 删除收藏夹
     const favoritePattern = `u:${userName}:fav:*`;
-    const favoriteKeys = await this.withRetry(() =>
-      this.client.keys(favoritePattern)
-    );
+    const favoriteKeys = await this.scanKeys(favoritePattern);
     if (favoriteKeys.length > 0) {
       await this.withRetry(() => this.client.del(favoriteKeys));
     }
 
     // 删除跳过片头片尾配置
     const skipConfigPattern = `u:${userName}:skip:*`;
-    const skipConfigKeys = await this.withRetry(() =>
-      this.client.keys(skipConfigPattern)
-    );
+    const skipConfigKeys = await this.scanKeys(skipConfigPattern);
     if (skipConfigKeys.length > 0) {
       await this.withRetry(() => this.client.del(skipConfigKeys));
     }
 
     // 删除剧集跳过配置
     const episodeSkipPattern = `u:${userName}:episodeskip:*`;
-    const episodeSkipKeys = await this.withRetry(() =>
-      this.client.keys(episodeSkipPattern)
-    );
+    const episodeSkipKeys = await this.scanKeys(episodeSkipPattern);
     if (episodeSkipKeys.length > 0) {
       await this.withRetry(() => this.client.del(episodeSkipKeys));
     }
@@ -559,7 +574,7 @@ export abstract class BaseRedisStorage implements IStorage {
   // ---------- 获取全部用户 ----------
   async getAllUsers(): Promise<string[]> {
     // 获取 V1 用户（u:*:pwd）
-    const v1Keys = await this.withRetry(() => this.client.keys('u:*:pwd'));
+    const v1Keys = await this.scanKeys('u:*:pwd');
     const v1Users = v1Keys
       .map((k) => {
         const match = k.match(/^u:(.+?):pwd$/);
@@ -568,7 +583,7 @@ export abstract class BaseRedisStorage implements IStorage {
       .filter((u): u is string => typeof u === 'string');
 
     // 获取 V2 用户（u:*:info）
-    const v2Keys = await this.withRetry(() => this.client.keys('u:*:info'));
+    const v2Keys = await this.scanKeys('u:*:info');
     const v2Users = v2Keys
       .map((k) => {
         const match = k.match(/^u:(.+?):info$/);
@@ -641,7 +656,7 @@ export abstract class BaseRedisStorage implements IStorage {
     userName: string
   ): Promise<{ [key: string]: EpisodeSkipConfig }> {
     const pattern = `u:${userName}:skip:*`;
-    const keys = await this.withRetry(() => this.client.keys(pattern));
+    const keys = await this.scanKeys(pattern);
 
     if (keys.length === 0) {
       return {};
@@ -711,7 +726,7 @@ export abstract class BaseRedisStorage implements IStorage {
     userName: string
   ): Promise<{ [key: string]: EpisodeSkipConfig }> {
     const pattern = `u:${userName}:episodeskip:*`;
-    const keys = await this.withRetry(() => this.client.keys(pattern));
+    const keys = await this.scanKeys(pattern);
 
     if (keys.length === 0) {
       return {};
@@ -867,7 +882,7 @@ export abstract class BaseRedisStorage implements IStorage {
     // Redis的TTL机制会自动清理过期数据，这里主要用于手动清理
     // 可以根据需要实现特定前缀的缓存清理
     const pattern = prefix ? `cache:${prefix}*` : 'cache:*';
-    const keys = await this.withRetry(() => this.client.keys(pattern));
+    const keys = await this.scanKeys(pattern);
 
     if (keys.length > 0) {
       await this.withRetry(() => this.client.del(keys));
@@ -1031,8 +1046,8 @@ export abstract class BaseRedisStorage implements IStorage {
         activeUsers,
       };
 
-      // 缓存结果30分钟
-      await this.setCache('play_stats_summary', result, 1800);
+      // 缓存结果1小时
+      await this.setCache('play_stats_summary', result, 3600);
 
       return result;
     } catch (error) {

@@ -6,6 +6,7 @@ import { ChevronUp } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 
 import { isAIRecommendFeatureDisabled } from '@/lib/ai-recommend.client';
 import { GetBangumiCalendarData } from '@/lib/bangumi.client';
@@ -37,6 +38,8 @@ function DoubanPageClient() {
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadingRef = useRef<HTMLDivElement>(null);
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // 🚀 智能防抖追踪：首次挂载立即执行
+  const isFirstMountRef = useRef(true);
   // 返回顶部按钮显示状态
   const [showBackToTop, setShowBackToTop] = useState(false);
   // VirtualDoubanGrid ref for scroll control
@@ -62,6 +65,9 @@ function DoubanPageClient() {
   });
 
   const type = searchParams.get('type') || 'movie';
+
+  // 🚀 智能防抖追踪：Tab 切换立即执行
+  const prevTypeRef = useRef<string>(type);
 
   // 获取 runtimeConfig 中的自定义分类数据
   const [customCategories, setCustomCategories] = useState<
@@ -482,9 +488,12 @@ function DoubanPageClient() {
         );
 
         if (keyParamsMatch) {
-          setDoubanData(data.list);
-          setHasMore(data.list.length !== 0);
-          setLoading(false);
+          // 🚀 使用 flushSync 强制同步更新，避免 React 批处理延迟
+          flushSync(() => {
+            setDoubanData(data.list);
+            setHasMore(data.list.length !== 0);
+            setLoading(false);
+          });
         } else {
           console.log('关键参数不一致，不执行任何操作，避免设置过期数据');
         }
@@ -506,7 +515,7 @@ function DoubanPageClient() {
     customCategories,
   ]);
 
-  // 只在选择器准备好后才加载数据
+  // 只在选择器准备好后才加载数据 - 🚀 智能防抖机制
   useEffect(() => {
     // 只有在选择器准备好时才开始加载
     if (!selectorsReady) {
@@ -518,10 +527,29 @@ function DoubanPageClient() {
       clearTimeout(debounceTimeoutRef.current);
     }
 
-    // 使用防抖机制加载数据，避免连续状态更新触发多次请求
-    debounceTimeoutRef.current = setTimeout(() => {
+    // 🚀 智能防抖：检测是否为首次挂载或 Tab 切换
+    const isTypeChanged = prevTypeRef.current !== type;
+    const shouldExecuteImmediately = isFirstMountRef.current || isTypeChanged;
+
+    // 更新追踪状态
+    if (isFirstMountRef.current) {
+      isFirstMountRef.current = false;
+    }
+    if (isTypeChanged) {
+      prevTypeRef.current = type;
+    }
+
+    if (shouldExecuteImmediately) {
+      // 🚀 首次挂载或 Tab 切换：立即执行（利用缓存实现 0 延迟体验）
+      console.log('[SmartDebounce] 首次挂载/Tab切换，立即执行');
       loadInitialData();
-    }, 100); // 100ms 防抖延迟
+    } else {
+      // 🚀 筛选条件变化：100ms 防抖，防止快速点击
+      console.log('[SmartDebounce] 筛选条件变化，100ms 防抖');
+      debounceTimeoutRef.current = setTimeout(() => {
+        loadInitialData();
+      }, 100);
+    }
 
     // 清理函数
     return () => {
@@ -651,26 +679,29 @@ function DoubanPageClient() {
             );
 
             if (keyParamsMatch) {
-              // 🔧 双重去重逻辑：防止跨批次和批次内重复数据
-              setDoubanData((prev) => {
-                const existingIds = new Set(prev.map((item) => item.id));
-                const uniqueNewItems: DoubanItem[] = [];
+              // 🚀 使用 flushSync 强制同步更新，确保数据立即渲染
+              flushSync(() => {
+                // 🔧 双重去重逻辑：防止跨批次和批次内重复数据
+                setDoubanData((prev) => {
+                  const existingIds = new Set(prev.map((item) => item.id));
+                  const uniqueNewItems: DoubanItem[] = [];
 
-                for (const item of data.list) {
-                  if (!existingIds.has(item.id)) {
-                    existingIds.add(item.id);  // 立即添加，防止批次内重复
-                    uniqueNewItems.push(item);
+                  for (const item of data.list) {
+                    if (!existingIds.has(item.id)) {
+                      existingIds.add(item.id);  // 立即添加，防止批次内重复
+                      uniqueNewItems.push(item);
+                    }
                   }
-                }
 
-                console.log(
-                  `📊 Batch: ${data.list.length}, Added: ${uniqueNewItems.length}, Duplicates removed: ${data.list.length - uniqueNewItems.length}`
-                );
+                  console.log(
+                    `📊 Batch: ${data.list.length}, Added: ${uniqueNewItems.length}, Duplicates removed: ${data.list.length - uniqueNewItems.length}`
+                  );
 
-                if (uniqueNewItems.length === 0) return prev;
-                return [...prev, ...uniqueNewItems];
+                  if (uniqueNewItems.length === 0) return prev;
+                  return [...prev, ...uniqueNewItems];
+                });
+                setHasMore(data.list.length !== 0);
               });
-              setHasMore(data.list.length !== 0);
             } else {
               console.log('关键参数不一致，不执行任何操作，避免设置过期数据');
             }

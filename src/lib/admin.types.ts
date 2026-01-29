@@ -58,6 +58,7 @@ export interface AdminConfig {
     disabled?: boolean;
     is_adult?: boolean;
     type?: 'vod' | 'shortdrama'; // 视频源类型：vod=普通视频，shortdrama=短剧（系统会自动查找"短剧"分类）
+    weight?: number; // 优先级权重：0-100，数字越大优先级越高，默认50。播放时先按权重排序，同权重再按测速结果
   }[];
   CustomCategories: {
     name?: string;

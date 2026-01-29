@@ -98,7 +98,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       config: config.ShortDramaConfig || {
-        primaryApiUrl: 'https://api.r2afosne.dpdns.org',
+        primaryApiUrl: 'https://wwzy.tv/api.php/provide/vod',
         alternativeApiUrl: '',
         enableAlternative: false,
       },
