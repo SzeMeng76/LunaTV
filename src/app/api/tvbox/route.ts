@@ -1,3 +1,4 @@
+import ipaddr from 'ipaddr.js';
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getConfig } from '@/lib/config';
@@ -218,26 +219,32 @@ export async function GET(request: NextRequest) {
       const isAllowed = securityConfig.allowedIPs.some(allowedIP => {
         const trimmedIP = allowedIP.trim();
         if (trimmedIP === '*') return true;
-        
-        // 支持CIDR格式检查
-        if (trimmedIP.includes('/')) {
-          // 简单的CIDR匹配（实际生产环境建议使用专门的库）
-          const [network, mask] = trimmedIP.split('/');
-          const networkParts = network.split('.').map(Number);
-          const clientParts = clientIP.split('.').map(Number);
-          const maskBits = parseInt(mask, 10);
-          
-          // 简化的子网匹配逻辑
-          if (maskBits >= 24) {
-            const networkPrefix = networkParts.slice(0, 3).join('.');
-            const clientPrefix = clientParts.slice(0, 3).join('.');
-            return networkPrefix === clientPrefix;
+
+        try {
+          // 使用 ipaddr.js 处理 IPv4/IPv6 地址和 CIDR
+          // process() 会将 IPv4-mapped IPv6 (::ffff:x.x.x.x) 转换为 IPv4
+          const clientAddr = ipaddr.process(clientIP);
+
+          // 支持 CIDR 格式检查
+          if (trimmedIP.includes('/')) {
+            const [network, prefixLength] = ipaddr.parseCIDR(trimmedIP);
+            // 确保地址类型匹配（IPv4 vs IPv6）
+            if (clientAddr.kind() === network.kind()) {
+              return clientAddr.match(network, prefixLength);
+            }
+            return false;
           }
-          
-          return clientIP.startsWith(network.split('.').slice(0, 2).join('.'));
+
+          // 单个 IP 地址匹配
+          const allowedAddr = ipaddr.process(trimmedIP);
+          if (clientAddr.kind() === allowedAddr.kind()) {
+            return clientAddr.toString() === allowedAddr.toString();
+          }
+          return false;
+        } catch {
+          // 如果解析失败，回退到简单字符串匹配
+          return clientIP === trimmedIP;
         }
-        
-        return clientIP === trimmedIP;
       });
       
       if (!isAllowed) {

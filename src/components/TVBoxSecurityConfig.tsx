@@ -144,18 +144,47 @@ const TVBoxSecurityConfig = ({ config, refreshConfig }: TVBoxSecurityConfigProps
     }
   };
 
-  // 验证IP地址或CIDR格式
+  // 验证IP地址或CIDR格式（支持 IPv4 和 IPv6）
   function isValidIPOrCIDR(ip: string): boolean {
-    // 简单的IP地址验证
-    const ipRegex = /^(\d{1,3}\.){3}\d{1,3}(\/\d{1,2})?$/;
-    const parts = ip.split('/')[0].split('.');
-    
-    if (!ipRegex.test(ip)) return false;
-    
-    return parts.every(part => {
-      const num = parseInt(part, 10);
-      return num >= 0 && num <= 255;
-    });
+    const trimmed = ip.trim();
+
+    // 允许通配符
+    if (trimmed === '*') return true;
+
+    // 分离 IP 和 CIDR 掩码
+    const [ipPart, maskPart] = trimmed.split('/');
+
+    // IPv4 正则
+    const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/;
+    // IPv6 正则（简化版，支持常见格式）
+    const ipv6Regex = /^([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}$|^::([0-9a-fA-F]{1,4}:){0,5}[0-9a-fA-F]{0,4}$|^([0-9a-fA-F]{1,4}:){1,6}:$|^::$/;
+
+    const isIPv4 = ipv4Regex.test(ipPart);
+    const isIPv6 = ipv6Regex.test(ipPart);
+
+    if (!isIPv4 && !isIPv6) return false;
+
+    // 验证 IPv4 地址的每个部分是否在 0-255 范围内
+    if (isIPv4) {
+      const parts = ipPart.split('.');
+      for (const part of parts) {
+        const num = parseInt(part, 10);
+        if (isNaN(num) || num < 0 || num > 255) {
+          return false;
+        }
+      }
+    }
+
+    // 验证子网掩码位数
+    if (maskPart) {
+      const mask = parseInt(maskPart, 10);
+      if (isNaN(mask) || mask < 0) return false;
+      // IPv4 掩码 0-32，IPv6 掩码 0-128
+      if (isIPv4 && mask > 32) return false;
+      if (isIPv6 && mask > 128) return false;
+    }
+
+    return true;
   }
 
   // 添加IP地址
@@ -163,7 +192,7 @@ const TVBoxSecurityConfig = ({ config, refreshConfig }: TVBoxSecurityConfigProps
     if (!newIP.trim()) return;
     
     if (!isValidIPOrCIDR(newIP.trim())) {
-      showMessage('error', '请输入有效的IP地址或CIDR格式 (例如: 192.168.1.100 或 192.168.1.0/24)');
+      showMessage('error', '请输入有效的IP地址或CIDR格式 (例如: 192.168.1.100, 192.168.1.0/24, 2001:db8::1, 2001:db8::/32)');
       return;
     }
     
@@ -364,7 +393,7 @@ const TVBoxSecurityConfig = ({ config, refreshConfig }: TVBoxSecurityConfigProps
                   type='text'
                   value={newIP}
                   onChange={(e) => setNewIP(e.target.value)}
-                  placeholder='192.168.1.100 或 192.168.1.0/24'
+                  placeholder='192.168.1.100 或 2001:db8::1'
                   className='flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100'
                   onKeyDown={(e) => e.key === 'Enter' && addIP()}
                 />
@@ -394,7 +423,7 @@ const TVBoxSecurityConfig = ({ config, refreshConfig }: TVBoxSecurityConfigProps
               )}
               
               <p className='text-xs text-gray-500 dark:text-gray-400'>
-                支持单个IP (192.168.1.100) 和CIDR格式 (192.168.1.0/24)
+                支持 IPv4 (192.168.1.100)、IPv6 (2001:db8::1) 和 CIDR 格式 (192.168.1.0/24, 2001:db8::/32)
               </p>
             </div>
           )}
