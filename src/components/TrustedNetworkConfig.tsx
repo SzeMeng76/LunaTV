@@ -166,10 +166,10 @@ const TrustedNetworkConfig = ({ config, refreshConfig }: TrustedNetworkConfigPro
   };
 
   return (
-    <div className='bg-white dark:bg-gray-800 rounded-lg shadow-md p-6'>
-      <div className='flex items-center gap-3 mb-6'>
-        <Shield className='h-6 w-6 text-green-600' />
-        <h2 className='text-xl font-bold text-gray-900 dark:text-gray-100'>
+    <div className='bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 sm:p-6'>
+      <div className='flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6'>
+        <Shield className='h-5 w-5 sm:h-6 sm:w-6 text-green-600' />
+        <h2 className='text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100'>
           信任网络配置
         </h2>
       </div>
@@ -216,16 +216,16 @@ const TrustedNetworkConfig = ({ config, refreshConfig }: TrustedNetworkConfigPro
 
         {/* 启用开关 */}
         <div className='border border-gray-200 dark:border-gray-700 rounded-lg p-4'>
-          <div className='flex items-center justify-between mb-4'>
-            <div>
-              <h3 className='text-lg font-semibold text-gray-900 dark:text-gray-100'>
+          <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4'>
+            <div className='flex-1 min-w-0'>
+              <h3 className='text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100'>
                 启用信任网络模式
               </h3>
-              <p className='text-sm text-gray-600 dark:text-gray-400'>
+              <p className='text-xs sm:text-sm text-gray-600 dark:text-gray-400'>
                 来自信任IP段的访问将自动跳过登录认证，适用于内网部署场景
               </p>
             </div>
-            <label className='relative inline-flex items-center cursor-pointer'>
+            <label className='relative inline-flex items-center cursor-pointer flex-shrink-0'>
               <input
                 type='checkbox'
                 checked={settings.enabled}
@@ -257,7 +257,7 @@ const TrustedNetworkConfig = ({ config, refreshConfig }: TrustedNetworkConfigPro
                 <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
                   快捷添加常见内网段
                 </label>
-                <div className='flex flex-wrap gap-2'>
+                <div className='grid grid-cols-2 sm:flex sm:flex-wrap gap-2'>
                   {[
                     { label: '10.0.0.0/8', desc: 'A类私网' },
                     { label: '172.16.0.0/12', desc: 'B类私网' },
@@ -269,10 +269,10 @@ const TrustedNetworkConfig = ({ config, refreshConfig }: TrustedNetworkConfigPro
                       type='button'
                       onClick={() => addCommonPrivateRange(label)}
                       disabled={settings.trustedIPs.includes(label)}
-                      className='px-3 py-1 text-xs bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-gray-700 dark:text-gray-300 rounded-lg transition-colors'
+                      className='px-2 sm:px-3 py-1.5 sm:py-1 text-xs bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-gray-700 dark:text-gray-300 rounded-lg transition-colors text-center'
                     >
-                      {label}
-                      <span className='ml-1 text-gray-500 dark:text-gray-400'>
+                      <span className='block sm:inline'>{label}</span>
+                      <span className='block sm:inline sm:ml-1 text-gray-500 dark:text-gray-400'>
                         ({desc})
                       </span>
                     </button>
@@ -285,19 +285,19 @@ const TrustedNetworkConfig = ({ config, refreshConfig }: TrustedNetworkConfigPro
                 <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1'>
                   信任的IP/CIDR列表
                 </label>
-                <div className='flex gap-2'>
+                <div className='flex flex-col sm:flex-row gap-2'>
                   <input
                     type='text'
                     value={newIP}
                     onChange={(e) => setNewIP(e.target.value)}
                     placeholder='192.168.0.0/16 或 2001:db8::/32'
-                    className='flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100'
+                    className='flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm'
                     onKeyDown={(e) => e.key === 'Enter' && addIP()}
                   />
                   <button
                     type='button'
                     onClick={addIP}
-                    className='px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg'
+                    className='px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg whitespace-nowrap'
                   >
                     添加
                   </button>
@@ -310,14 +310,14 @@ const TrustedNetworkConfig = ({ config, refreshConfig }: TrustedNetworkConfigPro
                   {settings.trustedIPs.map((ip, index) => (
                     <div
                       key={index}
-                      className='flex items-center justify-between bg-gray-50 dark:bg-gray-700 px-3 py-2 rounded'
+                      className='flex items-center justify-between bg-gray-50 dark:bg-gray-700 px-3 py-2 rounded gap-2'
                     >
-                      <span className='text-gray-900 dark:text-gray-100 font-mono text-sm'>
+                      <span className='text-gray-900 dark:text-gray-100 font-mono text-xs sm:text-sm break-all'>
                         {ip}
                       </span>
                       <button
                         onClick={() => removeIP(index)}
-                        className='text-red-600 hover:text-red-800 text-sm'
+                        className='text-red-600 hover:text-red-800 text-sm flex-shrink-0'
                       >
                         删除
                       </button>
@@ -341,13 +341,13 @@ const TrustedNetworkConfig = ({ config, refreshConfig }: TrustedNetworkConfigPro
                   </li>
                   <li>
                     &bull; <strong>环境变量配置：</strong>设置{' '}
-                    <code className='bg-gray-200 dark:bg-gray-700 px-1 rounded'>
-                      TRUSTED_NETWORK_IPS=192.168.0.0/16,10.0.0.0/8
+                    <code className='bg-gray-200 dark:bg-gray-700 px-1 rounded text-[10px] sm:text-xs break-all'>
+                      TRUSTED_NETWORK_IPS=192.168.0.0/16
                     </code>{' '}
-                    环境变量（优先级更高，无需数据库）
+                    （优先级更高）
                   </li>
                   <li>
-                    &bull; 信任IP段内的设备访问时将自动获得站长权限，无需输入密码
+                    &bull; 信任IP段内的设备访问时将自动获得站长权限
                   </li>
                   <li>
                     &bull; 非信任IP段的设备仍需正常登录
@@ -360,11 +360,11 @@ const TrustedNetworkConfig = ({ config, refreshConfig }: TrustedNetworkConfigPro
       </div>
 
       {/* 保存按钮 */}
-      <div className='flex justify-end pt-6'>
+      <div className='flex justify-end pt-4 sm:pt-6'>
         <button
           onClick={handleSave}
           disabled={isLoading}
-          className='px-6 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors'
+          className='w-full sm:w-auto px-6 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors'
         >
           {isLoading ? '保存中...' : '保存配置'}
         </button>
