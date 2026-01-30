@@ -73,11 +73,10 @@ export async function GET(request: NextRequest) {
   const config = await getConfig();
   const apiSites = await getAvailableApiSites(authInfo.username);
 
-  // 优化：预计算搜索变体，避免每个源重复计算（43个源 × 3次转换 = 129次转换）
-  const searchVariants = generateSearchVariants(query).slice(0, 2);
+  // 优化：预计算搜索变体，智能生成（普通查询1个，需要变体的2个）
+  const searchVariants = generateSearchVariants(query);
 
   // 添加超时控制和错误处理，避免慢接口拖累整体响应
-  // 移除数字变体后，统一使用智能搜索变体
   const searchPromises = apiSites.map((site) =>
     Promise.race([
       searchFromApi(site, query, searchVariants), // 传入预计算的变体

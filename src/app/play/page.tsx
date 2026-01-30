@@ -484,7 +484,7 @@ function PlayPageClient() {
         if (loadingBangumiDetails || bangumiDetails) {
           return;
         }
-        
+
         setLoadingBangumiDetails(true);
         try {
           const bangumiData = await fetchBangumiDetails(videoDoubanId);
@@ -3165,6 +3165,7 @@ function PlayPageClient() {
         search_title: searchTitle,
         remarks: remarksToSave, // 优先使用搜索结果的 remarks，因为详情接口可能没有
         douban_id: videoDoubanIdRef.current || detailRef.current?.douban_id || undefined, // 添加豆瓣ID
+        type: searchType || undefined, // 保存内容类型（anime/tv/movie）用于继续播放时正确请求详情
       });
 
       lastSaveTimeRef.current = Date.now();

@@ -39,7 +39,7 @@ TRUSTED_NETWORK_IPS=192.168.1.100,10.0.0.0/8
 ```yaml
 services:
   lunatv:
-    image: lunatv:latest
+    image: ghcr.io/szemeng76/lunatv:latest
     environment:
       - PASSWORD=your_password
       - TRUSTED_NETWORK_IPS=192.168.0.0/16,172.17.0.0/16

@@ -40,6 +40,8 @@ function DoubanPageClient() {
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   // 🚀 智能防抖追踪：首次挂载立即执行
   const isFirstMountRef = useRef(true);
+  // 🛡️ 请求生命周期管理：防止同一 cacheKey 的并发请求
+  const pendingCacheKeyRef = useRef<string | null>(null);
   // 返回顶部按钮显示状态
   const [showBackToTop, setShowBackToTop] = useState(false);
   // VirtualDoubanGrid ref for scroll control
@@ -379,6 +381,16 @@ function DoubanPageClient() {
       currentPage: 0,
     };
 
+    // 🛡️ 生成 cacheKey 用于防并发检查
+    const cacheKey = `${type}-${primarySelection}-${secondarySelection}-${selectedWeekday}-${JSON.stringify(multiLevelValues)}`;
+
+    // 🛡️ 防止同一 cacheKey 的并发请求
+    if (pendingCacheKeyRef.current === cacheKey) {
+      console.log('[Douban] 跳过并发请求:', cacheKey);
+      return;
+    }
+    pendingCacheKeyRef.current = cacheKey;
+
     try {
       setLoading(true);
       // 确保在加载初始数据时重置页面状态
@@ -504,6 +516,11 @@ function DoubanPageClient() {
     } catch (err) {
       console.error(err);
       setLoading(false); // 发生错误时总是停止loading状态
+    } finally {
+      // 🛡️ 清除并发锁（只有当前请求的 cacheKey 匹配时才清除）
+      if (pendingCacheKeyRef.current === cacheKey) {
+        pendingCacheKeyRef.current = null;
+      }
     }
   }, [
     type,
