@@ -7,7 +7,11 @@ import { getAuthInfoFromCookie } from '@/lib/auth';
 // 信任网络配置缓存（从 API 获取）
 let trustedNetworkCache: { enabled: boolean; trustedIPs: string[] } | null = null;
 let trustedNetworkCacheTime = 0;
-const CACHE_TTL = 30000; // 30 秒缓存
+// 标记是否已经尝试过获取配置（用于区分"未获取"和"获取后为空/禁用"）
+let trustedNetworkFetched = false;
+
+const CACHE_TTL_ENABLED = 30000; // 功能启用时：30 秒缓存
+const CACHE_TTL_DISABLED = 300000; // 功能禁用时：5 分钟缓存（减少无效请求）
 
 // 从环境变量获取信任网络配置（优先）
 function getTrustedNetworkFromEnv(): { enabled: boolean; trustedIPs: string[] } | null {
@@ -22,10 +26,26 @@ function getTrustedNetworkFromEnv(): { enabled: boolean; trustedIPs: string[] } 
 
 // 从 API 获取信任网络配置（数据库）
 async function getTrustedNetworkFromAPI(request: NextRequest): Promise<{ enabled: boolean; trustedIPs: string[] } | null> {
-  // 检查缓存是否有效
   const now = Date.now();
-  if (trustedNetworkCache && (now - trustedNetworkCacheTime) < CACHE_TTL) {
-    return trustedNetworkCache;
+
+  // 检查缓存是否有效
+  if (trustedNetworkFetched && trustedNetworkCache !== null) {
+    // 根据功能是否启用使用不同的缓存时间
+    const cacheTTL = trustedNetworkCache.enabled ? CACHE_TTL_ENABLED : CACHE_TTL_DISABLED;
+    if ((now - trustedNetworkCacheTime) < cacheTTL) {
+      // 功能禁用时直接返回 null，跳过后续所有逻辑
+      if (!trustedNetworkCache.enabled) {
+        return null;
+      }
+      return trustedNetworkCache;
+    }
+  }
+
+  // 如果已经获取过且结果是"未配置"，使用更长的缓存时间
+  if (trustedNetworkFetched && trustedNetworkCache === null) {
+    if ((now - trustedNetworkCacheTime) < CACHE_TTL_DISABLED) {
+      return null;
+    }
   }
 
   try {
@@ -39,6 +59,9 @@ async function getTrustedNetworkFromAPI(request: NextRequest): Promise<{ enabled
       },
     });
 
+    trustedNetworkFetched = true;
+    trustedNetworkCacheTime = now;
+
     if (response.ok) {
       const data = await response.json();
       if (data.TrustedNetworkConfig) {
@@ -46,12 +69,23 @@ async function getTrustedNetworkFromAPI(request: NextRequest): Promise<{ enabled
           enabled: data.TrustedNetworkConfig.enabled ?? false,
           trustedIPs: data.TrustedNetworkConfig.trustedIPs || [],
         };
-        trustedNetworkCacheTime = now;
+
+        // 功能禁用时返回 null，避免后续无效检查
+        if (!trustedNetworkCache.enabled) {
+          console.log('[Middleware] Trusted network is disabled, skipping checks for 5 minutes');
+          return null;
+        }
+
         return trustedNetworkCache;
       }
     }
+
+    // API 返回但没有配置，记录为 null
+    trustedNetworkCache = null;
   } catch (error) {
     console.error('[Middleware] Failed to fetch trusted network config:', error);
+    // 请求失败时也标记已尝试，避免频繁重试
+    trustedNetworkCache = null;
   }
 
   return null;
@@ -63,7 +97,7 @@ async function getTrustedNetworkConfig(request: NextRequest): Promise<{ enabled:
   const envConfig = getTrustedNetworkFromEnv();
   if (envConfig) return envConfig;
 
-  // 尝试从数据库获取
+  // 尝试从数据库获取（内部已处理禁用状态的缓存优化）
   return await getTrustedNetworkFromAPI(request);
 }
 

@@ -185,6 +185,13 @@ export interface AdminConfig {
     enabled: boolean;                    // 是否启用信任网络模式（内网免登录）
     trustedIPs: string[];               // 信任的IP/CIDR列表（如 192.168.0.0/16, 10.0.0.0/8）
   };
+  DanmuApiConfig?: {
+    enabled: boolean;                    // 是否启用弹幕API（默认启用）
+    useCustomApi: boolean;               // 是否使用自定义API（false则使用默认API）
+    customApiUrl: string;                // 自定义弹幕API地址
+    customToken: string;                 // 自定义API Token
+    timeout: number;                     // 请求超时时间（秒），默认15
+  };
 }
 
 export interface AdminConfigResult {

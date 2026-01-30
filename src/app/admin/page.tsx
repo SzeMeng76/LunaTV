@@ -43,7 +43,7 @@ import {
   Users,
   Video,
 } from 'lucide-react';
-import { GripVertical, KeyRound } from 'lucide-react';
+import { GripVertical, KeyRound, MessageSquare } from 'lucide-react';
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -59,6 +59,7 @@ import { TelegramAuthConfig } from '@/components/TelegramAuthConfig';
 import { OIDCAuthConfig } from '@/components/OIDCAuthConfig';
 import TVBoxSecurityConfig from '@/components/TVBoxSecurityConfig';
 import TrustedNetworkConfig from '@/components/TrustedNetworkConfig';
+import DanmuApiConfig from '@/components/DanmuApiConfig';
 import { TVBoxTokenCell, TVBoxTokenModal } from '@/components/TVBoxTokenManager';
 import YouTubeConfig from '@/components/YouTubeConfig';
 import ShortDramaConfig from '@/components/ShortDramaConfig';
@@ -6881,6 +6882,7 @@ function AdminPageClient() {
     watchRoomConfig: false,
     tvboxSecurityConfig: false,
     trustedNetworkConfig: false,
+    danmuApiConfig: false,
     telegramAuthConfig: false,
     oidcAuthConfig: false,
     configFile: false,
@@ -7236,6 +7238,23 @@ function AdminPageClient() {
                 onToggle={() => toggleTab('trustedNetworkConfig')}
               >
                 <TrustedNetworkConfig config={config} refreshConfig={fetchConfig} />
+              </CollapsibleTab>
+            )}
+
+            {/* 弹幕API配置 - 仅站长可见 */}
+            {role === 'owner' && (
+              <CollapsibleTab
+                title='弹幕API配置'
+                icon={
+                  <MessageSquare
+                    size={20}
+                    className='text-purple-600 dark:text-purple-400'
+                  />
+                }
+                isExpanded={expandedTabs.danmuApiConfig}
+                onToggle={() => toggleTab('danmuApiConfig')}
+              >
+                <DanmuApiConfig config={config} refreshConfig={fetchConfig} />
               </CollapsibleTab>
             )}
 
