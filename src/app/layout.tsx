@@ -109,6 +109,7 @@ export default async function RootLayout({
     FLUID_SEARCH: fluidSearch,
     CUSTOM_AD_FILTER_VERSION: customAdFilterVersion,
     AI_RECOMMEND_ENABLED: aiRecommendEnabled,
+    IS_VERCEL: process.env.VERCEL === '1',
   };
 
   return (

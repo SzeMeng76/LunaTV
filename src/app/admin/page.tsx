@@ -6987,7 +6987,7 @@ function AdminPageClient() {
   return (
     <PageLayout activePath='/admin'>
       <div className='-mt-6 md:mt-0'>
-        <div className='max-w-[95%] mx-auto pb-32 md:pb-safe-bottom'>
+        <div className='max-w-[95%] mx-auto pb-40 md:pb-safe-bottom'>
           {/* 标题 + 重置配置按钮 */}
           <div className='flex items-center gap-2 mb-8'>
             <h1 className='text-2xl font-bold text-gray-900 dark:text-gray-100'>

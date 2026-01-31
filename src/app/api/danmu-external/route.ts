@@ -52,7 +52,7 @@ async function getDanmuApiConfig(): Promise<DanmuApiConfig> {
         enabled: true,
         apiUrl: config.customApiUrl.replace(/\/$/, ''),
         token: config.customToken || '',
-        timeout: config.timeout || 15,
+        timeout: config.timeout || 30,
       };
     }
 
@@ -61,7 +61,7 @@ async function getDanmuApiConfig(): Promise<DanmuApiConfig> {
       enabled: true,
       apiUrl: DEFAULT_DANMU_API_URL,
       token: DEFAULT_DANMU_API_TOKEN,
-      timeout: config?.timeout || 15,
+      timeout: config?.timeout || 30,
     };
   } catch {
     // 配置获取失败，使用默认值
@@ -69,7 +69,7 @@ async function getDanmuApiConfig(): Promise<DanmuApiConfig> {
       enabled: true,
       apiUrl: DEFAULT_DANMU_API_URL,
       token: DEFAULT_DANMU_API_TOKEN,
-      timeout: 15,
+      timeout: 30,
     };
   }
 }
@@ -190,39 +190,138 @@ async function fetchDanmuFromCustomAPI(
 
     const commentData = await commentResponse.json();
 
-    // API 返回格式: { errorCode: 0, count: 1953, comments: [...] }
-    // errorCode === 0 表示成功
-    if (commentData.errorCode !== 0 || !commentData.comments || commentData.comments.length === 0) {
-      console.log(`📭 [弹幕API] 无弹幕数据 (errorCode: ${commentData.errorCode}, count: ${commentData.count || 0})`);
+    // API 返回格式有两种:
+    // 1. 搜索/详情: { success: true, ... } 或 { errorCode: 0, ... }
+    // 2. 弹幕数据: { count: 31217, comments: [...] } - 没有 errorCode 字段
+    // 检测有效弹幕的逻辑：有 comments 数组且不为空
+    if (!commentData.comments || !Array.isArray(commentData.comments) || commentData.comments.length === 0) {
+      console.log(`📭 [弹幕API] 无弹幕数据 (count: ${commentData.count || 0})`);
       return null;
     }
 
     console.log(`🎉 [弹幕API] 获取到 ${commentData.comments.length} 条弹幕`);
 
-    // 转换弹幕格式
-    const danmuList: DanmuItem[] = commentData.comments.map((item: any) => {
-      // p 格式: "time,mode,color,[source]"
-      const pParts = (item.p || '').split(',');
-      const time = parseFloat(pParts[0]) || item.t || 0;
-      const mode = parseInt(pParts[1]) || 0;
-      const colorInt = parseInt(pParts[2]) || 16777215;
+    // 🚀 激进性能优化策略 - 与XML API保持一致
+    // 核心问题: 大量弹幕导致内存占用和计算密集
+    // 解决方案: 智能分段加载 + 动态密度控制 + 预计算优化
 
-      return {
-        text: (item.m || '').trim(),
-        time: time,
-        color: '#' + colorInt.toString(16).padStart(6, '0').toUpperCase(),
-        mode: mode === 4 ? 1 : mode === 5 ? 2 : 0, // 4=顶部, 5=顶部, 其他=滚动
-      };
-    }).filter((item: DanmuItem) =>
-      item.text.length > 0 &&
-      item.text.length <= 100 &&
-      item.time >= 0
-    );
+    const SEGMENT_DURATION = 300; // 5分钟分段
+    const MAX_DANMU_PER_SEGMENT = 500; // 每段最大弹幕数
+    const BATCH_SIZE = 200; // 减小批处理大小，更频繁让出控制权
+    const maxAllowedDanmu = 20000; // 最大弹幕数限制
 
-    console.log(`✅ [弹幕API] 处理后 ${danmuList.length} 条弹幕`);
+    const timeSegments: { [key: number]: DanmuItem[] } = {};
+    let totalProcessed = 0;
+    let batchCount = 0;
+    const comments = commentData.comments;
+
+    for (const item of comments) {
+      try {
+        // p 格式: "time,mode,color,[source]"
+        const pParts = (item.p || '').split(',');
+        const time = parseFloat(pParts[0]) || item.t || 0;
+        const mode = parseInt(pParts[1]) || 0;
+        const colorInt = parseInt(pParts[2]) || 16777215;
+        const text = (item.m || '').trim();
+
+        // 🔥 激进预过滤: 更严格的质量控制
+        if (text.length === 0 ||
+            text.length > 50 || // 更严格的长度限制
+            text.length < 2 ||  // 过短弹幕通常是无意义的
+            /^[^\u4e00-\u9fa5a-zA-Z0-9]+$/.test(text) || // 纯符号弹幕
+            text.includes('弹幕正在赶来') ||
+            text.includes('观影愉快') ||
+            text.includes('视频不错') ||
+            text.includes('666') ||
+            /^\d+$/.test(text) || // 纯数字弹幕
+            /^[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]+$/.test(text)) { // 纯标点符号
+          continue;
+        }
+
+        // 时间范围和有效性检查
+        if (time < 0 || time > 86400 || !Number.isFinite(time)) continue;
+
+        // 🎯 智能分段: 按时间分段存储，便于按需加载
+        const segmentIndex = Math.floor(time / SEGMENT_DURATION);
+        if (!timeSegments[segmentIndex]) {
+          timeSegments[segmentIndex] = [];
+        }
+
+        // 🎯 密度控制: 每段限制弹幕数量，优先保留质量高的
+        if (timeSegments[segmentIndex].length >= MAX_DANMU_PER_SEGMENT) {
+          // 如果当前段已满，随机替换（保持弹幕多样性）
+          if (Math.random() < 0.1) { // 10%概率替换
+            const randomIndex = Math.floor(Math.random() * timeSegments[segmentIndex].length);
+            timeSegments[segmentIndex][randomIndex] = {
+              text,
+              time,
+              color: '#' + colorInt.toString(16).padStart(6, '0').toUpperCase(),
+              mode: mode === 4 ? 1 : mode === 5 ? 2 : 0,
+            };
+          }
+          continue;
+        }
+
+        timeSegments[segmentIndex].push({
+          text,
+          time,
+          color: '#' + colorInt.toString(16).padStart(6, '0').toUpperCase(),
+          mode: mode === 4 ? 1 : mode === 5 ? 2 : 0, // 4=顶部, 5=顶部, 其他=滚动
+        });
+
+        totalProcessed++;
+        batchCount++;
+
+        // 🔄 更频繁的批量处理控制
+        if (batchCount >= BATCH_SIZE) {
+          await new Promise(resolve => setTimeout(resolve, 0));
+          batchCount = 0;
+
+          // 进度反馈
+          if (totalProcessed % 1000 === 0) {
+            console.log(`📊 [弹幕API] 已处理 ${totalProcessed} 条弹幕，分段数: ${Object.keys(timeSegments).length}`);
+          }
+        }
+      } catch {
+        // 跳过解析失败的弹幕
+      }
+    }
+
+    // 🎯 将分段数据重新整合为时间排序的数组
+    console.log(`📈 [弹幕API] 分段统计: 共 ${Object.keys(timeSegments).length} 个时间段`);
+
+    const danmuList: DanmuItem[] = [];
+    for (const segmentIndex of Object.keys(timeSegments).sort((a, b) => parseInt(a) - parseInt(b))) {
+      const segment = timeSegments[parseInt(segmentIndex)];
+      // 段内按时间排序
+      segment.sort((a, b) => a.time - b.time);
+      danmuList.push(...segment);
+    }
+
+    // 🚀 智能采样：如果弹幕数量过多，采用均匀采样
+    let finalDanmu = danmuList;
+    if (danmuList.length > maxAllowedDanmu) {
+      console.warn(`⚠️ [弹幕API] 弹幕数量过多 (${danmuList.length})，采用智能采样至 ${maxAllowedDanmu} 条`);
+
+      const sampleRate = maxAllowedDanmu / danmuList.length;
+      finalDanmu = danmuList.filter((_, index) => {
+        return index === 0 || // 保留第一条
+               index === danmuList.length - 1 || // 保留最后一条
+               Math.random() < sampleRate || // 随机采样
+               index % Math.ceil(1 / sampleRate) === 0; // 均匀采样
+      }).slice(0, maxAllowedDanmu);
+    }
+
+    console.log(`✅ [弹幕API] 处理后 ${finalDanmu.length} 条优质弹幕`);
+
+    // 如果弹幕太少（少于10条），可能是聚合源没有实际弹幕，返回null让备用方案接管
+    if (finalDanmu.length < 10) {
+      console.log(`⚠️ [弹幕API] 弹幕数量过少 (${finalDanmu.length}条)，尝试备用方案`);
+      return null;
+    }
 
     return {
-      danmu: danmuList,
+      danmu: finalDanmu,
       source: `弹幕API (${bestMatch.animeTitle})`,
     };
   } catch (error) {

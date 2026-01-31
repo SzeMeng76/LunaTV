@@ -278,6 +278,50 @@ export abstract class BaseRedisStorage implements IStorage {
     await this.withRetry(() => this.client.del(this.favKey(userName, key)));
   }
 
+  // ---------- 🚀 批量写入方法（使用 mSet，减少 RTT） ----------
+
+  /**
+   * 批量保存播放记录（使用 mSet）
+   * @param userName 用户名
+   * @param records 键值对 { "source+id": PlayRecord }
+   */
+  async setPlayRecordsBatch(
+    userName: string,
+    records: Record<string, PlayRecord>
+  ): Promise<void> {
+    const entries = Object.entries(records);
+    if (entries.length === 0) return;
+
+    // 构建 mSet 参数：[key1, val1, key2, val2, ...]
+    const msetArgs: string[] = [];
+    for (const [key, record] of entries) {
+      msetArgs.push(this.prKey(userName, key), JSON.stringify(record));
+    }
+
+    await this.withRetry(() => this.client.mSet(msetArgs));
+  }
+
+  /**
+   * 批量保存收藏（使用 mSet）
+   * @param userName 用户名
+   * @param favorites 键值对 { "source+id": Favorite }
+   */
+  async setFavoritesBatch(
+    userName: string,
+    favorites: Record<string, Favorite>
+  ): Promise<void> {
+    const entries = Object.entries(favorites);
+    if (entries.length === 0) return;
+
+    // 构建 mSet 参数：[key1, val1, key2, val2, ...]
+    const msetArgs: string[] = [];
+    for (const [key, favorite] of entries) {
+      msetArgs.push(this.favKey(userName, key), JSON.stringify(favorite));
+    }
+
+    await this.withRetry(() => this.client.mSet(msetArgs));
+  }
+
   // ---------- 用户注册 / 登录 ----------
   private userPwdKey(user: string) {
     return `u:${user}:pwd`;

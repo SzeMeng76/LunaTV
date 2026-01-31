@@ -25,7 +25,7 @@ const DanmuApiConfig = ({ config, refreshConfig }: DanmuApiConfigProps) => {
     useCustomApi: false,
     customApiUrl: '',
     customToken: '',
-    timeout: 15,
+    timeout: 30,
   });
 
   // 从 config 加载设置
@@ -36,7 +36,7 @@ const DanmuApiConfig = ({ config, refreshConfig }: DanmuApiConfigProps) => {
         useCustomApi: config.DanmuApiConfig.useCustomApi ?? false,
         customApiUrl: config.DanmuApiConfig.customApiUrl || '',
         customToken: config.DanmuApiConfig.customToken || '',
-        timeout: config.DanmuApiConfig.timeout || 15,
+        timeout: config.DanmuApiConfig.timeout || 30,
       });
     }
   }, [config]);
@@ -315,14 +315,32 @@ const DanmuApiConfig = ({ config, refreshConfig }: DanmuApiConfigProps) => {
                   min={5}
                   max={60}
                   value={settings.timeout}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    // 允许空值输入，方便用户清空后重新输入
+                    if (val === '') {
+                      setSettings((prev) => ({ ...prev, timeout: '' as unknown as number }));
+                      return;
+                    }
+                    const num = parseInt(val);
+                    if (!isNaN(num)) {
+                      setSettings((prev) => ({ ...prev, timeout: num }));
+                    }
+                  }}
+                  onBlur={() => {
+                    // 失去焦点时验证范围
+                    const current = settings.timeout;
+                    const num = typeof current === 'number' && !isNaN(current) ? current : 30;
                     setSettings((prev) => ({
                       ...prev,
-                      timeout: Math.max(5, Math.min(60, parseInt(e.target.value) || 15)),
-                    }))
-                  }
+                      timeout: Math.max(5, Math.min(60, num)),
+                    }));
+                  }}
                   className='w-24 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm'
                 />
+                <p className='text-xs text-gray-500 dark:text-gray-400 mt-1'>
+                  范围 5-60 秒，建议 30 秒
+                </p>
               </div>
 
               {/* 测试连接 */}
