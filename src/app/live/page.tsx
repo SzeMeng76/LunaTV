@@ -2198,7 +2198,7 @@ function LivePageClient() {
                         </div>
 
                     {/* 频道列表 */}
-                    <div ref={channelListRef} className='flex-1 overflow-y-auto space-y-2 pb-4'>
+                    <div ref={channelListRef} className='flex-1 overflow-y-auto space-y-2 pb-24 md:pb-4'>
                       {filteredChannels.length > 0 ? (
                         filteredChannels.map(channel => {
                           const isActive = channel.id === currentChannel?.id;
@@ -2305,7 +2305,7 @@ function LivePageClient() {
                       </>
                     ) : (
                       // 搜索结果显示（仅当前源）
-                      <div className='flex-1 overflow-y-auto space-y-2 pb-4'>
+                      <div className='flex-1 overflow-y-auto space-y-2 pb-24 md:pb-4'>
                         {currentSourceSearchResults.length > 0 ? (
                           <div className='space-y-1 mb-2'>
                             <div className='text-xs text-gray-500 dark:text-gray-400 px-2'>
@@ -2621,7 +2621,7 @@ function LivePageClient() {
 
         {/* 当前频道信息 */}
         {currentChannel && (
-          <div className='pt-4'>
+          <div className='pt-4 pb-24 md:pb-0'>
             <div className='flex flex-col lg:flex-row gap-4'>
               {/* 频道图标+名称 - 在小屏幕上占100%，大屏幕占20% */}
               <div className='w-full shrink-0'>

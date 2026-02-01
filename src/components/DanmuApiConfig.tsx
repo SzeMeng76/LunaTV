@@ -373,20 +373,20 @@ const DanmuApiConfig = ({ config, refreshConfig }: DanmuApiConfigProps) => {
               </div>
 
               {/* 默认 API 信息 */}
-              <div className='bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3'>
+              <div className='bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 overflow-hidden'>
                 <h4 className='text-sm font-semibold text-blue-900 dark:text-blue-300 mb-2'>
                   默认弹幕服务
                 </h4>
                 <div className='text-xs text-blue-800 dark:text-blue-300 space-y-1'>
-                  <div>
-                    <span className='font-medium'>API地址：</span>
-                    <code className='ml-1 bg-blue-100 dark:bg-blue-800/50 px-1 rounded'>
+                  <div className='flex flex-col sm:flex-row sm:items-center gap-1'>
+                    <span className='font-medium shrink-0'>API地址：</span>
+                    <code className='bg-blue-100 dark:bg-blue-800/50 px-1 rounded break-all'>
                       {DEFAULT_DANMU_API_URL}
                     </code>
                   </div>
-                  <div>
-                    <span className='font-medium'>Token：</span>
-                    <code className='ml-1 bg-blue-100 dark:bg-blue-800/50 px-1 rounded'>
+                  <div className='flex flex-col sm:flex-row sm:items-center gap-1'>
+                    <span className='font-medium shrink-0'>Token：</span>
+                    <code className='bg-blue-100 dark:bg-blue-800/50 px-1 rounded break-all'>
                       {DEFAULT_DANMU_API_TOKEN}
                     </code>
                   </div>
