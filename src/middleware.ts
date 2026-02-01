@@ -7,11 +7,10 @@ import { getAuthInfoFromCookie } from '@/lib/auth';
 // 信任网络配置缓存（从 API 获取）
 let trustedNetworkCache: { enabled: boolean; trustedIPs: string[] } | null = null;
 let trustedNetworkCacheTime = 0;
-// 标记是否已经尝试过获取配置（用于区分"未获取"和"获取后为空/禁用"）
 let trustedNetworkFetched = false;
+let trustedNetworkVersion = ''; // 跟踪配置版本，用于立即失效缓存
 
-const CACHE_TTL_ENABLED = 30000; // 功能启用时：30 秒缓存
-const CACHE_TTL_DISABLED = 300000; // 功能禁用时：5 分钟缓存（减少无效请求）
+const CACHE_TTL = 86400000; // 24 小时缓存（配置变化时通过 cookie 版本号立即刷新）
 
 // 从环境变量获取信任网络配置（优先）
 function getTrustedNetworkFromEnv(): { enabled: boolean; trustedIPs: string[] } | null {
@@ -30,10 +29,7 @@ async function getTrustedNetworkFromAPI(request: NextRequest): Promise<{ enabled
 
   // 检查缓存是否有效
   if (trustedNetworkFetched && trustedNetworkCache !== null) {
-    // 根据功能是否启用使用不同的缓存时间
-    const cacheTTL = trustedNetworkCache.enabled ? CACHE_TTL_ENABLED : CACHE_TTL_DISABLED;
-    if ((now - trustedNetworkCacheTime) < cacheTTL) {
-      // 功能禁用时直接返回 null，跳过后续所有逻辑
+    if ((now - trustedNetworkCacheTime) < CACHE_TTL) {
       if (!trustedNetworkCache.enabled) {
         return null;
       }
@@ -41,15 +37,14 @@ async function getTrustedNetworkFromAPI(request: NextRequest): Promise<{ enabled
     }
   }
 
-  // 如果已经获取过且结果是"未配置"，使用更长的缓存时间
+  // 如果已经获取过且结果是"未配置"，使用长缓存时间
   if (trustedNetworkFetched && trustedNetworkCache === null) {
-    if ((now - trustedNetworkCacheTime) < CACHE_TTL_DISABLED) {
+    if ((now - trustedNetworkCacheTime) < CACHE_TTL) {
       return null;
     }
   }
 
   try {
-    // 构建内部 API URL
     const url = new URL('/api/server-config', request.url);
     url.searchParams.set('key', 'TrustedNetworkConfig');
 
@@ -70,9 +65,7 @@ async function getTrustedNetworkFromAPI(request: NextRequest): Promise<{ enabled
           trustedIPs: data.TrustedNetworkConfig.trustedIPs || [],
         };
 
-        // 功能禁用时返回 null，避免后续无效检查
         if (!trustedNetworkCache.enabled) {
-          console.log('[Middleware] Trusted network is disabled, skipping checks for 5 minutes');
           return null;
         }
 
@@ -80,12 +73,11 @@ async function getTrustedNetworkFromAPI(request: NextRequest): Promise<{ enabled
       }
     }
 
-    // API 返回但没有配置，记录为 null
-    trustedNetworkCache = null;
-  } catch (error) {
-    console.error('[Middleware] Failed to fetch trusted network config:', error);
-    // 请求失败时也标记已尝试，避免频繁重试
-    trustedNetworkCache = null;
+    // API 返回但没有配置 - 标记为禁用而不是 null，这样走禁用缓存逻辑
+    trustedNetworkCache = { enabled: false, trustedIPs: [] };
+  } catch {
+    // 请求失败时标记为禁用，使用长缓存时间避免频繁重试
+    trustedNetworkCache = { enabled: false, trustedIPs: [] };
   }
 
   return null;
@@ -96,6 +88,16 @@ async function getTrustedNetworkConfig(request: NextRequest): Promise<{ enabled:
   // 环境变量优先
   const envConfig = getTrustedNetworkFromEnv();
   if (envConfig) return envConfig;
+
+  // 检查 cookie 中的配置版本号
+  // 管理页面保存配置时会更新这个 cookie，版本号变化时强制刷新缓存
+  const cookieVersion = request.cookies.get('tn-version')?.value || '';
+  if (cookieVersion && cookieVersion !== trustedNetworkVersion) {
+    // 版本号变了，强制清除缓存，立即重新获取
+    trustedNetworkCache = null;
+    trustedNetworkFetched = false;
+    trustedNetworkVersion = cookieVersion;
+  }
 
   // 尝试从数据库获取（内部已处理禁用状态的缓存优化）
   return await getTrustedNetworkFromAPI(request);
@@ -210,14 +212,9 @@ function generateTrustedAuthCookie(request: NextRequest): NextResponse {
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const requestId = Math.random().toString(36).substring(7);
-
-  console.log(`[Middleware ${requestId}] Path:`, pathname);
 
   // 处理 /adult/ 路径前缀，重写为实际 API 路径
   if (pathname.startsWith('/adult/')) {
-    console.log(`[Middleware ${requestId}] Adult path detected, rewriting...`);
-
     // 移除 /adult 前缀
     const newPathname = pathname.replace(/^\/adult/, '');
 
@@ -230,8 +227,6 @@ export async function middleware(request: NextRequest) {
       url.searchParams.set('adult', '1');
     }
 
-    console.log(`[Middleware ${requestId}] Rewritten path: ${url.pathname}${url.search}`);
-
     // 重写请求
     const response = NextResponse.rewrite(url);
 
@@ -242,7 +237,7 @@ export async function middleware(request: NextRequest) {
     if (newPathname.startsWith('/api')) {
       // 将重写后的请求传递给认证逻辑
       const modifiedRequest = new NextRequest(url, request);
-      return handleAuthentication(modifiedRequest, newPathname, requestId, response);
+      return handleAuthentication(modifiedRequest, newPathname, response);
     }
 
     return response;
@@ -250,33 +245,29 @@ export async function middleware(request: NextRequest) {
 
   // 跳过不需要认证的路径
   if (shouldSkipAuth(pathname)) {
-    console.log(`[Middleware ${requestId}] Skipping auth for path:`, pathname);
     return NextResponse.next();
   }
 
-  return handleAuthentication(request, pathname, requestId);
+  return handleAuthentication(request, pathname);
 }
 
 // 提取认证处理逻辑为单独的函数
 async function handleAuthentication(
   request: NextRequest,
   pathname: string,
-  requestId: string,
   response?: NextResponse
 ) {
-  // 🔥 检查信任网络模式（环境变量优先，然后数据库，30秒缓存）
+  // 🔥 检查信任网络模式（环境变量优先，然后数据库）
   const trustedNetworkConfig = await getTrustedNetworkConfig(request);
   if (trustedNetworkConfig?.enabled && trustedNetworkConfig.trustedIPs.length > 0) {
     const clientIP = getClientIP(request);
-    console.log(`[Middleware ${requestId}] Trusted network check - Client IP:`, clientIP);
 
     if (isIPTrusted(clientIP, trustedNetworkConfig.trustedIPs)) {
-      console.log(`[Middleware ${requestId}] IP is in trusted network, auto-login`);
+      console.log(`[Middleware] Trusted network auto-login for IP: ${clientIP}`);
 
       // 检查是否已经有有效的认证 cookie
       const existingAuth = getAuthInfoFromCookie(request);
       if (existingAuth && (existingAuth.password || existingAuth.trustedNetwork || existingAuth.signature)) {
-        console.log(`[Middleware ${requestId}] Already authenticated, allowing access`);
         return response || NextResponse.next();
       }
 
@@ -286,29 +277,17 @@ async function handleAuthentication(
   }
 
   const storageType = process.env.NEXT_PUBLIC_STORAGE_TYPE || 'localstorage';
-  console.log(`[Middleware ${requestId}] Storage type:`, storageType);
 
   if (!process.env.PASSWORD) {
-    console.log(`[Middleware ${requestId}] PASSWORD env not set, redirecting to warning`);
     // 如果没有设置密码，重定向到警告页面
     const warningUrl = new URL('/warning', request.url);
     return NextResponse.redirect(warningUrl);
   }
 
   // 从cookie获取认证信息
-  console.log(`[Middleware ${requestId}] All cookies:`, request.cookies.getAll());
-  console.log(`[Middleware ${requestId}] Cookie header:`, request.headers.get('cookie'));
-
   const authInfo = getAuthInfoFromCookie(request);
-  console.log(`[Middleware ${requestId}] Auth info from cookie:`, authInfo ? {
-    username: authInfo.username,
-    hasSignature: !!authInfo.signature,
-    hasPassword: !!authInfo.password,
-    timestamp: authInfo.timestamp
-  } : null);
 
   if (!authInfo) {
-    console.log(`[Middleware ${requestId}] No auth info, failing auth`);
     return handleAuthFailure(request, pathname);
   }
 
@@ -323,39 +302,29 @@ async function handleAuthentication(
   // 其他模式：验证签名或信任网络标记
   // 🔥 信任网络模式：检查 trustedNetwork 标记
   if (authInfo.trustedNetwork) {
-    console.log(`[Middleware ${requestId}] Trusted network auth, allowing access`);
     return response || NextResponse.next();
   }
 
   // 检查是否有用户名（非localStorage模式下密码不存储在cookie中）
   if (!authInfo.username || !authInfo.signature) {
-    console.log(`[Middleware ${requestId}] Missing username or signature:`, {
-      hasUsername: !!authInfo.username,
-      hasSignature: !!authInfo.signature
-    });
     return handleAuthFailure(request, pathname);
   }
 
   // 验证签名（如果存在）
   if (authInfo.signature) {
-    console.log(`[Middleware ${requestId}] Verifying signature for user:`, authInfo.username);
     const isValidSignature = await verifySignature(
       authInfo.username,
       authInfo.signature,
       process.env.PASSWORD || ''
     );
 
-    console.log(`[Middleware ${requestId}] Signature valid:`, isValidSignature);
-
     // 签名验证通过即可
     if (isValidSignature) {
-      console.log(`[Middleware ${requestId}] Auth successful, allowing access`);
       return response || NextResponse.next();
     }
   }
 
   // 签名验证失败或不存在签名
-  console.log(`[Middleware ${requestId}] Signature verification failed, denying access`);
   return handleAuthFailure(request, pathname);
 }
 

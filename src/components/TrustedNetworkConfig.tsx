@@ -156,7 +156,7 @@ const TrustedNetworkConfig = ({ config, refreshConfig }: TrustedNetworkConfigPro
         throw new Error(errorData.error || '保存失败');
       }
 
-      showMessage('success', '信任网络配置保存成功！30 秒内自动生效');
+      showMessage('success', '信任网络配置保存成功！立即生效');
       await refreshConfig();
     } catch (error) {
       showMessage('error', error instanceof Error ? error.message : '保存失败');
@@ -337,7 +337,7 @@ const TrustedNetworkConfig = ({ config, refreshConfig }: TrustedNetworkConfigPro
                 </h4>
                 <ul className='text-xs text-gray-600 dark:text-gray-400 space-y-1'>
                   <li>
-                    &bull; <strong>数据库配置：</strong>在上方添加信任IP段后保存，30 秒内自动生效
+                    &bull; <strong>数据库配置：</strong>在上方添加信任IP段后保存，立即生效
                   </li>
                   <li>
                     &bull; <strong>环境变量配置：</strong>设置{' '}

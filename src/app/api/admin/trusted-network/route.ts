@@ -116,7 +116,8 @@ export async function POST(request: NextRequest) {
     // 清除配置缓存
     clearConfigCache();
 
-    return NextResponse.json(
+    // 设置 tn-version cookie 通知 middleware 立即刷新缓存
+    const response = NextResponse.json(
       { success: true },
       {
         headers: {
@@ -124,6 +125,14 @@ export async function POST(request: NextRequest) {
         },
       }
     );
+    response.cookies.set('tn-version', Date.now().toString(), {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 365 * 24 * 60 * 60, // 1 年
+    });
+
+    return response;
   } catch (error) {
     console.error('Save trusted network config error:', error);
     return NextResponse.json(

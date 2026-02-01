@@ -106,23 +106,22 @@ export function refineConfig(adminConfig: AdminConfig): AdminConfig {
   // 覆盖 CustomCategories
   const customCategoriesFromFile = fileConfig.custom_category || [];
 
-  // 只保留 from='custom' 的自定义分类，删除旧的 from='config' 的分类
+  // 保留所有现有自定义分类（包括 custom 和 config），以便保留用户的手动修改
   const currentCustomCategories = new Map(
     (adminConfig.CustomCategories || [])
-      .filter((c) => c.from === 'custom')
       .map((c) => [c.query + c.type, c])
   );
 
-  // 添加新订阅中的所有自定义分类
+  // 添加或更新订阅中的所有自定义分类
   customCategoriesFromFile.forEach((category) => {
     const key = category.query + category.type;
     const existedCategory = currentCustomCategories.get(key);
     if (existedCategory) {
-      // 如果 custom 分类和订阅分类冲突，保留 custom，但更新信息
+      // 如果分类已存在，更新基本信息但保留用户手动设置的字段
       existedCategory.name = category.name;
       existedCategory.query = category.query;
       existedCategory.type = category.type;
-      // 保持 from='custom'
+      // 保留用户手动设置的 from、disabled 等字段
     } else {
       // 添加新的订阅分类
       currentCustomCategories.set(key, {
@@ -140,23 +139,22 @@ export function refineConfig(adminConfig: AdminConfig): AdminConfig {
 
   const livesFromFile = Object.entries(fileConfig.lives || []);
 
-  // 只保留 from='custom' 的直播源，删除旧的 from='config' 的直播源
+  // 保留所有现有直播源（包括 custom 和 config），以便保留用户的手动修改
   const currentLives = new Map(
     (adminConfig.LiveConfig || [])
-      .filter((l) => l.from === 'custom')
       .map((l) => [l.key, l])
   );
 
-  // 添加新订阅中的所有直播源
+  // 添加或更新订阅中的所有直播源
   livesFromFile.forEach(([key, site]) => {
     const existingLive = currentLives.get(key);
     if (existingLive) {
-      // 如果 custom 直播源和订阅直播源冲突，保留 custom，但更新信息
+      // 如果直播源已存在，更新基本信息但保留用户手动设置的字段
       existingLive.name = site.name;
       existingLive.url = site.url;
       existingLive.ua = site.ua;
       existingLive.epg = site.epg;
-      // 保持 from='custom'
+      // 保留用户手动设置的 from、disabled、channelNumber 等字段
     } else {
       // 添加新的订阅直播源
       currentLives.set(key, {

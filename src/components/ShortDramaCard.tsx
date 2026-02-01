@@ -342,8 +342,8 @@ function ShortDramaCard({
               </div>
             )}
 
-            {/* 评分 - 使用vote_average字段 */}
-            {drama.vote_average && drama.vote_average > 0 && (
+            {/* 评分 - 只在评分大于0时显示 */}
+            {Number(drama.vote_average) > 0 && (
               <div className="flex items-center rounded-lg bg-linear-to-br from-yellow-400 to-orange-500 px-2 py-1 text-[10px] font-bold text-white shadow-lg backdrop-blur-sm ring-2 ring-white/30 transition-all duration-300 group-hover:scale-105">
                 <Star className="h-3 w-3 mr-0.5 fill-current" />
                 {drama.vote_average.toFixed(1)}

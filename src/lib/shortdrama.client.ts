@@ -13,8 +13,11 @@ import {
 } from './shortdrama-cache';
 import { DEFAULT_USER_AGENT } from './user-agent';
 
-// 新的视频源 API（资源站采集接口）
+// 新的视频源 API（资源站采集接口）- 用于分类和搜索
 const SHORTDRAMA_API_BASE = 'https://wwzy.tv/api.php/provide/vod';
+
+// 解析 API（乱短剧API）- 用于 parse 解析播放地址
+const SHORTDRAMA_PARSE_API_BASE = 'https://api.r2afosne.dpdns.org';
 
 // 检测是否为移动端环境
 const isMobile = () => {
@@ -53,8 +56,10 @@ export async function getShortDramaCategories(): Promise<ShortDramaCategory[]> {
     // 内部 API 已经处理好格式
     const result: ShortDramaCategory[] = data;
 
-    // 缓存结果
-    await setCache(cacheKey, result, SHORTDRAMA_CACHE_EXPIRE.categories);
+    // 只缓存非空结果，避免缓存错误/空数据
+    if (Array.isArray(result) && result.length > 0) {
+      await setCache(cacheKey, result, SHORTDRAMA_CACHE_EXPIRE.categories);
+    }
     return result;
   } catch (error) {
     console.error('获取短剧分类失败:', error);
@@ -90,8 +95,10 @@ export async function getRecommendedShortDramas(
 
     const result = await response.json();
 
-    // 缓存结果
-    await setCache(cacheKey, result, SHORTDRAMA_CACHE_EXPIRE.recommends);
+    // 只缓存非空结果，避免缓存错误/空数据
+    if (Array.isArray(result) && result.length > 0) {
+      await setCache(cacheKey, result, SHORTDRAMA_CACHE_EXPIRE.recommends);
+    }
     return result;
   } catch (error) {
     console.error('获取推荐短剧失败:', error);
@@ -125,9 +132,11 @@ export async function getShortDramaList(
 
     const result = await response.json();
 
-    // 缓存结果 - 第一页缓存时间更长
-    const cacheTime = page === 1 ? SHORTDRAMA_CACHE_EXPIRE.lists * 2 : SHORTDRAMA_CACHE_EXPIRE.lists;
-    await setCache(cacheKey, result, cacheTime);
+    // 只缓存非空结果，避免缓存错误/空数据
+    if (result.list && Array.isArray(result.list) && result.list.length > 0) {
+      const cacheTime = page === 1 ? SHORTDRAMA_CACHE_EXPIRE.lists * 2 : SHORTDRAMA_CACHE_EXPIRE.lists;
+      await setCache(cacheKey, result, cacheTime);
+    }
     return result;
   } catch (error) {
     console.error('获取短剧列表失败:', error);
@@ -441,7 +450,7 @@ export async function parseShortDramaEpisode(
     const timestamp = Date.now();
     const apiUrl = isMobile()
       ? `/api/shortdrama/parse?${params.toString()}&_t=${timestamp}`
-      : `${SHORTDRAMA_API_BASE}/vod/parse/single?${params.toString()}`;
+      : `${SHORTDRAMA_PARSE_API_BASE}/vod/parse/single?${params.toString()}`;
 
     const fetchOptions: RequestInit = isMobile() ? {
       cache: 'no-store',
@@ -535,7 +544,7 @@ export async function parseShortDramaBatch(
     const timestamp = Date.now();
     const apiUrl = isMobile()
       ? `/api/shortdrama/parse?${params.toString()}&_t=${timestamp}`
-      : `${SHORTDRAMA_API_BASE}/vod/parse/batch?${params.toString()}`;
+      : `${SHORTDRAMA_PARSE_API_BASE}/vod/parse/batch?${params.toString()}`;
 
     const fetchOptions: RequestInit = isMobile() ? {
       cache: 'no-store',
@@ -582,7 +591,7 @@ export async function parseShortDramaAll(
     const timestamp = Date.now();
     const apiUrl = isMobile()
       ? `/api/shortdrama/parse?${params.toString()}&_t=${timestamp}`
-      : `${SHORTDRAMA_API_BASE}/vod/parse/all?${params.toString()}`;
+      : `${SHORTDRAMA_PARSE_API_BASE}/vod/parse/all?${params.toString()}`;
 
     const fetchOptions: RequestInit = isMobile() ? {
       cache: 'no-store',
