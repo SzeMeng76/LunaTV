@@ -30,10 +30,11 @@ import { parseCustomTimeFormat } from '@/lib/time';
 import EpgScrollableRow from '@/components/EpgScrollableRow';
 import PageLayout from '@/components/PageLayout';
 
-// 扩展 HTMLVideoElement 类型以支持 hls 属性
+// 扩展 HTMLVideoElement 类型以支持 hls 和 flv 属性
 declare global {
   interface HTMLVideoElement {
     hls?: any;
+    flv?: any;
   }
 }
 
@@ -1446,6 +1447,85 @@ function LivePageClient() {
     });
   }
 
+  // FLV 播放器加载函数
+  function flvLoader(video: HTMLVideoElement, url: string, art: any) {
+    const flvjs = (window as any).DynamicFlvjs;
+    if (!flvjs || !flvjs.isSupported()) {
+      console.error('flv.js 不支持当前浏览器');
+      return;
+    }
+
+    // 清理之前的 FLV 实例
+    if (video.flv) {
+      try {
+        video.flv.unload();
+        video.flv.detachMediaElement();
+        video.flv.destroy();
+        video.flv = null;
+      } catch (err) {
+        console.warn('清理 FLV 实例时出错:', err);
+      }
+    }
+
+    const flvPlayer = flvjs.createPlayer({
+      type: 'flv',
+      url: url,
+      isLive: true,
+      hasAudio: true,
+      hasVideo: true,
+      cors: true,
+    }, {
+      enableWorker: false,
+      enableStashBuffer: true,
+      stashInitialSize: 128 * 1024,
+      lazyLoad: true,
+      lazyLoadMaxDuration: 3 * 60,
+      lazyLoadRecoverDuration: 30,
+      deferLoadAfterSourceOpen: true,
+      // @ts-ignore - autoCleanupSourceBuffer 是有效配置但类型定义缺失
+      autoCleanupSourceBuffer: true,
+      autoCleanupMaxBackwardDuration: 3 * 60,
+      autoCleanupMinBackwardDuration: 2 * 60,
+      fixAudioTimestampGap: true,
+      accurateSeek: true,
+      seekType: 'range',
+      rangeLoadZeroStart: false,
+    });
+
+    flvPlayer.attachMediaElement(video);
+    flvPlayer.load();
+    video.flv = flvPlayer;
+
+    flvPlayer.on(flvjs.Events.ERROR, (errorType: string, errorDetail: string) => {
+      console.error('FLV Error:', errorType, errorDetail);
+      if (errorType === flvjs.ErrorTypes.NETWORK_ERROR) {
+        console.log('FLV 网络错误，尝试重新加载...');
+        setTimeout(() => {
+          try {
+            flvPlayer.unload();
+            flvPlayer.load();
+          } catch (e) {
+            console.warn('FLV 重新加载失败:', e);
+          }
+        }, 2000);
+      }
+    });
+
+    // 播放结束时的清理
+    art.on('destroy', () => {
+      if (video.flv) {
+        try {
+          video.flv.unload();
+          video.flv.detachMediaElement();
+          video.flv.destroy();
+          video.flv = null;
+        } catch (e) {
+          console.warn('销毁时清理 FLV 实例出错:', e);
+        }
+      }
+    });
+  }
+
   // 播放器初始化
   useEffect(() => {
     // 异步初始化播放器，避免SSR问题
@@ -1472,15 +1552,37 @@ function LivePageClient() {
       // 重置不支持的类型
       setUnsupportedType(null);
 
+      // 检测 URL 类型（FLV 或 M3U8）- 在选择代理模式之前检测
+      const isFlvUrl = videoUrl.toLowerCase().includes('.flv') ||
+                       videoUrl.toLowerCase().includes('/flv') ||
+                       videoUrl.includes('/douyu/') ||    // 斗鱼源
+                       videoUrl.includes('/huya/') ||     // 虎牙源
+                       videoUrl.includes('/bilibili/') || // B站源
+                       videoUrl.includes('/yy/');         // YY源
+
       // 🚀 智能选择直连或代理模式
-      const useDirect = await shouldUseDirectPlayback(videoUrl);
-      const targetUrl = useDirect
-        ? videoUrl  // 直连模式：直接使用原始 URL
-        : `/api/proxy/m3u8?url=${encodeURIComponent(videoUrl)}&moontv-source=${currentSourceRef.current?.key || ''}`;  // 代理模式
+      // FLV 流强制使用直连，不走代理
+      let targetUrl: string;
+      if (isFlvUrl) {
+        targetUrl = videoUrl;  // FLV 直连
+        console.log(`🎬 播放模式: ⚡ FLV直连 | URL: ${targetUrl.substring(0, 100)}...`);
+      } else {
+        const useDirect = await shouldUseDirectPlayback(videoUrl);
+        targetUrl = useDirect
+          ? videoUrl  // 直连模式：直接使用原始 URL
+          : `/api/proxy/m3u8?url=${encodeURIComponent(videoUrl)}&moontv-source=${currentSourceRef.current?.key || ''}`;  // 代理模式
+        console.log(`🎬 播放模式: ${useDirect ? '⚡ 直连' : '🔄 代理'} | URL: ${targetUrl.substring(0, 100)}...`);
+      }
 
-      console.log(`🎬 播放模式: ${useDirect ? '⚡ 直连' : '🔄 代理'} | URL: ${targetUrl.substring(0, 100)}...`);
+      // 根据 URL 类型选择播放器类型
+      const playerType = isFlvUrl ? 'flv' : 'm3u8';
+      console.log(`📺 播放器类型: ${playerType} | FLV检测: ${isFlvUrl}`);
 
-      const customType = { m3u8: m3u8Loader };
+      const customType = {
+        m3u8: m3u8Loader,
+        flv: flvLoader,
+      };
+
       try {
         // 使用动态导入的 Artplayer
         const Artplayer = (window as any).DynamicArtplayer;
@@ -1524,7 +1626,7 @@ function LivePageClient() {
             crossOrigin: 'anonymous',
             preload: 'metadata',
           },
-          type: 'm3u8',
+          type: playerType,
           customType: customType,
           icons: {
             loading:
@@ -1600,17 +1702,21 @@ function LivePageClient() {
       }
     }; // 结束 initPlayer 函数
 
-    // 动态导入 ArtPlayer 并初始化
+    // 动态导入 ArtPlayer 和 flv.js 并初始化
     const loadAndInit = async () => {
       try {
         const { default: Artplayer } = await import('artplayer');
-        
+
+        // 动态导入 flv.js（避免 SSR 问题）
+        const flvjs = await import('flv.js');
+
         // 将导入的模块设置为全局变量供 initPlayer 使用
         (window as any).DynamicArtplayer = Artplayer;
-        
+        (window as any).DynamicFlvjs = flvjs.default;
+
         await initPlayer();
       } catch (error) {
-        console.error('动态导入 ArtPlayer 失败:', error);
+        console.error('动态导入 ArtPlayer 或 flv.js 失败:', error);
         // 不设置错误，只记录日志
       }
     };
