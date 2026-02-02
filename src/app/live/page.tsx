@@ -761,6 +761,8 @@ function LivePageClient() {
     // 重置错误计数器
     keyLoadErrorCount = 0;
     lastErrorTime = 0;
+    hlsNetworkRetryCount = 0;
+    flvNetworkRetryCount = 0;
 
     setCurrentChannel(channel);
     setVideoUrl(channel.url);
@@ -1193,6 +1195,14 @@ function LivePageClient() {
   const MAX_KEY_ERRORS = 3;
   const ERROR_TIMEOUT = 10000; // 10秒内超过3次keyLoadError就认为频道不可用
 
+  // HLS 网络错误重试计数
+  let hlsNetworkRetryCount = 0;
+  const MAX_HLS_NETWORK_RETRIES = 3;
+
+  // FLV 网络错误重试计数
+  let flvNetworkRetryCount = 0;
+  const MAX_FLV_NETWORK_RETRIES = 3;
+
   function m3u8Loader(video: HTMLVideoElement, url: string) {
     if (!Hls) {
       console.error('HLS.js 未加载');
@@ -1361,8 +1371,17 @@ function LivePageClient() {
       if (data.fatal) {
         switch (data.type) {
           case Hls.ErrorTypes.NETWORK_ERROR:
-            console.log('Network error, attempting to recover...');
-            
+            hlsNetworkRetryCount++;
+            console.log(`Network error (${hlsNetworkRetryCount}/${MAX_HLS_NETWORK_RETRIES}), attempting to recover...`);
+
+            if (hlsNetworkRetryCount >= MAX_HLS_NETWORK_RETRIES) {
+              console.error('Too many network errors, marking as unavailable');
+              setUnsupportedType('network-error');
+              setIsVideoLoading(false);
+              hls.destroy();
+              return;
+            }
+
             // 根据具体的网络错误类型进行处理
             if (data.details === Hls.ErrorDetails.MANIFEST_LOAD_ERROR) {
               console.log('Manifest load error, attempting reload...');
@@ -1372,7 +1391,7 @@ function LivePageClient() {
                 } catch (e) {
                   console.error('Failed to reload source:', e);
                 }
-              }, 2000);
+              }, 2000 * hlsNetworkRetryCount);
             } else {
               try {
                 hls.startLoad();
@@ -1499,7 +1518,23 @@ function LivePageClient() {
     flvPlayer.on(flvjs.Events.ERROR, (errorType: string, errorDetail: string) => {
       console.error('FLV Error:', errorType, errorDetail);
       if (errorType === flvjs.ErrorTypes.NETWORK_ERROR) {
-        console.log('FLV 网络错误，尝试重新加载...');
+        flvNetworkRetryCount++;
+        console.log(`FLV 网络错误 (${flvNetworkRetryCount}/${MAX_FLV_NETWORK_RETRIES})，尝试重新加载...`);
+
+        if (flvNetworkRetryCount >= MAX_FLV_NETWORK_RETRIES) {
+          console.error('FLV 网络错误过多，标记为不可用');
+          setUnsupportedType('network-error');
+          setIsVideoLoading(false);
+          try {
+            flvPlayer.unload();
+            flvPlayer.detachMediaElement();
+            flvPlayer.destroy();
+          } catch (e) {
+            console.warn('销毁 FLV 实例出错:', e);
+          }
+          return;
+        }
+
         setTimeout(() => {
           try {
             flvPlayer.unload();
@@ -1507,7 +1542,11 @@ function LivePageClient() {
           } catch (e) {
             console.warn('FLV 重新加载失败:', e);
           }
-        }, 2000);
+        }, 2000 * flvNetworkRetryCount);
+      } else if (errorType === flvjs.ErrorTypes.MEDIA_ERROR) {
+        console.error('FLV 媒体错误:', errorDetail);
+        setUnsupportedType('media-error');
+        setIsVideoLoading(false);
       }
     });
 
@@ -1687,6 +1726,21 @@ function LivePageClient() {
 
         artPlayerRef.current.on('error', (err: any) => {
           console.error('播放器错误:', err);
+          // 检查是否是可恢复的错误
+          const errorCode = artPlayerRef.current?.video?.error?.code;
+          if (errorCode) {
+            // MediaError codes: 1=ABORTED, 2=NETWORK, 3=DECODE, 4=SRC_NOT_SUPPORTED
+            if (errorCode === 2) {
+              // 网络错误由 HLS/FLV 处理
+              console.log('Video element network error (handled by HLS/FLV)');
+            } else if (errorCode === 3) {
+              setUnsupportedType('decode-error');
+              setIsVideoLoading(false);
+            } else if (errorCode === 4) {
+              setUnsupportedType('format-not-supported');
+              setIsVideoLoading(false);
+            }
+          }
         });
 
         if (artPlayerRef.current?.video) {
@@ -2058,31 +2112,70 @@ function LivePageClient() {
                     <div className='text-center max-w-md mx-auto px-6'>
                       <div className='relative mb-8'>
                         <div className='relative mx-auto w-24 h-24 bg-linear-to-r from-orange-500 to-red-600 rounded-2xl shadow-2xl flex items-center justify-center transform hover:scale-105 transition-transform duration-300'>
-                          <div className='text-white text-4xl'>⚠️</div>
+                          <div className='text-white text-4xl'>
+                            {unsupportedType === 'network-error' ? '🌐' :
+                             unsupportedType === 'channel-unavailable' ? '🔒' :
+                             unsupportedType === 'decode-error' ? '🔧' :
+                             unsupportedType === 'format-not-supported' ? '📼' : '⚠️'}
+                          </div>
                           <div className='absolute -inset-2 bg-linear-to-r from-orange-500 to-red-600 rounded-2xl opacity-20 animate-pulse'></div>
                         </div>
                       </div>
                       <div className='space-y-4'>
                         <h3 className='text-xl font-semibold text-white'>
-                          {unsupportedType === 'channel-unavailable' ? '该频道暂时不可用' : '暂不支持的直播流类型'}
+                          {unsupportedType === 'channel-unavailable' ? '该频道暂时不可用' :
+                           unsupportedType === 'network-error' ? '网络连接失败' :
+                           unsupportedType === 'media-error' ? '媒体播放错误' :
+                           unsupportedType === 'decode-error' ? '视频解码失败' :
+                           unsupportedType === 'format-not-supported' ? '格式不支持' :
+                           unsupportedType === 'codec-incompatible' ? '编解码器不兼容' :
+                           unsupportedType === 'fatal-error' ? '播放器错误' :
+                           '暂不支持的直播流类型'}
                         </h3>
                         <div className='bg-orange-500/20 border border-orange-500/30 rounded-lg p-4'>
                           <p className='text-orange-300 font-medium'>
-                            {unsupportedType === 'channel-unavailable' 
+                            {unsupportedType === 'channel-unavailable'
                               ? '频道可能需要特殊访问权限或链接已过期'
+                              : unsupportedType === 'network-error'
+                              ? '无法连接到直播源服务器'
+                              : unsupportedType === 'media-error'
+                              ? '视频流无法正常播放'
+                              : unsupportedType === 'decode-error'
+                              ? '浏览器无法解码此视频格式'
+                              : unsupportedType === 'format-not-supported'
+                              ? '当前浏览器不支持此视频格式'
+                              : unsupportedType === 'codec-incompatible'
+                              ? '视频编解码器与播放器不兼容'
+                              : unsupportedType === 'fatal-error'
+                              ? '播放器遇到无法恢复的错误'
                               : `当前频道直播流类型：${unsupportedType.toUpperCase()}`
                             }
                           </p>
                           <p className='text-sm text-orange-200 mt-2'>
                             {unsupportedType === 'channel-unavailable'
                               ? '请联系IPTV提供商或尝试其他频道'
-                              : '目前仅支持 M3U8 格式的直播流'
+                              : unsupportedType === 'network-error'
+                              ? '请检查网络连接或尝试其他频道'
+                              : unsupportedType === 'decode-error' || unsupportedType === 'format-not-supported'
+                              ? '请尝试使用其他浏览器或更换频道'
+                              : '请尝试其他频道或刷新页面'
                             }
                           </p>
                         </div>
-                        <p className='text-sm text-gray-300'>
-                          请尝试其他频道
-                        </p>
+                        <button
+                          onClick={() => {
+                            setUnsupportedType(null);
+                            // 重试当前频道
+                            if (currentChannel) {
+                              const newUrl = currentChannel.url;
+                              setVideoUrl('');
+                              setTimeout(() => setVideoUrl(newUrl), 100);
+                            }
+                          }}
+                          className='mt-4 px-6 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium transition-colors duration-200'
+                        >
+                          重试
+                        </button>
                       </div>
                     </div>
                   </div>
