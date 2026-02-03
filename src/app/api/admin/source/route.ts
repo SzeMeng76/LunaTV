@@ -9,7 +9,7 @@ import { db } from '@/lib/db';
 export const runtime = 'nodejs';
 
 // 支持的操作类型
-type Action = 'add' | 'update' | 'disable' | 'enable' | 'delete' | 'sort' | 'batch_disable' | 'batch_enable' | 'batch_delete' | 'update_adult' | 'batch_mark_adult' | 'batch_unmark_adult' | 'batch_mark_shortdrama' | 'batch_mark_vod';
+type Action = 'add' | 'update' | 'disable' | 'enable' | 'delete' | 'sort' | 'batch_disable' | 'batch_enable' | 'batch_delete' | 'update_adult' | 'batch_mark_adult' | 'batch_unmark_adult' | 'batch_mark_shortdrama' | 'batch_mark_vod' | 'update_weight';
 
 interface BaseBody {
   action?: Action;
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     const username = authInfo.username;
 
     // 基础校验
-    const ACTIONS: Action[] = ['add', 'update', 'disable', 'enable', 'delete', 'sort', 'batch_disable', 'batch_enable', 'batch_delete', 'update_adult', 'batch_mark_adult', 'batch_unmark_adult', 'batch_mark_shortdrama', 'batch_mark_vod'];
+    const ACTIONS: Action[] = ['add', 'update', 'disable', 'enable', 'delete', 'sort', 'batch_disable', 'batch_enable', 'batch_delete', 'update_adult', 'batch_mark_adult', 'batch_unmark_adult', 'batch_mark_shortdrama', 'batch_mark_vod', 'update_weight'];
     if (!username || !action || !ACTIONS.includes(action)) {
       return NextResponse.json({ error: '参数格式错误' }, { status: 400 });
     }
@@ -57,13 +57,14 @@ export async function POST(request: NextRequest) {
 
     switch (action) {
       case 'add': {
-        const { key, name, api, detail, is_adult, type } = body as {
+        const { key, name, api, detail, is_adult, type, weight } = body as {
           key?: string;
           name?: string;
           api?: string;
           detail?: string;
           is_adult?: boolean;
           type?: 'vod' | 'shortdrama';
+          weight?: number;
         };
         if (!key || !name || !api) {
           return NextResponse.json({ error: '缺少必要参数' }, { status: 400 });
@@ -80,17 +81,19 @@ export async function POST(request: NextRequest) {
           disabled: false,
           is_adult: is_adult || false,
           type: type || 'vod',
+          weight: weight !== undefined ? Math.max(0, Math.min(100, weight)) : 50,
         });
         break;
       }
       case 'update': {
-        const { key, name, api, detail, is_adult, type } = body as {
+        const { key, name, api, detail, is_adult, type, weight } = body as {
           key?: string;
           name?: string;
           api?: string;
           detail?: string;
           is_adult?: boolean;
           type?: 'vod' | 'shortdrama';
+          weight?: number;
         };
         if (!key) {
           return NextResponse.json({ error: '缺少 key 参数' }, { status: 400 });
@@ -104,6 +107,7 @@ export async function POST(request: NextRequest) {
         if (detail !== undefined) entry.detail = detail;
         if (is_adult !== undefined) entry.is_adult = is_adult;
         if (type !== undefined) entry.type = type;
+        if (weight !== undefined) entry.weight = Math.max(0, Math.min(100, weight));
         break;
       }
       case 'disable': {
@@ -308,6 +312,21 @@ export async function POST(request: NextRequest) {
             entry.type = 'vod';
           }
         });
+        break;
+      }
+      case 'update_weight': {
+        const { key, weight } = body as { key?: string; weight?: number };
+        if (!key) {
+          return NextResponse.json({ error: '缺少 key 参数' }, { status: 400 });
+        }
+        if (weight === undefined || typeof weight !== 'number') {
+          return NextResponse.json({ error: '缺少有效的 weight 参数' }, { status: 400 });
+        }
+        const entry = adminConfig.SourceConfig.find((s) => s.key === key);
+        if (!entry) {
+          return NextResponse.json({ error: '源不存在' }, { status: 404 });
+        }
+        entry.weight = Math.max(0, Math.min(100, weight));
         break;
       }
       default:

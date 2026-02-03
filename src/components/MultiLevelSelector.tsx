@@ -432,24 +432,28 @@ const MultiLevelSelector: React.FC<MultiLevelSelectorProps> = ({
 
     const value = values[categoryKey];
 
-    if (
-      !value ||
-      value === 'all' ||
-      (categoryKey === 'sort' && value === 'T')
-    ) {
+    // 🚀 排序始终显示选中的值，不隐藏默认值
+    if (categoryKey === 'sort') {
+      const option = category.options.find((opt) => opt.value === value);
+      return option?.label || category.label;
+    }
+
+    // 其他分类：如果没有值或是 'all'，显示分类标签
+    if (!value || value === 'all') {
       return category.label;
     }
     const option = category.options.find((opt) => opt.value === value);
     return option?.label || category.label;
   };
 
-  // 检查是否为默认值
+  // 检查是否为默认值（用于高亮显示）
   const isDefaultValue = (categoryKey: string) => {
     const value = values[categoryKey];
-    const defaultSort = (contentType === 'anime-tv' || contentType === 'anime-movie') ? 'U' : 'T';
-    return (
-      !value || value === 'all' || (categoryKey === 'sort' && value === defaultSort)
-    );
+    // 🚀 排序永远不视为默认值，始终高亮显示
+    if (categoryKey === 'sort') {
+      return false;
+    }
+    return !value || value === 'all';
   };
 
   // 检查选项是否被选中

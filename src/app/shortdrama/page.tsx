@@ -18,7 +18,7 @@ import ShortDramaCard from '@/components/ShortDramaCard';
 
 export default function ShortDramaPage() {
   const [categories, setCategories] = useState<ShortDramaCategory[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<number>(46); // 新API的短剧分类ID是46
+  const [selectedCategory, setSelectedCategory] = useState<number | null>(null); // 等分类加载后自动选中第一个
   const [dramas, setDramas] = useState<ShortDramaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(true);
@@ -53,6 +53,10 @@ export default function ShortDramaPage() {
     const fetchCategories = async () => {
       const cats = await getShortDramaCategories();
       setCategories(cats);
+      // 自动选中第一个分类
+      if (cats.length > 0 && !selectedCategory) {
+        setSelectedCategory(cats[0].type_id);
+      }
     };
     fetchCategories();
   }, []);
@@ -97,13 +101,15 @@ export default function ShortDramaPage() {
   // 加载短剧列表
   const loadDramas = useCallback(
     async (pageNum: number, reset = false) => {
+      if (!selectedCategory && !isSearchMode) return; // 没有选中分类且不是搜索模式时不加载
+
       setLoading(true);
       try {
         let result: { list: ShortDramaItem[]; hasMore: boolean };
         if (isSearchMode && searchQuery) {
           result = await searchShortDramas(searchQuery, pageNum, 20);
         } else {
-          result = await getShortDramaList(selectedCategory, pageNum, 20);
+          result = await getShortDramaList(selectedCategory!, pageNum, 20);
         }
 
         if (reset) {

@@ -30,10 +30,11 @@ import { parseCustomTimeFormat } from '@/lib/time';
 import EpgScrollableRow from '@/components/EpgScrollableRow';
 import PageLayout from '@/components/PageLayout';
 
-// 扩展 HTMLVideoElement 类型以支持 hls 属性
+// 扩展 HTMLVideoElement 类型以支持 hls 和 flv 属性
 declare global {
   interface HTMLVideoElement {
     hls?: any;
+    flv?: any;
   }
 }
 
@@ -760,6 +761,8 @@ function LivePageClient() {
     // 重置错误计数器
     keyLoadErrorCount = 0;
     lastErrorTime = 0;
+    hlsNetworkRetryCount = 0;
+    flvNetworkRetryCount = 0;
 
     setCurrentChannel(channel);
     setVideoUrl(channel.url);
@@ -1192,6 +1195,14 @@ function LivePageClient() {
   const MAX_KEY_ERRORS = 3;
   const ERROR_TIMEOUT = 10000; // 10秒内超过3次keyLoadError就认为频道不可用
 
+  // HLS 网络错误重试计数
+  let hlsNetworkRetryCount = 0;
+  const MAX_HLS_NETWORK_RETRIES = 3;
+
+  // FLV 网络错误重试计数
+  let flvNetworkRetryCount = 0;
+  const MAX_FLV_NETWORK_RETRIES = 3;
+
   function m3u8Loader(video: HTMLVideoElement, url: string) {
     if (!Hls) {
       console.error('HLS.js 未加载');
@@ -1360,8 +1371,17 @@ function LivePageClient() {
       if (data.fatal) {
         switch (data.type) {
           case Hls.ErrorTypes.NETWORK_ERROR:
-            console.log('Network error, attempting to recover...');
-            
+            hlsNetworkRetryCount++;
+            console.log(`Network error (${hlsNetworkRetryCount}/${MAX_HLS_NETWORK_RETRIES}), attempting to recover...`);
+
+            if (hlsNetworkRetryCount >= MAX_HLS_NETWORK_RETRIES) {
+              console.error('Too many network errors, marking as unavailable');
+              setUnsupportedType('network-error');
+              setIsVideoLoading(false);
+              hls.destroy();
+              return;
+            }
+
             // 根据具体的网络错误类型进行处理
             if (data.details === Hls.ErrorDetails.MANIFEST_LOAD_ERROR) {
               console.log('Manifest load error, attempting reload...');
@@ -1371,7 +1391,7 @@ function LivePageClient() {
                 } catch (e) {
                   console.error('Failed to reload source:', e);
                 }
-              }, 2000);
+              }, 2000 * hlsNetworkRetryCount);
             } else {
               try {
                 hls.startLoad();
@@ -1446,6 +1466,105 @@ function LivePageClient() {
     });
   }
 
+  // FLV 播放器加载函数
+  function flvLoader(video: HTMLVideoElement, url: string, art: any) {
+    const flvjs = (window as any).DynamicFlvjs;
+    if (!flvjs || !flvjs.isSupported()) {
+      console.error('flv.js 不支持当前浏览器');
+      return;
+    }
+
+    // 清理之前的 FLV 实例
+    if (video.flv) {
+      try {
+        video.flv.unload();
+        video.flv.detachMediaElement();
+        video.flv.destroy();
+        video.flv = null;
+      } catch (err) {
+        console.warn('清理 FLV 实例时出错:', err);
+      }
+    }
+
+    const flvPlayer = flvjs.createPlayer({
+      type: 'flv',
+      url: url,
+      isLive: true,
+      hasAudio: true,
+      hasVideo: true,
+      cors: true,
+    }, {
+      enableWorker: false,
+      enableStashBuffer: true,
+      stashInitialSize: 128 * 1024,
+      lazyLoad: true,
+      lazyLoadMaxDuration: 3 * 60,
+      lazyLoadRecoverDuration: 30,
+      deferLoadAfterSourceOpen: true,
+      // @ts-ignore - autoCleanupSourceBuffer 是有效配置但类型定义缺失
+      autoCleanupSourceBuffer: true,
+      autoCleanupMaxBackwardDuration: 3 * 60,
+      autoCleanupMinBackwardDuration: 2 * 60,
+      fixAudioTimestampGap: true,
+      accurateSeek: true,
+      seekType: 'range',
+      rangeLoadZeroStart: false,
+    });
+
+    flvPlayer.attachMediaElement(video);
+    flvPlayer.load();
+    video.flv = flvPlayer;
+
+    flvPlayer.on(flvjs.Events.ERROR, (errorType: string, errorDetail: string) => {
+      console.error('FLV Error:', errorType, errorDetail);
+      if (errorType === flvjs.ErrorTypes.NETWORK_ERROR) {
+        flvNetworkRetryCount++;
+        console.log(`FLV 网络错误 (${flvNetworkRetryCount}/${MAX_FLV_NETWORK_RETRIES})，尝试重新加载...`);
+
+        if (flvNetworkRetryCount >= MAX_FLV_NETWORK_RETRIES) {
+          console.error('FLV 网络错误过多，标记为不可用');
+          setUnsupportedType('network-error');
+          setIsVideoLoading(false);
+          try {
+            flvPlayer.unload();
+            flvPlayer.detachMediaElement();
+            flvPlayer.destroy();
+          } catch (e) {
+            console.warn('销毁 FLV 实例出错:', e);
+          }
+          return;
+        }
+
+        setTimeout(() => {
+          try {
+            flvPlayer.unload();
+            flvPlayer.load();
+          } catch (e) {
+            console.warn('FLV 重新加载失败:', e);
+          }
+        }, 2000 * flvNetworkRetryCount);
+      } else if (errorType === flvjs.ErrorTypes.MEDIA_ERROR) {
+        console.error('FLV 媒体错误:', errorDetail);
+        setUnsupportedType('media-error');
+        setIsVideoLoading(false);
+      }
+    });
+
+    // 播放结束时的清理
+    art.on('destroy', () => {
+      if (video.flv) {
+        try {
+          video.flv.unload();
+          video.flv.detachMediaElement();
+          video.flv.destroy();
+          video.flv = null;
+        } catch (e) {
+          console.warn('销毁时清理 FLV 实例出错:', e);
+        }
+      }
+    });
+  }
+
   // 播放器初始化
   useEffect(() => {
     // 异步初始化播放器，避免SSR问题
@@ -1472,15 +1591,37 @@ function LivePageClient() {
       // 重置不支持的类型
       setUnsupportedType(null);
 
+      // 检测 URL 类型（FLV 或 M3U8）- 在选择代理模式之前检测
+      const isFlvUrl = videoUrl.toLowerCase().includes('.flv') ||
+                       videoUrl.toLowerCase().includes('/flv') ||
+                       videoUrl.includes('/douyu/') ||    // 斗鱼源
+                       videoUrl.includes('/huya/') ||     // 虎牙源
+                       videoUrl.includes('/bilibili/') || // B站源
+                       videoUrl.includes('/yy/');         // YY源
+
       // 🚀 智能选择直连或代理模式
-      const useDirect = await shouldUseDirectPlayback(videoUrl);
-      const targetUrl = useDirect
-        ? videoUrl  // 直连模式：直接使用原始 URL
-        : `/api/proxy/m3u8?url=${encodeURIComponent(videoUrl)}&moontv-source=${currentSourceRef.current?.key || ''}`;  // 代理模式
+      // FLV 流强制使用直连，不走代理
+      let targetUrl: string;
+      if (isFlvUrl) {
+        targetUrl = videoUrl;  // FLV 直连
+        console.log(`🎬 播放模式: ⚡ FLV直连 | URL: ${targetUrl.substring(0, 100)}...`);
+      } else {
+        const useDirect = await shouldUseDirectPlayback(videoUrl);
+        targetUrl = useDirect
+          ? videoUrl  // 直连模式：直接使用原始 URL
+          : `/api/proxy/m3u8?url=${encodeURIComponent(videoUrl)}&moontv-source=${currentSourceRef.current?.key || ''}`;  // 代理模式
+        console.log(`🎬 播放模式: ${useDirect ? '⚡ 直连' : '🔄 代理'} | URL: ${targetUrl.substring(0, 100)}...`);
+      }
 
-      console.log(`🎬 播放模式: ${useDirect ? '⚡ 直连' : '🔄 代理'} | URL: ${targetUrl.substring(0, 100)}...`);
+      // 根据 URL 类型选择播放器类型
+      const playerType = isFlvUrl ? 'flv' : 'm3u8';
+      console.log(`📺 播放器类型: ${playerType} | FLV检测: ${isFlvUrl}`);
 
-      const customType = { m3u8: m3u8Loader };
+      const customType = {
+        m3u8: m3u8Loader,
+        flv: flvLoader,
+      };
+
       try {
         // 使用动态导入的 Artplayer
         const Artplayer = (window as any).DynamicArtplayer;
@@ -1524,7 +1665,7 @@ function LivePageClient() {
             crossOrigin: 'anonymous',
             preload: 'metadata',
           },
-          type: 'm3u8',
+          type: playerType,
           customType: customType,
           icons: {
             loading:
@@ -1585,6 +1726,21 @@ function LivePageClient() {
 
         artPlayerRef.current.on('error', (err: any) => {
           console.error('播放器错误:', err);
+          // 检查是否是可恢复的错误
+          const errorCode = artPlayerRef.current?.video?.error?.code;
+          if (errorCode) {
+            // MediaError codes: 1=ABORTED, 2=NETWORK, 3=DECODE, 4=SRC_NOT_SUPPORTED
+            if (errorCode === 2) {
+              // 网络错误由 HLS/FLV 处理
+              console.log('Video element network error (handled by HLS/FLV)');
+            } else if (errorCode === 3) {
+              setUnsupportedType('decode-error');
+              setIsVideoLoading(false);
+            } else if (errorCode === 4) {
+              setUnsupportedType('format-not-supported');
+              setIsVideoLoading(false);
+            }
+          }
         });
 
         if (artPlayerRef.current?.video) {
@@ -1600,17 +1756,21 @@ function LivePageClient() {
       }
     }; // 结束 initPlayer 函数
 
-    // 动态导入 ArtPlayer 并初始化
+    // 动态导入 ArtPlayer 和 flv.js 并初始化
     const loadAndInit = async () => {
       try {
         const { default: Artplayer } = await import('artplayer');
-        
+
+        // 动态导入 flv.js（避免 SSR 问题）
+        const flvjs = await import('flv.js');
+
         // 将导入的模块设置为全局变量供 initPlayer 使用
         (window as any).DynamicArtplayer = Artplayer;
-        
+        (window as any).DynamicFlvjs = flvjs.default;
+
         await initPlayer();
       } catch (error) {
-        console.error('动态导入 ArtPlayer 失败:', error);
+        console.error('动态导入 ArtPlayer 或 flv.js 失败:', error);
         // 不设置错误，只记录日志
       }
     };
@@ -1952,31 +2112,70 @@ function LivePageClient() {
                     <div className='text-center max-w-md mx-auto px-6'>
                       <div className='relative mb-8'>
                         <div className='relative mx-auto w-24 h-24 bg-linear-to-r from-orange-500 to-red-600 rounded-2xl shadow-2xl flex items-center justify-center transform hover:scale-105 transition-transform duration-300'>
-                          <div className='text-white text-4xl'>⚠️</div>
+                          <div className='text-white text-4xl'>
+                            {unsupportedType === 'network-error' ? '🌐' :
+                             unsupportedType === 'channel-unavailable' ? '🔒' :
+                             unsupportedType === 'decode-error' ? '🔧' :
+                             unsupportedType === 'format-not-supported' ? '📼' : '⚠️'}
+                          </div>
                           <div className='absolute -inset-2 bg-linear-to-r from-orange-500 to-red-600 rounded-2xl opacity-20 animate-pulse'></div>
                         </div>
                       </div>
                       <div className='space-y-4'>
                         <h3 className='text-xl font-semibold text-white'>
-                          {unsupportedType === 'channel-unavailable' ? '该频道暂时不可用' : '暂不支持的直播流类型'}
+                          {unsupportedType === 'channel-unavailable' ? '该频道暂时不可用' :
+                           unsupportedType === 'network-error' ? '网络连接失败' :
+                           unsupportedType === 'media-error' ? '媒体播放错误' :
+                           unsupportedType === 'decode-error' ? '视频解码失败' :
+                           unsupportedType === 'format-not-supported' ? '格式不支持' :
+                           unsupportedType === 'codec-incompatible' ? '编解码器不兼容' :
+                           unsupportedType === 'fatal-error' ? '播放器错误' :
+                           '暂不支持的直播流类型'}
                         </h3>
                         <div className='bg-orange-500/20 border border-orange-500/30 rounded-lg p-4'>
                           <p className='text-orange-300 font-medium'>
-                            {unsupportedType === 'channel-unavailable' 
+                            {unsupportedType === 'channel-unavailable'
                               ? '频道可能需要特殊访问权限或链接已过期'
+                              : unsupportedType === 'network-error'
+                              ? '无法连接到直播源服务器'
+                              : unsupportedType === 'media-error'
+                              ? '视频流无法正常播放'
+                              : unsupportedType === 'decode-error'
+                              ? '浏览器无法解码此视频格式'
+                              : unsupportedType === 'format-not-supported'
+                              ? '当前浏览器不支持此视频格式'
+                              : unsupportedType === 'codec-incompatible'
+                              ? '视频编解码器与播放器不兼容'
+                              : unsupportedType === 'fatal-error'
+                              ? '播放器遇到无法恢复的错误'
                               : `当前频道直播流类型：${unsupportedType.toUpperCase()}`
                             }
                           </p>
                           <p className='text-sm text-orange-200 mt-2'>
                             {unsupportedType === 'channel-unavailable'
                               ? '请联系IPTV提供商或尝试其他频道'
-                              : '目前仅支持 M3U8 格式的直播流'
+                              : unsupportedType === 'network-error'
+                              ? '请检查网络连接或尝试其他频道'
+                              : unsupportedType === 'decode-error' || unsupportedType === 'format-not-supported'
+                              ? '请尝试使用其他浏览器或更换频道'
+                              : '请尝试其他频道或刷新页面'
                             }
                           </p>
                         </div>
-                        <p className='text-sm text-gray-300'>
-                          请尝试其他频道
-                        </p>
+                        <button
+                          onClick={() => {
+                            setUnsupportedType(null);
+                            // 重试当前频道
+                            if (currentChannel) {
+                              const newUrl = currentChannel.url;
+                              setVideoUrl('');
+                              setTimeout(() => setVideoUrl(newUrl), 100);
+                            }
+                          }}
+                          className='mt-4 px-6 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium transition-colors duration-200'
+                        >
+                          重试
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -2198,7 +2397,7 @@ function LivePageClient() {
                         </div>
 
                     {/* 频道列表 */}
-                    <div ref={channelListRef} className='flex-1 overflow-y-auto space-y-2 pb-4'>
+                    <div ref={channelListRef} className='flex-1 overflow-y-auto space-y-2 pb-24 md:pb-4'>
                       {filteredChannels.length > 0 ? (
                         filteredChannels.map(channel => {
                           const isActive = channel.id === currentChannel?.id;
@@ -2305,7 +2504,7 @@ function LivePageClient() {
                       </>
                     ) : (
                       // 搜索结果显示（仅当前源）
-                      <div className='flex-1 overflow-y-auto space-y-2 pb-4'>
+                      <div className='flex-1 overflow-y-auto space-y-2 pb-24 md:pb-4'>
                         {currentSourceSearchResults.length > 0 ? (
                           <div className='space-y-1 mb-2'>
                             <div className='text-xs text-gray-500 dark:text-gray-400 px-2'>
@@ -2621,7 +2820,7 @@ function LivePageClient() {
 
         {/* 当前频道信息 */}
         {currentChannel && (
-          <div className='pt-4'>
+          <div className='pt-4 pb-24 md:pb-0'>
             <div className='flex flex-col lg:flex-row gap-4'>
               {/* 频道图标+名称 - 在小屏幕上占100%，大屏幕占20% */}
               <div className='w-full shrink-0'>

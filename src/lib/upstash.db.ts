@@ -98,15 +98,18 @@ export class UpstashRedisStorage implements IStorage {
     const keys: string[] = await withRetry(() => this.client.keys(pattern));
     if (keys.length === 0) return {};
 
+    // 🚀 优化：使用 mget 批量获取，只算1条命令（而不是N条）
+    const values = await withRetry(() => this.client.mget<PlayRecord[]>(...keys));
+
     const result: Record<string, PlayRecord> = {};
-    for (const fullKey of keys) {
-      const value = await withRetry(() => this.client.get(fullKey));
+    keys.forEach((fullKey, index) => {
+      const value = values[index];
       if (value) {
         // 截取 source+id 部分
         const keyPart = ensureString(fullKey.replace(`u:${userName}:pr:`, ''));
-        result[keyPart] = value as PlayRecord;
+        result[keyPart] = value;
       }
-    }
+    });
     return result;
   }
 
@@ -141,19 +144,66 @@ export class UpstashRedisStorage implements IStorage {
     const keys: string[] = await withRetry(() => this.client.keys(pattern));
     if (keys.length === 0) return {};
 
+    // 🚀 优化：使用 mget 批量获取，只算1条命令（而不是N条）
+    const values = await withRetry(() => this.client.mget<Favorite[]>(...keys));
+
     const result: Record<string, Favorite> = {};
-    for (const fullKey of keys) {
-      const value = await withRetry(() => this.client.get(fullKey));
+    keys.forEach((fullKey, index) => {
+      const value = values[index];
       if (value) {
         const keyPart = ensureString(fullKey.replace(`u:${userName}:fav:`, ''));
-        result[keyPart] = value as Favorite;
+        result[keyPart] = value;
       }
-    }
+    });
     return result;
   }
 
   async deleteFavorite(userName: string, key: string): Promise<void> {
     await withRetry(() => this.client.del(this.favKey(userName, key)));
+  }
+
+  // ---------- 🚀 批量写入方法（使用 mset，只算1条命令） ----------
+
+  /**
+   * 批量保存播放记录（使用 mset，无论多少条都只算1条命令）
+   * @param userName 用户名
+   * @param records 键值对 { "source+id": PlayRecord }
+   */
+  async setPlayRecordsBatch(
+    userName: string,
+    records: Record<string, PlayRecord>
+  ): Promise<void> {
+    const entries = Object.entries(records);
+    if (entries.length === 0) return;
+
+    // 构建 mset 参数：{ fullKey: JSON.stringify(record) }
+    const msetData: Record<string, string> = {};
+    for (const [key, record] of entries) {
+      msetData[this.prKey(userName, key)] = JSON.stringify(record);
+    }
+
+    await withRetry(() => this.client.mset(msetData));
+  }
+
+  /**
+   * 批量保存收藏（使用 mset，无论多少条都只算1条命令）
+   * @param userName 用户名
+   * @param favorites 键值对 { "source+id": Favorite }
+   */
+  async setFavoritesBatch(
+    userName: string,
+    favorites: Record<string, Favorite>
+  ): Promise<void> {
+    const entries = Object.entries(favorites);
+    if (entries.length === 0) return;
+
+    // 构建 mset 参数：{ fullKey: JSON.stringify(favorite) }
+    const msetData: Record<string, string> = {};
+    for (const [key, favorite] of entries) {
+      msetData[this.favKey(userName, key)] = JSON.stringify(favorite);
+    }
+
+    await withRetry(() => this.client.mset(msetData));
   }
 
   // ---------- 用户注册 / 登录 ----------
@@ -1248,6 +1298,8 @@ function getUpstashRedisClient(): Redis {
     client = new Redis({
       url: upstashUrl,
       token: upstashToken,
+      // 启用 auto-pipelining 减少 HTTP 往返延迟
+      enableAutoPipelining: true,
       // 可选配置
       retry: {
         retries: 3,

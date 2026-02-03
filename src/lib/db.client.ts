@@ -829,8 +829,8 @@ export async function getAllPlayRecords(forceRefresh = false): Promise<Record<st
           }
         })
         .catch((err) => {
-          console.warn('后台同步播放记录失败:', err);
-          triggerGlobalError('后台同步播放记录失败');
+          // 后台同步失败不影响用户使用，静默处理（用户已有缓存数据）
+          console.warn('[后台同步] 播放记录同步失败（不影响使用，已使用缓存数据）:', err);
         });
 
       return cachedData;
@@ -1106,8 +1106,8 @@ export async function getSearchHistory(): Promise<string[]> {
           }
         })
         .catch((err) => {
-          console.warn('后台同步搜索历史失败:', err);
-          triggerGlobalError('后台同步搜索历史失败');
+          // 后台同步失败不影响用户使用，静默处理（用户已有缓存数据）
+          console.warn('[后台同步] 搜索历史同步失败（不影响使用，已使用缓存数据）:', err);
         });
 
       return cachedData;
@@ -1981,8 +1981,8 @@ export async function getAllSkipConfigs(): Promise<Record<string, EpisodeSkipCon
           }
         })
         .catch((err) => {
-          console.warn('后台同步跳过片头片尾配置失败:', err);
-          triggerGlobalError('后台同步跳过片头片尾配置失败');
+          // 后台同步失败不影响用户使用，静默处理（用户已有缓存数据）
+          console.warn('[后台同步] 跳过片头片尾配置同步失败（不影响使用，已使用缓存数据）:', err);
         });
 
       return cachedData;

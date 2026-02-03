@@ -1,9 +1,10 @@
 /**
  * 外部流量监控模块
  * 统计应用调用外部 API 的流量
+ *
+ * 注意：流量数据仅保存在内存中（最多 1000 条，48 小时）
+ * 不再持久化到 Kvrocks，以防止 WAL 爆满和浪费 Upstash 命令
  */
-
-import { db } from './db';
 
 interface ExternalTrafficMetrics {
   timestamp: number;
@@ -19,61 +20,38 @@ interface ExternalTrafficMetrics {
 const externalTrafficCache: ExternalTrafficMetrics[] = [];
 const MAX_CACHE_SIZE = 1000;
 const MAX_CACHE_AGE = 48 * 60 * 60 * 1000; // 48小时（与性能监控保持一致）
-const EXTERNAL_TRAFFIC_KEY = 'external:traffic';
 
 // 数据加载标志
 let dataLoaded = false;
 
 /**
- * 从 Kvrocks 加载历史数据
+ * 从 Kvrocks 加载历史数据（已禁用持久化）
  */
 async function loadFromKvrocks(): Promise<void> {
-  try {
-    const cached = await db.getCache(EXTERNAL_TRAFFIC_KEY);
-    if (cached && Array.isArray(cached)) {
-      externalTrafficCache.length = 0;
-      externalTrafficCache.push(...cached);
-      console.log(`✅ 从 Kvrocks 加载了 ${cached.length} 条外部流量数据`);
-    }
-  } catch (error) {
-    console.error('❌ 从 Kvrocks 加载外部流量数据失败:', error);
-  } finally {
-    dataLoaded = true;
-  }
+  if (dataLoaded) return;
+  // 持久化已禁用，直接标记为已加载
+  dataLoaded = true;
 }
 
 /**
- * 保存数据到 Kvrocks
+ * 保存数据到 Kvrocks（已禁用持久化）
  */
-async function saveToKvrocks(snapshot: ExternalTrafficMetrics[]): Promise<void> {
-  try {
-    console.log(`💾 [External Traffic] 保存 ${snapshot.length} 条数据到 Kvrocks`);
-    await db.setCache(EXTERNAL_TRAFFIC_KEY, snapshot);
-  } catch (error) {
-    console.error('❌ 保存外部流量数据到 Kvrocks 失败:', error);
-  }
+async function saveToKvrocks(): Promise<void> {
+  // 持久化已禁用，不再保存到 Kvrocks
+  return;
 }
 
 /**
  * 记录外部请求流量
  */
 export function recordExternalTraffic(metrics: ExternalTrafficMetrics): void {
-  console.log(`🌐 [External] ${metrics.method} ${metrics.url} - ${metrics.statusCode} - ${(metrics.responseSize / 1024).toFixed(2)} KB`);
-
-  // 首次调用时从 Kvrocks 加载历史数据（异步，不阻塞）
+  // 首次调用时标记已加载（持久化已禁用）
   if (!dataLoaded) {
-    loadFromKvrocks().catch(err => {
-      console.error('❌ 加载外部流量数据失败:', err);
-    });
+    dataLoaded = true;
   }
 
-  // 添加到缓存
+  // 添加到内存缓存
   externalTrafficCache.push(metrics);
-  console.log(`📊 [External Traffic] 当前缓存数量: ${externalTrafficCache.length}`);
-
-  // 立即创建快照用于保存（在清理之前）
-  const snapshot = [...externalTrafficCache];
-  console.log(`📸 [External Traffic] 创建快照: ${snapshot.length} 条`);
 
   // 清理超过48小时的旧数据
   const now = Date.now();
@@ -83,45 +61,17 @@ export function recordExternalTraffic(metrics: ExternalTrafficMetrics): void {
   }
 
   // 限制缓存大小
-  if (externalTrafficCache.length > MAX_CACHE_SIZE) {
+  while (externalTrafficCache.length > MAX_CACHE_SIZE) {
     externalTrafficCache.shift();
   }
 
-  // 异步保存快照到 Kvrocks（不阻塞主流程）
-  saveToKvrocks(snapshot).catch((error) => {
-    console.error('❌ 保存外部流量数据到 Kvrocks 失败:', error);
-  });
+  // 持久化已禁用，不再保存到 Kvrocks
 }
 
 /**
  * 获取外部流量统计（按时间范围）
  */
 export async function getExternalTrafficStats(hours: number = 1) {
-  // 从 Kvrocks 加载最新数据
-  try {
-    const cached = await db.getCache(EXTERNAL_TRAFFIC_KEY);
-    if (cached && Array.isArray(cached)) {
-      // 过滤掉超过 48 小时的数据
-      const now = Date.now();
-      const cutoffTime = now - MAX_CACHE_AGE;
-      const validData = cached.filter((item: ExternalTrafficMetrics) => item.timestamp >= cutoffTime);
-
-      // 更新内存缓存
-      externalTrafficCache.length = 0;
-      externalTrafficCache.push(...validData);
-
-      console.log(`✅ 从 Kvrocks 加载了 ${validData.length} 条外部流量数据`);
-
-      // 🔑 关键修复：如果过滤后数据量减少，说明有旧数据被清理，需要更新 Kvrocks
-      if (validData.length < cached.length) {
-        console.log(`🧹 清理 Kvrocks 中的旧数据: ${cached.length} -> ${validData.length} 条`);
-        await saveToKvrocks(validData);
-      }
-    }
-  } catch (error) {
-    console.error('❌ 从 Kvrocks 加载外部流量数据失败:', error);
-  }
-
   const now = Date.now();
   const startTime = now - hours * 60 * 60 * 1000;
 

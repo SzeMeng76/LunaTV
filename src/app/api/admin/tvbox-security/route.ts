@@ -1,3 +1,4 @@
+import ipaddr from 'ipaddr.js';
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getAuthInfoFromCookie } from '@/lib/auth';
@@ -118,36 +119,19 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// 验证IP地址或CIDR格式的辅助函数
+// 验证IP地址或CIDR格式的辅助函数（支持 IPv4 和 IPv6）
 function isValidIPOrCIDR(ip: string): boolean {
   if (!ip || typeof ip !== 'string') return false;
-  
+
+  const trimmed = ip.trim();
+
   // 允许通配符
-  if (ip.trim() === '*') return true;
-  
-  // 基本的IP地址正则表达式
-  const ipRegex = /^(\d{1,3}\.){3}\d{1,3}(\/\d{1,2})?$/;
-  
-  if (!ipRegex.test(ip)) return false;
-  
-  const [ipPart, maskPart] = ip.split('/');
-  const parts = ipPart.split('.');
-  
-  // 验证IP地址的每个部分是否在0-255范围内
-  for (const part of parts) {
-    const num = parseInt(part, 10);
-    if (isNaN(num) || num < 0 || num > 255) {
-      return false;
-    }
+  if (trimmed === '*') return true;
+
+  // 使用 ipaddr.js 验证 IP 或 CIDR
+  if (trimmed.includes('/')) {
+    return ipaddr.isValidCIDR(trimmed);
   }
-  
-  // 验证子网掩码位数
-  if (maskPart) {
-    const mask = parseInt(maskPart, 10);
-    if (isNaN(mask) || mask < 0 || mask > 32) {
-      return false;
-    }
-  }
-  
-  return true;
+
+  return ipaddr.isValid(trimmed);
 }

@@ -9,6 +9,9 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const fetchCache = 'force-no-store';
 
+// 备用 API（乱短剧API）
+const FALLBACK_API_BASE = 'https://api.r2afosne.dpdns.org';
+
 // 从单个短剧源获取数据（通过分类名称查找）
 async function fetchListFromSource(
   api: string,
@@ -85,6 +88,53 @@ async function fetchListFromSource(
   };
 }
 
+// 从备用 API（乱短剧API）获取列表数据 - 使用 /vod/list
+async function fetchListFromFallbackApi(
+  categoryId: number,
+  page: number,
+  size: number
+) {
+  console.log('🔄 尝试备用API列表: 乱短剧API /vod/list');
+
+  const apiUrl = `${FALLBACK_API_BASE}/vod/list?categoryId=${categoryId}&page=${page}`;
+
+  const response = await fetch(apiUrl, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      'Accept': 'application/json',
+    },
+    signal: AbortSignal.timeout(10000),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Fallback API HTTP error! status: ${response.status}`);
+  }
+
+  const data = await response.json();
+  const items = data.list || [];
+
+  console.log(`✅ 备用API列表返回 ${items.length} 条数据`);
+
+  const list = items.slice(0, size).map((item: any) => ({
+    id: item.id,
+    name: item.name,
+    cover: item.cover || '',
+    update_time: item.update_time || new Date().toISOString(),
+    score: parseFloat(item.score) || 0,
+    episode_count: parseInt(String(item.episode_count || '1').replace(/[^\d]/g, '') || '1'),
+    description: item.description || '',
+    author: item.author || '',
+    backdrop: item.cover || '',
+    vote_average: parseFloat(item.score) || 0,
+    _source: 'fallback_api',
+  }));
+
+  return {
+    list,
+    hasMore: data.currentPage < data.totalPages,
+  };
+}
+
 // 服务端专用函数，从所有短剧源聚合数据
 async function getShortDramaListInternal(
   category: number,
@@ -150,7 +200,15 @@ async function getShortDramaListInternal(
         size
       );
     } catch (fallbackError) {
-      return { list: [], hasMore: false };
+      console.error('默认源也失败:', fallbackError);
+      // 尝试备用API
+      try {
+        console.log('⚠️ 默认源失败，尝试备用API');
+        return await fetchListFromFallbackApi(category, page, size);
+      } catch (fallbackApiError) {
+        console.error('备用API也失败:', fallbackApiError);
+        return { list: [], hasMore: false };
+      }
     }
   }
 }
