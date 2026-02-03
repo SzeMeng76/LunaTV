@@ -3079,6 +3079,38 @@ const VideoSourceConfig = ({
     }
   };
 
+  // 一键选中失效视频源（状态为 no_results 或 invalid）
+  const handleSelectInvalidSources = useCallback(() => {
+    const invalidKeys = validationResults
+      .filter((r) => r.status === 'no_results' || r.status === 'invalid')
+      .map((r) => r.key);
+
+    if (invalidKeys.length === 0) {
+      showAlert({
+        type: 'warning',
+        title: '没有失效的视频源',
+        message: '当前没有检测到失效或无法搜索的视频源',
+        timer: 3000,
+      });
+      return;
+    }
+
+    setSelectedSources(new Set(invalidKeys));
+    showAlert({
+      type: 'success',
+      title: '已选中失效源',
+      message: `已选中 ${invalidKeys.length} 个失效或无法搜索的视频源`,
+      timer: 3000,
+    });
+  }, [validationResults, showAlert]);
+
+  // 获取失效视频源数量
+  const invalidSourceCount = useMemo(() => {
+    return validationResults.filter(
+      (r) => r.status === 'no_results' || r.status === 'invalid',
+    ).length;
+  }, [validationResults]);
+
   const handleAddSource = () => {
     if (!newSource.name || !newSource.key || !newSource.api) return;
     withLoading('addSource', async () => {
@@ -3932,23 +3964,23 @@ const VideoSourceConfig = ({
           <div className='flex items-center gap-2 order-1 sm:order-2'>
             <button
               onClick={() => setImportExportModal({ isOpen: true, mode: 'import' })}
-              className='px-3 py-1 text-sm rounded-lg transition-colors flex items-center space-x-1 bg-linear-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 text-white'
+              className='group px-4 py-2 text-sm rounded-xl font-medium flex items-center space-x-2 bg-gradient-to-br from-blue-600 via-cyan-500 to-blue-500 hover:from-blue-700 hover:via-cyan-600 hover:to-blue-600 text-white shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-cyan-500/40 hover:-translate-y-0.5 active:scale-95 transition-all duration-300 backdrop-blur-sm border border-white/10'
               title='从 JSON 文件导入视频源'
             >
-              <Upload className='w-4 h-4' />
+              <Upload className='w-4 h-4 group-hover:scale-110 transition-transform duration-300' />
               <span className='hidden sm:inline'>导入视频源</span>
               <span className='sm:hidden'>导入</span>
             </button>
             <button
               onClick={() => setImportExportModal({ isOpen: true, mode: 'export' })}
-              className='px-3 py-1 text-sm rounded-lg transition-colors flex items-center space-x-1 bg-linear-to-r from-green-600 to-emerald-500 hover:from-green-700 hover:to-emerald-600 text-white'
+              className='group px-4 py-2 text-sm rounded-xl font-medium flex items-center space-x-2 bg-gradient-to-br from-green-600 via-emerald-500 to-teal-500 hover:from-green-700 hover:via-emerald-600 hover:to-teal-600 text-white shadow-lg shadow-green-500/30 hover:shadow-xl hover:shadow-emerald-500/40 hover:-translate-y-0.5 active:scale-95 transition-all duration-300 backdrop-blur-sm border border-white/10'
               title={
                 selectedSources.size > 0
                   ? `导出选中的 ${selectedSources.size} 个视频源`
                   : '导出所有视频源'
               }
             >
-              <Download className='w-4 h-4' />
+              <Download className='w-4 h-4 group-hover:scale-110 transition-transform duration-300' />
               <span className='hidden sm:inline'>
                 {selectedSources.size > 0
                   ? `导出已选(${selectedSources.size})`
@@ -3959,25 +3991,75 @@ const VideoSourceConfig = ({
             <button
               onClick={() => setShowValidationModal(true)}
               disabled={isValidating}
-              className={`px-3 py-1 text-sm rounded-lg transition-colors flex items-center space-x-1 ${isValidating
-                ? buttonStyles.disabled
-                : buttonStyles.primary
-                }`}
+              className={`group px-4 py-2 text-sm rounded-xl font-medium flex items-center space-x-2 ${
+                isValidating
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-gradient-to-br from-purple-600 via-indigo-500 to-purple-500 hover:from-purple-700 hover:via-indigo-600 hover:to-purple-600 text-white shadow-lg shadow-purple-500/30 hover:shadow-xl hover:shadow-indigo-500/40 hover:-translate-y-0.5 active:scale-95 backdrop-blur-sm border border-white/10'
+              } transition-all duration-300`}
             >
               {isValidating ? (
                 <>
-                  <div className='w-3 h-3 border border-white border-t-transparent rounded-full animate-spin'></div>
+                  <div className='w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin'></div>
                   <span>检测中...</span>
                 </>
               ) : (
-                '有效性检测'
+                <>
+                  <svg className='w-4 h-4 group-hover:scale-110 transition-transform duration-300' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                    <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' />
+                  </svg>
+                  <span>有效性检测</span>
+                </>
               )}
             </button>
+            {/* 选中失效源按钮 - 只在有检测结果且存在失效源时显示 */}
+            {!isValidating && invalidSourceCount > 0 && (
+              <button
+                onClick={handleSelectInvalidSources}
+                className='group relative px-4 py-2 text-sm rounded-xl font-medium flex items-center space-x-2 bg-gradient-to-br from-orange-500 via-red-500 to-pink-600 hover:from-orange-600 hover:via-red-600 hover:to-pink-700 text-white shadow-lg shadow-orange-500/30 hover:shadow-xl hover:shadow-red-500/40 hover:-translate-y-0.5 active:scale-95 transition-all duration-300 backdrop-blur-sm border border-white/10'
+                title={`一键选中 ${invalidSourceCount} 个失效或无法搜索的视频源`}
+              >
+                <svg
+                  className='w-4 h-4 group-hover:rotate-12 group-hover:scale-110 transition-transform duration-300'
+                  fill='none'
+                  stroke='currentColor'
+                  viewBox='0 0 24 24'
+                >
+                  <path
+                    strokeLinecap='round'
+                    strokeLinejoin='round'
+                    strokeWidth={2}
+                    d='M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'
+                  />
+                </svg>
+                <span className='hidden sm:inline'>
+                  选中失效源({invalidSourceCount})
+                </span>
+                <span className='sm:hidden'>{invalidSourceCount}</span>
+              </button>
+            )}
             <button
               onClick={() => setShowAddForm(!showAddForm)}
-              className={showAddForm ? buttonStyles.secondary : buttonStyles.success}
+              className={`group px-4 py-2 text-sm rounded-xl font-medium flex items-center space-x-2 transition-all duration-300 backdrop-blur-sm border border-white/10 ${
+                showAddForm
+                  ? 'bg-gradient-to-br from-gray-500 via-gray-600 to-gray-500 hover:from-gray-600 hover:via-gray-700 hover:to-gray-600 text-white shadow-lg shadow-gray-500/30 hover:shadow-xl hover:shadow-gray-600/40'
+                  : 'bg-gradient-to-br from-emerald-600 via-green-500 to-teal-500 hover:from-emerald-700 hover:via-green-600 hover:to-teal-600 text-white shadow-lg shadow-emerald-500/30 hover:shadow-xl hover:shadow-green-500/40'
+              } hover:-translate-y-0.5 active:scale-95`}
             >
-              {showAddForm ? '取消' : '添加视频源'}
+              {showAddForm ? (
+                <>
+                  <svg className='w-4 h-4 group-hover:rotate-90 transition-transform duration-300' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                    <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M6 18L18 6M6 6l12 12' />
+                  </svg>
+                  <span>取消</span>
+                </>
+              ) : (
+                <>
+                  <svg className='w-4 h-4 group-hover:rotate-90 transition-transform duration-300' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                    <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M12 4v16m8-8H4' />
+                  </svg>
+                  <span>添加视频源</span>
+                </>
+              )}
             </button>
           </div>
         </div>

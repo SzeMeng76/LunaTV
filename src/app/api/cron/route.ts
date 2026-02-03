@@ -2,10 +2,12 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
+import { getSpiderJarFromBlob, uploadSpiderJarToBlob } from '@/lib/blobStorage';
 import { getConfig, refineConfig } from '@/lib/config';
 import { db } from '@/lib/db';
 import { fetchVideoDetail } from '@/lib/fetchVideoDetail';
 import { refreshLiveChannels } from '@/lib/live';
+import { getSpiderJar } from '@/lib/spiderJar';
 import { SearchResult, Favorite, PlayRecord } from '@/lib/types';
 import { recordRequest, getDbQueryCount, resetDbQueryCount } from '@/lib/performance-monitor';
 import { migrateOldCache, cleanupExpiredCache, validateCacheSize } from '@/lib/video-cache';
@@ -335,6 +337,17 @@ async function cronJob() {
         console.log('✅ 缓存大小校验完成');
       } catch (err) {
         console.error('❌ 缓存大小校验失败:', err);
+      }
+    })(),
+
+    // 🎯 Spider JAR 更新任务（仅 Vercel 环境）
+    (async () => {
+      try {
+        console.log('🕷️ 检查 Spider JAR 更新...');
+        await updateSpiderJarToBlob();
+        console.log('✅ Spider JAR 更新检查完成');
+      } catch (err) {
+        console.error('❌ Spider JAR 更新失败:', err);
       }
     })()
   ]);
@@ -1100,5 +1113,36 @@ async function optimizeActiveUserLevels() {
     console.log(`✅ 等级优化完成，共优化 ${optimizedCount} 个用户`);
   } catch (err) {
     console.error('🚫 等级优化任务失败:', err);
+  }
+}
+
+/**
+ * 🕷️ Spider JAR 自动更新任务（仅 Vercel 环境）
+ * 每次都上传最新版本到 Blob（简化逻辑，Blob 会自动覆盖）
+ */
+async function updateSpiderJarToBlob() {
+  try {
+    // 1. 强制从 GitHub 拉取最新版本
+    console.log('[Spider Update] 从远程拉取最新 JAR...');
+    const newJar = await getSpiderJar(true);
+
+    if (!newJar.success) {
+      console.warn('[Spider Update] 远程 JAR 获取失败，跳过更新');
+      return;
+    }
+
+    console.log(`[Spider Update] 获取成功: ${newJar.source}, MD5: ${newJar.md5}, 大小: ${newJar.size} bytes`);
+
+    // 2. 上传到 Blob（会自动覆盖旧版本）
+    const blobUrl = await uploadSpiderJarToBlob(newJar.buffer, newJar.md5, newJar.source);
+    if (blobUrl) {
+      console.log(`[Spider Update] ✅ JAR 已更新到 Blob CDN!`);
+      console.log(`[Spider Update] URL: ${blobUrl}`);
+      console.log(`[Spider Update] MD5: ${newJar.md5}`);
+    } else {
+      console.warn('[Spider Update] Blob 上传失败（可能不在 Vercel 环境）');
+    }
+  } catch (error) {
+    console.error('[Spider Update] 更新失败:', error);
   }
 }
