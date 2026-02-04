@@ -131,6 +131,62 @@ https://your-domain.com/api/tvbox?format=json&token=USER_SPECIFIC_TOKEN
 
 防止滥用，默认每分钟 60 次请求。
 
+## 🚀 Spider JAR 加速（Vercel 用户专享）
+
+### 📦 什么是 Spider JAR？
+
+Spider JAR 是 TVBox 用于解析视频源的核心组件（约 276KB），通常托管在 GitHub 上。
+
+### ⚡ Vercel Blob CDN 加速
+
+**仅适用于部署在 Vercel 的用户**，LunaTV 自动启用全球 CDN 加速：
+
+**优势：**
+- ✅ **全球加速** - 用户从最近的 CDN 节点下载（0.5秒 vs 2秒）
+- ✅ **减轻服务器负载** - 99% 的流量走 CDN，不占用服务器带宽
+- ✅ **自动更新** - 每天凌晨 1 点通过 Cron 自动更新
+- ✅ **无感降级** - 未配置 Token 时自动使用代理模式
+- ✅ **零配置** - 配置 Token 后完全自动，无需手动维护
+
+**工作原理：**
+```
+首次部署 → 用户请求 → 服务器从 GitHub 拉取 → 异步上传到 Vercel Blob CDN
+后续请求 → 用户直接从 CDN 下载 ✅ 超快！
+每天凌晨1点 → Cron 自动更新 → 拉取最新 JAR 并上传到 CDN
+```
+
+**配置步骤（Vercel 用户）：**
+
+1. 在 Vercel 项目设置中添加环境变量：
+   ```
+   BLOB_READ_WRITE_TOKEN=<your-token>
+   ```
+
+2. 获取 Token：
+   - 访问 Vercel Dashboard → Storage → Create Database → Blob
+   - 复制生成的 `BLOB_READ_WRITE_TOKEN`
+
+3. 重新部署项目，自动生效！
+
+**Cron 定时任务说明：**
+
+LunaTV 的 Cron 任务（每天凌晨 1 点）会自动执行以下操作：
+- 🕷️ **Spider JAR 更新** - 从 GitHub 拉取最新版本并上传到 Blob CDN（仅 Vercel + Token）
+- 📺 **直播频道刷新** - 更新所有直播源的频道数量
+- 📊 **播放记录更新** - 刷新用户的播放记录和收藏（检查剧集更新）
+- 🧹 **用户清理** - 清理非活跃用户（如果启用）
+- 🔄 **配置同步** - 同步配置订阅（如果启用）
+
+**注意事项：**
+- ⚠️ 如果未配置 `BLOB_READ_WRITE_TOKEN`，Spider JAR 更新会自动跳过（不影响其他功能）
+- ✅ Cron 任务配置在 `vercel.json` 中，默认每天 1:00 AM UTC 执行
+- ✅ 可以通过访问 `/api/cron` 手动触发（需要管理员权限）
+
+**非 Vercel 用户：**
+- ✅ 自动降级到服务器代理模式
+- ✅ 所有功能正常工作
+- ✅ 无需任何配置
+
 ## 🎛️ 高级功能
 
 ### 🎯 智能搜索代理（新功能）

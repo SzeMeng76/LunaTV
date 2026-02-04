@@ -179,9 +179,31 @@ function md5(buf: Buffer): string {
 }
 
 export async function getSpiderJar(
-  forceRefresh = false
+  forceRefresh = false,
+  customUrl?: string
 ): Promise<SpiderJarInfo> {
   const now = Date.now();
+
+  // 🔑 如果指定了自定义 URL，优先尝试获取
+  if (customUrl) {
+    console.log(`[SpiderJar] 尝试获取自定义 jar: ${customUrl}`);
+    const buf = await fetchRemote(customUrl);
+    if (buf) {
+      const info: SpiderJarInfo = {
+        buffer: buf,
+        md5: md5(buf),
+        source: customUrl,
+        success: true,
+        cached: false,
+        timestamp: now,
+        size: buf.length,
+        tried: 1,
+      };
+      cache = info;
+      return info;
+    }
+    console.warn(`[SpiderJar] 自定义 jar 获取失败，回退到默认源`);
+  }
 
   // 重置失败记录（定期清理）
   if (now - lastFailureReset > FAILURE_RESET_INTERVAL) {

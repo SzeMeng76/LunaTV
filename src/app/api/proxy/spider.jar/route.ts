@@ -4,10 +4,16 @@ import { getSpiderJar } from '@/lib/spiderJar';
 export const runtime = 'nodejs';
 
 // Spider JAR 本地代理端点 - 使用统一的 jar 获取逻辑
-export async function GET(_req: NextRequest) {
+// 支持通过查询参数指定自定义 jar URL
+export async function GET(req: NextRequest) {
   try {
+    // 检查是否有自定义 jar URL 参数
+    const { searchParams } = new URL(req.url);
+    const customUrl = searchParams.get('url');
+    const forceRefresh = searchParams.get('refresh') === '1';
+
     // 使用管理模块获取 jar（优先使用缓存）
-    const jarInfo = await getSpiderJar(false);
+    const jarInfo = await getSpiderJar(forceRefresh, customUrl || undefined);
 
     console.log(`[Spider Proxy] 提供 ${jarInfo.success ? '真实' : '降级'} jar: ${jarInfo.source}, 大小: ${jarInfo.size} bytes, 缓存: ${jarInfo.cached}`);
 

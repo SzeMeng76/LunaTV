@@ -77,6 +77,16 @@ export function refineConfig(adminConfig: AdminConfig): AdminConfig {
       .map((s) => [s.key, s])
   );
 
+  // 获取配置文件中的所有源 key
+  const apiKeysInFile = new Set(apiSitesFromFile.map(([key]) => key));
+
+  // 删除不在配置文件中的 from='config' 的源
+  currentApiSites.forEach((source, key) => {
+    if (source.from === 'config' && !apiKeysInFile.has(key)) {
+      currentApiSites.delete(key);
+    }
+  });
+
   // 添加或更新订阅中的所有源
   apiSitesFromFile.forEach(([key, site]) => {
     const existingSource = currentApiSites.get(key);
@@ -112,6 +122,16 @@ export function refineConfig(adminConfig: AdminConfig): AdminConfig {
       .map((c) => [c.query + c.type, c])
   );
 
+  // 获取配置文件中的所有分类 key
+  const categoryKeysInFile = new Set(customCategoriesFromFile.map((c) => c.query + c.type));
+
+  // 删除不在配置文件中的 from='config' 的分类
+  currentCustomCategories.forEach((category, key) => {
+    if (category.from === 'config' && !categoryKeysInFile.has(key)) {
+      currentCustomCategories.delete(key);
+    }
+  });
+
   // 添加或更新订阅中的所有自定义分类
   customCategoriesFromFile.forEach((category) => {
     const key = category.query + category.type;
@@ -144,6 +164,16 @@ export function refineConfig(adminConfig: AdminConfig): AdminConfig {
     (adminConfig.LiveConfig || [])
       .map((l) => [l.key, l])
   );
+
+  // 获取配置文件中的所有直播源 key
+  const liveKeysInFile = new Set(livesFromFile.map(([key]) => key));
+
+  // 删除不在配置文件中的 from='config' 的直播源
+  currentLives.forEach((live, key) => {
+    if (live.from === 'config' && !liveKeysInFile.has(key)) {
+      currentLives.delete(key);
+    }
+  });
 
   // 添加或更新订阅中的所有直播源
   livesFromFile.forEach(([key, site]) => {
