@@ -4886,6 +4886,18 @@ function PlayPageClient() {
         lastPlaybackRateRef.current = artPlayerRef.current.playbackRate;
       });
 
+      // 监听全屏事件，进入全屏后自动隐藏控制栏
+      artPlayerRef.current.on('fullscreen', (isFullscreen: boolean) => {
+        if (isFullscreen) {
+          // 进入全屏后，延迟100ms触发控制栏自动隐藏
+          setTimeout(() => {
+            if (artPlayerRef.current?.controls) {
+              artPlayerRef.current.controls.show = true;
+            }
+          }, 100);
+        }
+      });
+
       // 监听视频可播放事件，这时恢复播放进度更可靠
       artPlayerRef.current.on('video:canplay', () => {
         // 🔥 重置 video:ended 处理标志，因为这是新视频
