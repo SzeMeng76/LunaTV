@@ -59,6 +59,8 @@ interface DanmuSettingsPanelProps {
   matchInfo?: DanmuMatchInfo | null;
   /** 加载元数据 */
   loadMeta?: DanmuLoadMeta;
+  /** 错误信息 */
+  error?: Error | null;
 }
 
 // ============================================================================
@@ -114,6 +116,7 @@ export const DanmuSettingsPanel = memo(function DanmuSettingsPanel({
   onReload,
   matchInfo,
   loadMeta,
+  error,
 }: DanmuSettingsPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
@@ -389,8 +392,26 @@ export const DanmuSettingsPanel = memo(function DanmuSettingsPanel({
 
       {/* 内容区域 - 零滚动设计 */}
       <div className='px-5 py-4 space-y-4 overflow-hidden'>
+        {/* 错误提示 */}
+        {error && settings.enabled && (
+          <div
+            className='px-3 py-2 rounded-xl backdrop-blur-sm'
+            style={{
+              background: 'linear-gradient(90deg, rgba(239, 68, 68, 0.15) 0%, rgba(185, 28, 28, 0.1) 100%)',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+            }}
+          >
+            <p className='text-xs text-red-300 font-medium'>
+              ❌ 加载失败
+            </p>
+            <p className='text-[11px] text-red-400/70 mt-0.5 truncate' title={error.message}>
+              {error.message}
+            </p>
+          </div>
+        )}
+
         {/* 匹配信息标签 - 显示片名（只要有matchInfo就显示，不要求danmuCount>0） */}
-        {matchInfo && settings.enabled && (
+        {matchInfo && settings.enabled && !error && (
           <div
             className='px-3 py-2 rounded-xl backdrop-blur-sm'
             style={{

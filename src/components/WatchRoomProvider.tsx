@@ -5,7 +5,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import { useWatchRoom } from '@/hooks/useWatchRoom';
 import { getAuthInfoFromBrowserCookie } from '@/lib/auth';
-import type { Room, Member, ChatMessage } from '@/types/watch-room.types';
+import type { Room, Member, ChatMessage, LiveState } from '@/types/watch-room.types';
 
 export interface WatchRoomContextType {
   socket: any | null;
@@ -41,6 +41,9 @@ export interface WatchRoomContextType {
   pause: () => void;
   changeVideo: (state: any) => void;
   clearRoomState: () => void;
+
+  // 直播控制
+  changeLiveChannel: (state: LiveState) => void;
 }
 
 const WatchRoomContext = createContext<WatchRoomContextType | null>(null);
@@ -223,6 +226,7 @@ export function WatchRoomProvider({ children }: WatchRoomProviderProps) {
     play: watchRoom.play,
     pause: watchRoom.pause,
     changeVideo: watchRoom.changeVideo,
+    changeLiveChannel: watchRoom.changeLiveChannel,
     clearRoomState: async () => {
       const result = await watchRoom.clearState();
       if (!result.success) {
