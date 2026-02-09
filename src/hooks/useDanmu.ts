@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { ClientCache } from '@/lib/client-cache';
 
 /**
@@ -12,6 +12,8 @@ import { ClientCache } from '@/lib/client-cache';
  * - 弹幕缓存管理（读取、保存、过期清理）
  * - 弹幕数据加载（API 请求、防重复、防抖）
  * - 弹幕操作处理（开关切换、插件控制）
+ * - 弹幕加载元数据追踪（来源、时间、数量）
+ * - 智能自动重试（首次加载为空时自动重试）
  */
 
 // ==================== 类型定义 ====================
@@ -25,13 +27,27 @@ export interface UseDanmuOptions {
   artPlayerRef: React.MutableRefObject<any>;
 }
 
+/** 弹幕加载元数据 */
+export interface DanmuLoadMeta {
+  /** 数据来源 */
+  source: 'init' | 'cache' | 'network' | 'network-retry' | 'empty' | 'error';
+  /** 加载完成时间戳 */
+  loadedAt: number | null;
+  /** 弹幕数量 */
+  count: number;
+}
+
 export interface UseDanmuReturn {
   // 状态
   externalDanmuEnabled: boolean;
   setExternalDanmuEnabled: (enabled: boolean) => void;
+  danmuList: any[]; // 弹幕列表state（用于显示弹幕数量）
+  loading: boolean; // 加载状态（state，便于UI响应）
+  loadMeta: DanmuLoadMeta; // 加载元数据
+  error: Error | null; // 错误状态
 
   // 方法
-  loadExternalDanmu: () => Promise<any[]>;
+  loadExternalDanmu: (options?: { force?: boolean }) => Promise<{ count: number; data: any[] }>;
   handleDanmuOperationOptimized: (nextState: boolean) => void;
 
   // Refs（供外部访问）
@@ -143,24 +159,51 @@ export function useDanmu(options: UseDanmuOptions): UseDanmuReturn {
     return false;
   });
 
+  // 弹幕列表state（用于React追踪弹幕数量变化）
+  const [danmuList, setDanmuList] = useState<any[]>([]);
+
+  // 加载状态（state，便于UI响应）
+  const [loading, setLoading] = useState(false);
+
+  // 错误状态
+  const [error, setError] = useState<Error | null>(null);
+
+  // 加载元数据追踪
+  const [loadMeta, setLoadMeta] = useState<DanmuLoadMeta>({
+    source: 'init',
+    loadedAt: null,
+    count: 0,
+  });
+
   // Refs
   const externalDanmuEnabledRef = useRef(externalDanmuEnabled);
   const danmuLoadingRef = useRef<any>(false);
   const lastDanmuLoadKeyRef = useRef<string>('');
   const danmuOperationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const danmuPluginStateRef = useRef<any>(null);
+  // 自动重试追踪
+  const autoRetryDanmuScopeRef = useRef<string>('');
 
   // 同步 ref
   useEffect(() => {
     externalDanmuEnabledRef.current = externalDanmuEnabled;
   }, [externalDanmuEnabled]);
 
+  // 集数变化时重置自动重试状态
+  useEffect(() => {
+    const scopeKey = `${videoTitle}_${videoYear}_${videoDoubanId}_${currentEpisodeIndex + 1}`;
+    autoRetryDanmuScopeRef.current = `pending:${scopeKey}`;
+  }, [videoTitle, videoYear, videoDoubanId, currentEpisodeIndex]);
+
   // ==================== 加载外部弹幕 ====================
 
-  const loadExternalDanmu = async (): Promise<any[]> => {
+  const loadExternalDanmu = useCallback(async (options?: { force?: boolean }): Promise<{ count: number; data: any[] }> => {
+    const force = options?.force === true;
+    const emptyResult = { count: 0, data: [] };
+
     if (!externalDanmuEnabledRef.current) {
       console.log('外部弹幕开关已关闭');
-      return [];
+      return emptyResult;
     }
 
     // 生成当前请求的唯一标识
@@ -175,10 +218,10 @@ export function useDanmu(options: UseDanmuOptions): UseDanmuReturn {
     const isStuckLoad = now - lastLoadTime > DANMU_LOAD_TIMEOUT;
     const isSameRequest = lastRequestKey === requestKey;
 
-    // 防止重复请求
-    if (loadingState?.loading && isSameRequest && !isStuckLoad) {
+    // 防止重复请求（除非强制刷新）
+    if (!force && loadingState?.loading && isSameRequest && !isStuckLoad) {
       console.log('⏳ 弹幕正在加载中，跳过重复请求');
-      return [];
+      return { count: danmuList.length, data: danmuList };
     }
 
     // 强制重置卡住的加载状态
@@ -196,6 +239,8 @@ export function useDanmu(options: UseDanmuOptions): UseDanmuReturn {
       episode: currentEpisodeNum,
     } as any;
     lastDanmuLoadKeyRef.current = requestKey;
+    setLoading(true);
+    setError(null); // 清除之前的错误
 
     try {
       // 构建请求参数
@@ -217,20 +262,31 @@ export function useDanmu(options: UseDanmuOptions): UseDanmuReturn {
       if (!params.toString()) {
         console.log('没有可用的参数获取弹幕');
         danmuLoadingRef.current = false;
-        return [];
+        setLoading(false);
+        setLoadMeta({ source: 'empty', loadedAt: Date.now(), count: 0 });
+        return emptyResult;
       }
 
       // 生成缓存键
       const cacheKey = `${videoTitle}_${videoYear}_${videoDoubanId}_${currentEpisodeNum}`;
 
-      // 检查缓存
-      console.log('🔍 检查弹幕缓存:', cacheKey);
-      const cached = await getDanmuCacheItem(cacheKey);
-      if (cached && (now - cached.timestamp) < (DANMU_CACHE_DURATION * 1000)) {
-        console.log('✅ 使用弹幕缓存数据，缓存键:', cacheKey);
-        console.log('📊 缓存弹幕数量:', cached.data.length);
-        danmuLoadingRef.current = false;
-        return cached.data;
+      // 检查缓存（除非强制刷新）
+      if (!force) {
+        console.log('🔍 检查弹幕缓存:', cacheKey);
+        const cached = await getDanmuCacheItem(cacheKey);
+        if (cached && (now - cached.timestamp) < (DANMU_CACHE_DURATION * 1000)) {
+          console.log('✅ 使用弹幕缓存数据，缓存键:', cacheKey);
+          console.log('📊 缓存弹幕数量:', cached.data.length);
+          danmuLoadingRef.current = false;
+          setLoading(false);
+          setDanmuList(cached.data);
+          setLoadMeta({
+            source: 'cache',
+            loadedAt: cached.timestamp,
+            count: cached.data.length,
+          });
+          return { count: cached.data.length, data: cached.data };
+        }
       }
 
       // 请求 API
@@ -241,8 +297,12 @@ export function useDanmu(options: UseDanmuOptions): UseDanmuReturn {
       if (!response.ok) {
         const errorText = await response.text();
         console.error('弹幕API请求失败:', response.status, errorText);
+        const apiError = new Error(`弹幕加载失败: ${response.status}`);
+        setError(apiError);
         danmuLoadingRef.current = false;
-        return [];
+        setLoading(false);
+        setLoadMeta({ source: 'error', loadedAt: Date.now(), count: 0 });
+        return emptyResult;
       }
 
       const data = await response.json();
@@ -256,18 +316,69 @@ export function useDanmu(options: UseDanmuOptions): UseDanmuReturn {
       console.log('💾 保存弹幕到缓存:', cacheKey);
       await setDanmuCacheItem(cacheKey, finalDanmu);
 
-      return finalDanmu;
+      setDanmuList(finalDanmu);
+      setLoadMeta({
+        source: force ? 'network-retry' : 'network',
+        loadedAt: Date.now(),
+        count: finalDanmu.length,
+      });
+      return { count: finalDanmu.length, data: finalDanmu };
     } catch (error) {
       console.error('加载外部弹幕失败:', error);
-      return [];
+      const loadError = error instanceof Error ? error : new Error('弹幕加载失败');
+      setError(loadError);
+      setLoadMeta({ source: 'error', loadedAt: Date.now(), count: 0 });
+      return emptyResult;
     } finally {
       danmuLoadingRef.current = false;
+      setLoading(false);
     }
-  };
+  }, [videoTitle, videoYear, videoDoubanId, currentEpisodeIndex, currentSource, danmuList]);
+
+  // ==================== 智能自动重试 ====================
+  // 首次加载弹幕为空时，自动延迟 900ms 后重试一次
+  useEffect(() => {
+    if (loading) return;
+    if (!externalDanmuEnabled) return;
+    if (!videoTitle && !videoDoubanId) return;
+    if (danmuList.length > 0) return;
+
+    const scopeKey = `${videoTitle}_${videoYear}_${videoDoubanId}_${currentEpisodeIndex + 1}`;
+    if (autoRetryDanmuScopeRef.current !== `pending:${scopeKey}`) return;
+
+    // 标记已重试，避免重复
+    autoRetryDanmuScopeRef.current = `done:${scopeKey}`;
+
+    const timer = setTimeout(async () => {
+      if (danmuLoadingRef.current?.loading) return;
+      console.log('🔄 弹幕首次为空，自动重试...');
+      try {
+        const result = await loadExternalDanmu({ force: true });
+        if (result.count > 0 && artPlayerRef.current) {
+          artPlayerRef.current.plugins?.artplayerPluginDanmuku?.load(result.data);
+          artPlayerRef.current.notice.show = `已自动重试并加载 ${result.count} 条弹幕`;
+        }
+      } catch {
+        // 忽略自动重试错误
+      }
+    }, 900);
+
+    return () => clearTimeout(timer);
+  }, [
+    loading,
+    externalDanmuEnabled,
+    videoTitle,
+    videoYear,
+    videoDoubanId,
+    currentEpisodeIndex,
+    danmuList.length,
+    loadExternalDanmu,
+    artPlayerRef,
+  ]);
 
   // ==================== 弹幕操作处理（防抖优化）====================
 
-  const handleDanmuOperationOptimized = (nextState: boolean) => {
+  const handleDanmuOperationOptimized = useCallback((nextState: boolean) => {
     // 清除之前的防抖定时器
     if (danmuOperationTimeoutRef.current) {
       clearTimeout(danmuOperationTimeoutRef.current);
@@ -293,16 +404,16 @@ export function useDanmu(options: UseDanmuOptions): UseDanmuReturn {
           if (nextState) {
             // 开启弹幕
             console.log('🚀 优化后开启外部弹幕...');
-            const externalDanmu = await loadExternalDanmu();
+            const result = await loadExternalDanmu();
 
             // 二次确认状态
             if (externalDanmuEnabledRef.current && artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
-              plugin.load(externalDanmu);
+              plugin.load(result.data);
               plugin.show();
-              console.log('✅ 外部弹幕已优化加载:', externalDanmu.length, '条');
+              console.log('✅ 外部弹幕已优化加载:', result.count, '条');
 
-              if (artPlayerRef.current && externalDanmu.length > 0) {
-                artPlayerRef.current.notice.show = `已加载 ${externalDanmu.length} 条弹幕`;
+              if (artPlayerRef.current && result.count > 0) {
+                artPlayerRef.current.notice.show = `已加载 ${result.count} 条弹幕`;
               }
             }
           } else {
@@ -316,7 +427,7 @@ export function useDanmu(options: UseDanmuOptions): UseDanmuReturn {
         console.error('弹幕操作失败:', error);
       }
     }, 300); // 300ms 防抖
-  };
+  }, [loadExternalDanmu, artPlayerRef]);
 
   // ==================== 返回值 ====================
 
@@ -324,6 +435,10 @@ export function useDanmu(options: UseDanmuOptions): UseDanmuReturn {
     // 状态
     externalDanmuEnabled,
     setExternalDanmuEnabled,
+    danmuList, // 弹幕列表state（用于显示弹幕数量）
+    loading, // 加载状态（state）
+    loadMeta, // 加载元数据
+    error, // 错误状态
 
     // 方法
     loadExternalDanmu,

@@ -4,6 +4,7 @@ import { io, Socket } from 'socket.io-client';
 import type {
   ChatMessage,
   ClientToServerEvents,
+  LiveState,
   Member,
   PlayState,
   Room,
@@ -49,6 +50,9 @@ export interface UseWatchRoomReturn {
   pause: () => void;
   changeVideo: (state: PlayState) => void;
   clearState: () => Promise<{ success: boolean; error?: string }>;
+
+  // 直播控制
+  changeLiveChannel: (state: LiveState) => void;
 
   // 聊天
   sendMessage: (content: string, type?: 'text' | 'emoji') => void;
@@ -184,6 +188,12 @@ export function useWatchRoom(options: UseWatchRoomOptions): UseWatchRoomReturn {
 
     newSocket.on('play:change', (state: PlayState) => {
       console.log('[WatchRoom] Video changed:', state);
+      // 更新房间的 currentState
+      setCurrentRoom((prev) => prev ? { ...prev, currentState: state } : null);
+    });
+
+    newSocket.on('live:change', (state: LiveState) => {
+      console.log('[WatchRoom] Live channel changed:', state);
       // 更新房间的 currentState
       setCurrentRoom((prev) => prev ? { ...prev, currentState: state } : null);
     });
@@ -337,6 +347,14 @@ export function useWatchRoom(options: UseWatchRoomOptions): UseWatchRoomReturn {
     }
   }, [socket, connected]);
 
+  const changeLiveChannel = useCallback((state: LiveState) => {
+    if (socket && connected) {
+      socket.emit('live:change', state);
+      // 本地也更新 currentState（因为服务器不会广播回给发送者）
+      setCurrentRoom((prev) => prev ? { ...prev, currentState: state } : null);
+    }
+  }, [socket, connected]);
+
   const clearState = useCallback(async () => {
     if (!socket || !connected) {
       return { success: false, error: '未连接到服务器' };
@@ -393,6 +411,7 @@ export function useWatchRoom(options: UseWatchRoomOptions): UseWatchRoomReturn {
     play,
     pause,
     changeVideo,
+    changeLiveChannel,
     clearState,
     sendMessage,
     connect,
