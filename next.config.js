@@ -1,16 +1,6 @@
 /** @type {import('next').NextConfig} */
 
-const SUB_PATH = '/moontv'; // 请将 /myapp 替换为你实际的子目录名称，例如 /lunatv
-
 const nextConfig = {
-  
-  // 配置基础路径：所有链接都会自动加上此前缀
-  basePath: SUB_PATH,
-
-  // 配置资源前缀：静态资源会从此路径加载
-  // 如果静态资源也在同一子目录下，通常与 basePath 保持一致
-  assetPrefix: SUB_PATH,
-
   // 生产环境始终使用 standalone 模式（Vercel/Docker/Zeabur）
   // 本地开发时（NODE_ENV !== 'production'）不使用 standalone
   ...(process.env.NODE_ENV === 'production' ? { output: 'standalone' } : {}),
