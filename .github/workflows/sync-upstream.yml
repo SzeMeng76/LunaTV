@@ -1,0 +1,48 @@
+name: 自动同步上游仓库
+
+# 触发条件：每天凌晨2点运行，同时支持手动触发
+on:
+  schedule:
+    - cron: '0 2 * * *'  # UTC时间，对应北京时间10点（UTC+8）
+  workflow_dispatch:  # 手动触发开关
+
+# 权限配置，需要读写仓库代码的权限
+permissions:
+  contents: write
+
+jobs:
+  sync-upstream:
+    runs-on: ubuntu-latest
+    steps:
+      # 步骤1：检出当前仓库代码
+      - name: 检出仓库代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 拉取完整的提交历史，避免合并冲突
+
+      # 步骤2：配置Git身份（用于提交）
+      - name: 配置Git用户信息
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+
+      # 步骤3：添加上游仓库并拉取最新代码
+      - name: 添加上游仓库并拉取
+        run: |
+          # 添加上游仓库地址
+          git remote add upstream https://github.com/SzeMeng76/LunaTV.git
+          # 拉取上游仓库所有分支的最新代码
+          git fetch upstream
+
+      # 步骤4：合并上游主分支到本地主分支（默认主分支为main，若为master需修改）
+      - name: 合并上游代码
+        run: |
+          # 切换到主分支（根据实际分支名修改，如master）
+          git checkout main
+          # 合并上游主分支代码
+          git merge upstream/main --no-edit
+
+      # 步骤5：推送合并后的代码到你的复刻仓库
+      - name: 推送到本地仓库
+        run: |
+          git push origin main
