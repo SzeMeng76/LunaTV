@@ -20,19 +20,19 @@ interface NetDiskSearchResultsProps {
 }
 
 const CLOUD_TYPES = {
-  baidu: { name: '百度网盘', color: 'bg-blue-500', icon: '📁', domain: 'pan.baidu.com' },
-  aliyun: { name: '阿里云盘', color: 'bg-orange-500', icon: '☁️', domain: 'alipan.com' },
-  quark: { name: '夸克网盘', color: 'bg-purple-500', icon: '⚡', domain: 'pan.quark.cn' },
-  tianyi: { name: '天翼云盘', color: 'bg-red-500', icon: '📱', domain: 'cloud.189.cn' },
-  uc: { name: 'UC网盘', color: 'bg-green-500', icon: '🌐', domain: 'drive.uc.cn' },
-  mobile: { name: '移动云盘', color: 'bg-cyan-500', icon: '📲', domain: 'caiyun.139.com' },
-  '115': { name: '115网盘', color: 'bg-gray-500', icon: '💾', domain: '115.com' },
-  pikpak: { name: 'PikPak', color: 'bg-pink-500', icon: '📦', domain: 'mypikpak.com' },
-  xunlei: { name: '迅雷网盘', color: 'bg-yellow-500', icon: '⚡', domain: 'pan.xunlei.com' },
-  '123': { name: '123网盘', color: 'bg-indigo-500', icon: '🔢', domain: '123pan.com' },
-  magnet: { name: '磁力链接', color: 'bg-black', icon: '🧲', domain: 'magnet:' },
-  ed2k: { name: '电驴链接', color: 'bg-teal-500', icon: '🐴', domain: 'ed2k://' },
-  others: { name: '其他', color: 'bg-gray-400', icon: '📄', domain: '' }
+  baidu: { name: '百度网盘', color: 'bg-blue-500', lightColor: 'bg-blue-500/10 hover:bg-blue-500/20', icon: '📁', domain: 'pan.baidu.com' },
+  aliyun: { name: '阿里云盘', color: 'bg-orange-500', lightColor: 'bg-orange-500/10 hover:bg-orange-500/20', icon: '☁️', domain: 'alipan.com' },
+  quark: { name: '夸克网盘', color: 'bg-purple-500', lightColor: 'bg-purple-500/10 hover:bg-purple-500/20', icon: '⚡', domain: 'pan.quark.cn' },
+  tianyi: { name: '天翼云盘', color: 'bg-red-500', lightColor: 'bg-red-500/10 hover:bg-red-500/20', icon: '📱', domain: 'cloud.189.cn' },
+  uc: { name: 'UC网盘', color: 'bg-green-500', lightColor: 'bg-green-500/10 hover:bg-green-500/20', icon: '🌐', domain: 'drive.uc.cn' },
+  mobile: { name: '移动云盘', color: 'bg-cyan-500', lightColor: 'bg-cyan-500/10 hover:bg-cyan-500/20', icon: '📲', domain: 'caiyun.139.com' },
+  '115': { name: '115网盘', color: 'bg-gray-500', lightColor: 'bg-gray-500/10 hover:bg-gray-500/20', icon: '💾', domain: '115.com' },
+  pikpak: { name: 'PikPak', color: 'bg-pink-500', lightColor: 'bg-pink-500/10 hover:bg-pink-500/20', icon: '📦', domain: 'mypikpak.com' },
+  xunlei: { name: '迅雷网盘', color: 'bg-yellow-500', lightColor: 'bg-yellow-500/10 hover:bg-yellow-500/20', icon: '⚡', domain: 'pan.xunlei.com' },
+  '123': { name: '123网盘', color: 'bg-indigo-500', lightColor: 'bg-indigo-500/10 hover:bg-indigo-500/20', icon: '🔢', domain: '123pan.com' },
+  magnet: { name: '磁力链接', color: 'bg-black', lightColor: 'bg-black/10 hover:bg-black/20', icon: '🧲', domain: 'magnet:' },
+  ed2k: { name: '电驴链接', color: 'bg-teal-500', lightColor: 'bg-teal-500/10 hover:bg-teal-500/20', icon: '🐴', domain: 'ed2k://' },
+  others: { name: '其他', color: 'bg-gray-400', lightColor: 'bg-gray-400/10 hover:bg-gray-400/20', icon: '📄', domain: '' }
 };
 
 export default function NetDiskSearchResults({ results, loading, error, total }: NetDiskSearchResultsProps) {
@@ -255,7 +255,7 @@ export default function NetDiskSearchResults({ results, loading, error, total }:
                 className={`inline-flex items-center space-x-1 sm:space-x-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg border transition-colors ${
                   filterMode === 'selected' && selectedFilter.includes(type)
                     ? `${info.color} text-white border-transparent`
-                    : `${info.color} bg-opacity-10 border-gray-300 dark:border-gray-600 hover:bg-opacity-20`
+                    : `${info.lightColor} border-gray-300 dark:border-gray-600`
                 } text-xs sm:text-sm font-medium`}
                 title={filterMode === 'all' ? '点击跳转' : '点击筛选'}
               >

@@ -175,7 +175,7 @@ const AlertModal = ({
   };
 
   return createPortal(
-    <div className={`fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 transition-opacity duration-200 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
+    <div className={`fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 transition-opacity duration-200 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
       <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-sm w-full border ${getBgColor()} transition-all duration-200 ${isVisible ? 'scale-100' : 'scale-95'}`}>
         <div className="p-6 text-center">
           <div className="flex justify-center mb-4">
@@ -1754,7 +1754,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
 
       {/* 配置用户采集源权限弹窗 */}
       {showConfigureApisModal && selectedUser && createPortal(
-        <div className='fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4' onClick={() => {
+        <div className='fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4' onClick={() => {
           setShowConfigureApisModal(false);
           setSelectedUser(null);
           setSelectedApis([]);
@@ -1913,7 +1913,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
 
       {/* 添加用户组弹窗 */}
       {showAddUserGroupForm && createPortal(
-        <div className='fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4' onClick={() => {
+        <div className='fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4' onClick={() => {
           setShowAddUserGroupForm(false);
           setNewUserGroup({ name: '', enabledApis: [], showAdultContent: false });
         }}>
@@ -2141,7 +2141,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
 
       {/* 编辑用户组弹窗 */}
       {showEditUserGroupForm && editingUserGroup && createPortal(
-        <div className='fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4' onClick={() => {
+        <div className='fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4' onClick={() => {
           setShowEditUserGroupForm(false);
           setEditingUserGroup(null);
         }}>
@@ -2353,7 +2353,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
 
       {/* 配置用户组弹窗 */}
       {showConfigureUserGroupModal && selectedUserForGroup && createPortal(
-        <div className='fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4' onClick={() => {
+        <div className='fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4' onClick={() => {
           setShowConfigureUserGroupModal(false);
           setSelectedUserForGroup(null);
           setSelectedUserGroups([]);
@@ -2449,7 +2449,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
 
       {/* 删除用户组确认弹窗 */}
       {showDeleteUserGroupModal && deletingUserGroup && createPortal(
-        <div className='fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4' onClick={() => {
+        <div className='fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4' onClick={() => {
           setShowDeleteUserGroupModal(false);
           setDeletingUserGroup(null);
         }}>
@@ -2549,7 +2549,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
 
       {/* 删除用户确认弹窗 */}
       {showDeleteUserModal && deletingUser && createPortal(
-        <div className='fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4' onClick={() => {
+        <div className='fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4' onClick={() => {
           // 删除中禁止关闭弹窗
           if (isLoading(`deleteUser_${deletingUser}`)) return;
           setShowDeleteUserModal(false);
@@ -2639,7 +2639,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
 
       {/* 批量设置用户组弹窗 */}
       {showBatchUserGroupModal && createPortal(
-        <div className='fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4' onClick={() => {
+        <div className='fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4' onClick={() => {
           setShowBatchUserGroupModal(false);
           setSelectedUserGroup('');
         }}>
@@ -4395,7 +4395,7 @@ const VideoSourceConfig = ({
 
       {/* 有效性检测弹窗 */}
       {showValidationModal && createPortal(
-        <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50' onClick={() => setShowValidationModal(false)}>
+        <div className='fixed inset-0 bg-black/50 flex items-center justify-center z-50' onClick={() => setShowValidationModal(false)}>
           <div className='bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4' onClick={(e) => e.stopPropagation()}>
             <h3 className='text-lg font-medium text-gray-900 dark:text-gray-100 mb-4'>
               视频源有效性检测
@@ -4446,7 +4446,7 @@ const VideoSourceConfig = ({
 
       {/* 批量操作确认弹窗 */}
       {confirmModal.isOpen && createPortal(
-        <div className='fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4' onClick={confirmModal.onCancel}>
+        <div className='fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4' onClick={confirmModal.onCancel}>
           <div className='bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full' onClick={(e) => e.stopPropagation()}>
             <div className='p-6'>
               <div className='flex items-center justify-between mb-4'>
@@ -7515,7 +7515,7 @@ function AdminPageClient() {
 
       {/* 重置配置确认弹窗 */}
       {showResetConfigModal && createPortal(
-        <div className='fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4' onClick={() => setShowResetConfigModal(false)}>
+        <div className='fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4' onClick={() => setShowResetConfigModal(false)}>
           <div className='bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full' onClick={(e) => e.stopPropagation()}>
             <div className='p-6'>
               <div className='flex items-center justify-between mb-6'>
