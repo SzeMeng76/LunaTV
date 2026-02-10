@@ -27,13 +27,14 @@ function getMimeType(url) {
   return mimeTypes[extension] || 'application/octet-stream'
 }
 
-export default function artplayerPluginChromecast(option) {
+export default function artplayerPluginChromecast(option = {}) {
   const DEFAULT_ICON = `<svg height="20" width="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><path d="M512 96H64v99c-13-2-26.4-3-40-3H0V96C0 60.7 28.7 32 64 32H512c35.3 0 64 28.7 64 64V416c0 35.3-28.7 64-64 64H288V456c0-13.6-1-27-3-40H512V96zM24 224c128.1 0 232 103.9 232 232c0 13.3-10.7 24-24 24s-24-10.7-24-24c0-101.6-82.4-184-184-184c-13.3 0-24-10.7-24-24s10.7-24 24-24zm8 192a32 32 0 1 1 0 64 32 32 0 1 1 0-64zM0 344c0-13.3 10.7-24 24-24c75.1 0 136 60.9 136 136c0 13.3-10.7 24-24 24s-24-10.7-24-24c0-48.6-39.4-88-88-88c-13.3 0-24-10.7-24-24z"/></svg>`
   const DEFAULT_SDK = 'https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1'
 
   let isCastInitialized = false
   let castSession = null
   let castState = null
+  let currentMedia = null // Track current media for control
 
   const updateCastButton = (state) => {
     const button = document.querySelector('.art-icon-cast')
@@ -155,11 +156,30 @@ export default function artplayerPluginChromecast(option) {
   const castVideo = (art, session) => {
     const url = option.url || art.option.url
     const mediaInfo = new window.chrome.cast.media.MediaInfo(url, option.mimeType || getMimeType(url))
+
+    // Set stream type
+    mediaInfo.streamType = window.chrome.cast.media.StreamType.BUFFERED
+
+    // Add metadata (title, poster) if provided
+    if (option.title || option.poster) {
+      const metadata = new window.chrome.cast.media.GenericMediaMetadata()
+      metadata.title = option.title || 'Video'
+      if (option.poster) {
+        metadata.images = [new window.chrome.cast.Image(option.poster)]
+      }
+      mediaInfo.metadata = metadata
+    }
+
     const request = new window.chrome.cast.media.LoadRequest(mediaInfo)
+    request.autoplay = true
+    request.currentTime = art.currentTime || 0 // Resume from current position
+
     session
       .loadMedia(request)
-      .then(() => {
-        art.notice.show = 'Casting started'
+      .then((media) => {
+        currentMedia = media
+        const title = option.title ? ` "${option.title}"` : ''
+        art.notice.show = `Casting${title} started`
         option.onCastStart?.()
       })
       .catch((error) => {
@@ -167,6 +187,26 @@ export default function artplayerPluginChromecast(option) {
         option.onError?.(error)
         throw error
       })
+  }
+
+  const endCastSession = (art) => {
+    if (!castSession) {
+      art.notice.show = 'No active cast session'
+      return
+    }
+
+    try {
+      const context = window.cast.framework.CastContext.getInstance()
+      context.endCurrentSession(true)
+      castSession = null
+      currentMedia = null
+      art.notice.show = 'Cast session ended'
+      option.onCastEnd?.()
+    } catch (error) {
+      console.error('Error ending cast session:', error)
+      art.notice.show = 'Error ending cast session'
+      option.onError?.(error)
+    }
   }
 
   return async (art) => {
@@ -241,6 +281,12 @@ export default function artplayerPluginChromecast(option) {
       tooltip: 'Chromecast',
       html: `<i class="art-icon art-icon-cast">${option.icon || DEFAULT_ICON}</i>`,
       click: async () => {
+        // If already casting, end the session
+        if (castSession) {
+          endCastSession(art)
+          return
+        }
+
         if (!isCastInitialized) {
           try {
             await initializeCastApi()
@@ -253,19 +299,18 @@ export default function artplayerPluginChromecast(option) {
         }
 
         const context = window.cast.framework.CastContext.getInstance()
-        if (castSession) {
-          castVideo(art, castSession)
+        try {
+          const session = await context.requestSession()
+          castVideo(art, session)
         }
-        else {
-          try {
-            const session = await context.requestSession()
-            castVideo(art, session)
+        catch (error) {
+          // User cancelled - not an error
+          if (error.code === 'cancel') {
+            return
           }
-          catch (error) {
-            art.notice.show = 'Error connecting to cast session'
-            option.onError?.(error)
-            throw error
-          }
+          art.notice.show = 'Error connecting to cast device'
+          option.onError?.(error)
+          throw error
         }
       },
     })
@@ -274,6 +319,14 @@ export default function artplayerPluginChromecast(option) {
       name: 'artplayerPluginChromecast',
       getCastState: () => castState,
       isCasting: () => castSession !== null,
+      endSession: () => endCastSession(art),
+      getCurrentMedia: () => currentMedia,
+      // Update media info (title, poster) for next cast
+      setMediaInfo: (info) => {
+        if (info.title) option.title = info.title
+        if (info.poster) option.poster = info.poster
+        if (info.url) option.url = info.url
+      },
     }
   }
 }

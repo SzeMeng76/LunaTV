@@ -1,5 +1,4 @@
 /** @type {import('next').NextConfig} */
-/* eslint-disable @typescript-eslint/no-var-requires */
 
 const nextConfig = {
   // 生产环境始终使用 standalone 模式（Vercel/Docker/Zeabur）
@@ -22,8 +21,20 @@ const nextConfig = {
     },
   },
 
-  // Uncoment to add domain whitelist
+  // 性能优化：包体积优化和模块化导入
+  experimental: {
+    // 自动优化大型库的导入，只打包实际使用的部分
+    optimizePackageImports: [
+      'lucide-react',
+      '@heroicons/react',
+      'framer-motion',
+      'react-icons',
+    ],
+  },
+
+  // 图片优化配置
   images: {
+    // 禁用 Next.js 图片优化（代理图片不兼容）
     unoptimized: true,
     remotePatterns: [
       {

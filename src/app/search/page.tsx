@@ -700,18 +700,19 @@ function SearchPageClient() {
     const value = e.target.value;
     setSearchQuery(value);
 
-    if (value.trim()) {
-      setShowSuggestions(true);
-    } else {
-      setShowSuggestions(false);
+    // 如果输入框为空，隐藏搜索结果，显示搜索历史
+    if (!value.trim()) {
+      setShowResults(false);
     }
+
+    // 无论输入框是否为空，都显示建议（空时显示搜索历史）
+    setShowSuggestions(true);
   };
 
   // 搜索框聚焦时触发，显示搜索建议
   const handleInputFocus = () => {
-    if (searchQuery.trim()) {
-      setShowSuggestions(true);
-    }
+    // 聚焦时始终显示建议（空时显示搜索历史）
+    setShowSuggestions(true);
   };
 
   // YouTube搜索函数
@@ -1053,7 +1054,8 @@ function SearchPageClient() {
                   type='button'
                   onClick={() => {
                     setSearchQuery('');
-                    setShowSuggestions(false);
+                    setShowResults(false); // 隐藏搜索结果，显示搜索历史
+                    setShowSuggestions(true); // 清空后显示搜索历史
                     document.getElementById('searchInput')?.focus();
                   }}
                   className='absolute right-4 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-full bg-gray-200/80 hover:bg-red-500 text-gray-500 hover:text-white transition-all duration-300 hover:scale-110 hover:rotate-90 dark:bg-gray-700/80 dark:text-gray-400 dark:hover:bg-red-600 shadow-sm hover:shadow-md'

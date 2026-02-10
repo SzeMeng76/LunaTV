@@ -2,6 +2,9 @@
 /**
  * 性能监控模块
  * 收集和聚合应用性能数据
+ *
+ * 注意：性能数据仅保存在内存中（最多 10000 条，48 小时）
+ * 不再持久化到 Kvrocks，以防止 WAL 爆满
  */
 
 import { RequestMetrics, HourlyMetrics, SystemMetrics } from './performance.types';
@@ -12,9 +15,8 @@ const requestCache: RequestMetrics[] = [];
 const MAX_CACHE_SIZE = 10000; // 最多缓存 10000 条请求
 const MAX_CACHE_AGE = 48 * 60 * 60 * 1000; // 48 小时（毫秒）
 
-// Kvrocks 存储 key
+// Kvrocks 存储 key（仅用于清理旧数据）
 const PERFORMANCE_KEY = 'performance:requests';
-const PERFORMANCE_LOADED = 'performance:loaded';
 
 // 系统指标缓存
 const systemMetricsCache: SystemMetrics[] = [];
@@ -24,7 +26,23 @@ const MAX_SYSTEM_METRICS = 1000;
 let dbQueryCount = 0;
 let lastDbQueryReset = Date.now();
 
-// 标记是否已从 Kvrocks 加载数据
+// CPU 使用率跟踪（用于计算百分比）
+let lastCpuUsage: NodeJS.CpuUsage | null = null;
+let lastCpuTime: bigint | null = null;
+
+// 在服务端环境下立即初始化基线（仅在 Node.js 环境）
+if (typeof process !== 'undefined' && process.versions?.node) {
+  try {
+    if (typeof process.cpuUsage === 'function' && process.hrtime && typeof process.hrtime.bigint === 'function') {
+      lastCpuUsage = process.cpuUsage();
+      lastCpuTime = process.hrtime.bigint();
+    }
+  } catch (e) {
+    // 静默失败，稍后在函数调用时再尝试初始化
+  }
+}
+
+// 标记是否已加载
 let dataLoaded = false;
 
 /**
@@ -50,50 +68,32 @@ export function resetDbQueryCount(): void {
 }
 
 /**
- * 从 Kvrocks 加载历史数据到内存
+ * 从 Kvrocks 加载历史数据到内存（已禁用持久化）
  */
 async function loadFromKvrocks(): Promise<void> {
   if (dataLoaded) return;
-
-  try {
-    const cached = await db.getCache(PERFORMANCE_KEY);
-    if (cached && Array.isArray(cached)) {
-      // 过滤掉超过 48 小时的数据
-      const now = Date.now();
-      const cutoffTime = now - MAX_CACHE_AGE;
-      const validData = cached.filter((item: RequestMetrics) => item.timestamp >= cutoffTime);
-
-      requestCache.push(...validData);
-      console.log(`✅ 从 Kvrocks 加载了 ${validData.length} 条性能监控数据`);
-    }
-    dataLoaded = true;
-  } catch (error) {
-    console.error('❌ 从 Kvrocks 加载性能数据失败:', error);
-    dataLoaded = true; // 即使失败也标记为已加载，避免重复尝试
-  }
+  // 持久化已禁用，直接标记为已加载
+  dataLoaded = true;
 }
 
 /**
- * 保存数据到 Kvrocks
+ * 保存数据到 Kvrocks（已禁用持久化）
  */
-async function saveToKvrocks(): Promise<void> {
-  try {
-    // 保存整个 requestCache 到 Kvrocks，不设置过期时间（手动管理 48 小时清理）
-    console.log(`💾 [Performance] 保存 ${requestCache.length} 条数据到 Kvrocks`);
-    await db.setCache(PERFORMANCE_KEY, requestCache);
-  } catch (error) {
-    console.error('❌ 保存性能数据到 Kvrocks 失败:', error);
-  }
+async function saveToKvrocks(snapshot: RequestMetrics[]): Promise<void> {
+  // 持久化已禁用，不再保存到 Kvrocks
+  return;
 }
 
 /**
  * 记录单次请求的性能数据
  */
-export async function recordRequest(metrics: RequestMetrics): Promise<void> {
-  // 首次调用时从 Kvrocks 加载历史数据
-  await loadFromKvrocks();
+export function recordRequest(metrics: RequestMetrics): void {
+  // 首次调用时标记已加载（持久化已禁用）
+  if (!dataLoaded) {
+    dataLoaded = true;
+  }
 
-  // 添加到缓存
+  // 添加到内存缓存
   requestCache.push(metrics);
 
   // 清理超过 48 小时的旧数据
@@ -104,14 +104,11 @@ export async function recordRequest(metrics: RequestMetrics): Promise<void> {
   }
 
   // 限制缓存大小，移除最旧的数据
-  if (requestCache.length > MAX_CACHE_SIZE) {
+  while (requestCache.length > MAX_CACHE_SIZE) {
     requestCache.shift();
   }
 
-  // 异步保存到 Kvrocks（不阻塞主流程）
-  saveToKvrocks().catch((error) => {
-    console.error('❌ 保存性能数据到 Kvrocks 失败:', error);
-  });
+  // 持久化已禁用，不再保存到 Kvrocks
 }
 
 /**
@@ -128,12 +125,50 @@ export function getAndResetDbQueryCount(): number {
  * 获取当前系统资源使用情况
  */
 export function collectSystemMetrics(): SystemMetrics {
+  // 环境检测：确保在 Node.js 环境中运行
+  if (typeof process === 'undefined' || !process.versions?.node) {
+    throw new Error('collectSystemMetrics() can only be called in Node.js environment');
+  }
+
   const memUsage = process.memoryUsage();
   const os = require('os');
 
-  // CPU 使用率计算（简化版）
-  const cpuUsage = process.cpuUsage();
-  const cpuPercent = (cpuUsage.user + cpuUsage.system) / 1000000; // 转换为秒
+  // 如果基线未初始化（模块加载时初始化失败），现在初始化
+  if (lastCpuUsage === null || lastCpuTime === null) {
+    if (typeof process.cpuUsage === 'function' && process.hrtime && typeof process.hrtime.bigint === 'function') {
+      lastCpuUsage = process.cpuUsage();
+      lastCpuTime = process.hrtime.bigint();
+    } else {
+      throw new Error('process.cpuUsage or process.hrtime is not available');
+    }
+  }
+
+  // ✅ 正确的 CPU 使用率计算
+  const currentCpuUsage = process.cpuUsage(lastCpuUsage);
+  const currentTime = process.hrtime.bigint();
+
+  // 计算时间间隔（微秒）
+  const elapsedNs = currentTime - lastCpuTime;
+  const elapsedTimeMicroseconds = Number(elapsedNs / 1000n);
+
+  // 计算 CPU 时间使用（微秒）
+  const cpuTimeUsedMicroseconds = currentCpuUsage.user + currentCpuUsage.system;
+
+  // 获取 CPU 核心数
+  const numberOfCores = os.cpus().length;
+
+  // 计算总可用 CPU 时间
+  const totalAvailableCpuTimeMicroseconds = elapsedTimeMicroseconds * numberOfCores;
+
+  // 计算 CPU 使用率百分比
+  let cpuPercent = 0;
+  if (totalAvailableCpuTimeMicroseconds > 0) {
+    cpuPercent = (cpuTimeUsedMicroseconds / totalAvailableCpuTimeMicroseconds) * 100;
+  }
+
+  // 更新上次记录的值
+  lastCpuUsage = process.cpuUsage();
+  lastCpuTime = process.hrtime.bigint();
 
   // 系统总内存和可用内存
   const totalSystemMemory = os.totalmem();
@@ -143,6 +178,8 @@ export function collectSystemMetrics(): SystemMetrics {
   return {
     timestamp: Date.now(),
     cpuUsage: cpuPercent,
+    cpuCores: numberOfCores,
+    cpuModel: os.cpus()[0]?.model || 'Unknown',
     memoryUsage: {
       heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024 * 100) / 100, // MB
       heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024 * 100) / 100,
@@ -246,20 +283,30 @@ export function getRecentMetrics(hours: number): HourlyMetrics[] {
 /**
  * 获取最近的请求列表
  */
-export async function getRecentRequests(limit: number = 100): Promise<RequestMetrics[]> {
-  // 首次调用时从 Kvrocks 加载数据
-  await loadFromKvrocks();
+export async function getRecentRequests(limit: number = 100, hours?: number): Promise<RequestMetrics[]> {
+  // 持久化已禁用，直接使用内存缓存
 
-  // 返回最近的 N 条请求，按时间倒序
-  return requestCache.slice(-limit).reverse();
+  // 如果指定了时间范围，按时间过滤
+  let filteredRequests = requestCache;
+  if (hours !== undefined) {
+    const now = Date.now();
+    const timeRangeMs = hours * 60 * 60 * 1000;
+    const startTime = now - timeRangeMs;
+    filteredRequests = requestCache.filter((r) => r.timestamp >= startTime);
+
+    // 如果指定了时间范围，返回该时间范围内的所有数据（不限制条数）
+    return filteredRequests.reverse();
+  }
+
+  // 如果没有指定时间范围，返回最近的 N 条请求，按时间倒序
+  return filteredRequests.slice(-limit).reverse();
 }
 
 /**
  * 获取当前系统状态
  */
 export async function getCurrentStatus() {
-  // 首次调用时从 Kvrocks 加载历史数据
-  await loadFromKvrocks();
+  // 持久化已禁用，直接使用内存缓存
 
   const systemMetrics = collectSystemMetrics();
   const recentRequests = requestCache.filter(
@@ -291,10 +338,10 @@ export async function clearCache(): Promise<void> {
   systemMetricsCache.length = 0;
   dbQueryCount = 0;
 
-  // 同时删除 Kvrocks 中的持久化数据
+  // 持久化已禁用，但仍然清理 Kvrocks 中可能存在的旧数据
   try {
     await db.deleteCache(PERFORMANCE_KEY);
-    console.log('✅ 已清空 Kvrocks 中的性能监控数据');
+    console.log('✅ 已清空性能监控数据（包括 Kvrocks 中的旧数据）');
   } catch (error) {
     console.error('❌ 清空 Kvrocks 数据失败:', error);
   }

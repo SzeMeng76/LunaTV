@@ -13,6 +13,7 @@ export interface RequestMetrics {
   dbQueries: number;           // 数据库查询次数
   requestSize: number;         // 请求大小（字节）
   responseSize: number;        // 响应大小（字节）
+  filter?: string;             // 过滤条件（如用户名、资源ID等）
 }
 
 // 每小时聚合的性能数据
@@ -41,6 +42,8 @@ export interface HourlyMetrics {
 export interface SystemMetrics {
   timestamp: number;
   cpuUsage: number;            // CPU 使用率（百分比）
+  cpuCores: number;            // CPU 核心数
+  cpuModel: string;            // CPU 型号名称
   memoryUsage: {
     heapUsed: number;          // 堆内存使用（MB）
     heapTotal: number;         // 堆内存总量（MB）

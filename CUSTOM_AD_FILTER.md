@@ -8,12 +8,13 @@ LunaTV 提供强大的自定义去广告功能，允许管理员编写 JavaScrip
 
 ✅ **灵活的过滤逻辑**
 - 针对不同播放源实现不同的过滤策略
-- 过滤特定时长的广告片段
+- 基于关键字的智能广告检测
 - 支持复杂的广告检测算法
 
 ✅ **动态配置**
 - 无需修改源代码，在线编辑即可生效
 - 版本管理机制，确保更新及时推送
+- 智能缓存机制，优化加载性能
 - 自动降级策略，失败时使用默认规则
 
 ✅ **开发友好**
@@ -81,110 +82,159 @@ function filterAdsFromM3U8(type, m3u8Content) {
 
 ## 示例代码
 
-### 示例 1：基础广告过滤
+### 示例 1：基于关键字的广告过滤（推荐）
 
-适合大多数播放源的通用过滤逻辑。
+使用 URL 关键字检测广告片段，适合大多数播放源的通用过滤逻辑。
 
 ```javascript
 function filterAdsFromM3U8(type, m3u8Content) {
   if (!m3u8Content) return '';
 
+  // 广告关键字列表
+  const adKeywords = [
+    'sponsor',
+    '/ad/',
+    '/ads/',
+    'advert',
+    'advertisement',
+    '/adjump',
+    'redtraffic'
+  ];
+
+  // 按行分割M3U8内容
   const lines = m3u8Content.split('\n');
   const filteredLines = [];
-  let inAdBlock = false;
 
-  for (let i = 0; i < lines.length; i++) {
+  let i = 0;
+  while (i < lines.length) {
     const line = lines[i];
 
-    // 检测广告开始标记
-    if (line.includes('#EXT-X-CUE-OUT') ||
-        line.includes('#EXT-X-DISCONTINUITY')) {
-      inAdBlock = true;
+    // 跳过 #EXT-X-DISCONTINUITY 标识
+    if (line.includes('#EXT-X-DISCONTINUITY')) {
+      i++;
       continue;
     }
 
-    // 检测广告结束标记
-    if (line.includes('#EXT-X-CUE-IN')) {
-      inAdBlock = false;
-      continue;
+    // 如果是 EXTINF 行，检查下一行 URL 是否包含广告关键字
+    if (line.includes('#EXTINF:')) {
+      // 检查下一行 URL 是否包含广告关键字
+      if (i + 1 < lines.length) {
+        const nextLine = lines[i + 1];
+        const containsAdKeyword = adKeywords.some(keyword =>
+          nextLine.toLowerCase().includes(keyword.toLowerCase())
+        );
+
+        if (containsAdKeyword) {
+          // 跳过 EXTINF 行和 URL 行
+          i += 2;
+          continue;
+        }
+      }
     }
 
-    // 跳过广告区块内容
-    if (inAdBlock) {
-      continue;
-    }
-
+    // 保留当前行
     filteredLines.push(line);
+    i++;
   }
 
   return filteredLines.join('\n');
 }
 ```
 
-### 示例 2：针对特定源的过滤
+### 示例 2：结合关键字和自定义规则
 
-根据不同播放源使用不同的过滤策略。
+根据不同播放源使用不同的过滤策略，结合关键字检测和自定义规则。
 
 ```javascript
 function filterAdsFromM3U8(type, m3u8Content) {
   if (!m3u8Content) return '';
+
+  // 广告关键字列表
+  const adKeywords = [
+    'sponsor',
+    '/ad/',
+    '/ads/',
+    'advert',
+    'advertisement',
+    '/adjump',
+    'redtraffic'
+  ];
 
   const lines = m3u8Content.split('\n');
   const filteredLines = [];
-  let skipNext = false;
 
-  for (let i = 0; i < lines.length; i++) {
+  let i = 0;
+  while (i < lines.length) {
     const line = lines[i];
 
-    if (skipNext) {
-      skipNext = false;
+    // 跳过 #EXT-X-DISCONTINUITY 标识
+    if (line.includes('#EXT-X-DISCONTINUITY')) {
+      i++;
       continue;
     }
 
-    // 针对 ruyi 源的特殊处理
-    if (type === 'ruyi') {
-      // 过滤特定时长的广告片段
-      if (line.includes('EXTINF:5.640000') ||
-          line.includes('EXTINF:2.960000') ||
-          line.includes('EXTINF:3.480000')) {
-        skipNext = true; // 跳过下一行的 ts 文件
-        continue;
+    // 如果是 EXTINF 行，检查下一行 URL
+    if (line.includes('#EXTINF:')) {
+      if (i + 1 < lines.length) {
+        const nextLine = lines[i + 1];
+
+        // 检查是否包含广告关键字
+        const containsAdKeyword = adKeywords.some(keyword =>
+          nextLine.toLowerCase().includes(keyword.toLowerCase())
+        );
+
+        if (containsAdKeyword) {
+          // 跳过 EXTINF 行和 URL 行
+          i += 2;
+          continue;
+        }
+
+        // 针对特定源的额外规则
+        if (type === 'ruyi') {
+          // 如意源：检查特定的 URL 模式
+          if (nextLine.includes('ad-server') || nextLine.includes('promo')) {
+            i += 2;
+            continue;
+          }
+        }
       }
     }
 
-    // 针对 dyttzy 源的特殊处理
-    if (type === 'dyttzy') {
-      // 过滤特定的广告标记
-      if (line.includes('ad-marker')) {
-        skipNext = true;
-        continue;
-      }
-    }
-
-    // 通用过滤规则
-    if (!line.includes('#EXT-X-DISCONTINUITY')) {
-      filteredLines.push(line);
-    }
+    // 保留当前行
+    filteredLines.push(line);
+    i++;
   }
 
   return filteredLines.join('\n');
 }
 ```
 
-### 示例 3：高级 SCTE-35 广告检测（推荐）
+### 示例 3：结合 SCTE-35 和关键字检测
 
-支持行业标准的 SCTE-35 广告标记检测，适用于大多数专业视频流。
+支持行业标准的 SCTE-35 广告标记检测，同时结合关键字检测，提供更全面的广告过滤。
 
 ```javascript
 function filterAdsFromM3U8(type, m3u8Content) {
   if (!m3u8Content) return '';
+
+  // 广告关键字列表
+  const adKeywords = [
+    'sponsor',
+    '/ad/',
+    '/ads/',
+    'advert',
+    'advertisement',
+    '/adjump',
+    'redtraffic'
+  ];
 
   const lines = m3u8Content.split('\n');
   const filteredLines = [];
   let inAdBlock = false;
   let adSegmentCount = 0;
 
-  for (let i = 0; i < lines.length; i++) {
+  let i = 0;
+  while (i < lines.length) {
     const line = lines[i];
 
     // 检测行业标准广告标记（SCTE-35系列）
@@ -194,24 +244,48 @@ function filterAdsFromM3U8(type, m3u8Content) {
         line.includes('#EXT-OATCLS-SCTE35')) {
       inAdBlock = true;
       adSegmentCount++;
+      i++;
       continue;
     }
 
     // 检测广告结束标记
     if (line.includes('#EXT-X-CUE-IN')) {
       inAdBlock = false;
+      i++;
       continue;
     }
 
     // 跳过广告区块内容
     if (inAdBlock) {
+      i++;
       continue;
     }
 
-    // 过滤 DISCONTINUITY 标记
-    if (!line.includes('#EXT-X-DISCONTINUITY')) {
-      filteredLines.push(line);
+    // 跳过 #EXT-X-DISCONTINUITY 标识
+    if (line.includes('#EXT-X-DISCONTINUITY')) {
+      i++;
+      continue;
     }
+
+    // 如果是 EXTINF 行，检查下一行 URL 是否包含广告关键字
+    if (line.includes('#EXTINF:')) {
+      if (i + 1 < lines.length) {
+        const nextLine = lines[i + 1];
+        const containsAdKeyword = adKeywords.some(keyword =>
+          nextLine.toLowerCase().includes(keyword.toLowerCase())
+        );
+
+        if (containsAdKeyword) {
+          adSegmentCount++;
+          i += 2;
+          continue;
+        }
+      }
+    }
+
+    // 保留当前行
+    filteredLines.push(line);
+    i++;
   }
 
   // 输出统计信息（开发调试用）
@@ -370,19 +444,31 @@ function filterAdsFromM3U8(type, m3u8Content) {
 
 ---
 
-## 版本管理
+## 版本管理与缓存机制
 
 ### 为什么需要版本号？
 
 浏览器会缓存自定义去广告代码。当你修改代码后，递增版本号可以**强制浏览器重新获取最新代码**。
 
+### 智能缓存机制
+
+LunaTV 使用智能缓存机制优化性能：
+
+1. **版本号注入**：服务器在页面加载时将版本号注入到 `RUNTIME_CONFIG`
+2. **本地缓存**：代码和版本号存储在 `localStorage` 中
+3. **自动检测更新**：每次加载播放页面时，自动比对版本号
+4. **按需获取**：仅在版本号变化时才重新获取完整代码
+
 ### 如何使用版本号
 
 1. 修改代码后，将版本号从 `1` 改为 `2`
 2. 点击"保存配置"
-3. 用户刷新页面后会自动加载新版本代码
+3. 用户刷新页面后会自动检测到新版本并加载
 
-💡 **提示**：每次修改代码都应该递增版本号，确保所有用户获得最新版本。
+💡 **提示**：
+- 每次修改代码都应该递增版本号，确保所有用户获得最新版本
+- 版本号为 `0` 时表示未启用自定义去广告，系统会自动清空缓存
+- 控制台会显示 `去广告代码已更新到版本 X` 的提示信息
 
 ---
 
@@ -458,18 +544,43 @@ function filterAdsFromM3U8(type, m3u8Content) {
 ```
 1. 用户访问播放页面
    ↓
-2. 前端通过 /api/ad-filter 获取自定义代码和版本号
+2. 从 RUNTIME_CONFIG 读取版本号
    ↓
-3. 将代码存储在内存中（带版本号缓存）
+3. 检查 localStorage 缓存
+   ├─ 有缓存且版本号一致 → 使用缓存代码
+   └─ 无缓存或版本号不一致 → 调用 /api/ad-filter?full=true 获取完整代码
    ↓
-4. 播放器加载 m3u8 文件
+4. 将代码和版本号存储到 localStorage
    ↓
-5. 调用 filterAdsFromM3U8(type, content)
+5. 播放器加载 m3u8 文件
    ↓
-6. 优先使用自定义代码，失败则降级到默认规则
+6. 调用 filterAdsFromM3U8(type, content)
    ↓
-7. 返回过滤后的 m3u8 内容给播放器
+7. 优先使用自定义代码，失败则降级到默认规则
+   ↓
+8. 返回过滤后的 m3u8 内容给播放器
 ```
+
+### API 端点说明
+
+**GET /api/ad-filter**
+
+支持两种模式：
+
+1. **版本检查模式**（不带参数）
+   - 请求：`GET /api/ad-filter`
+   - 响应：`{ "version": 1 }`
+   - 用途：快速检查版本号，判断是否需要更新
+
+2. **完整获取模式**（带 `?full=true` 参数）
+   - 请求：`GET /api/ad-filter?full=true`
+   - 响应：`{ "code": "...", "version": 1 }`
+   - 用途：获取完整的去广告代码和版本号
+
+💡 **优化说明**：
+- API 端点设置了 `dynamic = 'force-dynamic'`，禁用缓存确保实时性
+- 客户端优先使用 localStorage 缓存，减少网络请求
+- 仅在版本号变化时才请求完整代码，优化性能
 
 ### TypeScript 类型注解处理
 
@@ -648,6 +759,13 @@ function filterAdsFromM3U8(type, m3u8Content) {
 - **v1.1** - 添加版本管理机制，支持代码热更新
 - **v1.2** - 添加 TypeScript 类型注解自动移除
 - **v1.3** - 优化错误处理，添加自动降级机制
+- **v1.4** (2026-01-26) - 重大更新：
+  - ✨ 新增基于关键字的广告检测（sponsor, /ad/, /ads/, advert, advertisement, /adjump, redtraffic）
+  - ⚡ 优化 API 端点：支持版本检查模式和完整获取模式
+  - 🚀 实现智能缓存机制：使用 localStorage 缓存代码，减少网络请求
+  - 📦 版本号注入到 RUNTIME_CONFIG，实现客户端快速版本检查
+  - 🔧 改进 M3U8 处理逻辑：正确跳过 #EXT-X-DISCONTINUITY 标识
+  - 🎯 默认去广告规则从基于时长检测升级为基于 URL 关键字检测
 
 ---
 

@@ -760,14 +760,14 @@ async function checkShouldUpdateOriginalEpisodes(existingRecord: PlayRecord, new
   console.log(`🔍 用户看了第${newRecord.index}集（超过原始${originalEpisodes}集），从数据库获取最新集数...`);
 
   try {
-    const latestTotalEpisodes = Math.max(freshRecord.total_episodes, originalEpisodes);
-    console.log(`✓ 应更新原始集数: ${existingRecord.title} - 用户看了第${newRecord.index}集（超过原始${originalEpisodes}集），数据库最新集数${freshRecord.total_episodes}集 → 更新原始集数为${latestTotalEpisodes}集`);
+    const latestTotalEpisodes = Math.max(freshRecord.total_episodes, originalEpisodes, newRecord.total_episodes);
+    console.log(`✓ 应更新原始集数: ${existingRecord.title} - 用户看了第${newRecord.index}集（超过原始${originalEpisodes}集），数据库最新集数${freshRecord.total_episodes}集，播放器集数${newRecord.total_episodes}集 → 更新原始集数为${latestTotalEpisodes}集`);
 
     return { shouldUpdate: true, latestTotalEpisodes };
   } catch (error) {
     console.error('❌ 获取最新集数失败:', error);
     // 失败时仍然更新，使用保守的值
-    return { shouldUpdate: true, latestTotalEpisodes: Math.max(newRecord.total_episodes, originalEpisodes) };
+    return { shouldUpdate: true, latestTotalEpisodes: Math.max(newRecord.total_episodes, originalEpisodes, existingRecord.total_episodes) };
   }
 }
 
@@ -829,8 +829,8 @@ export async function getAllPlayRecords(forceRefresh = false): Promise<Record<st
           }
         })
         .catch((err) => {
-          console.warn('后台同步播放记录失败:', err);
-          triggerGlobalError('后台同步播放记录失败');
+          // 后台同步失败不影响用户使用，静默处理（用户已有缓存数据）
+          console.warn('[后台同步] 播放记录同步失败（不影响使用，已使用缓存数据）:', err);
         });
 
       return cachedData;
@@ -1106,8 +1106,8 @@ export async function getSearchHistory(): Promise<string[]> {
           }
         })
         .catch((err) => {
-          console.warn('后台同步搜索历史失败:', err);
-          triggerGlobalError('后台同步搜索历史失败');
+          // 后台同步失败不影响用户使用，静默处理（用户已有缓存数据）
+          console.warn('[后台同步] 搜索历史同步失败（不影响使用，已使用缓存数据）:', err);
         });
 
       return cachedData;
@@ -1981,8 +1981,8 @@ export async function getAllSkipConfigs(): Promise<Record<string, EpisodeSkipCon
           }
         })
         .catch((err) => {
-          console.warn('后台同步跳过片头片尾配置失败:', err);
-          triggerGlobalError('后台同步跳过片头片尾配置失败');
+          // 后台同步失败不影响用户使用，静默处理（用户已有缓存数据）
+          console.warn('[后台同步] 跳过片头片尾配置同步失败（不影响使用，已使用缓存数据）:', err);
         });
 
       return cachedData;

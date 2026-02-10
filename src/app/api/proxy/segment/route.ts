@@ -109,8 +109,8 @@ export async function GET(request: Request) {
     headers.set('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Content-Type, Accept-Ranges');
     headers.set('Cache-Control', 'public, max-age=300'); // 5分钟缓存
     
-    // 复制原始响应的重要头部
-    const importantHeaders = ['Content-Length', 'Content-Range', 'Last-Modified', 'ETag'];
+    // 复制原始响应的重要头部（不转发 Content-Length，因为流式传输使用 chunked encoding，两者冲突）
+    const importantHeaders = ['Content-Range', 'Last-Modified', 'ETag'];
     importantHeaders.forEach(header => {
       const value = response?.headers.get(header);
       if (value) {
