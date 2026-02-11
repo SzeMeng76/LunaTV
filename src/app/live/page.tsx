@@ -2204,10 +2204,14 @@ function LivePageClient() {
 
         artPlayerRef.current.on('loadeddata', () => {
           setIsVideoLoading(false);
+          // 视频成功加载，清除错误状态
+          setUnsupportedType(null);
         });
 
         artPlayerRef.current.on('canplay', () => {
           setIsVideoLoading(false);
+          // 视频可以播放，清除错误状态
+          setUnsupportedType(null);
         });
 
         artPlayerRef.current.on('waiting', () => {
@@ -2224,10 +2228,13 @@ function LivePageClient() {
               // 网络错误由 HLS/FLV 处理
               console.log('Video element network error (handled by HLS/FLV)');
             } else if (errorCode === 3) {
-              setUnsupportedType('decode-error');
+              // 只在没有已设置错误时才设置解码错误
+              setUnsupportedType(prev => prev || 'decode-error');
               setIsVideoLoading(false);
             } else if (errorCode === 4) {
-              setUnsupportedType('format-not-supported');
+              // 只在没有已设置错误时才设置格式不支持错误
+              // 避免覆盖 HLS/FLV 已经设置的 network-error
+              setUnsupportedType(prev => prev || 'format-not-supported');
               setIsVideoLoading(false);
             }
           }
