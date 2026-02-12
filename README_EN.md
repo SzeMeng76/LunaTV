@@ -166,7 +166,7 @@ This project is a deeply customized version based on **MoonTV**, continuously de
 - **M3U8 Download**: Client-side M3U8 video download support, batch episode download, 6x concurrent download speed boost, download settings UI, stream-on-demand auto-detection
 - **Player Buffer Optimization**: Three buffer modes (data-saving, balanced, high-quality), smart network adaptation
 - **Netflix-style Smart Speed Test**: Real-time network speed testing, intelligent early stop mechanism, auto-recommend optimal buffer mode
-- **Anime4K Super Resolution**: WebGPU-accelerated real-time video super-resolution for quality enhancement
+- **WebSR AI Super Resolution**: WebGPU-accelerated real-time video super-resolution, supports 2x upscaling and quality restoration, multi-content type optimization (anime/real-life/3D), three quality tiers, split-screen comparison feature
 - **Custom Ad Filter**: Support custom ad filtering rule code, separate reset and restore default buttons
 - **Chromecast Casting**: Smart browser detection, auto-excludes OPPO, Xiaomi, Huawei, Samsung vendor browsers
 - **iPad/iOS Optimization**: HLS.js official source optimization, smart device detection, multi-attempt autoplay strategy

@@ -42,8 +42,8 @@ importers:
         specifier: ^0.5.19
         version: 0.5.19(tailwindcss@4.1.18)
       '@tanstack/react-query':
-        specifier: ^5.90.20
-        version: 5.90.20(react@19.2.3)
+        specifier: ^5.90.21
+        version: 5.90.21(react@19.2.3)
       '@types/crypto-js':
         specifier: ^4.2.2
         version: 4.2.2
@@ -56,9 +56,9 @@ importers:
       '@vidstack/react':
         specifier: ^1.12.13
         version: 1.12.13(@types/react@19.2.7)(react@19.2.3)
-      anime4k-webgpu:
-        specifier: ^1.0.0
-        version: 1.0.0(@webgpu/types@0.1.68)
+      '@websr/websr':
+        specifier: ^0.0.14
+        version: 0.0.14
       artplayer:
         specifier: ^5.3.0
         version: 5.3.0
@@ -176,7 +176,7 @@ importers:
         version: 4.1.18
       '@tanstack/react-query-devtools':
         specifier: ^5.91.3
-        version: 5.91.3(@tanstack/react-query@5.90.20(react@19.2.3))(react@19.2.3)
+        version: 5.91.3(@tanstack/react-query@5.90.21(react@19.2.3))(react@19.2.3)
       '@testing-library/jest-dom':
         specifier: ^5.17.0
         version: 5.17.0
@@ -216,6 +216,9 @@ importers:
       '@typescript-eslint/parser':
         specifier: ^8.33.0
         version: 8.50.0(eslint@9.39.2(jiti@2.6.1))(typescript@5.9.3)
+      '@webgpu/types':
+        specifier: ^0.1.69
+        version: 0.1.69
       eslint:
         specifier: ^9.28.0
         version: 9.39.2(jiti@2.6.1)
@@ -1877,8 +1880,8 @@ packages:
       '@tanstack/react-query': ^5.90.20
       react: ^18 || ^19
 
-  '@tanstack/react-query@5.90.20':
-    resolution: {integrity: sha512-vXBxa+qeyveVO7OA0jX1z+DeyCA4JKnThKv411jd5SORpBKgkcVnYKCiBgECvADvniBX7tobwBmg01qq9JmMJw==}
+  '@tanstack/react-query@5.90.21':
+    resolution: {integrity: sha512-0Lu6y5t+tvlTJMTO7oh5NSpJfpg/5D41LlThfepTixPYkJ0sE2Jj0m0f6yYqujBwIXlId87e234+MxG3D3g7kg==}
     peerDependencies:
       react: ^18 || ^19
 
@@ -2286,8 +2289,11 @@ packages:
   '@webassemblyjs/wast-printer@1.14.1':
     resolution: {integrity: sha512-kPSSXE6De1XOR820C90RIo2ogvZG+c3KiHzqUoO/F34Y2shGzesfqv7o57xrxovZJH/MetF5UjroJ/R/3isoiw==}
 
-  '@webgpu/types@0.1.68':
-    resolution: {integrity: sha512-3ab1B59Ojb6RwjOspYLsTpCzbNB3ZaamIAxBMmvnNkiDoLTZUOBXZ9p5nAYVEkQlDdf6qAZWi1pqj9+ypiqznA==}
+  '@webgpu/types@0.1.69':
+    resolution: {integrity: sha512-RPmm6kgRbI8e98zSD3RVACvnuktIja5+yLgDAkTmxLr90BEwdTXRQWNLF3ETTTyH/8mKhznZuN5AveXYFEsMGQ==}
+
+  '@websr/websr@0.0.14':
+    resolution: {integrity: sha512-mcwVpYnPnZ+9hs4msHHpGa7+3HA/V+9J+twGgL8D34xfad+8GMNDW5UmZesJHTf1D5dX4I2GWkCQOVJSvBc+wg==}
 
   '@xtuc/ieee754@1.2.0':
     resolution: {integrity: sha512-DX8nKgqcGwsc0eJSqYt5lwP4DH5FlHnmuWWBRy7X0NcaGR0ZtuyeESgMwTYVEtxmsNGY+qit4QYT/MIYTOTPeA==}
@@ -2348,11 +2354,6 @@ packages:
   amdefine@1.0.1:
     resolution: {integrity: sha512-S2Hw0TtNkMJhIabBwIojKL9YHO5T0n5eNqWJ7Lrlel/zDbftQpxpapi8tZs3X1HWa+u+QeydGmzzNU0m09+Rcg==}
     engines: {node: '>=0.4.2'}
-
-  anime4k-webgpu@1.0.0:
-    resolution: {integrity: sha512-syZZyDRHYukFnDLxdES4AuMHzKwxlu5Lo52yhEEc1hwKQmvza8DGC62/VDPrrWOu4KArU5jh/0yFJQBwetGuxg==}
-    peerDependencies:
-      '@webgpu/types': ^0.1.38
 
   ansi-escapes@4.3.2:
     resolution: {integrity: sha512-gKXj5ALrKWQLsYG9jlTRmR/xKluxHV+Z9QEwNIgCfM1/uwPMCuzVVnh5mwTd+OuBZcwSIMbqssNWRm1lE51QaQ==}
@@ -7868,13 +7869,13 @@ snapshots:
 
   '@tanstack/query-devtools@5.93.0': {}
 
-  '@tanstack/react-query-devtools@5.91.3(@tanstack/react-query@5.90.20(react@19.2.3))(react@19.2.3)':
+  '@tanstack/react-query-devtools@5.91.3(@tanstack/react-query@5.90.21(react@19.2.3))(react@19.2.3)':
     dependencies:
       '@tanstack/query-devtools': 5.93.0
-      '@tanstack/react-query': 5.90.20(react@19.2.3)
+      '@tanstack/react-query': 5.90.21(react@19.2.3)
       react: 19.2.3
 
-  '@tanstack/react-query@5.90.20(react@19.2.3)':
+  '@tanstack/react-query@5.90.21(react@19.2.3)':
     dependencies:
       '@tanstack/query-core': 5.90.20
       react: 19.2.3
@@ -8330,7 +8331,9 @@ snapshots:
       '@webassemblyjs/ast': 1.14.1
       '@xtuc/long': 4.2.2
 
-  '@webgpu/types@0.1.68': {}
+  '@webgpu/types@0.1.69': {}
+
+  '@websr/websr@0.0.14': {}
 
   '@xtuc/ieee754@1.2.0': {}
 
@@ -8384,10 +8387,6 @@ snapshots:
       require-from-string: 2.0.2
 
   amdefine@1.0.1: {}
-
-  anime4k-webgpu@1.0.0(@webgpu/types@0.1.68):
-    dependencies:
-      '@webgpu/types': 0.1.68
 
   ansi-escapes@4.3.2:
     dependencies:

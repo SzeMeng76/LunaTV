@@ -14,11 +14,12 @@ import { cleanExpiredCache, clearRecommendsCache } from '@/lib/shortdrama-cache'
 import { ShortDramaItem, ReleaseCalendarItem } from '@/lib/types';
 // 客户端收藏 API
 import {
-  clearAllFavorites,
   getAllFavorites,
   getAllPlayRecords,
   subscribeToDataUpdates,
 } from '@/lib/db.client';
+// 🚀 TanStack Query Mutations
+import { useClearFavoritesMutation } from '@/hooks/useFavoritesMutations';
 import { getDoubanDetails } from '@/lib/douban.client';
 import { DoubanItem } from '@/lib/types';
 import { getAuthInfoFromBrowserCookie } from '@/lib/auth';
@@ -606,12 +607,9 @@ function HomeClient() {
       });
   }, [homeData]);
 
-  // 🚀 TanStack Query - 处理清空所有收藏（使用 queryClient 刷新缓存）
-  const handleClearFavorites = async () => {
-    await clearAllFavorites();
-    // 刷新收藏数据缓存
-    queryClient.invalidateQueries({ queryKey: ['favorites'] });
-  };
+  // 🚀 TanStack Query - 使用 useMutation 管理清空收藏操作
+  // 特性：乐观更新（立即清空 UI）+ 错误回滚（失败时恢复数据）
+  const clearFavoritesMutation = useClearFavoritesMutation();
 
   // 🚀 TanStack Query - 监听数据更新事件，自动刷新缓存
   useEffect(() => {
@@ -711,7 +709,9 @@ function HomeClient() {
                       if (requireClearConfirmation) {
                         setShowClearFavoritesDialog(true);
                       } else {
-                        handleClearFavorites();
+                        // 🚀 使用 mutation.mutate() 清空收藏
+                        // 特性：立即清空 UI（乐观更新），失败时自动回滚
+                        clearFavoritesMutation.mutate();
                       }
                     }}
                   >
@@ -941,7 +941,12 @@ function HomeClient() {
                 confirmText="确认清空"
                 cancelText="取消"
                 variant="danger"
-                onConfirm={handleClearFavorites}
+                onConfirm={() => {
+                  // 🚀 使用 mutation.mutate() 清空收藏
+                  // 特性：立即清空 UI（乐观更新），失败时自动回滚
+                  clearFavoritesMutation.mutate();
+                  setShowClearFavoritesDialog(false);
+                }}
                 onCancel={() => setShowClearFavoritesDialog(false)}
               />
             </section>

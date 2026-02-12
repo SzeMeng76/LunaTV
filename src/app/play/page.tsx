@@ -1,5 +1,7 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment, @typescript-eslint/no-explicit-any, react-hooks/exhaustive-deps, no-console, @next/next/no-img-element */
 
+/// <reference types="@webgpu/types" />
+
 'use client';
 
 import { Suspense, useEffect, useRef, useState } from 'react';
@@ -32,6 +34,7 @@ import OwnerChangeDialog from '@/components/play/OwnerChangeDialog';
 import VideoCoverDisplay from '@/components/play/VideoCoverDisplay';
 import PlayErrorDisplay from '@/components/play/PlayErrorDisplay';
 import DanmuSettingsPanel from '@/components/play/DanmuSettingsPanel';
+import WebSRSettingsPanel from '@/components/play/WebSRSettingsPanel';
 import artplayerPluginChromecast from '@/lib/artplayer-plugin-chromecast';
 import artplayerPluginLiquidGlass from '@/lib/artplayer-plugin-liquid-glass';
 import { ClientCache } from '@/lib/client-cache';
@@ -142,6 +145,9 @@ function PlayPageClient() {
   const [, setDanmuSettingsVersion] = useState(0);
   const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
 
+  // WebSR 设置面板状态
+  const [isWebSRSettingsPanelOpen, setIsWebSRSettingsPanelOpen] = useState(false);
+
   // 下载选集面板状态
   const [showDownloadEpisodeSelector, setShowDownloadEpisodeSelector] = useState(false);
 
@@ -174,27 +180,56 @@ function PlayPageClient() {
   const customAdFilterCodeRef = useRef(customAdFilterCode);
 
 
-  // Anime4K超分相关状态
+  // WebSR超分相关状态
   const [webGPUSupported, setWebGPUSupported] = useState<boolean>(false);
-  const [anime4kEnabled, setAnime4kEnabled] = useState<boolean>(false);
-  const [anime4kMode, setAnime4kMode] = useState<string>(() => {
+  const [websrEnabled, setWebsrEnabled] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
-      const v = localStorage.getItem('anime4k_mode');
-      if (v !== null) return v;
+      return localStorage.getItem('websr_enabled') === 'true';
     }
-    return 'ModeA';
+    return false;
   });
-  const [anime4kScale, setAnime4kScale] = useState<number>(() => {
+  const [websrMode, setWebsrMode] = useState<'upscale' | 'restore'>(() => {
     if (typeof window !== 'undefined') {
-      const v = localStorage.getItem('anime4k_scale');
-      if (v !== null) return parseFloat(v);
+      const v = localStorage.getItem('websr_mode');
+      if (v === 'restore') return 'restore';
     }
-    return 2.0;
+    return 'upscale';
   });
-  const anime4kRef = useRef<any>(null);
-  const anime4kEnabledRef = useRef(anime4kEnabled);
-  const anime4kModeRef = useRef(anime4kMode);
-  const anime4kScaleRef = useRef(anime4kScale);
+  const [websrContentType, setWebsrContentType] = useState<'an' | 'rl' | '3d'>(() => {
+    if (typeof window !== 'undefined') {
+      const v = localStorage.getItem('websr_content_type');
+      if (v === 'rl' || v === '3d') return v;
+    }
+    return 'an';
+  });
+  const [websrNetworkSize, setWebsrNetworkSize] = useState<'s' | 'm' | 'l'>(() => {
+    if (typeof window !== 'undefined') {
+      const v = localStorage.getItem('websr_network_size');
+      if (v === 'm' || v === 'l') return v;
+    }
+    return 's';
+  });
+  const [websrCompareEnabled, setWebsrCompareEnabled] = useState(false);
+  const [websrComparePosition, setWebsrComparePosition] = useState(50);
+
+  const websrRef = useRef<{
+    instance: any;
+    gpu: GPUDevice | null;
+    canvas: HTMLCanvasElement | null;
+    weightsCache: Map<string, any>;
+    isActive: boolean;
+  }>({
+    instance: null,
+    gpu: null,
+    canvas: null,
+    weightsCache: new Map(),
+    isActive: false,
+  });
+
+  const websrEnabledRef = useRef(websrEnabled);
+  const websrModeRef = useRef(websrMode);
+  const websrContentTypeRef = useRef(websrContentType);
+  const websrNetworkSizeRef = useRef(websrNetworkSize);
   const netdiskModalContentRef = useRef<HTMLDivElement>(null);
 
   // 获取服务器配置（下载功能开关）
@@ -216,10 +251,11 @@ function PlayPageClient() {
   }, []);
 
   useEffect(() => {
-    anime4kEnabledRef.current = anime4kEnabled;
-    anime4kModeRef.current = anime4kMode;
-    anime4kScaleRef.current = anime4kScale;
-  }, [anime4kEnabled, anime4kMode, anime4kScale]);
+    websrEnabledRef.current = websrEnabled;
+    websrModeRef.current = websrMode;
+    websrContentTypeRef.current = websrContentType;
+    websrNetworkSizeRef.current = websrNetworkSize;
+  }, [websrEnabled, websrMode, websrContentType, websrNetworkSize]);
 
   // 获取 HLS 缓冲配置（根据用户设置的模式）
   const getHlsBufferConfig = () => {
@@ -488,39 +524,6 @@ function PlayPageClient() {
       }
 
       try {
-        // 修复anime4k-webgpu库的buffer size限制问题
-        // 在全局层面patch requestAdapter，确保所有adapter都有正确的limits
-        const originalRequestAdapter = (navigator as any).gpu.requestAdapter.bind((navigator as any).gpu);
-
-        (navigator as any).gpu.requestAdapter = async (options?: any) => {
-          const adapter = await originalRequestAdapter(options);
-          if (!adapter) return adapter;
-
-          // 保存原始的requestDevice方法
-          const originalRequestDevice = adapter.requestDevice.bind(adapter);
-
-          // 重写requestDevice方法，添加必要的buffer size限制
-          adapter.requestDevice = async (descriptor?: any) => {
-            const adapterLimits = adapter.limits;
-
-            // 合并用户提供的descriptor和我们需要的limits
-            const enhancedDescriptor = {
-              ...descriptor,
-              requiredLimits: {
-                ...descriptor?.requiredLimits,
-                // 使用adapter支持的最大值，但不超过2GB
-                maxBufferSize: Math.min(adapterLimits.maxBufferSize || 2147483648, 2147483648),
-                maxStorageBufferBindingSize: Math.min(adapterLimits.maxStorageBufferBindingSize || 1073741824, 1073741824),
-              }
-            };
-
-            console.log('WebGPU设备请求配置:', enhancedDescriptor.requiredLimits);
-            return originalRequestDevice(enhancedDescriptor);
-          };
-
-          return adapter;
-        };
-
         const adapter = await (navigator as any).gpu.requestAdapter();
         if (!adapter) {
           setWebGPUSupported(false);
@@ -530,10 +533,6 @@ function PlayPageClient() {
 
         setWebGPUSupported(true);
         console.log('WebGPU支持检测：✅ 支持');
-        console.log('Adapter limits:', {
-          maxBufferSize: adapter.limits.maxBufferSize,
-          maxStorageBufferBindingSize: adapter.limits.maxStorageBufferBindingSize
-        });
       } catch (err) {
         setWebGPUSupported(false);
         console.log('WebGPU不支持：检测失败', err);
@@ -542,6 +541,58 @@ function PlayPageClient() {
 
     checkWebGPUSupport();
   }, []);
+
+  // WebSR 启用/禁用生命周期
+  useEffect(() => {
+    if (!websrEnabled || !webGPUSupported || !artPlayerRef.current?.video) {
+      destroyWebSR();
+      return;
+    }
+
+    const video = artPlayerRef.current.video as HTMLVideoElement;
+
+    const waitForVideo = () => {
+      if (video.videoWidth > 0 && video.videoHeight > 0) {
+        initWebSR();
+      } else {
+        const handler = () => {
+          video.removeEventListener('loadedmetadata', handler);
+          initWebSR();
+        };
+        video.addEventListener('loadedmetadata', handler);
+      }
+    };
+
+    waitForVideo();
+
+    return () => {
+      destroyWebSR();
+    };
+  }, [websrEnabled, webGPUSupported]);
+
+  // WebSR 配置变化（模式/网络大小/内容类型）
+  useEffect(() => {
+    if (!websrRef.current.isActive) return;
+    switchWebSRConfig();
+  }, [websrMode, websrNetworkSize, websrContentType]);
+
+  // WebSR 对比模式
+  useEffect(() => {
+    if (!websrRef.current.canvas || !artPlayerRef.current?.video) return;
+
+    const canvas = websrRef.current.canvas;
+    const video = artPlayerRef.current.video as HTMLVideoElement;
+
+    if (websrCompareEnabled) {
+      canvas.style.clipPath = `inset(0 0 0 ${websrComparePosition}%)`;
+      video.style.opacity = '1';
+      video.style.clipPath = `inset(0 ${100 - websrComparePosition}% 0 0)`;
+    } else {
+      canvas.style.clipPath = '';
+      video.style.opacity = '0';
+      video.style.clipPath = '';
+    }
+  }, [websrCompareEnabled, websrComparePosition]);
 
   // 加载详情（豆瓣或bangumi）
   useEffect(() => {
@@ -1831,8 +1882,8 @@ function PlayPageClient() {
 
   // 清理播放器资源的统一函数
   const cleanupPlayer = async () => {
-    // 先清理Anime4K，避免GPU纹理错误
-    await cleanupAnime4K();
+    // 先清理WebSR，避免GPU纹理错误
+    await destroyWebSR();
 
     // 清理集数切换定时器
     if (episodeSwitchTimeoutRef.current) {
@@ -1882,24 +1933,35 @@ function PlayPageClient() {
     }
   };
 
+  // WebSR 辅助函数：获取网络名称
+  const getWebsrNetworkName = (mode: 'upscale' | 'restore', size: 's' | 'm' | 'l'): any => {
+    if (mode === 'restore') {
+      return `anime4k/cnn-restore-${size}`;
+    }
+    return `anime4k/cnn-2x-${size}`;
+  };
+
+  // WebSR 辅助函数：获取权重文件名
+  const getWebsrWeightFilename = (
+    mode: 'upscale' | 'restore',
+    size: 's' | 'm' | 'l',
+    contentType: 'an' | 'rl' | '3d'
+  ): string => {
+    if (mode === 'restore') {
+      return `cnn-restore-${size}-an.json`;
+    }
+    return `cnn-2x-${size}-${contentType}.json`;
+  };
+
   // 初始化Anime4K超分
-  const initAnime4K = async () => {
+  const initWebSR = async () => {
     if (!artPlayerRef.current?.video) return;
 
-    let frameRequestId: number | null = null;
-    let outputCanvas: HTMLCanvasElement | null = null;
-
     try {
-      if (anime4kRef.current) {
-        anime4kRef.current.controller?.stop?.();
-        anime4kRef.current = null;
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-
       const video = artPlayerRef.current.video as HTMLVideoElement;
 
+      // 等待视频尺寸就绪
       if (!video.videoWidth || !video.videoHeight) {
-        console.warn('视频尺寸未就绪，等待loadedmetadata事件');
         await new Promise<void>((resolve) => {
           const handler = () => {
             video.removeEventListener('loadedmetadata', handler);
@@ -1917,240 +1979,193 @@ function PlayPageClient() {
         throw new Error('无法获取视频尺寸');
       }
 
-      const isFirefox = navigator.userAgent.toLowerCase().includes('firefox');
-      outputCanvas = document.createElement('canvas');
+      // 初始化 GPU（复用已有的或创建新的）
+      if (!websrRef.current.gpu) {
+        const { default: WebSR } = await import('@websr/websr');
+        const gpu = await WebSR.initWebGPU();
+        if (!gpu) {
+          throw new Error('WebGPU 初始化失败');
+        }
+        websrRef.current.gpu = gpu;
+      }
+
+      // 创建 canvas
+      const canvas = document.createElement('canvas');
+      const scale = websrModeRef.current === 'upscale' ? 2 : 1;
+      canvas.width = Math.floor(video.videoWidth * scale);
+      canvas.height = Math.floor(video.videoHeight * scale);
+
+      // Canvas 样式
+      canvas.style.position = 'absolute';
+      canvas.style.top = '0';
+      canvas.style.left = '0';
+      canvas.style.width = '100%';
+      canvas.style.height = '100%';
+      canvas.style.objectFit = 'contain';
+      canvas.style.pointerEvents = 'none'; // 让点击穿透到 ArtPlayer
+      canvas.style.zIndex = '1';
+
+      // 插入 canvas
       const container = artPlayerRef.current.template.$video.parentElement;
+      container.insertBefore(canvas, video);
 
-      const scale = anime4kScaleRef.current;
-      outputCanvas.width = Math.floor(video.videoWidth * scale);
-      outputCanvas.height = Math.floor(video.videoHeight * scale);
+      // 获取权重文件
+      const weightFile = getWebsrWeightFilename(
+        websrModeRef.current,
+        websrNetworkSizeRef.current,
+        websrContentTypeRef.current
+      );
 
-      if (!outputCanvas.width || !outputCanvas.height || !isFinite(outputCanvas.width) || !isFinite(outputCanvas.height)) {
-        throw new Error(`outputCanvas尺寸无效: ${outputCanvas.width}x${outputCanvas.height}`);
+      let weights = websrRef.current.weightsCache.get(weightFile);
+      if (!weights) {
+        const response = await fetch(`/weights/anime4k/${weightFile}`);
+        if (!response.ok) {
+          throw new Error(`权重文件加载失败: ${weightFile}`);
+        }
+        weights = await response.json();
+        websrRef.current.weightsCache.set(weightFile, weights);
       }
 
-      outputCanvas.style.position = 'absolute';
-      outputCanvas.style.top = '0';
-      outputCanvas.style.left = '0';
-      outputCanvas.style.width = '100%';
-      outputCanvas.style.height = '100%';
-      outputCanvas.style.objectFit = 'contain';
-      outputCanvas.style.cursor = 'pointer';
-      outputCanvas.style.zIndex = '1';
-      outputCanvas.style.backgroundColor = 'transparent';
+      // 创建 WebSR 实例
+      const { default: WebSR } = await import('@websr/websr');
+      const networkName = getWebsrNetworkName(websrModeRef.current, websrNetworkSizeRef.current);
 
-      let sourceCanvas: HTMLCanvasElement | null = null;
-      let sourceCtx: CanvasRenderingContext2D | null = null;
+      const websr = new WebSR({
+        source: video,
+        canvas: canvas,
+        weights: weights,
+        network_name: networkName,
+        gpu: websrRef.current.gpu,
+      });
 
-      if (isFirefox) {
-        sourceCanvas = document.createElement('canvas');
-        sourceCanvas.width = Math.floor(video.videoWidth);
-        sourceCanvas.height = Math.floor(video.videoHeight);
+      websrRef.current.instance = websr;
+      websrRef.current.canvas = canvas;
+      websrRef.current.isActive = true;
 
-        if (!sourceCanvas.width || !sourceCanvas.height) {
-          throw new Error(`sourceCanvas尺寸无效: ${sourceCanvas.width}x${sourceCanvas.height}`);
-        }
+      // 启动渲染
+      await websr.start();
 
-        sourceCtx = sourceCanvas.getContext('2d', { willReadFrequently: true, alpha: false });
-        if (!sourceCtx) throw new Error('无法创建2D上下文');
-
-        if (video.readyState >= video.HAVE_CURRENT_DATA) {
-          sourceCtx.drawImage(video, 0, 0, sourceCanvas.width, sourceCanvas.height);
-        }
-      }
-
-      const handleCanvasClick = () => {
-        if (artPlayerRef.current) artPlayerRef.current.toggle();
-      };
-      outputCanvas.addEventListener('click', handleCanvasClick);
-
-      const handleCanvasDblClick = () => {
-        if (artPlayerRef.current) artPlayerRef.current.fullscreen = !artPlayerRef.current.fullscreen;
-      };
-      outputCanvas.addEventListener('dblclick', handleCanvasDblClick);
-
+      // 隐藏原始视频
       video.style.opacity = '0';
-      video.style.pointerEvents = 'none';
       video.style.position = 'absolute';
-      video.style.zIndex = '-1';
 
-      container.insertBefore(outputCanvas, video);
+      const modeText = websrModeRef.current === 'upscale' ? '2x超分' : '降噪';
+      const sizeText = { s: '快速', m: '标准', l: '高质' }[websrNetworkSizeRef.current];
+      const typeText = { an: '动漫', rl: '真人', '3d': '3D' }[websrContentTypeRef.current];
 
-      if (isFirefox && sourceCtx && sourceCanvas) {
-        // 🚀 性能优化：添加帧率限制，降低 CPU 占用
-        let lastFrameTime = 0;
-        const targetFPS = 30; // 从 60fps 降到 30fps，降低约 50% CPU 占用
-        const frameInterval = 1000 / targetFPS;
-
-        const captureVideoFrame = () => {
-          const now = performance.now();
-
-          // 只在达到目标帧间隔时才执行绘制
-          if (now - lastFrameTime >= frameInterval) {
-            if (sourceCtx && sourceCanvas && video.readyState >= video.HAVE_CURRENT_DATA) {
-              sourceCtx.drawImage(video, 0, 0, sourceCanvas.width, sourceCanvas.height);
-            }
-            lastFrameTime = now - ((now - lastFrameTime) % frameInterval);
-          }
-
-          frameRequestId = requestAnimationFrame(captureVideoFrame);
-        };
-        captureVideoFrame();
-      }
-
-      const { render: anime4kRender, ModeA, ModeB, ModeC, ModeAA, ModeBB, ModeCA } = await import('anime4k-webgpu');
-
-      let ModeClass: any;
-      const modeName = anime4kModeRef.current;
-
-      switch (modeName) {
-        case 'ModeA': ModeClass = ModeA; break;
-        case 'ModeB': ModeClass = ModeB; break;
-        case 'ModeC': ModeClass = ModeC; break;
-        case 'ModeAA': ModeClass = ModeAA; break;
-        case 'ModeBB': ModeClass = ModeBB; break;
-        case 'ModeCA': ModeClass = ModeCA; break;
-        default: ModeClass = ModeA;
-      }
-
-      const renderConfig: any = {
-        video: isFirefox ? sourceCanvas : video,
-        canvas: outputCanvas,
-        pipelineBuilder: (device: GPUDevice, inputTexture: GPUTexture) => {
-          if (!outputCanvas) throw new Error('outputCanvas is null');
-          const mode = new ModeClass({
-            device,
-            inputTexture,
-            nativeDimensions: { width: Math.floor(video.videoWidth), height: Math.floor(video.videoHeight) },
-            targetDimensions: { width: Math.floor(outputCanvas.width), height: Math.floor(outputCanvas.height) },
-          });
-          return [mode];
-        },
-      };
-
-      const controller = await anime4kRender(renderConfig);
-
-      anime4kRef.current = {
-        controller,
-        canvas: outputCanvas,
-        sourceCanvas: isFirefox ? sourceCanvas : null,
-        frameRequestId: isFirefox ? frameRequestId : null,
-        handleCanvasClick,
-        handleCanvasDblClick,
-      };
-
-      console.log('Anime4K超分已启用，模式:', anime4kModeRef.current, '倍数:', scale);
+      console.log(`WebSR已启用: ${modeText} | ${sizeText} | ${typeText}`);
       if (artPlayerRef.current) {
-        artPlayerRef.current.notice.show = `超分已启用 (${anime4kModeRef.current}, ${scale}x)`;
+        artPlayerRef.current.notice.show = `超分已启用 (${modeText}, ${sizeText}, ${typeText})`;
       }
     } catch (err) {
-      console.error('初始化Anime4K失败:', err);
+      console.error('初始化WebSR失败:', err);
       if (artPlayerRef.current) {
         artPlayerRef.current.notice.show = '超分启用失败：' + (err instanceof Error ? err.message : '未知错误');
       }
 
-      if (frameRequestId) cancelAnimationFrame(frameRequestId);
-      if (outputCanvas && outputCanvas.parentNode) {
-        outputCanvas.parentNode.removeChild(outputCanvas);
+      // 清理
+      if (websrRef.current.canvas && websrRef.current.canvas.parentNode) {
+        websrRef.current.canvas.parentNode.removeChild(websrRef.current.canvas);
+      }
+      if (artPlayerRef.current?.video) {
+        artPlayerRef.current.video.style.opacity = '1';
+        artPlayerRef.current.video.style.position = '';
+      }
+      websrRef.current.canvas = null;
+      websrRef.current.instance = null;
+      websrRef.current.isActive = false;
+    }
+  };
+
+  // 销毁WebSR
+  const destroyWebSR = async () => {
+    const ref = websrRef.current;
+    ref.isActive = false;
+
+    try {
+      if (ref.instance) {
+        await ref.instance.destroy();
+        ref.instance = null;
+      }
+
+      if (ref.canvas && ref.canvas.parentNode) {
+        ref.canvas.parentNode.removeChild(ref.canvas);
+        ref.canvas = null;
       }
 
       if (artPlayerRef.current?.video) {
         artPlayerRef.current.video.style.opacity = '1';
-        artPlayerRef.current.video.style.pointerEvents = 'auto';
         artPlayerRef.current.video.style.position = '';
-        artPlayerRef.current.video.style.zIndex = '';
       }
+
+      console.log('WebSR已清理');
+    } catch (err) {
+      console.warn('清理WebSR时出错:', err);
     }
   };
 
-  // 清理Anime4K
-  const cleanupAnime4K = async () => {
-    if (anime4kRef.current) {
-      try {
-        if (anime4kRef.current.frameRequestId) {
-          cancelAnimationFrame(anime4kRef.current.frameRequestId);
-        }
-
-        anime4kRef.current.controller?.stop?.();
-
-        if (anime4kRef.current.canvas) {
-          if (anime4kRef.current.handleCanvasClick) {
-            anime4kRef.current.canvas.removeEventListener('click', anime4kRef.current.handleCanvasClick);
-          }
-          if (anime4kRef.current.handleCanvasDblClick) {
-            anime4kRef.current.canvas.removeEventListener('dblclick', anime4kRef.current.handleCanvasDblClick);
-          }
-        }
-
-        if (anime4kRef.current.canvas && anime4kRef.current.canvas.parentNode) {
-          anime4kRef.current.canvas.parentNode.removeChild(anime4kRef.current.canvas);
-        }
-
-        if (anime4kRef.current.sourceCanvas) {
-          const ctx = anime4kRef.current.sourceCanvas.getContext('2d');
-          if (ctx) {
-            ctx.clearRect(0, 0, anime4kRef.current.sourceCanvas.width, anime4kRef.current.sourceCanvas.height);
-          }
-        }
-
-        anime4kRef.current = null;
-
-        if (artPlayerRef.current?.video) {
-          artPlayerRef.current.video.style.opacity = '1';
-          artPlayerRef.current.video.style.pointerEvents = 'auto';
-          artPlayerRef.current.video.style.position = '';
-          artPlayerRef.current.video.style.zIndex = '';
-        }
-
-        console.log('Anime4K已清理');
-      } catch (err) {
-        console.warn('清理Anime4K时出错:', err);
-      }
-    }
-  };
-
-  // 切换Anime4K状态
-  const toggleAnime4K = async (enabled: boolean) => {
+  // 切换WebSR状态
+  const toggleWebSR = async (enabled: boolean) => {
     try {
       if (enabled) {
-        await initAnime4K();
+        await initWebSR();
       } else {
-        await cleanupAnime4K();
+        await destroyWebSR();
       }
-      setAnime4kEnabled(enabled);
-      localStorage.setItem('enable_anime4k', String(enabled));
+      setWebsrEnabled(enabled);
+      localStorage.setItem('websr_enabled', String(enabled));
     } catch (err) {
       console.error('切换超分状态失败:', err);
     }
   };
 
-  // 更改Anime4K模式
-  const changeAnime4KMode = async (mode: string) => {
-    try {
-      setAnime4kMode(mode);
-      localStorage.setItem('anime4k_mode', mode);
+  // 切换WebSR配置（模式/网络大小/内容类型变化时）
+  const switchWebSRConfig = async () => {
+    if (!websrRef.current.isActive) return;
 
-      if (anime4kEnabledRef.current) {
-        await cleanupAnime4K();
-        await initAnime4K();
+    try {
+      // 如果 upscale <-> restore 切换，canvas 尺寸会变，需要完全重建
+      const currentScale = websrRef.current.canvas ?
+        (websrRef.current.canvas.width > (artPlayerRef.current?.video?.videoWidth || 0) ? 2 : 1) : 1;
+      const newScale = websrModeRef.current === 'upscale' ? 2 : 1;
+
+      if (currentScale !== newScale) {
+        await destroyWebSR();
+        await initWebSR();
+        return;
+      }
+
+      // 否则热切换网络
+      const networkName = getWebsrNetworkName(websrModeRef.current, websrNetworkSizeRef.current);
+      const weightFile = getWebsrWeightFilename(
+        websrModeRef.current,
+        websrNetworkSizeRef.current,
+        websrContentTypeRef.current
+      );
+
+      let weights = websrRef.current.weightsCache.get(weightFile);
+      if (!weights) {
+        const response = await fetch(`/weights/anime4k/${weightFile}`);
+        if (!response.ok) throw new Error(`权重文件加载失败: ${weightFile}`);
+        weights = await response.json();
+        websrRef.current.weightsCache.set(weightFile, weights);
+      }
+
+      if (websrRef.current.instance && websrRef.current.instance.switchNetwork) {
+        await websrRef.current.instance.switchNetwork(networkName, weights);
+
+        if (artPlayerRef.current) {
+          const modeText = websrModeRef.current === 'upscale' ? '2x超分' : '降噪';
+          const sizeText = { s: '快速', m: '标准', l: '高质' }[websrNetworkSizeRef.current];
+          const typeText = { an: '动漫', rl: '真人', '3d': '3D' }[websrContentTypeRef.current];
+          artPlayerRef.current.notice.show = `已切换: ${modeText}, ${sizeText}, ${typeText}`;
+        }
       }
     } catch (err) {
-      console.error('更改超分模式失败:', err);
-    }
-  };
-
-  // 更改Anime4K分辨率倍数
-  const changeAnime4KScale = async (scale: number) => {
-    try {
-      setAnime4kScale(scale);
-      localStorage.setItem('anime4k_scale', scale.toString());
-
-      if (anime4kEnabledRef.current) {
-        await cleanupAnime4K();
-        await initAnime4K();
-      }
-    } catch (err) {
-      console.error('更改超分倍数失败:', err);
+      console.error('切换WebSR配置失败:', err);
+      // 失败时重建
+      await destroyWebSR();
+      await initWebSR();
     }
   };
 
@@ -3907,7 +3922,7 @@ function PlayPageClient() {
             name: '弹幕设置',
             html: '弹幕设置',
             tooltip: '打开弹幕设置面板',
-            icon: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>',
+            icon: '<text x="50%" y="50%" font-size="14" font-weight="bold" text-anchor="middle" dominant-baseline="middle" fill="#ffffff">弹</text>',
             // 🎨 点击式按钮，打开美化的弹幕设置面板
             onClick: function () {
               setIsDanmuSettingsPanelOpen(true);
@@ -3921,43 +3936,16 @@ function PlayPageClient() {
           },
           ...(webGPUSupported ? [
             {
-              name: 'Anime4K超分',
-              html: 'Anime4K超分',
-              switch: anime4kEnabledRef.current,
-              onSwitch: async function (item: any) {
-                const newVal = !item.switch;
-                await toggleAnime4K(newVal);
-                return newVal;
-              },
-            },
-            {
-              name: '超分模式',
-              html: '超分模式',
-              selector: [
-                { html: 'ModeA (快速)', value: 'ModeA', default: anime4kModeRef.current === 'ModeA' },
-                { html: 'ModeB (标准)', value: 'ModeB', default: anime4kModeRef.current === 'ModeB' },
-                { html: 'ModeC (高质)', value: 'ModeC', default: anime4kModeRef.current === 'ModeC' },
-                { html: 'ModeAA (极速)', value: 'ModeAA', default: anime4kModeRef.current === 'ModeAA' },
-                { html: 'ModeBB (平衡)', value: 'ModeBB', default: anime4kModeRef.current === 'ModeBB' },
-                { html: 'ModeCA (优质)', value: 'ModeCA', default: anime4kModeRef.current === 'ModeCA' },
-              ],
-              onSelect: async function (item: any) {
-                await changeAnime4KMode(item.value);
-                return item.html;
-              },
-            },
-            {
-              name: '超分倍数',
-              html: '超分倍数',
-              selector: [
-                { html: '1.5x', value: '1.5', default: anime4kScaleRef.current === 1.5 },
-                { html: '2.0x', value: '2.0', default: anime4kScaleRef.current === 2.0 },
-                { html: '3.0x', value: '3.0', default: anime4kScaleRef.current === 3.0 },
-                { html: '4.0x', value: '4.0', default: anime4kScaleRef.current === 4.0 },
-              ],
-              onSelect: async function (item: any) {
-                await changeAnime4KScale(parseFloat(item.value));
-                return item.html;
+              name: '超分设置',
+              html: '超分设置',
+              icon: '<text x="50%" y="50%" font-size="14" font-weight="bold" text-anchor="middle" dominant-baseline="middle" fill="#ffffff">超</text>',
+              tooltip: '打开AI超分设置面板',
+              onClick: function () {
+                setIsWebSRSettingsPanelOpen(true);
+                if (artPlayerRef.current) {
+                  artPlayerRef.current.setting.show = false;
+                }
+                return '打开AI超分设置面板';
               },
             },
           ] : []),
@@ -5161,8 +5149,8 @@ function PlayPageClient() {
       // 释放 Wake Lock
       releaseWakeLock();
 
-      // 清理Anime4K
-      cleanupAnime4K();
+      // 清理WebSR
+      destroyWebSR();
 
       // 销毁播放器实例
       cleanupPlayer();
@@ -5298,6 +5286,54 @@ function PlayPageClient() {
                   ref={artRef}
                   className='bg-black w-full h-full rounded-xl overflow-hidden shadow-lg'
                 ></div>
+
+                {/* WebSR 分屏对比分割线 */}
+                {websrEnabled && websrCompareEnabled && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      left: `${websrComparePosition}%`,
+                      top: 0,
+                      bottom: 0,
+                      width: '4px',
+                      backgroundColor: 'white',
+                      cursor: 'col-resize',
+                      zIndex: 10,
+                      transform: 'translateX(-50%)',
+                    }}
+                    onPointerDown={(e) => {
+                      e.currentTarget.setPointerCapture(e.pointerId);
+                    }}
+                    onPointerMove={(e) => {
+                      if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;
+                      const rect = e.currentTarget.parentElement?.getBoundingClientRect();
+                      if (!rect) return;
+                      const x = e.clientX - rect.left;
+                      const pct = Math.max(0, Math.min(100, (x / rect.width) * 100));
+                      setWebsrComparePosition(pct);
+                    }}
+                  >
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '50%',
+                        backgroundColor: 'rgba(255,255,255,0.9)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '16px',
+                        color: '#333',
+                      }}
+                    >
+                      ↔
+                    </div>
+                  </div>
+                )}
 
                 {/* 跳过设置按钮 - 播放器内右上角 */}
                 {currentSource && currentId && (
@@ -5532,6 +5568,62 @@ function PlayPageClient() {
                 }
                 return result.count;
               }}
+            />
+          </div>
+        </div>,
+        portalContainer
+      )}
+
+      {/* WebSR 设置面板 */}
+      {isWebSRSettingsPanelOpen && portalContainer && createPortal(
+        <div style={{ all: 'initial', fontFamily: 'Inter, system-ui, sans-serif', position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 9999 }}>
+          <style>{`.websr-iso svg { fill: none !important; }`}</style>
+          <div className="websr-iso" style={{ pointerEvents: 'auto' }}>
+            <WebSRSettingsPanel
+              isOpen={isWebSRSettingsPanelOpen}
+              onClose={() => setIsWebSRSettingsPanelOpen(false)}
+              settings={{
+                enabled: websrEnabled,
+                mode: websrMode,
+                contentType: websrContentType,
+                networkSize: websrNetworkSize,
+                compareEnabled: websrCompareEnabled,
+                comparePosition: 50,
+              }}
+              onSettingsChange={async (newSettings) => {
+                // 更新启用状态
+                if (newSettings.enabled !== undefined) {
+                  await toggleWebSR(newSettings.enabled);
+                }
+
+                // 更新模式
+                if (newSettings.mode !== undefined) {
+                  setWebsrMode(newSettings.mode);
+                  localStorage.setItem('websr_mode', newSettings.mode);
+                  await switchWebSRConfig();
+                }
+
+                // 更新内容类型
+                if (newSettings.contentType !== undefined) {
+                  setWebsrContentType(newSettings.contentType);
+                  localStorage.setItem('websr_content_type', newSettings.contentType);
+                  await switchWebSRConfig();
+                }
+
+                // 更新画质等级
+                if (newSettings.networkSize !== undefined) {
+                  setWebsrNetworkSize(newSettings.networkSize);
+                  localStorage.setItem('websr_network_size', newSettings.networkSize);
+                  await switchWebSRConfig();
+                }
+
+                // 更新对比模式
+                if (newSettings.compareEnabled !== undefined) {
+                  setWebsrCompareEnabled(newSettings.compareEnabled);
+                }
+              }}
+              webGPUSupported={webGPUSupported}
+              processing={false}
             />
           </div>
         </div>,
