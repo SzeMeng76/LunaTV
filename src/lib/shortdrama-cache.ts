@@ -78,7 +78,13 @@ async function setCache(key: string, data: any, expireSeconds: number): Promise<
 async function cleanExpiredCache(): Promise<void> {
   try {
     // 清理统一存储中的过期缓存
-    await ClientCache.clearExpired('shortdrama-');
+    // 静默处理错误，避免在没有数据时产生401错误
+    try {
+      await ClientCache.clearExpired('shortdrama-');
+    } catch (e) {
+      // 静默处理：如果缓存为空或请求失败，不影响应用运行
+      // 这是正常情况，不需要警告
+    }
 
     // 清理localStorage中的过期缓存
     if (typeof localStorage !== 'undefined') {

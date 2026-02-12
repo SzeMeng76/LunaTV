@@ -875,8 +875,8 @@ export default function SourceTestModule() {
           <>
             {/* 遮罩层 */}
             <div
-              className={`fixed inset-0 bg-black z-998 transition-opacity duration-300 ${
-                isDrawerAnimating ? 'bg-opacity-50' : 'bg-opacity-0'
+              className={`fixed inset-0 z-998 transition-opacity duration-300 ${
+                isDrawerAnimating ? 'bg-black/50' : 'bg-black/0'
               }`}
               onClick={handleCloseDrawer}
             />

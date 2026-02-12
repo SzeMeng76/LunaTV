@@ -3,6 +3,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import { cookies } from 'next/headers';
+import { Suspense } from 'react';
 
 import './globals.css';
 
@@ -144,12 +145,16 @@ export default async function RootLayout({
               <DownloadProvider>
                 <WatchRoomProvider>
                   <SiteProvider siteName={siteName} announcement={announcement}>
-                    <SessionTracker />
-                    {children}
-                    <GlobalErrorIndicator />
+                    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+                      <SessionTracker />
+                      {children}
+                      <GlobalErrorIndicator />
+                    </Suspense>
                   </SiteProvider>
-                  <DownloadPanel />
-                  <ChatFloatingWindow />
+                  <Suspense fallback={null}>
+                    <DownloadPanel />
+                    <ChatFloatingWindow />
+                  </Suspense>
                 </WatchRoomProvider>
               </DownloadProvider>
             </GlobalCacheProvider>

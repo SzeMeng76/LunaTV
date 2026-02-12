@@ -760,14 +760,14 @@ async function checkShouldUpdateOriginalEpisodes(existingRecord: PlayRecord, new
   console.log(`🔍 用户看了第${newRecord.index}集（超过原始${originalEpisodes}集），从数据库获取最新集数...`);
 
   try {
-    const latestTotalEpisodes = Math.max(freshRecord.total_episodes, originalEpisodes);
-    console.log(`✓ 应更新原始集数: ${existingRecord.title} - 用户看了第${newRecord.index}集（超过原始${originalEpisodes}集），数据库最新集数${freshRecord.total_episodes}集 → 更新原始集数为${latestTotalEpisodes}集`);
+    const latestTotalEpisodes = Math.max(freshRecord.total_episodes, originalEpisodes, newRecord.total_episodes);
+    console.log(`✓ 应更新原始集数: ${existingRecord.title} - 用户看了第${newRecord.index}集（超过原始${originalEpisodes}集），数据库最新集数${freshRecord.total_episodes}集，播放器集数${newRecord.total_episodes}集 → 更新原始集数为${latestTotalEpisodes}集`);
 
     return { shouldUpdate: true, latestTotalEpisodes };
   } catch (error) {
     console.error('❌ 获取最新集数失败:', error);
     // 失败时仍然更新，使用保守的值
-    return { shouldUpdate: true, latestTotalEpisodes: Math.max(newRecord.total_episodes, originalEpisodes) };
+    return { shouldUpdate: true, latestTotalEpisodes: Math.max(newRecord.total_episodes, originalEpisodes, existingRecord.total_episodes) };
   }
 }
 
