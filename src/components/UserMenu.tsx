@@ -8,6 +8,7 @@ import {
   Calendar,
   Check,
   ChevronDown,
+  Download,
   ExternalLink,
   Heart,
   KeyRound,
@@ -41,6 +42,8 @@ import {
 } from '@/lib/db.client';
 import type { Favorite } from '@/lib/types';
 
+import { useDownload } from '@/contexts/DownloadContext';
+
 import { VersionPanel } from './VersionPanel';
 import VideoCard from './VideoCard';
 
@@ -72,6 +75,8 @@ export const UserMenu: React.FC = () => {
   const [favorites, setFavorites] = useState<(Favorite & { key: string })[]>([]);
   const [hasUnreadUpdates, setHasUnreadUpdates] = useState(false);
   const [showWatchRoom, setShowWatchRoom] = useState(false);
+  const [downloadEnabled, setDownloadEnabled] = useState(true);
+  const { tasks, setShowDownloadPanel } = useDownload();
 
   // Body 滚动锁定 - 使用 overflow 方式避免布局问题
   useEffect(() => {
@@ -234,6 +239,22 @@ export const UserMenu: React.FC = () => {
     };
 
     checkWatchRoomConfig();
+  }, []);
+
+  // 检查下载功能是否启用
+  useEffect(() => {
+    const fetchDownloadConfig = async () => {
+      try {
+        const response = await fetch('/api/server-config');
+        if (response.ok) {
+          const config = await response.json();
+          setDownloadEnabled(config.DownloadEnabled ?? true);
+        }
+      } catch {
+        setDownloadEnabled(true);
+      }
+    };
+    fetchDownloadConfig();
   }, []);
 
   // 从 localStorage 读取设置
@@ -1187,6 +1208,34 @@ export const UserMenu: React.FC = () => {
             >
               <Users className='w-4 h-4 text-gray-500 dark:text-gray-400' />
               <span className='font-medium'>观影室</span>
+            </button>
+          )}
+
+          {/* 下载管理按钮 */}
+          {downloadEnabled && (
+            <button
+              onClick={() => {
+                setShowDownloadPanel(true);
+                handleCloseMenu();
+              }}
+              className='w-full px-3 py-2 text-left flex items-center gap-2.5 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-[background-color] duration-150 ease-in-out text-sm'
+            >
+              <Download className='w-4 h-4 text-gray-500 dark:text-gray-400' />
+              <span className='font-medium'>下载管理</span>
+              {tasks.filter(t => t.status === 'downloading').length > 0 && (
+                <span className='ml-auto flex items-center gap-1'>
+                  <span className='relative flex h-2 w-2'>
+                    <span className='animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75'></span>
+                    <span className='relative inline-flex rounded-full h-2 w-2 bg-green-500'></span>
+                  </span>
+                  <span className='text-xs text-green-600 dark:text-green-400'>
+                    {tasks.filter(t => t.status === 'downloading').length}
+                  </span>
+                </span>
+              )}
+              {tasks.length > 0 && tasks.filter(t => t.status === 'downloading').length === 0 && (
+                <span className='ml-auto text-xs text-gray-400'>{tasks.length}</span>
+              )}
             </button>
           )}
 

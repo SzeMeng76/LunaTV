@@ -1119,6 +1119,146 @@ async function fetchDanmuFromAPI(videoUrl: string): Promise<DanmuItem[]> {
   }
 }
 
+// 通过 episodeId 直接获取弹幕（手动匹配模式）
+async function fetchDanmuByEpisodeId(
+  episodeId: number,
+): Promise<{ danmu: DanmuItem[]; source: string } | null> {
+  const config = await getDanmuApiConfig();
+
+  if (!config.enabled || !config.apiUrl) {
+    console.log('[手动匹配] 弹幕API未启用');
+    return null;
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), config.timeout * 1000);
+
+  try {
+    const commentUrl = `${config.apiUrl}/${config.token}/api/v2/comment/${episodeId}?format=json`;
+    console.log(`[手动匹配] 获取弹幕: ${commentUrl}`);
+
+    const response = await fetch(commentUrl, {
+      signal: controller.signal,
+      headers: { 'User-Agent': DEFAULT_USER_AGENT },
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      console.log(`[手动匹配] 请求失败: ${response.status}`);
+      return null;
+    }
+
+    const commentData = await response.json();
+
+    if (!commentData.comments || !Array.isArray(commentData.comments) || commentData.comments.length === 0) {
+      console.log(`[手动匹配] 无弹幕数据`);
+      return { danmu: [], source: '手动匹配' };
+    }
+
+    console.log(`[手动匹配] 获取到 ${commentData.comments.length} 条弹幕`);
+
+    // 复用同样的弹幕处理逻辑
+    const SEGMENT_DURATION = 300;
+    const MAX_DANMU_PER_SEGMENT = 500;
+    const BATCH_SIZE = 200;
+    const maxAllowedDanmu = 20000;
+
+    const timeSegments: { [key: number]: DanmuItem[] } = {};
+    let totalProcessed = 0;
+    let batchCount = 0;
+
+    for (const item of commentData.comments) {
+      try {
+        const pParts = (item.p || '').split(',');
+        const time = parseFloat(pParts[0]) || item.t || 0;
+        const mode = parseInt(pParts[1]) || 0;
+        const colorInt = parseInt(pParts[2]) || 16777215;
+        const text = (item.m || '').trim();
+
+        if (text.length === 0 ||
+            text.length > 50 ||
+            text.length < 2 ||
+            /^[^\u4e00-\u9fa5a-zA-Z0-9]+$/.test(text) ||
+            text.includes('弹幕正在赶来') ||
+            text.includes('观影愉快') ||
+            text.includes('视频不错') ||
+            text.includes('666') ||
+            /^\d+$/.test(text) ||
+            /^[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]+$/.test(text)) {
+          continue;
+        }
+
+        if (time < 0 || time > 86400 || !Number.isFinite(time)) continue;
+
+        const segmentIndex = Math.floor(time / SEGMENT_DURATION);
+        if (!timeSegments[segmentIndex]) {
+          timeSegments[segmentIndex] = [];
+        }
+
+        if (timeSegments[segmentIndex].length >= MAX_DANMU_PER_SEGMENT) {
+          if (Math.random() < 0.1) {
+            const randomIndex = Math.floor(Math.random() * timeSegments[segmentIndex].length);
+            timeSegments[segmentIndex][randomIndex] = {
+              text,
+              time,
+              color: '#' + colorInt.toString(16).padStart(6, '0').toUpperCase(),
+              mode: mode === 4 ? 1 : mode === 5 ? 2 : 0,
+            };
+          }
+          continue;
+        }
+
+        timeSegments[segmentIndex].push({
+          text,
+          time,
+          color: '#' + colorInt.toString(16).padStart(6, '0').toUpperCase(),
+          mode: mode === 4 ? 1 : mode === 5 ? 2 : 0,
+        });
+
+        totalProcessed++;
+        batchCount++;
+
+        if (batchCount >= BATCH_SIZE) {
+          await new Promise(resolve => setTimeout(resolve, 0));
+          batchCount = 0;
+        }
+      } catch {
+        // skip
+      }
+    }
+
+    const danmuList: DanmuItem[] = [];
+    for (const segmentIndex of Object.keys(timeSegments).sort((a, b) => parseInt(a) - parseInt(b))) {
+      const segment = timeSegments[parseInt(segmentIndex)];
+      segment.sort((a, b) => a.time - b.time);
+      danmuList.push(...segment);
+    }
+
+    let finalDanmu = danmuList;
+    if (danmuList.length > maxAllowedDanmu) {
+      const sampleRate = maxAllowedDanmu / danmuList.length;
+      finalDanmu = danmuList.filter((_, index) => {
+        return index === 0 ||
+               index === danmuList.length - 1 ||
+               Math.random() < sampleRate ||
+               index % Math.ceil(1 / sampleRate) === 0;
+      }).slice(0, maxAllowedDanmu);
+    }
+
+    console.log(`[手动匹配] 处理后 ${finalDanmu.length} 条弹幕`);
+
+    return {
+      danmu: finalDanmu,
+      source: `手动匹配 (episodeId:${episodeId})`,
+    };
+  } catch (error) {
+    clearTimeout(timeoutId);
+    console.error(`[手动匹配] 请求失败:`, error);
+    return null;
+  }
+}
+
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
   const startMemory = process.memoryUsage().heapUsed;
@@ -1129,12 +1269,59 @@ export async function GET(request: NextRequest) {
   const title = searchParams.get('title');
   const year = searchParams.get('year');
   const episode = searchParams.get('episode'); // 新增集数参数
+  const manualEpisodeId = searchParams.get('episode_id'); // 手动匹配 episodeId
 
   console.log('=== 弹幕API请求参数 ===');
   console.log('豆瓣ID:', doubanId);
   console.log('标题:', title);
   console.log('年份:', year);
   console.log('集数:', episode);
+  if (manualEpisodeId) console.log('手动匹配episodeId:', manualEpisodeId);
+
+  // 手动匹配模式：直接通过 episodeId 获取弹幕
+  if (manualEpisodeId) {
+    const episodeIdNum = parseInt(manualEpisodeId, 10);
+    if (!Number.isFinite(episodeIdNum) || episodeIdNum <= 0) {
+      return NextResponse.json(
+        { error: 'episode_id 无效', danmu: [], total: 0 },
+        { status: 400 },
+      );
+    }
+
+    try {
+      const result = await fetchDanmuByEpisodeId(episodeIdNum);
+      const danmu = result?.danmu || [];
+      const uniqueDanmu = deduplicateDanmu(danmu);
+
+      const successResponse = {
+        danmu: uniqueDanmu,
+        platforms: [{ platform: 'manual_match', source: result?.source || '手动匹配', count: uniqueDanmu.length }],
+        total: uniqueDanmu.length,
+      };
+      const responseSize = Buffer.byteLength(JSON.stringify(successResponse), 'utf8');
+
+      recordRequest({
+        timestamp: startTime,
+        method: 'GET',
+        path: '/api/danmu-external',
+        statusCode: 200,
+        duration: Date.now() - startTime,
+        memoryUsed: (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
+        dbQueries: getDbQueryCount(),
+        requestSize: 0,
+        responseSize,
+        filter: `episode_id:${episodeIdNum}|danmu:${uniqueDanmu.length}|source:manual_match`,
+      });
+
+      return NextResponse.json(successResponse);
+    } catch (error) {
+      console.error('[手动匹配] 获取弹幕失败:', error);
+      return NextResponse.json(
+        { error: '手动匹配弹幕获取失败', danmu: [], total: 0 },
+        { status: 500 },
+      );
+    }
+  }
 
   if (!doubanId && !title) {
     const errorResponse = {

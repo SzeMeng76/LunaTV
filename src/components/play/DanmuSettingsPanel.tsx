@@ -6,6 +6,7 @@ import {
   Layers,
   MessageSquare,
   RefreshCw,
+  Search,
   Shield,
   Type,
   X,
@@ -61,6 +62,12 @@ interface DanmuSettingsPanelProps {
   loadMeta?: DanmuLoadMeta;
   /** 错误信息 */
   error?: Error | null;
+  /** 是否处于手动匹配覆盖状态 */
+  isManualOverridden?: boolean;
+  /** 打开手动匹配弹窗 */
+  onManualMatch?: () => void;
+  /** 清除手动匹配，恢复自动 */
+  onClearManualMatch?: () => void;
 }
 
 // ============================================================================
@@ -117,6 +124,9 @@ export const DanmuSettingsPanel = memo(function DanmuSettingsPanel({
   matchInfo,
   loadMeta,
   error,
+  isManualOverridden = false,
+  onManualMatch,
+  onClearManualMatch,
 }: DanmuSettingsPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
@@ -355,6 +365,25 @@ export const DanmuSettingsPanel = memo(function DanmuSettingsPanel({
               />
             </button>
           )}
+          {/* 手动匹配按钮 */}
+          {onManualMatch && (
+            <button
+              onClick={onManualMatch}
+              className='p-2 hover:bg-white/10 rounded-xl transition-all duration-200 group active:scale-95'
+              style={{
+                transitionTimingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+              }}
+              title='手动匹配弹幕'
+            >
+              <Search
+                className={`w-4 h-4 transition-colors duration-300 ${
+                  isManualOverridden
+                    ? 'text-amber-400'
+                    : 'text-gray-400 group-hover:text-gray-200'
+                }`}
+              />
+            </button>
+          )}
           <button
             onClick={onClose}
             className='p-2 hover:bg-white/10 rounded-xl transition-all duration-200 group active:scale-95'
@@ -447,6 +476,34 @@ export const DanmuSettingsPanel = memo(function DanmuSettingsPanel({
             <p className='text-[11px] text-green-400/70 mt-0.5 truncate'>
               {matchInfo.episodeTitle}
             </p>
+          </div>
+        )}
+
+        {/* 手动匹配覆盖指示器 */}
+        {isManualOverridden && settings.enabled && (
+          <div
+            className='px-3 py-2 rounded-xl backdrop-blur-sm flex items-center justify-between gap-2'
+            style={{
+              background: 'linear-gradient(90deg, rgba(245, 158, 11, 0.15) 0%, rgba(217, 119, 6, 0.1) 100%)',
+              border: '1px solid rgba(245, 158, 11, 0.3)',
+            }}
+          >
+            <div className='min-w-0'>
+              <p className='text-xs text-amber-300 font-medium'>
+                手动覆盖模式
+              </p>
+              <p className='text-[11px] text-amber-400/70 mt-0.5'>
+                当前弹幕源为手动指定
+              </p>
+            </div>
+            {onClearManualMatch && (
+              <button
+                onClick={onClearManualMatch}
+                className='shrink-0 text-[11px] px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-200 hover:bg-amber-500/30 transition-colors'
+              >
+                恢复自动
+              </button>
+            )}
           </div>
         )}
 

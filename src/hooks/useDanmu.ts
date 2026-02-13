@@ -25,6 +25,15 @@ export interface UseDanmuOptions {
   currentEpisodeIndex: number;
   currentSource: string;
   artPlayerRef: React.MutableRefObject<any>;
+  manualOverride?: DanmuManualOverride | null;
+}
+
+/** 手动弹幕覆盖 */
+export interface DanmuManualOverride {
+  animeId: number;
+  episodeId: number;
+  animeTitle?: string;
+  episodeTitle?: string;
 }
 
 /** 弹幕加载元数据 */
@@ -47,7 +56,7 @@ export interface UseDanmuReturn {
   error: Error | null; // 错误状态
 
   // 方法
-  loadExternalDanmu: (options?: { force?: boolean }) => Promise<{ count: number; data: any[] }>;
+  loadExternalDanmu: (options?: { force?: boolean; manualOverride?: DanmuManualOverride | null }) => Promise<{ count: number; data: any[] }>;
   handleDanmuOperationOptimized: (nextState: boolean) => void;
 
   // Refs（供外部访问）
@@ -148,6 +157,7 @@ export function useDanmu(options: UseDanmuOptions): UseDanmuReturn {
     currentEpisodeIndex,
     currentSource,
     artPlayerRef,
+    manualOverride,
   } = options;
 
   // 弹幕开关状态（从 localStorage 继承，默认关闭）
@@ -197,8 +207,9 @@ export function useDanmu(options: UseDanmuOptions): UseDanmuReturn {
 
   // ==================== 加载外部弹幕 ====================
 
-  const loadExternalDanmu = useCallback(async (options?: { force?: boolean }): Promise<{ count: number; data: any[] }> => {
+  const loadExternalDanmu = useCallback(async (options?: { force?: boolean; manualOverride?: DanmuManualOverride | null }): Promise<{ count: number; data: any[] }> => {
     const force = options?.force === true;
+    const activeManualOverride = options?.manualOverride !== undefined ? options.manualOverride : manualOverride;
     const emptyResult = { count: 0, data: [] };
 
     if (!externalDanmuEnabledRef.current) {
@@ -259,6 +270,11 @@ export function useDanmu(options: UseDanmuOptions): UseDanmuReturn {
         params.append('episode', currentEpisodeNum.toString());
       }
 
+      // 手动匹配参数
+      if (activeManualOverride?.episodeId) {
+        params.append('episode_id', String(activeManualOverride.episodeId));
+      }
+
       if (!params.toString()) {
         console.log('没有可用的参数获取弹幕');
         danmuLoadingRef.current = false;
@@ -267,8 +283,11 @@ export function useDanmu(options: UseDanmuOptions): UseDanmuReturn {
         return emptyResult;
       }
 
-      // 生成缓存键
-      const cacheKey = `${videoTitle}_${videoYear}_${videoDoubanId}_${currentEpisodeNum}`;
+      // 生成缓存键（手动匹配使用独立缓存键）
+      const baseCacheKey = `${videoTitle}_${videoYear}_${videoDoubanId}_${currentEpisodeNum}`;
+      const cacheKey = activeManualOverride
+        ? `${baseCacheKey}__manual_${activeManualOverride.animeId}_${activeManualOverride.episodeId}`
+        : baseCacheKey;
 
       // 检查缓存（除非强制刷新）
       if (!force) {
@@ -333,7 +352,7 @@ export function useDanmu(options: UseDanmuOptions): UseDanmuReturn {
       danmuLoadingRef.current = false;
       setLoading(false);
     }
-  }, [videoTitle, videoYear, videoDoubanId, currentEpisodeIndex, currentSource, danmuList]);
+  }, [videoTitle, videoYear, videoDoubanId, currentEpisodeIndex, currentSource, manualOverride, danmuList]);
 
   // ==================== 智能自动重试 ====================
   // 首次加载弹幕为空时，自动延迟 900ms 后重试一次
@@ -354,8 +373,10 @@ export function useDanmu(options: UseDanmuOptions): UseDanmuReturn {
       console.log('🔄 弹幕首次为空，自动重试...');
       try {
         const result = await loadExternalDanmu({ force: true });
-        if (result.count > 0 && artPlayerRef.current) {
-          artPlayerRef.current.plugins?.artplayerPluginDanmuku?.load(result.data);
+        if (result.count > 0 && artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
+          const plugin = artPlayerRef.current.plugins.artplayerPluginDanmuku;
+          plugin.load(); // 清空已有弹幕
+          plugin.load(result.data); // 加载新弹幕
           artPlayerRef.current.notice.show = `已自动重试并加载 ${result.count} 条弹幕`;
         }
       } catch {
@@ -408,7 +429,8 @@ export function useDanmu(options: UseDanmuOptions): UseDanmuReturn {
 
             // 二次确认状态
             if (externalDanmuEnabledRef.current && artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
-              plugin.load(result.data);
+              plugin.load(); // 清空已有弹幕
+              plugin.load(result.data); // 加载新弹幕
               plugin.show();
               console.log('✅ 外部弹幕已优化加载:', result.count, '条');
 

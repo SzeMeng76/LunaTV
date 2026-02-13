@@ -20,10 +20,10 @@ import {
 } from '@/lib/db.client';
 // 🚀 TanStack Query Mutations
 import { useClearFavoritesMutation } from '@/hooks/useFavoritesMutations';
+import { useHomePageQueries } from '@/hooks/useHomePageQueries';
 import { getDoubanDetails } from '@/lib/douban.client';
 import { DoubanItem } from '@/lib/types';
 import { getAuthInfoFromBrowserCookie } from '@/lib/auth';
-import { useGlobalCache } from '@/contexts/GlobalCacheContext';
 
 import CapsuleSwitch from '@/components/CapsuleSwitch';
 import ContinueWatching from '@/components/ContinueWatching';
@@ -114,8 +114,14 @@ function HomeClient() {
   // 🚀 TanStack Query - 全局缓存管理
   const queryClient = useQueryClient();
 
-  // 🚀 GlobalCache - 首页数据全局缓存
-  const { homeData, homeLoading, fetchHomeData } = useGlobalCache();
+  // 🚀 TanStack Query - 首页数据查询（替代 GlobalCache）
+  const {
+    data: homeData,
+    isLoading: homeLoading,
+    isFetching: homeFetching,
+    errors: homeErrors,
+    refetch: refetchHomeData,
+  } = useHomePageQueries();
 
   // 🎯 优化：使用 useReducer 合并本地状态
   const [state, dispatch] = useReducer(homeReducer, {
@@ -142,7 +148,7 @@ function HomeClient() {
     showAnnouncement,
   } = state;
 
-  // 🚀 从 GlobalCache 获取首页数据，本地状态作为详情增强
+  // 🚀 从 TanStack Query 获取首页数据，本地状态作为详情增强
   const hotMovies = useMemo(() => {
     const cached = homeData?.hotMovies || [];
     // 合并本地详情数据
@@ -201,8 +207,8 @@ function HomeClient() {
 
   const bangumiCalendarData = homeData?.bangumiCalendar || [];
 
-  // 🚀 计算 loading 状态：无缓存数据时显示 loading
-  const loading = homeLoading && !homeData;
+  // 🚀 计算 loading 状态：首次加载时显示 loading
+  const loading = homeLoading;
 
   // 🚀 Web Worker引用
   const workerRef = useRef<Worker | null>(null);
@@ -373,8 +379,7 @@ function HomeClient() {
     // 清除可能缓存了空数据的短剧推荐缓存
     clearRecommendsCache().catch(console.error);
 
-    // 🚀 使用 GlobalCacheContext 加载首页数据
-    fetchHomeData();
+    // 🚀 TanStack Query 会自动加载数据，无需手动调用
 
     // 🚀 清理Web Worker
     return () => {
@@ -384,15 +389,15 @@ function HomeClient() {
         console.log('📅 [Main] Web Worker已清理');
       }
     };
-  }, [fetchHomeData]);
+  }, []);
 
   // 如果首页数据加载完成但热门短剧为空，强制刷新（可能之前缓存了空数据）
   useEffect(() => {
     if (homeData && homeData.hotShortDramas.length === 0 && !homeLoading) {
-      console.log('[GlobalCache] 热门短剧为空，强制刷新首页数据');
-      fetchHomeData(true);
+      console.log('[TanStack Query] 热门短剧为空，强制刷新首页数据');
+      refetchHomeData();
     }
-  }, [homeData, homeLoading, fetchHomeData]);
+  }, [homeData, homeLoading, refetchHomeData]);
 
   // 🚀 当 GlobalCache 数据加载完成后，延迟加载详情数据
   useEffect(() => {
