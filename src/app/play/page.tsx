@@ -5891,7 +5891,15 @@ function PlayPageClient() {
             return;
           }
           try {
-            await createTask(currentUrl, videoTitle || '视频', 'TS');
+            // 从 M3U8 URL 提取 origin 和 referer
+            const urlObj = new URL(currentUrl);
+            const origin = `${urlObj.protocol}//${urlObj.host}`;
+            const referer = currentUrl;
+
+            await createTask(currentUrl, videoTitle || '视频', 'TS', {
+              referer,
+              origin,
+            });
           } catch (error) {
             console.error('创建下载任务失败:', error);
             alert('创建下载任务失败: ' + (error as Error).message);
@@ -5913,7 +5921,16 @@ function PlayPageClient() {
 
             const episodeName = `第${episodeIndex + 1}集`;
             const downloadTitle = `${videoTitle || '视频'}_${episodeName}`;
-            await createTask(episodeUrl, downloadTitle, 'TS');
+
+            // 从 M3U8 URL 提取 origin 和 referer
+            const urlObj = new URL(episodeUrl);
+            const origin = `${urlObj.protocol}//${urlObj.host}`;
+            const referer = episodeUrl;
+
+            await createTask(episodeUrl, downloadTitle, 'TS', {
+              referer,
+              origin,
+            });
           } catch (error) {
             console.error(`创建第${episodeIndex + 1}集下载任务失败:`, error);
           }

@@ -2090,17 +2090,18 @@ function LivePageClient() {
                        videoUrl.includes('/yy/');         // YY源
 
       // 🚀 智能选择直连或代理模式
-      // FLV 流强制使用直连，不走代理
       let targetUrl: string;
-      if (isFlvUrl) {
-        targetUrl = videoUrl;  // FLV 直连
-        console.log(`🎬 播放模式: ⚡ FLV直连 | URL: ${targetUrl.substring(0, 100)}...`);
+      const useDirect = await shouldUseDirectPlayback(videoUrl);
+
+      if (useDirect) {
+        // 直连模式：直接使用原始 URL
+        targetUrl = videoUrl;
+        console.log(`🎬 播放模式: ⚡ 直连 (${isFlvUrl ? 'FLV' : 'M3U8'}) | URL: ${targetUrl.substring(0, 100)}...`);
       } else {
-        const useDirect = await shouldUseDirectPlayback(videoUrl);
-        targetUrl = useDirect
-          ? videoUrl  // 直连模式：直接使用原始 URL
-          : `/api/proxy/m3u8?url=${encodeURIComponent(videoUrl)}&moontv-source=${currentSourceRef.current?.key || ''}`;  // 代理模式
-        console.log(`🎬 播放模式: ${useDirect ? '⚡ 直连' : '🔄 代理'} | URL: ${targetUrl.substring(0, 100)}...`);
+        // 代理模式：FLV 和 M3U8 都通过代理
+        const proxyEndpoint = isFlvUrl ? '/api/proxy/stream' : '/api/proxy/m3u8';
+        targetUrl = `${proxyEndpoint}?url=${encodeURIComponent(videoUrl)}&moontv-source=${currentSourceRef.current?.key || ''}`;
+        console.log(`🎬 播放模式: 🔄 代理 (${isFlvUrl ? 'FLV' : 'M3U8'}) | URL: ${targetUrl.substring(0, 100)}...`);
       }
 
       // 根据 URL 类型选择播放器类型

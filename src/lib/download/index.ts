@@ -37,6 +37,13 @@ import type { M3U8Task as M3U8TaskBase } from './m3u8-downloader';
 export interface M3U8DownloadTask extends M3U8TaskBase {
   id: string;
   status: 'ready' | 'downloading' | 'pause' | 'done' | 'error';
+  progress?: {
+    current: number;
+    total: number;
+    percentage: number;
+    status: 'downloading' | 'processing' | 'done' | 'error';
+    message?: string;
+  };
 }
 
 /**

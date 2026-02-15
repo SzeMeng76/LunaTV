@@ -155,13 +155,13 @@ export default function DanmuManualMatchModal({
 
   return createPortal(
     <>
-      <div
-        className='fixed inset-0 z-[1008] bg-black/65 backdrop-blur-sm'
+      <div className='fixed inset-0 z-[1008] bg-black/65 backdrop-blur-sm'
         onClick={onClose}
       />
-      <div className='fixed left-1/2 top-1/2 z-[1009] w-[min(96vw,1080px)] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/20 bg-gray-950/95 dark:bg-slate-950/95 shadow-2xl'>
+      {/* Mobile: full-screen sheet / Desktop: centered dialog */}
+      <div className='fixed inset-0 z-[1009] flex flex-col bg-gray-950/95 dark:bg-slate-950/95 pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] md:inset-auto md:left-1/2 md:top-1/2 md:max-h-[90vh] md:w-[min(96vw,1080px)] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-2xl md:border md:border-white/20 md:pb-0 md:pt-0 md:shadow-2xl'>
         {/* Header */}
-        <div className='flex items-center justify-between border-b border-white/10 px-4 py-3 sm:px-5'>
+        <div className='flex shrink-0 items-center justify-between border-b border-white/10 px-[max(1rem,env(safe-area-inset-left))] py-3 sm:px-5'>
           <div>
             <h2 className='text-base font-semibold text-white sm:text-lg'>
               手动匹配弹幕
@@ -181,7 +181,7 @@ export default function DanmuManualMatchModal({
         </div>
 
         {/* Search Bar */}
-        <div className='border-b border-white/10 px-4 py-3 sm:px-5'>
+        <div className='shrink-0 border-b border-white/10 px-[max(1rem,env(safe-area-inset-left))] py-3 sm:px-5'>
           <div className='flex flex-col gap-2 sm:flex-row'>
             <input
               type='text'
@@ -213,14 +213,14 @@ export default function DanmuManualMatchModal({
           {error && <p className='mt-2 text-xs text-amber-300'>{error}</p>}
         </div>
 
-        {/* Two-panel layout */}
-        <div className='grid h-[min(78vh,620px)] grid-cols-1 gap-0 md:grid-cols-2'>
+        {/* Two-panel layout: Mobile stacked scroll / Desktop side-by-side */}
+        <div className='min-h-0 flex-1 overflow-y-auto md:grid md:grid-cols-2 md:overflow-hidden'>
           {/* Left: Anime list */}
-          <div className='border-r border-white/10'>
+          <div className='border-b border-white/10 md:border-b-0 md:border-r md:border-white/10 md:flex md:flex-col md:min-h-0'>
             <div className='border-b border-white/10 px-4 py-2 text-xs text-slate-400 sm:px-5'>
               搜索结果（选择正确番剧）
             </div>
-            <div className='max-h-[40vh] overflow-y-auto p-3 sm:max-h-[calc(min(78vh,620px)-44px)] sm:p-4'>
+            <div className='p-3 sm:p-4 md:flex-1 md:overflow-y-auto'>
               {searching && results.length === 0 ? (
                 <div className='rounded-lg border border-white/10 bg-white/5 p-4 text-center text-sm text-slate-300'>
                   正在搜索...
@@ -283,13 +283,13 @@ export default function DanmuManualMatchModal({
           </div>
 
           {/* Right: Episode list */}
-          <div className='flex min-h-0 flex-col'>
+          <div className='md:flex md:min-h-0 md:flex-col'>
             <div className='border-b border-white/10 px-4 py-2 text-xs text-slate-400 sm:px-5'>
               {selectedAnime
                 ? `集数列表：${selectedAnime.animeTitle}`
                 : '集数列表'}
             </div>
-            <div className='max-h-[38vh] overflow-y-auto p-3 sm:max-h-[calc(min(78vh,620px)-44px)] sm:p-4'>
+            <div className='p-3 sm:p-4 md:flex-1 md:overflow-y-auto'>
               {!selectedAnime ? (
                 <div className='rounded-lg border border-dashed border-white/15 bg-white/5 p-4 text-center text-sm text-slate-300'>
                   请先选择左侧番剧

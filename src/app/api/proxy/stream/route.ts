@@ -56,8 +56,15 @@ export async function GET(request: Request) {
   const decodedUrl = decodeURIComponent(url);
 
   try {
+    const targetUrl = new URL(decodedUrl);
     const requestHeaders = new Headers();
     requestHeaders.set('User-Agent', ua);
+    requestHeaders.set('Accept', '*/*');
+    requestHeaders.set(
+      'Referer',
+      `${targetUrl.protocol}//${targetUrl.host}${targetUrl.pathname}`,
+    );
+    requestHeaders.set('Origin', `${targetUrl.protocol}//${targetUrl.host}`);
 
     const range = request.headers.get('range');
     if (range) {

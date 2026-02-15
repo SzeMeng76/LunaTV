@@ -7,6 +7,8 @@
 import CryptoJS from 'crypto-js';
 
 import { StreamingTransmuxer, transmuxTSToMP4 } from './mp4-transmuxer';
+import { getRandomUserAgent, DEFAULT_USER_AGENT } from '../user-agent';
+import { saveSegment } from './download-idb';
 
 export type StreamSaverMode = 'disabled' | 'service-worker' | 'file-system';
 
@@ -81,6 +83,19 @@ export interface M3U8Task {
   };
   totalSize?: number;
   downloadedSegments?: Map<number, ArrayBuffer>;
+  // 请求头相关字段
+  requestHeaders?: {
+    referer?: string;
+    origin?: string;
+    userAgent?: string;
+  };
+  // BYTERANGE 支持
+  segmentByteRanges?: Array<{ offset: number; length: number } | null>;
+  // MAP 段支持（fMP4 初始化段）
+  mapSegment?: {
+    url: string;
+    byteRange?: { offset: number; length: number };
+  };
 }
 
 /**
@@ -153,16 +168,81 @@ function extractSubPlaylistUrl(m3u8Content: string, baseUrl: string): string | n
 }
 
 /**
+ * 构建请求头
+ */
+function buildRequestHeaders(requestHeaders?: M3U8Task['requestHeaders']): HeadersInit {
+  const headers: Record<string, string> = {
+    'User-Agent': requestHeaders?.userAgent || getRandomUserAgent(),
+  };
+
+  if (requestHeaders?.referer) {
+    headers['Referer'] = requestHeaders.referer;
+  }
+
+  if (requestHeaders?.origin) {
+    headers['Origin'] = requestHeaders.origin;
+  }
+
+  return headers;
+}
+
+/**
+ * 解析 BYTERANGE 标签
+ * 格式: #EXT-X-BYTERANGE:<length>[@<offset>]
+ */
+function parseByteRange(line: string, previousOffset?: number): { offset: number; length: number } | null {
+  const match = line.match(/#EXT-X-BYTERANGE:(\d+)(?:@(\d+))?/);
+  if (!match) return null;
+
+  const length = parseInt(match[1], 10);
+  const offset = match[2] ? parseInt(match[2], 10) : (previousOffset ?? 0);
+
+  return { offset, length };
+}
+
+/**
+ * 解析 MAP 标签
+ * 格式: #EXT-X-MAP:URI="<url>"[,BYTERANGE="<range>"]
+ */
+function parseMapSegment(line: string, baseUrl: string): { url: string; byteRange?: { offset: number; length: number } } | null {
+  const uriMatch = line.match(/URI="([^"]+)"/);
+  if (!uriMatch) return null;
+
+  const url = applyURL(uriMatch[1], baseUrl);
+  const byteRangeMatch = line.match(/BYTERANGE="(\d+)(?:@(\d+))?"/);
+
+  if (byteRangeMatch) {
+    const length = parseInt(byteRangeMatch[1], 10);
+    const offset = byteRangeMatch[2] ? parseInt(byteRangeMatch[2], 10) : 0;
+    return { url, byteRange: { offset, length } };
+  }
+
+  return { url };
+}
+
+/**
  * 解析M3U8文件（支持主播放列表自动解析）
  */
-export async function parseM3U8(url: string, depth = 0): Promise<M3U8Task> {
+export async function parseM3U8(
+  url: string,
+  requestHeaders?: M3U8Task['requestHeaders'],
+  depth = 0
+): Promise<M3U8Task> {
   // 防止无限递归
   if (depth > 5) {
     throw new Error('M3U8 解析层级过深，可能存在循环引用');
   }
 
-  const response = await fetch(url);
-  const m3u8Str = await response.text();
+  const headers = buildRequestHeaders(requestHeaders);
+
+  // 播放列表超时 20s
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 20000);
+
+  try {
+    const response = await fetch(url, { headers, signal: controller.signal });
+    clearTimeout(timeoutId);
+    const m3u8Str = await response.text();
 
   if (m3u8Str.substring(0, 7).toUpperCase() !== '#EXTM3U') {
     throw new Error('无效的 m3u8 链接');
@@ -171,13 +251,13 @@ export async function parseM3U8(url: string, depth = 0): Promise<M3U8Task> {
   // 检查是否为主播放列表
   if (isMasterPlaylist(m3u8Str)) {
     const subPlaylistUrl = extractSubPlaylistUrl(m3u8Str, url);
-    
+
     if (!subPlaylistUrl) {
       throw new Error('无法从主播放列表中提取子播放列表');
     }
-    
-    // 递归解析子播放列表
-    return parseM3U8(subPlaylistUrl, depth + 1);
+
+    // 递归解析子播放列表，传递请求头
+    return parseM3U8(subPlaylistUrl, requestHeaders, depth + 1);
   }
 
   const task: M3U8Task = {
@@ -203,25 +283,44 @@ export async function parseM3U8(url: string, depth = 0): Promise<M3U8Task> {
       targetSegment: 0,
     },
     totalSize: 0,
+    requestHeaders, // 保存请求头配置
+    segmentByteRanges: [], // BYTERANGE 支持
   };
 
   // 提取 ts 视频片段地址和时长
   const lines = m3u8Str.split('\n');
   let currentSegmentDuration = 0;
+  let currentByteRange: { offset: number; length: number } | null = null;
+  let previousByteRangeEnd = 0;
 
-  for (const line of lines) {
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+
     if (line.startsWith('#EXTINF:')) {
       // 提取片段时长（#EXTINF:duration,title）
       const durationStr = line.split('#EXTINF:')[1].split(',')[0];
       currentSegmentDuration = parseFloat(durationStr);
       task.durationSecond += currentSegmentDuration;
-    } else if (/^[^#]/.test(line) && line.trim()) {
-      const tsUrl = applyURL(line.trim(), url);
+    } else if (line.startsWith('#EXT-X-BYTERANGE:')) {
+      // 解析 BYTERANGE
+      currentByteRange = parseByteRange(line, previousByteRangeEnd);
+      if (currentByteRange) {
+        previousByteRangeEnd = currentByteRange.offset + currentByteRange.length;
+      }
+    } else if (line.startsWith('#EXT-X-MAP:')) {
+      // 解析 MAP 段（fMP4 初始化段）
+      task.mapSegment = parseMapSegment(line, url);
+    } else if (/^[^#]/.test(line) && line) {
+      const tsUrl = applyURL(line, url);
       task.tsUrlList.push(tsUrl);
-      task.finishList.push({ title: line.trim(), status: '' });
+      task.finishList.push({ title: line, status: '' });
       // 保存该片段的实际时长
       task.segmentDurations.push(currentSegmentDuration);
+      // 保存 BYTERANGE 信息
+      task.segmentByteRanges!.push(currentByteRange);
+
       currentSegmentDuration = 0; // 重置
+      currentByteRange = null; // 重置
     }
   }
 
@@ -243,15 +342,27 @@ export async function parseM3U8(url: string, depth = 0): Promise<M3U8Task> {
     task.aesConf.uri = uriMatch ? applyURL(uriMatch[1], url) : '';
     task.aesConf.iv = ivMatch ? ivMatch[1] : '';
 
-    // 获取 AES key
+    // 获取 AES key，使用请求头和超时控制（资源超时 90s）
     if (task.aesConf.uri) {
-      const keyResponse = await fetch(task.aesConf.uri);
-      const keyArrayBuffer = await keyResponse.arrayBuffer();
-      task.aesConf.key = arrayBufferToWordArray(keyArrayBuffer);
+      const keyController = new AbortController();
+      const keyTimeoutId = setTimeout(() => keyController.abort(), 90000);
+      try {
+        const keyResponse = await fetch(task.aesConf.uri, { headers, signal: keyController.signal });
+        clearTimeout(keyTimeoutId);
+        const keyArrayBuffer = await keyResponse.arrayBuffer();
+        task.aesConf.key = arrayBufferToWordArray(keyArrayBuffer);
+      } catch (error) {
+        clearTimeout(keyTimeoutId);
+        throw error;
+      }
     }
   }
 
   return task;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw error;
+  }
 }
 
 /**
@@ -313,13 +424,51 @@ export function aesDecrypt(data: ArrayBuffer, key: any, iv: string): ArrayBuffer
 
 /**
  * 下载单个 TS 片段
+ * @param url 片段 URL
+ * @param signal AbortSignal
+ * @param requestHeaders 请求头
+ * @param byteRange 字节范围（可选）
+ * @param timeout 超时时间（毫秒），默认 45000ms
  */
-export async function downloadTsSegment(url: string, signal?: AbortSignal): Promise<ArrayBuffer> {
-  const response = await fetch(url, { signal });
-  if (!response.ok) {
-    throw new Error(`下载失败: ${response.status}`);
+export async function downloadTsSegment(
+  url: string,
+  signal?: AbortSignal,
+  requestHeaders?: M3U8Task['requestHeaders'],
+  byteRange?: { offset: number; length: number } | null,
+  timeout = 45000
+): Promise<ArrayBuffer> {
+  const headers = buildRequestHeaders(requestHeaders);
+
+  // 添加 Range 头支持 BYTERANGE
+  if (byteRange) {
+    (headers as Record<string, string>)['Range'] = `bytes=${byteRange.offset}-${byteRange.offset + byteRange.length - 1}`;
   }
-  return response.arrayBuffer();
+
+  // 创建超时控制
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+  // 合并 signal
+  const combinedSignal = signal
+    ? (() => {
+        const combined = controller.signal;
+        signal.addEventListener('abort', () => controller.abort());
+        return combined;
+      })()
+    : controller.signal;
+
+  try {
+    const response = await fetch(url, { signal: combinedSignal, headers });
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      throw new Error(`下载失败: ${response.status}`);
+    }
+    return response.arrayBuffer();
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw error;
+  }
 }
 
 /**
@@ -373,15 +522,41 @@ export async function downloadM3U8Video(
   concurrency = 6, // 默认6个并发
   streamMode: StreamSaverMode = 'disabled', // 边下边存模式
   maxRetries = 3, // 最大重试次数
-  completeStreamRef?: { current: (() => Promise<void>) | null } // 完成流函数引用（用于边下边存模式立即保存）
+  completeStreamRef?: { current: (() => Promise<void>) | null }, // 完成流函数引用（用于边下边存模式立即保存）
+  taskId?: string // 任务 ID，用于保存片段到 IndexedDB
 ): Promise<void> {
   const { startSegment, endSegment } = task.rangeDownload;
   const totalSegments = endSegment - startSegment + 1;
-  
+
   // 计算范围下载的实际时长
   const segmentDuration = task.durationSecond / task.tsUrlList.length;
   const rangeDuration = totalSegments * segmentDuration;
-  
+
+  // 下载 MAP 段（fMP4 初始化段）
+  let mapSegmentData: ArrayBuffer | null = null;
+  if (task.mapSegment) {
+    try {
+      onProgress?.({
+        current: 0,
+        total: totalSegments,
+        percentage: 0,
+        status: 'downloading',
+        message: '正在下载初始化段...',
+      });
+
+      mapSegmentData = await downloadTsSegment(
+        task.mapSegment.url,
+        signal,
+        task.requestHeaders,
+        task.mapSegment.byteRange ?? null,
+        90000 // MAP 段使用资源超时 90s
+      );
+    } catch (error) {
+      console.error('MAP 段下载失败:', error);
+      throw new Error('初始化段下载失败，无法继续');
+    }
+  }
+
   // 流式写入器（边下边存模式）
   let writer: WritableStreamDefaultWriter<Uint8Array> | null = null;
   // MP4 流式转码器
@@ -391,6 +566,12 @@ export async function downloadM3U8Video(
   let nextWriteIndex = startSegment - 1; // 下一个要写入的片段索引
   // 写入锁：确保写入操作的串行化，避免多线程并发写入导致数据丢失
   let writeLock: Promise<void> = Promise.resolve();
+
+  // 进度优化：跟踪下载速度和活跃线程
+  let completedCount = 0;
+  let activeDownloads = 0;
+  let downloadedBytes = 0;
+  const startTime = Date.now();
   
   if (streamMode !== 'disabled') {
     try {
@@ -428,8 +609,26 @@ export async function downloadM3U8Video(
       if (stream) {
         writer = stream.getWriter();
 
-        // 如果是 MP4 格式，初始化流式转码器
-        if (task.type === 'MP4') {
+        // 如果有 MAP 段，先写入
+        if (mapSegmentData) {
+          try {
+            if (task.type === 'MP4') {
+              // MP4 模式下，MAP 段会在转码器初始化时处理
+              streamingTransmuxer = new StreamingTransmuxer(writer, rangeDuration);
+              // eslint-disable-next-line no-console
+              console.log('✅ 启用 MP4 流式转码（含 MAP 段）');
+            } else {
+              // TS 模式下，直接写入 MAP 段
+              await writer.write(new Uint8Array(mapSegmentData));
+              // eslint-disable-next-line no-console
+              console.log('✅ MAP 段已写入');
+            }
+          } catch (error) {
+            console.error('MAP 段写入失败:', error);
+            throw error;
+          }
+        } else if (task.type === 'MP4') {
+          // 没有 MAP 段但是 MP4 格式
           streamingTransmuxer = new StreamingTransmuxer(writer, rangeDuration);
           // eslint-disable-next-line no-console
           console.log('✅ 启用 MP4 流式转码');
@@ -441,8 +640,6 @@ export async function downloadM3U8Video(
       writer = null;
     }
   }
-  
-  let completedCount = 0;
 
   // 串行化写入函数：确保写入操作按顺序执行，避免多线程并发写入
   const flushPendingWrites = async (): Promise<void> => {
@@ -548,9 +745,27 @@ export async function downloadM3U8Video(
   // 并发下载函数（带重试机制）
   const downloadSegment = async (index: number, retryCount = 0): Promise<void> => {
     const retryDelay = 1000; // 重试延迟（毫秒）
-    
+
     if (signal?.aborted) {
       throw new Error('下载已取消');
+    }
+
+    // 检查是否已经下载过（从 IndexedDB 恢复的片段）
+    if (task.downloadedSegments?.has(index)) {
+      // 片段已存在，跳过下载
+      task.finishList[index].status = 'success';
+      completedCount++;
+      task.finishNum++;
+
+      onProgress?.({
+        current: completedCount,
+        total: totalSegments,
+        percentage: Math.floor((completedCount / totalSegments) * 100),
+        status: 'downloading',
+        message: `${completedCount}/${totalSegments} 片段 | 恢复中...`,
+      });
+
+      return;
     }
 
     // 检查是否暂停，如果暂停则等待恢复
@@ -571,7 +786,19 @@ export async function downloadM3U8Video(
         throw new Error('下载已取消');
       }
 
-      let segmentData = await downloadTsSegment(task.tsUrlList[index], signal);
+      // 增加活跃下载计数
+      activeDownloads++;
+
+      let segmentData = await downloadTsSegment(
+        task.tsUrlList[index],
+        signal,
+        task.requestHeaders,
+        task.segmentByteRanges?.[index] ?? null
+      );
+
+      // 减少活跃下载计数，累计下载字节数
+      activeDownloads--;
+      downloadedBytes += segmentData.byteLength;
 
       // 下载完成后检查暂停状态，如果暂停则等待恢复
       if (pauseResumeController) {
@@ -608,7 +835,17 @@ export async function downloadM3U8Video(
         }
         task.downloadedSegments.set(index, segmentData);
       }
-      
+
+      // 保存片段到 IndexedDB（支持断点续传）
+      if (taskId) {
+        try {
+          await saveSegment(taskId, index, segmentData);
+        } catch (error) {
+          // IndexedDB 保存失败不影响下载继续
+          console.warn('片段保存到 IndexedDB 失败:', index, error);
+        }
+      }
+
       // 在处理完数据后、更新状态前再次检查暂停状态
       if (pauseResumeController) {
         await pauseResumeController.waitIfPaused();
@@ -619,19 +856,28 @@ export async function downloadM3U8Video(
       
       // 更新片段状态为成功
       task.finishList[index].status = 'success';
-      
+
       completedCount++;
       task.finishNum++;
 
-      // 更新进度
+      // 计算下载速度
+      const elapsedSeconds = (Date.now() - startTime) / 1000;
+      const speedMBps = elapsedSeconds > 0 ? (downloadedBytes / 1024 / 1024 / elapsedSeconds).toFixed(2) : '0.00';
+
+      // 更新进度（优化版：显示速度和活跃线程）
       onProgress?.({
         current: completedCount,
         total: totalSegments,
         percentage: Math.floor((completedCount / totalSegments) * 100),
         status: 'downloading',
-        message: `正在下载 ${completedCount}/${totalSegments} 个片段 (${concurrency} 线程)${retryCount > 0 ? ` [重试成功]` : ''}`,
+        message: `${completedCount}/${totalSegments} 片段 | ${speedMBps}MB/s | ${activeDownloads}/${concurrency} 连接${retryCount > 0 ? ` [重试成功]` : ''}`,
       });
     } catch (error) {
+      // 减少活跃下载计数（如果还没减少）
+      if (activeDownloads > 0) {
+        activeDownloads--;
+      }
+
       // 检查是否是写入失败（用户取消下载）
       const isWriteError = error instanceof Error && error.message.includes('写入失败');
       if (isWriteError) {
@@ -639,6 +885,34 @@ export async function downloadM3U8Video(
         // eslint-disable-next-line no-console
         console.error('写入流失败，用户可能取消了下载，停止下载任务');
         throw error;
+      }
+
+      // 检查是否是 403 错误
+      const is403Error = error instanceof Error && error.message.includes('403');
+
+      // 如果是 403 错误且有 referer，尝试轮换 referer 重试
+      if (is403Error && task.requestHeaders?.referer && retryCount < maxRetries) {
+        // eslint-disable-next-line no-console
+        console.warn(`片段 ${index + 1} 遇到 403 错误，尝试轮换 referer 重试...`);
+
+        // 轮换 referer：使用播放列表 URL 或原始 URL
+        const alternativeReferer = retryCount % 2 === 0 ? task.url : task.requestHeaders.referer;
+        task.requestHeaders = {
+          ...task.requestHeaders,
+          referer: alternativeReferer,
+        };
+
+        onProgress?.({
+          current: completedCount,
+          total: totalSegments,
+          percentage: Math.floor((completedCount / totalSegments) * 100),
+          status: 'downloading',
+          message: `片段 ${index + 1} 403错误重试中 (${retryCount + 1}/${maxRetries})`,
+        });
+
+        // 等待后重试
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+        return downloadSegment(index, retryCount + 1);
       }
 
       // 如果还有重试机会，进行重试
@@ -798,6 +1072,12 @@ export async function downloadM3U8Video(
 
   // 按顺序合并片段
   const segments: ArrayBuffer[] = [];
+
+  // 如果有 MAP 段，先添加到开头
+  if (mapSegmentData) {
+    segments.push(mapSegmentData);
+  }
+
   for (let i = startSegment - 1; i < endSegment; i++) {
     const segment = task.downloadedSegments.get(i);
     if (segment) {
