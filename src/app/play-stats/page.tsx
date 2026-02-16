@@ -18,6 +18,13 @@ import {
 
 import PageLayout from '@/components/PageLayout';
 import VideoCard from '@/components/VideoCard';
+import {
+  useAdminStatsQuery,
+  useUserStatsQuery,
+  usePlayStatsWatchingUpdatesQuery,
+  useUpcomingReleasesQuery,
+  useInvalidatePlayStats,
+} from '@/hooks/usePlayStatsQueries';
 
 // 用户等级系统
 const USER_LEVELS = [
@@ -70,20 +77,45 @@ import { PlayStatsResult } from '@/app/api/admin/play-stats/route';
 
 const PlayStatsPage: React.FC = () => {
   const router = useRouter();
-  const [statsData, setStatsData] = useState<PlayStatsResult | null>(null);
-  const [userStats, setUserStats] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
   const [authInfo, setAuthInfo] = useState<{ username?: string; role?: string } | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showBackToTop, setShowBackToTop] = useState(false);
-  const [watchingUpdates, setWatchingUpdates] = useState<WatchingUpdate | null>(null);
   const [showWatchingUpdates, setShowWatchingUpdates] = useState(false);
   const [activeTab, setActiveTab] = useState<'admin' | 'personal'>('admin'); // 新增Tab状态
-  const [upcomingReleases, setUpcomingReleases] = useState<ReleaseCalendarItem[]>([]);
-  const [upcomingLoading, setUpcomingLoading] = useState(false);
-  const [upcomingInitialized, setUpcomingInitialized] = useState(false);
+
+  // 🚀 TanStack Query - 管理员统计数据
+  const {
+    data: statsData = null,
+    error: adminError,
+    isLoading: adminLoading,
+  } = useAdminStatsQuery(!!authInfo && isAdmin);
+
+  // 🚀 TanStack Query - 用户个人统计数据
+  const {
+    data: userStats = null,
+    error: userError,
+    isLoading: userLoading,
+  } = useUserStatsQuery(!!authInfo);
+
+  // 🚀 TanStack Query - 追番更新
+  const {
+    data: watchingUpdates = null,
+  } = usePlayStatsWatchingUpdatesQuery(!!authInfo);
+
+  // 🚀 TanStack Query - 即将上映
+  const {
+    data: upcomingReleases = [],
+    isLoading: upcomingLoading,
+  } = useUpcomingReleasesQuery(!!authInfo);
+
+  // 🚀 TanStack Query - 刷新所有数据
+  const invalidatePlayStats = useInvalidatePlayStats();
+
+  // 兼容旧代码的loading和error状态
+  const loading = isAdmin ? (adminLoading || userLoading) : userLoading;
+  const error = adminError?.message || userError?.message || null;
+  const upcomingInitialized = !upcomingLoading;
 
   // 检查用户权限
   useEffect(() => {
@@ -142,81 +174,7 @@ const PlayStatsPage: React.FC = () => {
     });
   };
 
-  // 获取管理员统计数据
-  const fetchAdminStats = useCallback(async () => {
-    try {
-      console.log('开始获取管理员统计数据...');
-      const response = await fetch('/api/admin/play-stats');
-
-      if (response.status === 401) {
-        router.push('/login');
-        return;
-      }
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `HTTP ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log('管理员统计数据获取成功:', data);
-      setStatsData(data);
-    } catch (err) {
-      console.error('获取管理员统计数据失败:', err);
-      const errorMessage =
-        err instanceof Error ? err.message : '获取播放统计失败';
-      setError(errorMessage);
-    }
-  }, [router]);
-
-  // 获取用户个人统计数据
-  const fetchUserStats = useCallback(async () => {
-    try {
-      console.log('开始获取用户个人统计数据...');
-      const response = await fetch('/api/user/my-stats');
-
-      if (response.status === 401) {
-        router.push('/login');
-        return;
-      }
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `HTTP ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log('用户个人统计数据获取成功:', data);
-      console.log('个人统计中的注册天数:', data.registrationDays);
-      console.log('个人统计中的登录天数:', data.loginDays);
-      setUserStats(data);
-    } catch (err) {
-      console.error('获取用户个人统计数据失败:', err);
-      const errorMessage =
-        err instanceof Error ? err.message : '获取个人统计失败';
-      setError(errorMessage);
-    }
-  }, [router]);
-
-  // 根据用户角色获取数据
-  const fetchStats = useCallback(async () => {
-    console.log('fetchStats 被调用, isAdmin:', isAdmin);
-    setLoading(true);
-    setError(null);
-
-    if (isAdmin) {
-      console.log('管理员模式，同时获取全站统计和个人统计');
-      // 管理员同时获取全站统计和个人统计
-      await Promise.all([fetchAdminStats(), fetchUserStats()]);
-    } else {
-      console.log('普通用户模式，只获取个人统计');
-      // 普通用户只获取个人统计
-      await fetchUserStats();
-    }
-
-    setLoading(false);
-    console.log('fetchStats 完成');
-  }, [isAdmin, fetchAdminStats, fetchUserStats]);
+  // 🚀 数据获取由 TanStack Query 自动管理
 
   // 清理过期缓存
   const cleanExpiredCache = useCallback(() => {
@@ -273,83 +231,16 @@ const PlayStatsPage: React.FC = () => {
     });
   }, []);
 
-  // 获取即将上映的内容（不再使用localStorage缓存，完全依赖API数据库缓存）
-  const fetchUpcomingReleases = useCallback(async () => {
-    try {
-      setUpcomingLoading(true);
-
-      // 清理过期的localStorage缓存（兼容性清理）
-      cleanExpiredCache();
-
-      // 🌐 直接从API获取数据（API有数据库缓存，24小时有效）
-      console.log('🌐 正在从API获取即将上映数据...');
-
-      // 获取未来2周的发布内容，包含更多电影
-      const today = new Date();
-      const twoWeeks = new Date(today);
-      twoWeeks.setDate(today.getDate() + 14);
-
-      const response = await fetch(
-        `/api/release-calendar?dateFrom=${today.toISOString().split('T')[0]}&dateTo=${twoWeeks.toISOString().split('T')[0]}`
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        const items = data.items || [];
-        setUpcomingReleases(items);
-
-        console.log(`📊 获取到 ${items.length} 条即将上映数据`);
-      } else {
-        console.error('获取即将上映内容失败:', response.status);
-        // API失败时设置空数组，确保UI仍然显示
-        setUpcomingReleases([]);
-      }
-    } catch (error) {
-      console.error('获取即将上映内容失败:', error);
-      // 网络错误时设置空数组，确保UI仍然显示
-      setUpcomingReleases([]);
-    } finally {
-      setUpcomingLoading(false);
-      setUpcomingInitialized(true); // 标记已经初始化完成
-    }
-  }, [cleanExpiredCache]);
+  // 🚀 即将上映由 TanStack Query 自动管理
 
   // 处理刷新按钮点击
   const handleRefreshClick = async () => {
     console.log('刷新按钮被点击');
-    setLoading(true);
-
     try {
-      // 清除追番更新缓存
-      localStorage.removeItem('moontv_watching_updates');
-      localStorage.removeItem('moontv_last_update_check');
-
-      // 清除遗留的即将上映缓存（兼容性清理）
-      localStorage.removeItem('upcoming_releases_cache');
-      localStorage.removeItem('upcoming_releases_cache_time');
-
-      console.log('已清除所有localStorage缓存');
-
-      // 🔧 优化：强制刷新追番更新，跳过缓存时间检查
-      await checkWatchingUpdates(true);
-      console.log('已重新检查追番更新');
-
-      // 重新获取统计数据
-      await fetchStats();
-      console.log('已重新获取统计数据');
-
-      // 重新获取 watchingUpdates
-      const details = getDetailedWatchingUpdates();
-      setWatchingUpdates(details);
-
-      // 重新获取即将上映内容（API会使用数据库缓存，速度很快）
-      await fetchUpcomingReleases();
-      console.log('已重新获取即将上映内容');
-
+      await invalidatePlayStats();
+      console.log('所有数据已刷新');
     } catch (error) {
       console.error('刷新数据失败:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -394,74 +285,47 @@ const PlayStatsPage: React.FC = () => {
       ? (window as any).RUNTIME_CONFIG.STORAGE_TYPE
       : 'localstorage';
 
+  // 🚀 数据获取由 TanStack Query 的 enabled 选项自动控制
+  // 当 authInfo 和 isAdmin 变化时，queries 自动重新执行
+
+  // 处理401重定向
   useEffect(() => {
-    if (authInfo) {
-      fetchStats();
+    if (adminError?.message === 'UNAUTHORIZED' || userError?.message === 'UNAUTHORIZED') {
+      router.push('/login');
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authInfo]); // ✅ 只在 authInfo 变化时调用
+  }, [adminError, userError, router]);
 
-  // 获取即将上映内容
+  // 监听播放记录更新事件，刷新追番数据
   useEffect(() => {
-    if (authInfo) {
-      fetchUpcomingReleases();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authInfo]); // ✅ 只在 authInfo 变化时调用
+    if (!authInfo) return;
 
-  // 追番更新检查
-  useEffect(() => {
-    if (authInfo) {
-      const checkUpdates = async () => {
-        const cached = getCachedWatchingUpdates();
-        if (cached) {
-          const details = getDetailedWatchingUpdates();
-          setWatchingUpdates(details);
-        } else {
-          await checkWatchingUpdates();
-          const details = getDetailedWatchingUpdates();
-          setWatchingUpdates(details);
-        }
-      };
+    let updateTimeout: ReturnType<typeof setTimeout> | null = null;
+    const handlePlayRecordsUpdate = () => {
+      console.log('播放记录更新，重新检查 watchingUpdates');
 
-      checkUpdates();
+      // 🔧 防抖：避免无限循环，1秒内只执行一次
+      if (updateTimeout) {
+        console.log('⏸️ 防抖：跳过本次更新请求');
+        return;
+      }
 
-      // 监听播放记录更新事件（修复删除记录后页面不立即更新的问题）
-      let updateTimeout: NodeJS.Timeout | null = null;
-      const handlePlayRecordsUpdate = () => {
-        console.log('播放记录更新，重新检查 watchingUpdates');
+      updateTimeout = setTimeout(() => {
+        updateTimeout = null;
+      }, 1000);
 
-        // 🔧 防抖：避免无限循环，1秒内只执行一次
-        if (updateTimeout) {
-          console.log('⏸️ 防抖：跳过本次更新请求');
-          return;
-        }
+      forceClearWatchingUpdatesCache();
+      invalidatePlayStats();
+    };
 
-        updateTimeout = setTimeout(() => {
-          updateTimeout = null;
-        }, 1000);
+    window.addEventListener('playRecordsUpdated', handlePlayRecordsUpdate);
 
-        // 🔧 优化：使用新的强制清除缓存函数
-        forceClearWatchingUpdatesCache();
-        // 🔧 不使用强制刷新，让缓存机制生效，避免无限循环
-        checkWatchingUpdates().then(() => {
-          const details = getDetailedWatchingUpdates();
-          setWatchingUpdates(details);
-          console.log('watchingUpdates 已更新:', details);
-        });
-      };
-
-      // 监听播放记录更新事件
-      window.addEventListener('playRecordsUpdated', handlePlayRecordsUpdate);
-
-      return () => {
-        window.removeEventListener('playRecordsUpdated', handlePlayRecordsUpdate);
-        if (updateTimeout) {
-          clearTimeout(updateTimeout);
-        }
-      };
-    }
-  }, [authInfo]);
+    return () => {
+      window.removeEventListener('playRecordsUpdated', handlePlayRecordsUpdate);
+      if (updateTimeout) {
+        clearTimeout(updateTimeout);
+      }
+    };
+  }, [authInfo, invalidatePlayStats]);
 
   // 处理追番更新卡片点击
   const handleWatchingUpdatesClick = () => {
@@ -496,7 +360,6 @@ const PlayStatsPage: React.FC = () => {
   const handleCloseWatchingUpdates = () => {
     setShowWatchingUpdates(false);
     markUpdatesAsViewed();
-    setWatchingUpdates(prev => prev ? { ...prev, hasUpdates: false, updatedCount: 0, continueWatchingCount: 0 } : null);
   };
 
   // 格式化更新时间

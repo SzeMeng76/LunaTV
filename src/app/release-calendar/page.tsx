@@ -1,15 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Calendar, Filter, Search, Clock, Film, Tv, MapPin, Tag, ChevronUp } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { ReleaseCalendarItem, ReleaseCalendarResult } from '@/lib/types';
 import PageLayout from '@/components/PageLayout';
 
 export default function ReleaseCalendarPage() {
-  const [data, setData] = useState<ReleaseCalendarResult | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   // 过滤状态
   const [filters, setFilters] = useState({
@@ -50,59 +49,17 @@ export default function ReleaseCalendarPage() {
     });
   };
 
-  // 清理过期缓存
-  const cleanExpiredCache = () => {
-    const CACHE_DURATION = 2 * 60 * 60 * 1000; // 2小时
-    const now = Date.now();
-
-    // 检查release calendar缓存
-    const cacheTimeKey = 'release_calendar_all_data_time';
-    const cachedTime = localStorage.getItem(cacheTimeKey);
-
-    if (cachedTime) {
-      const age = now - parseInt(cachedTime);
-      if (age >= CACHE_DURATION) {
-        localStorage.removeItem('release_calendar_all_data');
-        localStorage.removeItem(cacheTimeKey);
-        console.log('已清理过期的发布日历缓存');
-      }
-    }
-
-    // 清理其他可能过期的缓存项
-    const keysToCheck = [
-      'upcoming_releases_cache',
-      'upcoming_releases_cache_time'
-    ];
-
-    keysToCheck.forEach(key => {
-      if (key.endsWith('_time')) {
-        const timeStr = localStorage.getItem(key);
-        if (timeStr) {
-          const age = now - parseInt(timeStr);
-          if (age >= CACHE_DURATION) {
-            const dataKey = key.replace('_time', '');
-            localStorage.removeItem(dataKey);
-            localStorage.removeItem(key);
-            console.log(`已清理过期缓存: ${dataKey}`);
-          }
-        }
-      }
-    });
-  };
-
-  // 获取数据（简化版，移除localStorage缓存，依赖API数据库缓存）
-  const fetchData = async (reset = false) => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      // 清理过期的localStorage缓存（兼容性清理）
-      cleanExpiredCache();
-
-      // 🌐 直接从API获取数据（API有数据库缓存，全局共享，24小时有效）
+  // 🚀 TanStack Query - 获取发布日历数据
+  // 替换手动 fetch + localStorage缓存，TanStack Query 自动管理缓存
+  const {
+    data: rawData,
+    isLoading: loading,
+    error: queryError,
+  } = useQuery<ReleaseCalendarResult>({
+    queryKey: ['releaseCalendar'],
+    queryFn: async () => {
       console.log('🌐 正在从API获取发布日历数据...');
-      const apiUrl = reset ? '/api/release-calendar?refresh=true' : '/api/release-calendar';
-      const response = await fetch(apiUrl);
+      const response = await fetch('/api/release-calendar');
 
       if (!response.ok) {
         throw new Error('获取数据失败');
@@ -111,78 +68,75 @@ export default function ReleaseCalendarPage() {
       const result: ReleaseCalendarResult = await response.json();
       console.log(`📊 获取到 ${result.items.length} 条上映数据`);
 
-      // 前端过滤（无需缓存，API数据库缓存已处理）
-      const filteredData = applyClientSideFilters(result);
-      setData(filteredData);
-      setCurrentPage(1);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '未知错误');
-    } finally {
-      setLoading(false);
+      // 清理遗留的localStorage缓存（兼容性清理）
+      localStorage.removeItem('release_calendar_all_data');
+      localStorage.removeItem('release_calendar_all_data_time');
+
+      return result;
+    },
+    staleTime: 30 * 60 * 1000, // 30 minutes - API has its own DB cache
+    gcTime: 60 * 60 * 1000,
+  });
+
+  // 兼容旧代码的error
+  const error = queryError?.message || null;
+
+  // 前端过滤逻辑（使用 useMemo 自动响应 filters 变化）
+  const data = useMemo(() => {
+    if (!rawData) return null;
+
+    let filteredItems = [...rawData.items];
+
+    if (filters.type) {
+      filteredItems = filteredItems.filter(item => item.type === filters.type);
     }
-  };
 
-  // 前端过滤逻辑
-  const applyClientSideFilters = (data: ReleaseCalendarResult): ReleaseCalendarResult => {
-    return applyClientSideFiltersWithParams(data, filters);
-  };
-
-  // 前端过滤逻辑（可以指定过滤参数）
-  const applyClientSideFiltersWithParams = (data: ReleaseCalendarResult, filterParams: typeof filters): ReleaseCalendarResult => {
-    let filteredItems = [...data.items];
-
-    if (filterParams.type) {
-      filteredItems = filteredItems.filter(item => item.type === filterParams.type);
-    }
-
-    if (filterParams.region && filterParams.region !== '全部') {
+    if (filters.region && filters.region !== '全部') {
       filteredItems = filteredItems.filter(item =>
-        item.region.includes(filterParams.region!)
+        item.region.includes(filters.region!)
       );
     }
 
-    if (filterParams.genre && filterParams.genre !== '全部') {
+    if (filters.genre && filters.genre !== '全部') {
       filteredItems = filteredItems.filter(item =>
-        item.genre.includes(filterParams.genre!)
+        item.genre.includes(filters.genre!)
       );
     }
 
-    if (filterParams.dateFrom) {
+    if (filters.dateFrom) {
       filteredItems = filteredItems.filter(item =>
-        item.releaseDate >= filterParams.dateFrom!
+        item.releaseDate >= filters.dateFrom!
       );
     }
 
-    if (filterParams.dateTo) {
+    if (filters.dateTo) {
       filteredItems = filteredItems.filter(item =>
-        item.releaseDate <= filterParams.dateTo!
+        item.releaseDate <= filters.dateTo!
       );
     }
 
-    if (filterParams.search) {
+    if (filters.search) {
       filteredItems = filteredItems.filter(item =>
-        item.title.toLowerCase().includes(filterParams.search.toLowerCase()) ||
-        item.director.toLowerCase().includes(filterParams.search.toLowerCase()) ||
-        item.actors.toLowerCase().includes(filterParams.search.toLowerCase())
+        item.title.toLowerCase().includes(filters.search.toLowerCase()) ||
+        item.director.toLowerCase().includes(filters.search.toLowerCase()) ||
+        item.actors.toLowerCase().includes(filters.search.toLowerCase())
       );
     }
 
     return {
-      ...data,
+      ...rawData,
       items: filteredItems,
       total: filteredItems.length,
-      hasMore: false // 前端分页，所以没有更多数据
+      hasMore: false,
     };
-  };
+  }, [rawData, filters]);
 
-  // 应用过滤器（简化版，直接重新获取数据）
+  // 应用过滤器（filters变化时useMemo自动重新计算，只需重置页码）
   const applyFilters = () => {
     setCurrentPage(1);
-    // 🔄 直接重新获取数据（API有数据库缓存，速度很快）
-    fetchData(false);
   };
 
-  // 处理刷新按钮点击（简化版，清除数据库缓存并刷新）
+  // 处理刷新按钮点击
   const handleRefreshClick = async () => {
     console.log('📅 刷新上映日程数据...');
 
@@ -190,10 +144,10 @@ export default function ReleaseCalendarPage() {
       // 清除遗留的localStorage缓存（兼容性清理）
       localStorage.removeItem('release_calendar_all_data');
       localStorage.removeItem('release_calendar_all_data_time');
-      console.log('✅ 已清除遗留的localStorage缓存');
 
-      // 🔄 强制刷新（API会清除数据库缓存并重新获取）
-      await fetchData(true);
+      // 🔄 强制刷新（先fetch带refresh=true的API清除数据库缓存，再invalidate query）
+      await fetch('/api/release-calendar?refresh=true');
+      await queryClient.invalidateQueries({ queryKey: ['releaseCalendar'] });
       console.log('🎉 上映日程数据刷新成功！');
     } catch (error) {
       console.error('❌ 刷新上映日程数据失败:', error);
@@ -202,28 +156,15 @@ export default function ReleaseCalendarPage() {
 
   // 重置过滤器
   const resetFilters = () => {
-    const resetFiltersState = {
+    setFilters({
       type: '' as 'movie' | 'tv' | '',
       region: '',
       genre: '',
       dateFrom: '',
       dateTo: '',
       search: '',
-    };
-
-    setFilters(resetFiltersState);
+    });
     setCurrentPage(1);
-
-    // 如果有缓存数据，使用重置后的过滤条件重新应用过滤
-    const cachedData = localStorage.getItem('release_calendar_all_data');
-    if (cachedData) {
-      const allData = JSON.parse(cachedData);
-      // 直接使用重置后的过滤条件，而不是依赖state（state更新是异步的）
-      const filteredData = applyClientSideFiltersWithParams(allData, resetFiltersState);
-      setData(filteredData);
-    } else {
-      fetchData(false);
-    }
   };
 
   // 前端分页逻辑
@@ -233,20 +174,7 @@ export default function ReleaseCalendarPage() {
   const endIndex = startIndex + itemsPerPage;
   const currentItems = data?.items.slice(startIndex, endIndex) || [];
 
-  // 客户端搜索过滤
-  const filteredItems = data?.items.filter(item => {
-    if (!filters.search) return true;
-    const searchLower = filters.search.toLowerCase();
-    return (
-      item.title.toLowerCase().includes(searchLower) ||
-      item.director.toLowerCase().includes(searchLower) ||
-      item.actors.toLowerCase().includes(searchLower)
-    );
-  }) || [];
-
-  useEffect(() => {
-    fetchData();
-  }, []);
+  // 🚀 数据获取由 TanStack Query 自动管理，过滤由 useMemo 自动响应
 
   // 监听滚动事件以显示/隐藏返回顶部按钮
   useEffect(() => {
@@ -509,8 +437,8 @@ export default function ReleaseCalendarPage() {
               <div className="flex items-center justify-between">
                 <div className="text-sm text-gray-600 dark:text-gray-400">
                   共找到 <span className="font-semibold text-gray-900 dark:text-white">{data.total}</span> 条记录
-                  {filteredItems.length !== data.items.length && (
-                    <span>，当前显示 <span className="font-semibold text-gray-900 dark:text-white">{filteredItems.length}</span> 条</span>
+                  {rawData && data.items.length !== rawData.items.length && (
+                    <span>，当前显示 <span className="font-semibold text-gray-900 dark:text-white">{data.items.length}</span> 条</span>
                   )}
                 </div>
               </div>
