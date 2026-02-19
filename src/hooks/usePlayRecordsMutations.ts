@@ -182,12 +182,18 @@ export function useDeletePlayRecordMutation(): UseMutationResult<
       const previousPlayRecords = queryClient.getQueryData<Record<string, PlayRecord>>(['playRecords']);
 
       // 3. 立即从缓存中删除
+      const key = `${source}+${id}`;
       queryClient.setQueryData<Record<string, PlayRecord>>(['playRecords'], (old = {}) => {
-        const key = `${source}+${id}`;
         const newRecords = { ...old };
         delete newRecords[key];
         return newRecords;
       });
+
+      // 同时更新 continueWatching 缓存，避免事件驱动的 invalidate 覆盖乐观更新
+      queryClient.setQueryData<(PlayRecord & { key: string })[]>(
+        ['playRecords', 'continueWatching'],
+        (old = []) => old.filter(record => record.key !== key)
+      );
 
       return { previousPlayRecords };
     },
@@ -243,14 +249,18 @@ export function useClearPlayRecordsMutation(): UseMutationResult<
 
     // ========== onMutate: 乐观更新 ==========
     onMutate: async () => {
-      // 1. 取消进行中的查询
+      // 1. 取消所有 playRecords 相关的进行中查询（前缀匹配）
+      //    包括 ['playRecords'] 和 ['playRecords', 'continueWatching'] 等
       await queryClient.cancelQueries({ queryKey: ['playRecords'] });
 
       // 2. 保存旧数据
       const previousPlayRecords = queryClient.getQueryData<Record<string, PlayRecord>>(['playRecords']);
 
-      // 3. 立即清空缓存
+      // 3. 立即清空所有 playRecords 相关缓存（乐观更新）
+      //    必须同时更新 ['playRecords'] 和 ['playRecords', 'continueWatching']
+      //    否则 ContinueWatching 组件不会立即响应清空
       queryClient.setQueryData(['playRecords'], {});
+      queryClient.setQueryData(['playRecords', 'continueWatching'], []);
 
       return { previousPlayRecords };
     },
@@ -261,6 +271,15 @@ export function useClearPlayRecordsMutation(): UseMutationResult<
 
       if (context?.previousPlayRecords) {
         queryClient.setQueryData(['playRecords'], context.previousPlayRecords);
+        // 回滚 continueWatching 缓存
+        const recordsArray = Object.entries(context.previousPlayRecords).map(([key, record]) => ({
+          ...record,
+          key,
+        }));
+        queryClient.setQueryData(
+          ['playRecords', 'continueWatching'],
+          recordsArray.sort((a, b) => b.save_time - a.save_time)
+        );
       }
     },
 

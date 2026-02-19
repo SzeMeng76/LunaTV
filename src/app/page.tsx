@@ -4,7 +4,7 @@
 
 import { ChevronRight, Film, Tv, Calendar, Sparkles, Play, Trash2 } from 'lucide-react';
 import Link from 'next/link';
-import { Suspense, useEffect, useState, useRef, useMemo, useReducer } from 'react';
+import { Suspense, useEffect, useState, useRef, useMemo, useReducer, useTransition } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
@@ -122,6 +122,9 @@ function HomeClient() {
     errors: homeErrors,
     refetch: refetchHomeData,
   } = useHomePageQueries();
+
+  // 🎯 优化：使用 useTransition 让 tab 切换不阻塞 UI
+  const [isPending, startTransition] = useTransition();
 
   // 🎯 优化：使用 useReducer 合并本地状态
   const [state, dispatch] = useReducer(homeReducer, {
@@ -694,11 +697,11 @@ function HomeClient() {
               { label: '收藏夹', value: 'favorites' },
             ]}
             active={activeTab}
-            onChange={(value) => dispatch({ type: 'SET_ACTIVE_TAB', payload: value as 'home' | 'favorites' })}
+            onChange={(value) => startTransition(() => dispatch({ type: 'SET_ACTIVE_TAB', payload: value as 'home' | 'favorites' }))}
           />
         </div>
 
-        <div className='w-full mx-auto'>
+        <div className={`w-full mx-auto ${isPending ? 'opacity-70 transition-opacity duration-150' : ''}`}>
           {activeTab === 'favorites' ? (
             // 收藏夹视图
             <section className='mb-8'>
