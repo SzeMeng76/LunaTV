@@ -549,7 +549,31 @@ export class DbManager {
     const storageType = process.env.NEXT_PUBLIC_STORAGE_TYPE || 'localstorage';
     return storageType !== 'localstorage';
   }
+
+  // 用户 Emby 配置相关方法
+  async getUserEmbyConfig(userName: string): Promise<any | null> {
+    incrementDbQuery();
+    if (typeof (this.storage as any).getUserEmbyConfig === 'function') {
+      return (this.storage as any).getUserEmbyConfig(userName);
+    }
+    return null;
+  }
+
+  async saveUserEmbyConfig(userName: string, config: any): Promise<void> {
+    incrementDbQuery();
+    if (typeof (this.storage as any).saveUserEmbyConfig === 'function') {
+      await (this.storage as any).saveUserEmbyConfig(userName, config);
+    }
+  }
+
+  async deleteUserEmbyConfig(userName: string): Promise<void> {
+    incrementDbQuery();
+    if (typeof (this.storage as any).deleteUserEmbyConfig === 'function') {
+      await (this.storage as any).deleteUserEmbyConfig(userName);
+    }
+  }
 }
 
 // 导出默认实例
 export const db = new DbManager();
+export const dbManager = db; // 别名，方便使用

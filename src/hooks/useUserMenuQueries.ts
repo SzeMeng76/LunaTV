@@ -1,9 +1,81 @@
 /* eslint-disable no-console */
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, queryOptions } from '@tanstack/react-query';
 import { getAllPlayRecords, forceRefreshPlayRecordsCache } from '@/lib/db.client';
 import { checkForUpdates, type UpdateStatus } from '@/lib/version_check';
 import type { Favorite, PlayRecord } from '@/lib/types';
+
+// ─── Emby Config Types ──────────────────────────────────────────────────────
+
+export interface EmbySource {
+  key: string;
+  name: string;
+  enabled: boolean;
+  ServerURL: string;
+  ApiKey?: string;
+  Username?: string;
+  Password?: string;
+  removeEmbyPrefix?: boolean;
+  appendMediaSourceId?: boolean;
+  transcodeMp4?: boolean;
+  proxyPlay?: boolean;
+}
+
+export interface EmbyConfig {
+  sources: EmbySource[];
+}
+
+// ─── Emby Config Query Options (reusable key, type-safe) ─────────────────────
+
+export const embyConfigQueryOptions = queryOptions({
+  queryKey: ['user', 'emby-config'] as const,
+  queryFn: async (): Promise<EmbyConfig> => {
+    const res = await fetch('/api/user/emby-config');
+    const data = await res.json();
+    if (data.success && data.config) {
+      return data.config as EmbyConfig;
+    }
+    return { sources: [] };
+  },
+  staleTime: 5 * 60 * 1000,  // 5 minutes - config rarely changes
+  gcTime: 30 * 60 * 1000,
+});
+
+/**
+ * Fetch user Emby config
+ * Only fetches when isSettingsOpen - use enabled option at call site
+ */
+export function useEmbyConfigQuery(enabled: boolean) {
+  return useQuery({
+    ...embyConfigQueryOptions,
+    enabled,
+  });
+}
+
+/**
+ * Save Emby config mutation
+ * Invalidates emby-config query on success so ModernNav etc. refresh
+ */
+export function useSaveEmbyConfigMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (config: EmbyConfig) => {
+      const res = await fetch('/api/user/emby-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ config }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        throw new Error(data.error || '保存失败');
+      }
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: embyConfigQueryOptions.queryKey });
+    },
+  });
+}
 
 /**
  * Fetch watch room config

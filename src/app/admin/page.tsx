@@ -64,6 +64,7 @@ import { TVBoxTokenCell, TVBoxTokenModal } from '@/components/TVBoxTokenManager'
 import YouTubeConfig from '@/components/YouTubeConfig';
 import ShortDramaConfig from '@/components/ShortDramaConfig';
 import DownloadConfig from '@/components/OfflineDownloadConfig';
+import EmbyConfig from '@/components/EmbyConfig';
 import CustomAdFilterConfig from '@/components/CustomAdFilterConfig';
 import WatchRoomConfig from '@/components/WatchRoomConfig';
 import PerformanceMonitor from '@/components/admin/PerformanceMonitor';
@@ -6959,6 +6960,7 @@ function AdminPageClient() {
     aiRecommendConfig: false,
     youtubeConfig: false,
     shortDramaConfig: false,
+    embyConfig: false,
     downloadConfig: false,
     customAdFilter: false,
     watchRoomConfig: false,
@@ -7244,6 +7246,21 @@ function AdminPageClient() {
               onToggle={() => toggleTab('shortDramaConfig')}
             >
               <ShortDramaConfig config={config} refreshConfig={fetchConfig} />
+            </CollapsibleTab>
+
+            {/* Emby配置标签 */}
+            <CollapsibleTab
+              title='Emby私人影库'
+              icon={
+                <FolderOpen
+                  size={20}
+                  className='text-indigo-600 dark:text-indigo-400'
+                />
+              }
+              isExpanded={expandedTabs.embyConfig}
+              onToggle={() => toggleTab('embyConfig')}
+            >
+              <EmbyConfig config={config} refreshConfig={fetchConfig} />
             </CollapsibleTab>
 
             {/* 下载配置标签 */}

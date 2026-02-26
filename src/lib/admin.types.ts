@@ -42,6 +42,24 @@ export interface AdminConfig {
       tvboxEnabledSources?: string[]; // TVBox 可访问的源（为空则返回所有源）
       showAdultContent?: boolean; // 用户级别的成人内容显示控制
       oidcSub?: string; // OIDC的唯一标识符(sub字段)
+      embyConfig?: {
+        sources: Array<{
+          key: string;                       // 唯一标识
+          name: string;                      // 显示名称
+          enabled: boolean;                  // 是否启用
+          ServerURL: string;                 // Emby服务器地址
+          ApiKey?: string;                   // API Key（推荐方式）
+          Username?: string;                 // 用户名
+          Password?: string;                 // 密码
+          UserId?: string;                   // 用户ID
+          AuthToken?: string;                // 认证令牌
+          Libraries?: string[];              // 媒体库ID
+          removeEmbyPrefix?: boolean;        // 移除/emby前缀
+          appendMediaSourceId?: boolean;     // 拼接MediaSourceId参数
+          transcodeMp4?: boolean;            // 转码mp4
+          proxyPlay?: boolean;               // 视频播放代理
+        }>;
+      };
     }[];
     Tags?: {
       name: string;
@@ -191,6 +209,29 @@ export interface AdminConfig {
     customApiUrl: string;                // 自定义弹幕API地址
     customToken: string;                 // 自定义API Token
     timeout: number;                     // 请求超时时间（秒），默认15
+  };
+  EmbyConfig?: {
+    // 多源配置
+    Sources?: Array<{
+      key: string;                       // 唯一标识，如 'emby1', 'emby2'
+      name: string;                      // 显示名称，如 '家庭Emby', '公司Emby'
+      enabled: boolean;                  // 是否启用
+      ServerURL: string;                 // Emby服务器地址
+      ApiKey?: string;                   // API Key（推荐方式）
+      Username?: string;                 // 用户名（或使用API Key）
+      Password?: string;                 // 密码
+      UserId?: string;                   // 用户ID（登录后获取）
+      AuthToken?: string;                // 认证令牌（用户名密码登录后获取）
+      Libraries?: string[];              // 要显示的媒体库ID（可选，默认全部）
+      LastSyncTime?: number;             // 最后同步时间戳
+      ItemCount?: number;                // 媒体项数量
+      isDefault?: boolean;               // 是否为默认源（用于向后兼容）
+      // 高级流媒体选项
+      removeEmbyPrefix?: boolean;        // 播放链接移除/emby前缀
+      appendMediaSourceId?: boolean;     // 拼接MediaSourceId参数
+      transcodeMp4?: boolean;            // 转码mp4
+      proxyPlay?: boolean;               // 视频播放代理开关
+    }>;
   };
 }
 

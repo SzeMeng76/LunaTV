@@ -1388,4 +1388,38 @@ export abstract class BaseRedisStorage implements IStorage {
       throw error;
     }
   }
+
+  // 用户 Emby 配置相关方法
+  async getUserEmbyConfig(userName: string): Promise<any | null> {
+    try {
+      const key = `u:${userName}:emby-config`;
+      const data = await this.client.get(key);
+      return data ? JSON.parse(data) : null;
+    } catch (error) {
+      console.error(`获取用户 ${userName} Emby 配置失败:`, error);
+      return null;
+    }
+  }
+
+  async saveUserEmbyConfig(userName: string, config: any): Promise<void> {
+    try {
+      const key = `u:${userName}:emby-config`;
+      await this.client.set(key, JSON.stringify(config));
+      console.log(`用户 ${userName} Emby 配置已保存`);
+    } catch (error) {
+      console.error(`保存用户 ${userName} Emby 配置失败:`, error);
+      throw error;
+    }
+  }
+
+  async deleteUserEmbyConfig(userName: string): Promise<void> {
+    try {
+      const key = `u:${userName}:emby-config`;
+      await this.client.del(key);
+      console.log(`用户 ${userName} Emby 配置已删除`);
+    } catch (error) {
+      console.error(`删除用户 ${userName} Emby 配置失败:`, error);
+      throw error;
+    }
+  }
 }

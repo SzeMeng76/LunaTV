@@ -11,6 +11,33 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "6.1.3",
+    date: "2026-02-23",
+    added: [
+    "🔬 WebSR超分辨率：升级至v0.0.15，用WebSR替换Anime4K-WebGPU实现多内容类型超分辨率，添加玻璃态设计风格设置面板",
+    "💬 弹幕手动匹配：添加手动弹幕匹配功能，支持搜索番剧、选择剧集、覆盖自动匹配结果",
+    "📥 M3U8下载器增强：在UserMenu添加下载管理器入口，支持IndexedDB持久化和Storage Buckets，页面刷新后可恢复下载任务",
+    "🔍 精确搜索过滤：添加精确搜索过滤功能",
+    "📺 FLV直播CORS代理支持：为FLV直播流添加CORS代理支持"
+    ],
+    changed: [
+    "⚡ TanStack Query全面迁移：全面用useQuery/useQueries/useMutation替换播放页、首页、HeroBanner、发布日历、搜索建议、播放统计、继续观看、UserMenu的数据获取逻辑，集成prefetching和乐观更新",
+    "⚡ 首页标签切换非阻塞优化：使用useTransition实现首页标签切换非阻塞渲染"
+    ],
+    fixed: [
+    "🎬 修复直播播放器错误覆盖层遮挡视频画面",
+    "🎨 迁移所有已废弃的Tailwind v4 opacity工具类到斜杠语法：修复YouTube缩略图被不透明覆盖层遮挡等Tailwind v4破坏性变更导致的样式问题",
+    "🔬 修复WebSR设置面板多项问题：关闭按钮pointer-events、面板结构与弹幕面板对齐、图标显示",
+    "🔔 减少噪音错误弹窗：仅对用户主动操作失败显示错误提示",
+    "🔧 修复/api/cache 401错误、hydration错误418及CMS代理Referer/Origin头缺失问题",
+    "🔍 修复源搜索精确标题匹配优先于子字符串匹配",
+    "🔄 修复播放记录乐观更新同步到continueWatching查询键及watching updates检查死循环",
+    "💬 修复弹幕系统多项问题：加载前未清空旧数据导致重复、模态框全屏portalContainer渲染、手动匹配损坏图片URL、搜索过早过滤无集数番剧、移动端响应式和iPhone安全区域适配",
+    "📥 修复下载系统多项问题：进度显示优化、页面刷新后恢复进度和任务、恢复时不自动弹出面板",
+    "👤 修复UserMenu初始化时强制刷新问题"
+    ]
+  },
+  {
     version: "6.1.2",
     date: "2026-02-09",
     added: [

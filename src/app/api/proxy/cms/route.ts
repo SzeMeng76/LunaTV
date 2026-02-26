@@ -179,9 +179,14 @@ export async function GET(request: NextRequest) {
     try {
       console.log(`[CMS Proxy] Fetching: ${targetUrl}`);
 
+      // 设置 Referer/Origin 为目标站点的 origin（某些 CMS 会校验）
+      const requestHeaders: Record<string, string> = { ...BROWSER_HEADERS };
+      requestHeaders['Referer'] = `${parsedUrl.origin}/`;
+      requestHeaders['Origin'] = parsedUrl.origin;
+
       const response = await fetch(targetUrl, {
         method: 'GET',
-        headers: BROWSER_HEADERS,
+        headers: requestHeaders,
         signal: controller.signal,
         // @ts-ignore - Node.js fetch 特有选项
         compress: true, // 启用压缩

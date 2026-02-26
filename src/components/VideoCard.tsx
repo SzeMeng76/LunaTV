@@ -185,17 +185,18 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
            (isAggregate && dynamicSourceNames && dynamicSourceNames.length > 0);
   }, [remarks, hasReleaseTag, isAggregate, dynamicSourceNames]);
 
-  // 获取收藏状态（搜索结果页面不检查）
+  // 获取收藏状态
   useEffect(() => {
-    // 豆瓣内容和非搜索页面需要检查收藏状态
-    const shouldCheckFavorite = from !== 'search';
-
-    if (!shouldCheckFavorite || !actualSource || !actualId) return;
+    if (!actualSource || !actualId) return;
 
     const fetchFavoriteStatus = async () => {
       try {
         const fav = await isFavorited(actualSource, actualId);
-        setFavorited(fav);
+        if (from === 'search') {
+          setSearchFavorited(fav);
+        } else {
+          setFavorited(fav);
+        }
       } catch (err) {
         throw new Error('检查收藏状态失败');
       }
@@ -208,9 +209,12 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
     const unsubscribe = subscribeToDataUpdates(
       'favoritesUpdated',
       (newFavorites: Record<string, any>) => {
-        // 检查当前项目是否在新的收藏列表中
         const isNowFavorited = !!newFavorites[storageKey];
-        setFavorited(isNowFavorited);
+        if (from === 'search') {
+          setSearchFavorited(isNowFavorited);
+        } else {
+          setFavorited(isNowFavorited);
+        }
       }
     );
 
@@ -957,11 +961,11 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
                   }}
                 />
               )}
-              {config.showHeart && from !== 'search' && (
+              {config.showHeart && (
                 <Heart
                   onClick={handleToggleFavorite}
                   size={20}
-                  className={`transition-all duration-300 ease-out ${optimisticFavorited
+                  className={`transition-all duration-300 ease-out ${(from === 'search' ? optimisticSearchFavorited : optimisticFavorited)
                     ? 'fill-red-600 stroke-red-600'
                     : 'fill-transparent stroke-white hover:stroke-red-400'
                     } hover:scale-[1.1]`}
