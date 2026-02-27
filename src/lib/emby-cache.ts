@@ -98,6 +98,49 @@ export function setCachedEmbyViews(embyKey = 'default', data: any): void {
   });
 }
 
+// 搜索索引缓存相关
+
+interface MediaIndexItem {
+  id: string;
+  title: string;
+  poster: string;
+  year: string;
+  releaseDate?: string;
+  overview?: string;
+  voteAverage?: number;
+  rating?: number;
+  mediaType: 'movie' | 'tv';
+}
+
+function makeIndexCacheKey(embyKey?: string): string {
+  return embyKey ? `emby:${embyKey}:index` : 'emby:index';
+}
+
+/**
+ * 获取缓存的全量媒体索引
+ */
+export function getCachedMediaIndex(embyKey?: string): MediaIndexItem[] | null {
+  const key = makeIndexCacheKey(embyKey);
+  const entry = EMBY_CACHE.get(key);
+  if (!entry) return null;
+  if (entry.expiresAt <= Date.now()) {
+    EMBY_CACHE.delete(key);
+    return null;
+  }
+  return entry.data;
+}
+
+/**
+ * 设置全量媒体索引缓存
+ */
+export function setCachedMediaIndex(data: MediaIndexItem[], embyKey?: string): void {
+  const key = makeIndexCacheKey(embyKey);
+  EMBY_CACHE.set(key, {
+    expiresAt: Date.now() + EMBY_CACHE_TTL_MS,
+    data,
+  });
+}
+
 /**
  * 获取缓存统计信息
  */

@@ -108,7 +108,19 @@ export default function ModernNav({ showAIButton = false, onAIButtonClick }: Mod
       const data = await res.json();
       return data.config;
     },
-    staleTime: 5 * 60 * 1000, // 5分钟
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
+
+  // 检查管理员是否设置了公共源
+  const { data: publicSourcesData } = useQuery({
+    queryKey: ['emby', 'public-sources'],
+    queryFn: async () => {
+      const res = await fetch('/api/emby/public-sources');
+      if (!res.ok) return { sources: [] };
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
     retry: false,
   });
 
@@ -126,21 +138,23 @@ export default function ModernNav({ showAIButton = false, onAIButtonClick }: Mod
       });
     }
 
-    // Emby - 检查用户是否配置了 Emby
-    const hasEmbyConfig = userEmbyConfig?.sources?.some((s: any) => s.enabled && s.ServerURL);
-    const hasEmbyInMenu = newItems.some(item => item.href === '/private-library');
+    // Emby - 用户有私人源 OR 管理员有公共源，都显示导航
+    const hasUserEmby = userEmbyConfig?.sources?.some((s: any) => s.enabled && s.ServerURL);
+    const hasPublicEmby = (publicSourcesData?.sources?.length ?? 0) > 0;
+    const hasEmbyConfig = hasUserEmby || hasPublicEmby;
+    const hasEmbyInMenu = newItems.some(item => item.href === '/emby');
 
     if (hasEmbyConfig && !hasEmbyInMenu) {
       newItems.push({
         icon: FolderOpen,
         label: 'Emby',
-        href: '/private-library',
+        href: '/emby',
         color: 'text-indigo-500',
         gradient: 'from-indigo-500 to-purple-500',
       });
     } else if (!hasEmbyConfig && hasEmbyInMenu) {
       // 如果用户删除了所有 Emby 配置，移除导航项
-      const index = newItems.findIndex(item => item.href === '/private-library');
+      const index = newItems.findIndex(item => item.href === '/emby');
       if (index > -1) {
         newItems.splice(index, 1);
       }
@@ -149,7 +163,7 @@ export default function ModernNav({ showAIButton = false, onAIButtonClick }: Mod
     if (newItems.length !== menuItems.length) {
       setMenuItems(newItems);
     }
-  }, [userEmbyConfig]);
+  }, [userEmbyConfig, publicSourcesData]);
 
   useEffect(() => {
     const queryString = searchParams.toString();

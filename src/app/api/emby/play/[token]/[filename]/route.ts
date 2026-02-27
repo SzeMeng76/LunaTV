@@ -9,15 +9,17 @@ export const runtime = 'nodejs';
 
 /**
  * 获取 Emby 客户端
+ * 优先使用用户配置，TVBox token 场景回退到全局配置
  */
-async function getEmbyClient(embyKey?: string) {
+async function getEmbyClient(embyKey?: string, username?: string) {
+  const { embyManager } = await import('@/lib/emby-manager');
+  if (username) {
+    return await embyManager.getClientForUser(username, embyKey);
+  }
   const config = await getConfig();
-
   if (!config.EmbyConfig?.Sources || config.EmbyConfig.Sources.length === 0) {
     throw new Error('Emby 未配置或未启用');
   }
-
-  const { embyManager } = await import('@/lib/emby-manager');
   return await embyManager.getClient(embyKey);
 }
 
@@ -58,7 +60,7 @@ export async function GET(
     }
 
     // 获取 Emby 客户端
-    let client = await getEmbyClient(embyKey);
+    let client = await getEmbyClient(embyKey, authInfo?.username);
 
     // 构建 Emby 原始播放链接（强制获取直接URL，避免代理循环）
     let embyStreamUrl = await client.getStreamUrl(itemId, true, true);
@@ -80,7 +82,7 @@ export async function GET(
       console.log('[Emby Play] 收到 401 错误，尝试重新认证');
       const { embyManager } = await import('@/lib/emby-manager');
       embyManager.clearCache();
-      client = await getEmbyClient(embyKey);
+      client = await getEmbyClient(embyKey, authInfo?.username);
       embyStreamUrl = await client.getStreamUrl(itemId, true, true);
       videoResponse = await fetch(embyStreamUrl, {
         headers: requestHeaders,

@@ -226,6 +226,7 @@ export interface AdminConfig {
       LastSyncTime?: number;             // 最后同步时间戳
       ItemCount?: number;                // 媒体项数量
       isDefault?: boolean;               // 是否为默认源（用于向后兼容）
+      isPublic?: boolean;                // 是否对所有用户开放（公共源）
       // 高级流媒体选项
       removeEmbyPrefix?: boolean;        // 播放链接移除/emby前缀
       appendMediaSourceId?: boolean;     // 拼接MediaSourceId参数

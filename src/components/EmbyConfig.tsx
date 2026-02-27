@@ -24,6 +24,7 @@ const EmbyConfig = ({ config, refreshConfig }: EmbyConfigProps) => {
     key: '',
     name: '',
     enabled: true,
+    isPublic: false,
     ServerURL: '',
     ApiKey: '',
     Username: '',
@@ -54,6 +55,7 @@ const EmbyConfig = ({ config, refreshConfig }: EmbyConfigProps) => {
       key: '',
       name: '',
       enabled: true,
+      isPublic: false,
       ServerURL: '',
       ApiKey: '',
       Username: '',
@@ -295,6 +297,11 @@ const EmbyConfig = ({ config, refreshConfig }: EmbyConfigProps) => {
                     >
                       {source.enabled ? '已启用' : '已禁用'}
                     </span>
+                    {source.isPublic && (
+                      <span className='px-2 py-0.5 text-xs font-medium rounded bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300'>
+                        公共源
+                      </span>
+                    )}
                   </div>
                   <p className='mt-1 text-sm text-gray-600 dark:text-gray-400'>
                     标识符: {source.key}
@@ -560,6 +567,31 @@ const EmbyConfig = ({ config, refreshConfig }: EmbyConfigProps) => {
               <label htmlFor='enabled' className='text-sm text-gray-700 dark:text-gray-300'>
                 启用此源
               </label>
+            </div>
+
+            {/* 公共源开关 */}
+            <div className='flex items-center justify-between p-3 rounded-lg bg-purple-50 dark:bg-purple-900/10 border border-purple-200 dark:border-purple-800'>
+              <div>
+                <label className='text-sm font-medium text-purple-800 dark:text-purple-300'>
+                  设为公共源
+                </label>
+                <p className='text-xs text-purple-600 dark:text-purple-400 mt-0.5'>
+                  开启后，所有用户的私人媒体库将自动包含此源
+                </p>
+              </div>
+              <button
+                type='button'
+                onClick={() => setFormData({ ...formData, isPublic: !formData.isPublic })}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  formData.isPublic ? 'bg-purple-600' : 'bg-gray-200 dark:bg-gray-700'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    formData.isPublic ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
             </div>
 
             {/* 操作按钮 */}

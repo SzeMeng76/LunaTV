@@ -280,12 +280,19 @@ export default function PrivateLibraryPage() {
         {/* 标题和源选择 */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-4">
-            <h1 className="text-2xl font-bold">Emby</h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold">Emby</h1>
+              {!loading && listData && listData.pages[0]?.total > 0 && !isSearchMode && (
+                <span className="text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2.5 py-1 rounded-full">
+                  共 {listData.pages[0].total} 部
+                </span>
+              )}
+            </div>
             <button
               onClick={handleRefresh}
               disabled={isRefreshing}
               title="刷新列表"
-              className={`group relative flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-all duration-300 transform hover:scale-105
+              className={`group relative overflow-hidden flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-all duration-300 transform hover:scale-105
                 ${isRefreshing
                   ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed'
                   : 'bg-linear-to-r from-emerald-500 via-green-500 to-teal-500 text-white shadow-lg shadow-green-500/30 hover:shadow-green-500/50'
@@ -309,7 +316,7 @@ export default function PrivateLibraryPage() {
                   const newKey = e.target.value || undefined;
                   setEmbyKey(newKey);
                   const sourceParam = newKey ? `emby:${newKey}` : 'emby';
-                  router.push(`/private-library?source=${sourceParam}`);
+                  router.push(`/emby?source=${sourceParam}`);
                 }}
                 className="px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 dark:border-gray-700"
               >
@@ -473,22 +480,65 @@ export default function PrivateLibraryPage() {
           </div>
         )}
 
+        {/* 无搜索结果 */}
+        {isSearchMode && !isSearching && searchResults.length === 0 && (
+          <div className='flex justify-center py-16'>
+            <div className='relative px-12 py-10 rounded-3xl bg-linear-to-br from-gray-50 via-slate-50 to-gray-100 dark:from-gray-800/40 dark:via-slate-800/40 dark:to-gray-800/50 border border-gray-200/50 dark:border-gray-700/50 shadow-xl backdrop-blur-sm overflow-hidden max-w-md'>
+              <div className='absolute top-0 left-0 w-32 h-32 bg-linear-to-br from-green-200/20 to-teal-200/20 rounded-full blur-3xl'></div>
+              <div className='absolute bottom-0 right-0 w-32 h-32 bg-linear-to-br from-blue-200/20 to-green-200/20 rounded-full blur-3xl'></div>
+              <div className='relative flex flex-col items-center gap-4'>
+                <div className='relative'>
+                  <div className='w-24 h-24 rounded-full bg-linear-to-br from-gray-100 to-slate-200 dark:from-gray-700 dark:to-slate-700 flex items-center justify-center shadow-lg'>
+                    <svg className='w-12 h-12 text-gray-400 dark:text-gray-500' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                      <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='1.5' d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'></path>
+                    </svg>
+                  </div>
+                  <div className='absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-ping'></div>
+                  <div className='absolute -bottom-1 -left-1 w-2 h-2 bg-teal-400 rounded-full animate-pulse'></div>
+                </div>
+                <div className='text-center space-y-2'>
+                  <h3 className='text-xl font-bold text-gray-800 dark:text-gray-200'>
+                    没有找到相关视频
+                  </h3>
+                  <p className='text-sm text-gray-600 dark:text-gray-400 max-w-xs'>
+                    换个关键词试试，或者浏览 Emby 媒体库
+                  </p>
+                </div>
+                <button
+                  onClick={() => setSearchKeyword('')}
+                  className='mt-2 px-6 py-2.5 bg-linear-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105'
+                >
+                  清除搜索条件
+                </button>
+                <div className='w-16 h-1 bg-linear-to-r from-transparent via-gray-300 to-transparent dark:via-gray-600 rounded-full'></div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* 视频列表 */}
         {!loading && videos.length > 0 && !isSearchMode && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-            {videos.map((video) => (
-              <VideoCard
-                key={video.id}
-                id={video.id}
-                title={video.title}
-                poster={video.poster}
-                year={video.year}
-                source={embyKey ? `emby_${embyKey}` : 'emby'}
-                source_name={embySourceName}
-                from="search"
-              />
-            ))}
-          </div>
+          <>
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                已加载 {videos.length} / {listData?.pages[0]?.total ?? 0} 部
+              </p>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+              {videos.map((video) => (
+                <VideoCard
+                  key={video.id}
+                  id={video.id}
+                  title={video.title}
+                  poster={video.poster}
+                  year={video.year}
+                  source={embyKey ? `emby_${embyKey}` : 'emby'}
+                  source_name={embySourceName}
+                  from="search"
+                />
+              ))}
+            </div>
+          </>
         )}
 
         {/* 空状态 */}

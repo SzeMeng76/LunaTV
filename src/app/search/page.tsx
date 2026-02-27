@@ -24,6 +24,9 @@ import YouTubeVideoCard from '@/components/YouTubeVideoCard';
 import DirectYouTubePlayer from '@/components/DirectYouTubePlayer';
 import TMDBFilterPanel, { TMDBFilterState } from '@/components/TMDBFilterPanel';
 import AcgSearch from '@/components/AcgSearch';
+import stcasc from 'switch-chinese';
+
+const chineseConverter = stcasc();
 
 function SearchPageClient() {
   // 根据 type_name 推断内容类型的辅助函数
@@ -247,13 +250,21 @@ function SearchPageClient() {
 
   // 辅助函数：检查标题是否包含搜索词（用于精确搜索）
   const titleContainsQuery = (title: string, query: string): boolean => {
-    if (!exactSearch) return true; // 如果未开启精确搜索，不过滤
-    if (!query || !title) return true; // 如果没有搜索词或标题，不过滤
+    if (!exactSearch) return true;
+    if (!query || !title) return true;
 
     const normalizedTitle = title.toLowerCase();
     const normalizedQuery = query.toLowerCase();
 
-    return normalizedTitle.includes(normalizedQuery);
+    if (normalizedTitle.includes(normalizedQuery)) return true;
+
+    // 繁简互转匹配：仅当输入为繁体时，转换为简体再匹配
+    if (chineseConverter.detect(normalizedQuery) === 1) {
+      const simplifiedQuery = chineseConverter.simplized(normalizedQuery);
+      return normalizedTitle.includes(simplifiedQuery);
+    }
+
+    return false;
   };
   // 聚合后的结果（按标题和年份分组）
   const aggregatedResults = useMemo(() => {

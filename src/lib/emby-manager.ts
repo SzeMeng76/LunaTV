@@ -19,6 +19,7 @@ interface EmbySourceConfig {
   LastSyncTime?: number;
   ItemCount?: number;
   isDefault?: boolean;
+  isPublic?: boolean; // 管理员公共源，对所有用户可见
   // 高级流媒体选项
   removeEmbyPrefix?: boolean;
   appendMediaSourceId?: boolean;
@@ -78,26 +79,37 @@ class EmbyManager {
 
   /**
    * 获取用户的 Emby 源配置
+   * 合并策略：用户私人源 + 管理员公共源（isPublic: true）
+   * 用户私人源优先（相同 key 时覆盖公共源）
    * @param username 用户名，如果不提供则使用全局配置（向后兼容）
    */
   private async getSourcesForUser(username?: string): Promise<EmbySourceConfig[]> {
-    // 如果提供了用户名，优先使用用户配置
-    if (username) {
-      console.log(`🔍 [EmbyManager] 获取用户 ${username} 的 Emby 配置`);
-      const userConfig = await dbManager.getUserEmbyConfig(username);
-      console.log(`📦 [EmbyManager] 用户配置:`, JSON.stringify(userConfig, null, 2));
+    // 获取管理员公共源
+    const adminSources = await this.getSources();
+    const publicSources = adminSources.filter(s => (s as any).isPublic === true);
 
-      if (userConfig?.sources && Array.isArray(userConfig.sources)) {
-        console.log(`✅ [EmbyManager] 找到 ${userConfig.sources.length} 个用户配置的源`);
-        return userConfig.sources;
-      } else {
-        console.log(`⚠️ [EmbyManager] 用户配置为空或格式错误，回退到全局配置`);
+    // 如果提供了用户名，合并用户私人源
+    if (username) {
+      const userConfig = await dbManager.getUserEmbyConfig(username);
+      const userSources: EmbySourceConfig[] = (userConfig?.sources && Array.isArray(userConfig.sources))
+        ? userConfig.sources
+        : [];
+
+      // 合并：用户私人源优先，公共源补充（key 不重复）
+      const userKeys = new Set(userSources.map(s => s.key));
+      const mergedPublic = publicSources.filter(s => !userKeys.has(s.key));
+      const merged = [...userSources, ...mergedPublic];
+
+      if (merged.length > 0) {
+        return merged;
       }
+
+      // 用户和公共源都为空，回退到全局配置
+      return adminSources;
     }
 
-    // 回退到全局配置（向后兼容）
-    console.log(`🔄 [EmbyManager] 使用全局配置`);
-    return this.getSources();
+    // 无用户名：回退到全局配置（向后兼容）
+    return adminSources;
   }
 
   /**
