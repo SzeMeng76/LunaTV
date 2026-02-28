@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { VirtuosoGrid, VirtuosoGridHandle } from 'react-virtuoso';
+import { GridScrollSeekPlaceholderProps, VirtuosoGrid, VirtuosoGridHandle } from 'react-virtuoso';
 
 import { DoubanItem } from '@/lib/types';
 import { useImagePreload } from '@/hooks/useImagePreload';
@@ -32,8 +32,8 @@ const skeletonData = Array.from({ length: 25 }, (_, i) => i);
 const INCREASE_VIEWPORT_BY = { top: 300, bottom: 600 };
 
 const SCROLL_SEEK_CONFIG = {
-  enter: (velocity: number) => Math.abs(velocity) > 200,
-  exit: (velocity: number) => Math.abs(velocity) < 30,
+  enter: (velocity: number) => Math.abs(velocity) > 1000,
+  exit: (velocity: number) => Math.abs(velocity) < 100,
 };
 
 // List 容器：flex wrap，对应原来的 grid class
@@ -61,16 +61,9 @@ const ItemContainer = ({ children, ...props }: React.HTMLAttributes<HTMLDivEleme
   </div>
 );
 
-// 快速滚动时的占位符，替代真实卡片渲染
-const ScrollSeekPlaceholder = () => (
-  <div className='w-full'>
-    <div className='relative w-full rounded-lg overflow-hidden'>
-      <div className='aspect-[2/3] w-full bg-gray-200 dark:bg-gray-700 animate-pulse rounded-lg' />
-      <div className='mt-2 flex justify-center'>
-        <div className='h-4 w-24 sm:w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse' />
-      </div>
-    </div>
-  </div>
+// 快速滚动时的占位符，必须接收 height/width 撑开，否则 grid 会闪烁
+const ScrollSeekPlaceholder = ({ height, width }: GridScrollSeekPlaceholderProps) => (
+  <div style={{ height, width }} className='bg-gray-200 dark:bg-gray-700 animate-pulse rounded-lg' />
 );
 
 export const VirtualDoubanGrid = React.forwardRef<VirtualDoubanGridRef, VirtualDoubanGridProps>(
