@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { GridScrollSeekPlaceholderProps, VirtuosoGrid, VirtuosoGridHandle } from 'react-virtuoso';
+import { VirtuosoGrid, VirtuosoGridHandle } from 'react-virtuoso';
 
 import { DoubanItem } from '@/lib/types';
 import { useImagePreload } from '@/hooks/useImagePreload';
@@ -31,11 +31,6 @@ const skeletonData = Array.from({ length: 25 }, (_, i) => i);
 
 const INCREASE_VIEWPORT_BY = { top: 300, bottom: 600 };
 
-const SCROLL_SEEK_CONFIG = {
-  enter: (velocity: number) => Math.abs(velocity) > 1000,
-  exit: (velocity: number) => Math.abs(velocity) < 100,
-};
-
 // List 容器：flex wrap，对应原来的 grid class
 const ListContainer = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ style, children, ...props }, ref) => (
@@ -59,11 +54,6 @@ const ItemContainer = ({ children, ...props }: React.HTMLAttributes<HTMLDivEleme
   >
     {children}
   </div>
-);
-
-// 快速滚动时的占位符，必须接收 height/width 撑开，否则 grid 会闪烁
-const ScrollSeekPlaceholder = ({ height, width }: GridScrollSeekPlaceholderProps) => (
-  <div style={{ height, width }} className='bg-gray-200 dark:bg-gray-700 animate-pulse rounded-lg' />
 );
 
 export const VirtualDoubanGrid = React.forwardRef<VirtualDoubanGridRef, VirtualDoubanGridProps>(
@@ -154,7 +144,6 @@ export const VirtualDoubanGrid = React.forwardRef<VirtualDoubanGridRef, VirtualD
         customScrollParent={scrollParent ?? undefined}
         data={doubanData}
         increaseViewportBy={INCREASE_VIEWPORT_BY}
-        scrollSeekConfiguration={SCROLL_SEEK_CONFIG}
         computeItemKey={computeItemKey}
         endReached={() => {
           if (hasMore && !isLoadingMore) onLoadMore();
@@ -162,7 +151,6 @@ export const VirtualDoubanGrid = React.forwardRef<VirtualDoubanGridRef, VirtualD
         components={{
           List: ListContainer,
           Item: ItemContainer,
-          ScrollSeekPlaceholder,
           Footer: () =>
             isLoadingMore ? (
               <div className='flex justify-center mt-8 py-8'>

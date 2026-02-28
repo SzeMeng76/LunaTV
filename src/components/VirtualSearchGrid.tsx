@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { GridScrollSeekPlaceholderProps, VirtuosoGrid, VirtuosoGridHandle } from 'react-virtuoso';
+import { VirtuosoGrid, VirtuosoGridHandle } from 'react-virtuoso';
 
 import { SearchResult } from '@/lib/types';
 import { useImagePreload } from '@/hooks/useImagePreload';
@@ -30,11 +30,6 @@ const INITIAL_PRIORITY_COUNT = 24;
 
 const INCREASE_VIEWPORT_BY = { top: 300, bottom: 600 };
 
-const SCROLL_SEEK_CONFIG = {
-  enter: (velocity: number) => Math.abs(velocity) > 1000,
-  exit: (velocity: number) => Math.abs(velocity) < 100,
-};
-
 // List 容器：flex wrap
 const ListContainer = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ style, children, ...props }, ref) => (
@@ -58,11 +53,6 @@ const ItemContainer = ({ children, ...props }: React.HTMLAttributes<HTMLDivEleme
   >
     {children}
   </div>
-);
-
-// 快速滚动时的占位符，必须接收 height/width 撑开，否则 grid 会闪烁
-const ScrollSeekPlaceholder = ({ height, width }: GridScrollSeekPlaceholderProps) => (
-  <div style={{ height, width }} className='bg-gray-200 dark:bg-gray-700 animate-pulse rounded-lg' />
 );
 
 export const VirtualSearchGrid = React.forwardRef<VirtualSearchGridRef, VirtualSearchGridProps>(
@@ -146,12 +136,10 @@ export const VirtualSearchGrid = React.forwardRef<VirtualSearchGridRef, VirtualS
         customScrollParent={scrollParent ?? undefined}
         data={currentData as any[]}
         increaseViewportBy={INCREASE_VIEWPORT_BY}
-        scrollSeekConfiguration={SCROLL_SEEK_CONFIG}
         computeItemKey={computeItemKey}
         components={{
           List: ListContainer,
           Item: ItemContainer,
-          ScrollSeekPlaceholder,
           Footer: () =>
             isLoading && totalItemCount > 0 ? (
               <div className='fixed bottom-0 left-0 right-0 z-50 flex justify-center py-3 bg-white/98 dark:bg-gray-900/98 border-t border-gray-200/80 dark:border-gray-700/80'>
