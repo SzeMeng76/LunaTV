@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import React, { useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { VirtuosoGrid, VirtuosoGridHandle } from 'react-virtuoso';
 
 import { SearchResult } from '@/lib/types';
@@ -28,6 +28,13 @@ interface VirtualSearchGridProps {
 
 const INITIAL_PRIORITY_COUNT = 24;
 
+const INCREASE_VIEWPORT_BY = { top: 300, bottom: 600 };
+
+const SCROLL_SEEK_CONFIG = {
+  enter: (velocity: number) => Math.abs(velocity) > 200,
+  exit: (velocity: number) => Math.abs(velocity) < 30,
+};
+
 // List 容器：flex wrap
 const ListContainer = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ style, children, ...props }, ref) => (
@@ -50,6 +57,18 @@ const ItemContainer = ({ children, ...props }: React.HTMLAttributes<HTMLDivEleme
     className='w-1/3 sm:w-[calc(100%/4)] md:w-[calc(100%/5)] lg:w-[calc(100%/6)] xl:w-[calc(100%/7)] 2xl:w-[calc(100%/8)] px-1 sm:px-4 pb-14 sm:pb-20 box-border'
   >
     {children}
+  </div>
+);
+
+// 快速滚动时的占位符，替代真实卡片渲染
+const ScrollSeekPlaceholder = () => (
+  <div className='w-full'>
+    <div className='relative w-full rounded-lg overflow-hidden'>
+      <div className='aspect-[2/3] w-full bg-gray-200 dark:bg-gray-700 animate-pulse rounded-lg' />
+      <div className='mt-2 flex justify-center'>
+        <div className='h-4 w-24 sm:w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse' />
+      </div>
+    </div>
   </div>
 );
 
@@ -97,6 +116,18 @@ export const VirtualSearchGrid = React.forwardRef<VirtualSearchGridRef, VirtualS
       },
     }));
 
+    const computeItemKey = useCallback(
+      (index: number, item: any) => {
+        if (viewMode === 'agg') {
+          const [mapKey] = item as [string, SearchResult[]];
+          return `agg-${mapKey}`;
+        }
+        const s = item as SearchResult;
+        return `search-${s.source}-${s.id ?? index}`;
+      },
+      [viewMode],
+    );
+
     if (totalItemCount === 0) {
       return (
         <div className='flex justify-center items-center min-h-[300px]'>
@@ -121,10 +152,13 @@ export const VirtualSearchGrid = React.forwardRef<VirtualSearchGridRef, VirtualS
         ref={virtuosoRef}
         customScrollParent={scrollParent ?? undefined}
         data={currentData as any[]}
-        overscan={1200}
+        increaseViewportBy={INCREASE_VIEWPORT_BY}
+        scrollSeekConfiguration={SCROLL_SEEK_CONFIG}
+        computeItemKey={computeItemKey}
         components={{
           List: ListContainer,
           Item: ItemContainer,
+          ScrollSeekPlaceholder,
           Footer: () =>
             isLoading && totalItemCount > 0 ? (
               <div className='fixed bottom-0 left-0 right-0 z-50 flex justify-center py-3 bg-white/98 dark:bg-gray-900/98 border-t border-gray-200/80 dark:border-gray-700/80'>

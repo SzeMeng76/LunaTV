@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import React, { useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { VirtuosoGrid, VirtuosoGridHandle } from 'react-virtuoso';
 
 import { DoubanItem } from '@/lib/types';
@@ -29,6 +29,13 @@ interface VirtualDoubanGridProps {
 const INITIAL_PRIORITY_COUNT = 30;
 const skeletonData = Array.from({ length: 25 }, (_, i) => i);
 
+const INCREASE_VIEWPORT_BY = { top: 300, bottom: 600 };
+
+const SCROLL_SEEK_CONFIG = {
+  enter: (velocity: number) => Math.abs(velocity) > 200,
+  exit: (velocity: number) => Math.abs(velocity) < 30,
+};
+
 // List 容器：flex wrap，对应原来的 grid class
 const ListContainer = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ style, children, ...props }, ref) => (
@@ -51,6 +58,18 @@ const ItemContainer = ({ children, ...props }: React.HTMLAttributes<HTMLDivEleme
     className='w-1/3 sm:w-[calc(100%/4)] md:w-[calc(100%/5)] lg:w-[calc(100%/6)] xl:w-[calc(100%/7)] 2xl:w-[calc(100%/8)] px-1 sm:px-4 pb-12 sm:pb-20 box-border'
   >
     {children}
+  </div>
+);
+
+// 快速滚动时的占位符，替代真实卡片渲染
+const ScrollSeekPlaceholder = () => (
+  <div className='w-full'>
+    <div className='relative w-full rounded-lg overflow-hidden'>
+      <div className='aspect-[2/3] w-full bg-gray-200 dark:bg-gray-700 animate-pulse rounded-lg' />
+      <div className='mt-2 flex justify-center'>
+        <div className='h-4 w-24 sm:w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse' />
+      </div>
+    </div>
   </div>
 );
 
@@ -91,6 +110,11 @@ export const VirtualDoubanGrid = React.forwardRef<VirtualDoubanGridRef, VirtualD
         virtuosoRef.current?.scrollToIndex({ index: 0, behavior: 'smooth' });
       },
     }));
+
+    const computeItemKey = useCallback(
+      (index: number, item: DoubanItem) => `douban-${item.id ?? index}`,
+      [],
+    );
 
     if (loading) {
       return (
@@ -136,13 +160,16 @@ export const VirtualDoubanGrid = React.forwardRef<VirtualDoubanGridRef, VirtualD
         ref={virtuosoRef}
         customScrollParent={scrollParent ?? undefined}
         data={doubanData}
-        overscan={1200}
+        increaseViewportBy={INCREASE_VIEWPORT_BY}
+        scrollSeekConfiguration={SCROLL_SEEK_CONFIG}
+        computeItemKey={computeItemKey}
         endReached={() => {
           if (hasMore && !isLoadingMore) onLoadMore();
         }}
         components={{
           List: ListContainer,
           Item: ItemContainer,
+          ScrollSeekPlaceholder,
           Footer: () =>
             isLoadingMore ? (
               <div className='flex justify-center mt-8 py-8'>
