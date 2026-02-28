@@ -60,6 +60,16 @@ export class DbManager {
 
   constructor() {
     this.storage = getStorage();
+    // 启动时自动触发数据迁移（异步，不阻塞构造）
+    if (this.storage && typeof (this.storage as any).migrateData === 'function') {
+      (this.storage as any).migrateData().then(async () => {
+        if (typeof (this.storage as any).migratePasswords === 'function') {
+          await (this.storage as any).migratePasswords();
+        }
+      }).catch((err: any) => {
+        console.error('数据迁移异常:', err);
+      });
+    }
   }
 
   // 播放记录相关方法

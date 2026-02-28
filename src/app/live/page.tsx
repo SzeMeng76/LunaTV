@@ -3691,7 +3691,34 @@ const FavoriteIcon = ({ filled }: { filled: boolean }) => {
 export default function LivePage() {
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      <LivePageClient />
+      <LivePageGuard />
     </Suspense>
   );
+}
+
+function LivePageGuard() {
+  const [enabled, setEnabled] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const runtimeConfig = (window as any).RUNTIME_CONFIG;
+    setEnabled(!!runtimeConfig?.ENABLE_WEB_LIVE);
+  }, []);
+
+  if (enabled === null) {
+    return <div>Loading...</div>;
+  }
+
+  if (!enabled) {
+    return (
+      <PageLayout>
+        <div className='flex flex-col items-center justify-center min-h-[60vh] text-gray-500 dark:text-gray-400'>
+          <Radio className='h-16 w-16 mb-4 opacity-30' />
+          <h2 className='text-xl font-semibold mb-2'>直播功能未开启</h2>
+          <p className='text-sm opacity-70'>请联系管理员开启直播功能</p>
+        </div>
+      </PageLayout>
+    );
+  }
+
+  return <LivePageClient />;
 }

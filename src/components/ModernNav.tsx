@@ -90,13 +90,6 @@ export default function ModernNav({ showAIButton = false, onAIButtonClick }: Mod
       color: 'text-orange-500',
       gradient: 'from-orange-500 to-amber-500',
     },
-    {
-      icon: Radio,
-      label: '直播',
-      href: '/live',
-      color: 'text-teal-500',
-      gradient: 'from-teal-500 to-cyan-500',
-    },
   ]);
 
   // 检查用户是否配置了 Emby
@@ -128,7 +121,22 @@ export default function ModernNav({ showAIButton = false, onAIButtonClick }: Mod
     const runtimeConfig = (window as any).RUNTIME_CONFIG;
     const newItems = [...menuItems];
 
-    if (runtimeConfig?.CUSTOM_CATEGORIES?.length > 0) {
+    // 直播 - 根据 ENABLE_WEB_LIVE 动态控制
+    const hasLiveInMenu = newItems.some(item => item.href === '/live');
+    if (runtimeConfig?.ENABLE_WEB_LIVE && !hasLiveInMenu) {
+      newItems.push({
+        icon: Radio,
+        label: '直播',
+        href: '/live',
+        color: 'text-teal-500',
+        gradient: 'from-teal-500 to-cyan-500',
+      });
+    } else if (!runtimeConfig?.ENABLE_WEB_LIVE && hasLiveInMenu) {
+      const index = newItems.findIndex(item => item.href === '/live');
+      if (index > -1) newItems.splice(index, 1);
+    }
+
+    if (runtimeConfig?.CUSTOM_CATEGORIES?.length > 0 && !newItems.some(item => item.href === '/douban?type=custom')) {
       newItems.push({
         icon: Star,
         label: '自定义',

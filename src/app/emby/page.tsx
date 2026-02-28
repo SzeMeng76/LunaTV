@@ -218,10 +218,11 @@ export default function PrivateLibraryPage() {
 
   // ── 4. Emby 搜索 ──────────────────────────────────────────────────────────
   const { data: searchData, isFetching: isSearching } = useQuery({
-    queryKey: ['emby', 'search', embyKey, searchKeyword],
+    queryKey: ['emby', 'search', embyKey, selectedView, searchKeyword],
     queryFn: async ({ signal }) => {
       const params = new URLSearchParams({ keyword: searchKeyword });
       if (embyKey) params.append('embyKey', embyKey);
+      if (selectedView && selectedView !== 'all') params.append('parentId', selectedView);
       const res = await fetch(`/api/emby/search?${params.toString()}`, { signal });
       if (!res.ok) throw new Error('搜索失败');
       const data = await res.json();

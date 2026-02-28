@@ -13,6 +13,7 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const keyword = searchParams.get('keyword');
     const embyKey = searchParams.get('embyKey');
+    const parentId = searchParams.get('parentId') || undefined;
 
     if (!keyword || !keyword.trim()) {
       return NextResponse.json({ error: '搜索关键词不能为空' }, { status: 400 });
@@ -34,8 +35,9 @@ export async function GET(request: NextRequest) {
     // 获取用户的 Emby 客户端
     const client = await embyManager.getClientForUser(username, embyKeyStr);
 
-    // 尝试从本地索引搜索
-    let index = getCachedMediaIndex(embyKeyStr);
+    // 尝试从本地索引搜索（缓存 key 区分 parentId）
+    const cacheKey = parentId ? `${embyKeyStr}:${parentId}` : embyKeyStr;
+    let index = getCachedMediaIndex(cacheKey);
 
     if (!index) {
       // 索引不存在，分页拉取全量数据建立索引
@@ -44,6 +46,7 @@ export async function GET(request: NextRequest) {
 
       // 第一批：拿数据同时获得 TotalRecordCount
       const firstPage = await client.getItems({
+        ParentId: parentId,
         IncludeItemTypes: 'Movie,Series',
         Recursive: true,
         Fields: 'PrimaryImageAspectRatio,PremiereDate,ProductionYear,Overview,CommunityRating',
@@ -60,6 +63,7 @@ export async function GET(request: NextRequest) {
         for (let startIndex = PAGE_SIZE; startIndex < total; startIndex += PAGE_SIZE) {
           remainingRequests.push(
             client.getItems({
+              ParentId: parentId,
               IncludeItemTypes: 'Movie,Series',
               Recursive: true,
               Fields: 'PrimaryImageAspectRatio,PremiereDate,ProductionYear,Overview,CommunityRating',
@@ -86,7 +90,7 @@ export async function GET(request: NextRequest) {
         mediaType: item.Type === 'Movie' ? 'movie' : 'tv',
       }));
 
-      setCachedMediaIndex(index, embyKeyStr);
+      setCachedMediaIndex(index, cacheKey);
     }
 
     // 本地模糊搜索（包含匹配，不区分大小写）
