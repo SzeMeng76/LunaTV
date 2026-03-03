@@ -164,7 +164,8 @@ export function DownloadPanel() {
                   <div className='mb-3'>
                     <div className='flex items-center justify-between text-xs text-gray-600 dark:text-gray-300 mb-1'>
                       <span>
-                        {task.finishNum} / {task.rangeDownload.targetSegment} 片段
+                        {/* 显示优化后的进度消息（包含速度和活跃线程） */}
+                        {task.progress?.message || `${task.finishNum} / ${task.rangeDownload.targetSegment} 片段`}
                         {timeRange ? (
                           <span className='ml-2 text-blue-600 dark:text-blue-400'>
                             {task.rangeDownload.startSegment > 1 || task.rangeDownload.endSegment < task.tsUrlList.length
@@ -230,7 +231,7 @@ export function DownloadPanel() {
                           <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z' />
                           <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M21 12a9 9 0 11-18 0 9 9 0 0118 0z' />
                         </svg>
-                        {task.status === 'error' ? '重试' : '开始'}
+                        {task.status === 'error' ? '重试' : task.status === 'pause' ? '继续' : '开始'}
                       </button>
                     )}
 

@@ -2090,17 +2090,18 @@ function LivePageClient() {
                        videoUrl.includes('/yy/');         // YY源
 
       // 🚀 智能选择直连或代理模式
-      // FLV 流强制使用直连，不走代理
       let targetUrl: string;
-      if (isFlvUrl) {
-        targetUrl = videoUrl;  // FLV 直连
-        console.log(`🎬 播放模式: ⚡ FLV直连 | URL: ${targetUrl.substring(0, 100)}...`);
+      const useDirect = await shouldUseDirectPlayback(videoUrl);
+
+      if (useDirect) {
+        // 直连模式：直接使用原始 URL
+        targetUrl = videoUrl;
+        console.log(`🎬 播放模式: ⚡ 直连 (${isFlvUrl ? 'FLV' : 'M3U8'}) | URL: ${targetUrl.substring(0, 100)}...`);
       } else {
-        const useDirect = await shouldUseDirectPlayback(videoUrl);
-        targetUrl = useDirect
-          ? videoUrl  // 直连模式：直接使用原始 URL
-          : `/api/proxy/m3u8?url=${encodeURIComponent(videoUrl)}&moontv-source=${currentSourceRef.current?.key || ''}`;  // 代理模式
-        console.log(`🎬 播放模式: ${useDirect ? '⚡ 直连' : '🔄 代理'} | URL: ${targetUrl.substring(0, 100)}...`);
+        // 代理模式：FLV 和 M3U8 都通过代理
+        const proxyEndpoint = isFlvUrl ? '/api/proxy/stream' : '/api/proxy/m3u8';
+        targetUrl = `${proxyEndpoint}?url=${encodeURIComponent(videoUrl)}&moontv-source=${currentSourceRef.current?.key || ''}`;
+        console.log(`🎬 播放模式: 🔄 代理 (${isFlvUrl ? 'FLV' : 'M3U8'}) | URL: ${targetUrl.substring(0, 100)}...`);
       }
 
       // 根据 URL 类型选择播放器类型
@@ -3690,7 +3691,34 @@ const FavoriteIcon = ({ filled }: { filled: boolean }) => {
 export default function LivePage() {
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      <LivePageClient />
+      <LivePageGuard />
     </Suspense>
   );
+}
+
+function LivePageGuard() {
+  const [enabled, setEnabled] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const runtimeConfig = (window as any).RUNTIME_CONFIG;
+    setEnabled(!!runtimeConfig?.ENABLE_WEB_LIVE);
+  }, []);
+
+  if (enabled === null) {
+    return <div>Loading...</div>;
+  }
+
+  if (!enabled) {
+    return (
+      <PageLayout>
+        <div className='flex flex-col items-center justify-center min-h-[60vh] text-gray-500 dark:text-gray-400'>
+          <Radio className='h-16 w-16 mb-4 opacity-30' />
+          <h2 className='text-xl font-semibold mb-2'>直播功能未开启</h2>
+          <p className='text-sm opacity-70'>请联系管理员开启直播功能</p>
+        </div>
+      </PageLayout>
+    );
+  }
+
+  return <LivePageClient />;
 }

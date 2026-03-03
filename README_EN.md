@@ -25,7 +25,7 @@
 ![HLS.js](https://img.shields.io/badge/HLS.js-1.6.15-ec407a)
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Docker Ready](https://img.shields.io/badge/Docker-ready-blue?logo=docker)
-![Version](https://img.shields.io/badge/Version-6.1.2-orange)
+![Version](https://img.shields.io/badge/Version-6.2.0-orange)
 
 </div>
 
@@ -33,17 +33,18 @@
 
 ## 📢 Project Overview
 
-This project is a deeply customized version based on **MoonTV**, continuously developed from **v4.3.1** to the current **v6.1.2**, with **60+ major feature modules** and **400+ detailed optimizations** added. See [CHANGELOG](CHANGELOG) for all new features.
+This project is a deeply customized version based on **MoonTV**, continuously developed from **v4.3.1** to the current **v6.2.0**, with **60+ major feature modules** and **400+ detailed optimizations** added. See [CHANGELOG](CHANGELOG) for all new features.
 
 ### 💡 Core Enhancement Highlights
 
 #### 🎥 Content Ecosystem Expansion
+- **Emby Private Library**: Complete Emby media server integration with per-user configuration, dual authentication (API key and username/password), local full-text index search (fuzzy matching and Traditional/Simplified Chinese support), HLS transcoding (forced AAC audio for EAC3/TrueHD compatibility), admin public sources, manual refresh, mobile optimization
 - **YouTube Integration**: Complete YouTube search, playback, live streaming with cookieless domain support
 - **Cloud Drive Search (PanSou)**: Integrated advanced filtering and cache management
 - **ACG Torrent Search**: Integrated ACG anime torrent resource search for rich anime content access
 - **Mikan Project Integration**: ACG search dual-source system (ACG.RIP and Mikan Project), supports source switching, unified response format, and complete torrent metadata
 - **Short Drama Features**: Search, playback, dedicated detail pages, mobile API proxy, auto-skip to next episode when backup API unavailable, fallback API support
-- **IPTV Live TV**: m3u/m3u8 subscriptions, FLV live stream support (integrated flv.js), EPG program guide (multi-source & url-tvg support), source aggregation, logo proxy, channel search within current source, live source tab quick search, long channel name click-to-expand, channel health check system
+- **IPTV Live TV**: m3u/m3u8 subscriptions, FLV live stream support (integrated flv.js, CORS proxy support), EPG program guide (multi-source & url-tvg support), source aggregation, logo proxy, channel search within current source, live source tab quick search, long channel name click-to-expand, channel health check system
 - **Bangumi Anime**: Intelligent anime detection, API integration, caching mechanism, anime content details prioritize Bangumi API
 - **Traditional Chinese Search Support**: Smart Traditional-Simplified conversion, multi-strategy search, lightweight switch-chinese library, optimized Traditional Chinese user search experience, intelligent search variant detection
 - **2026 Year Filter**: Add 2026 year filter option for Douban content, easily find latest releases
@@ -64,6 +65,7 @@ This project is a deeply customized version based on **MoonTV**, continuously de
 - **Smart Performance Optimization**: Device-based tiered rendering, Web Worker acceleration, hardware acceleration
 - **Comprehensive Settings Panel**: 2026 UI/UX design upgrade, integrated danmaku settings panel in global settings with fullscreen Portal rendering, supporting font size, speed, opacity, display area, anti-overlap adjustments
 - **Smart Caching**: localStorage persistence, 30-minute cache, auto cleanup of expired data
+- **Manual Danmaku Matching**: Search anime, select episode, override auto-match for precise danmaku retrieval
 - **Web-exclusive Input**: Simple "Danmu" button for quick sending (auto-hidden on mobile)
 - **Error State Display**: Auto-retry, loading metadata tracking, and improved reload feedback
 
@@ -105,6 +107,7 @@ This project is a deeply customized version based on **MoonTV**, continuously de
 - **Batch Episode Download**: Supports batch downloading multiple episodes locally
 - **Concurrent Write Optimization**: Resolved stream-on-demand mode concurrent write data loss
 - **Time Range Display**: Add segment duration tracking and time range display for download tasks, show total duration for complete videos
+- **IndexedDB Persistence**: Persist download tasks with IndexedDB and Storage Buckets, auto-restore after page refresh
 
 #### 📺 EPG System Enhancement
 - **Debug API Endpoint**: Dedicated EPG debug interface providing complete parsing information
@@ -163,10 +166,10 @@ This project is a deeply customized version based on **MoonTV**, continuously de
   - **Smart Follow**: Members auto-follow when host switches episodes (no confirmation needed)
   - **Source Switch Confirmation**: Confirmation dialog when switching video source to prevent accidental interruption
   - **Live Channel Sync**: Add live channel synchronization functionality for watch rooms
-- **M3U8 Download**: Client-side M3U8 video download support, batch episode download, 6x concurrent download speed boost, download settings UI, stream-on-demand auto-detection
+- **M3U8 Download**: Client-side M3U8 video download support, batch episode download, 6x concurrent download speed boost, download settings UI, stream-on-demand auto-detection, IndexedDB task persistence and restore
 - **Player Buffer Optimization**: Three buffer modes (data-saving, balanced, high-quality), smart network adaptation
 - **Netflix-style Smart Speed Test**: Real-time network speed testing, intelligent early stop mechanism, auto-recommend optimal buffer mode
-- **WebSR AI Super Resolution**: WebGPU-accelerated real-time video super-resolution, supports 2x upscaling and quality restoration, multi-content type optimization (anime/real-life/3D), three quality tiers, split-screen comparison feature
+- **WebSR AI Super Resolution**: WebGPU-accelerated real-time video super-resolution (v0.0.15), replaced Anime4K-WebGPU, multi-content type support (anime/real-life/3D), three quality tiers, split-screen comparison, glassmorphism settings panel
 - **Custom Ad Filter**: Support custom ad filtering rule code, separate reset and restore default buttons
 - **Chromecast Casting**: Smart browser detection, auto-excludes OPPO, Xiaomi, Huawei, Samsung vendor browsers
 - **iPad/iOS Optimization**: HLS.js official source optimization, smart device detection, multi-attempt autoplay strategy
@@ -259,12 +262,12 @@ This project is licensed under **CC BY-NC-SA 4.0**, with the following terms:
 ## ✨ Complete Feature List
 
 ### 🎬 Content Aggregation
-- ✅ Multi-source video aggregation search (streaming output, smart variants, language-aware filtering, fallback API support, Traditional Chinese support)
+- ✅ Multi-source video aggregation search (streaming output, smart variants, exact search filter, language-aware filtering, fallback API support, Traditional Chinese support)
 - ✅ YouTube integration (search, live streaming, iframe playback, time filtering & sorting)
 - ✅ Cloud drive search (PanSou integration, advanced filtering, cache management)
 - ✅ ACG torrent search (ACG.RIP and Mikan Project dual-source system, source switching, unified response format, complete torrent metadata)
 - ✅ Short drama features (search, playback, dedicated detail pages, mobile API proxy)
-- ✅ IPTV live TV (m3u subscriptions, EPG guide, multi-source support, url-tvg, source aggregation, channel search, long channel name click-to-expand)
+- ✅ IPTV live TV (m3u subscriptions, EPG guide, multi-source support, url-tvg, source aggregation, channel search, long channel name click-to-expand, FLV live CORS proxy)
 - ✅ Bangumi anime (info detection, API integration, 3-6 digit ID support)
 - ✅ TMDB actor search (filtering, caching)
 - ✅ Completed series episode count (displays total episode count on search and category pages)
@@ -283,6 +286,7 @@ This project is licensed under **CC BY-NC-SA 4.0**, with the following terms:
 - ✅ Smart content matching (auto-filter commentary, trailers, irrelevant content)
 - ✅ Smart performance optimization (device tiering, Web Worker, hardware acceleration, segmented loading)
 - ✅ Complete configuration (font size, speed, opacity, display area, anti-overlap, type masking)
+- ✅ Manual danmaku matching (search anime, select episode, override auto-match)
 - ✅ Smart caching (localStorage, 30-min expiry, page refresh persistence)
 - ✅ Danmaku input (web-only "Danmu" button, auto-hidden on mobile)
 - ✅ EXT-X-MEDIA URI handling (prevents HLS audio track loading errors)
@@ -1327,50 +1331,49 @@ This project works with [OrionTV](https://github.com/zimplexing/OrionTV) on Andr
 
 For complete feature updates and bug fixes, see [CHANGELOG](CHANGELOG).
 
-### Latest Version: v6.1.2 (2026-02-09)
+### Latest Version: v6.2.0 (2026-03-01)
 
 #### Added
-- 📺 FLV Live Streaming Support: Integrate flv.js for FLV format live streaming playback
-- 🎯 One-Click Invalid Source Selection: Add one-click invalid source selection with modernized button UI
-- 🎬 Player Error UI Overlay: Add error UI overlay with retry button
-- 📦 TVBox Vercel Blob CDN: Add Vercel Blob CDN support for spider JAR
-- 🎨 Danmaku Settings Panel 2026 UI/UX Upgrade: Adopt 2026 UI/UX best practices with fullscreen Portal rendering support
-- 💬 Danmaku System Enhancement: Error state display, auto-retry, load metadata tracking and improved reload feedback
-- 📺 Chromecast Enhancement: Metadata support, disconnect toggle and playback resume functionality
-- 🖱️ Material UI Tabs Drag Scroll: Add drag-to-scroll functionality and lazy health check on scroll
-- 🏥 Channel Health Check System: Add channel health check system and enhanced category management
-- 🎭 Celebrity Works API: Add celebrity works API with anti-crawler protection and 3-tier fallback search
-- 👥 Watch Room Live Channel Sync: Add live channel sync for watch room
-- 🎬 Fullscreen Playback Info Overlay: Display title and episode info overlay during fullscreen playback
+- 🔌 Emby Private Library Support: Integrated Emby private library with auto-initialization and config UI improvements
+- ⚙️ Emby Advanced Options: Add Emby advanced options in config UI
+- 🔍 Emby Search Feature: Add real-time Emby search with modern UI design, local full-text index supporting fuzzy matching
+- 👤 Emby User Configuration: Implement per-user independent Emby configuration system with test API functionality
+- 📭 Emby Empty State UI: Add empty state UI for no search results
+- 🌐 Emby Public Sources: Add admin public sources functionality
+- 💾 Private Library Enhancements: localStorage persistent sort preferences, manual refresh button, mobile category count display
+- 🎛️ EnableWebLive Toggle: Add EnableWebLive toggle to control live streaming access
+- 🖼️ Short Drama Image Cache: Implement short drama image cache and priority loading
+- ♾️ Virtual Scroll Seamless Loading: Implement virtual scroll seamless infinite loading for Emby and short drama, with viewport-aware endReached threshold and adaptive overscan
 
 #### Changed
-- 📦 Package Import Optimization: Use optimizePackageImports to optimize bundle size
-- 🔍 Douban HTML Parsing Optimization: Use split instead of regex for better parsing performance
-- 📦 TVBox Spider JAR Download Strategy: Proxy all spider JAR downloads through server
+- 🏷️ Rename 'Private Library' to 'Emby': Improve clarity and user understanding, route renamed to /emby
+- 🔄 Refactor SettingsPanel Component: Extract settings to standalone SettingsPanel component, use TanStack Query for Emby config management
+- ⚡ Migrate Private Library to TanStack Query: Refactor private library data management with TanStack Query
+- 🔐 Database Migration: Migrate flat Redis keys to Hash structure, use scrypt password hashing
+- 📦 Virtual Grid Refactor: Migrate react-window to @tanstack/react-virtual via unified VirtualGrid
 
 #### Fixed
-- 📱 Mobile Bottom Padding and Text Overflow: Improve mobile bottom padding and text overflow display
-- 📦 TVBox Multiple Fixes: Improve config API compatibility and network reliability, spider.jar IP access compatibility
-- ⚡ Performance Monitor System Fixes: Environment checks, CPU baseline initialization, lazy initialization to prevent module load errors
-- 🗑️ Config Source Database Cleanup: Remove deleted config sources from database
-- 🎮 Player Fullscreen Control Auto-Hide: Auto-hide player controls after entering fullscreen
-- 💬 Danmaku System Fixes: Fix loading issues, settings panel slider flicker, Portal rendering for fullscreen support
-- 🖱️ Tabs Drag Scroll Fixes: Fix scroll button coordination and tab click conflicts
-- 💬 Chat Send Button Display: Prevent send button from being pushed out of view
-- 🎬 Fullscreen Title Layer Rendering Fixes: Fix initial HTML content and rendering timing issues
-- 🎨 Portal Isolation Wrapper Font: Restore font-family on portal isolation wrapper
-- 📊 Episode Total Calculation: Include newRecord.total_episodes in latestTotalEpisodes calculation
+- 🔍 Fix source lookup and detail API: Fix source lookup logic for specified source and ID, regular API sources use search-based detail fetching, unify Emby source detail handling in /api/detail
+- 🔄 Fix play page initialization: Fix detailData null check and background loading state, optimize play page initialization for direct source access
+- 🔐 Fix Emby authentication system: Fix API key and username/password dual authentication support, use /Users/Me endpoint for API key authentication
+- 💾 Fix Emby config management: Fix auto-fetch and save Emby UserId on configuration, clear EmbyClient cache when user updates config to apply changes immediately
+- ⚡ Optimize UserEmbyConfig performance: Rewrite as uncontrolled inputs to eliminate lag, optimize form performance, fix per-user Emby config and add complete UI
+- 🎵 Fix Emby playback issues: Add PlaySessionId to HLS transcode URL to resolve fragment loading errors, use HLS with forced audio transcoding to resolve EAC3/TrueHD playback issues
+- 🖼️ Optimize image loading performance: Implement module-level image cache system, share cache between VideoCard and useImagePreload, prevent flash on virtual scroll remount
+- 🎬 Fix Douban virtual scroll issues: Fix virtual mode double infinite scroll trigger, eliminate load-more flash by releasing lock inside flushSync
+- ⚡ Optimize virtual scroll performance: Use unified container offset for better VirtualGrid performance, increase initial page size to fill viewport, preload data 800px before viewport end for seamless scroll
 
 ### Major Milestone Versions
 
-- **v6.1.2**: FLV live streaming support, danmaku settings panel 2026 UI/UX upgrade, Chromecast enhancement, Material UI Tabs drag scroll, channel health check system, celebrity works API, watch room live channel sync, fullscreen playback info overlay
+- **v6.2.0**: Emby private library support, virtual grid refactor (react-window to @tanstack/react-virtual), database migration (Redis Hash + scrypt password hashing), image cache optimization, virtual scroll performance optimization
+- **v6.1.3**: WebSR super resolution, manual danmaku matching, TanStack Query full migration, M3U8 downloader IndexedDB persistence, exact search filter, FLV live CORS proxy
 - **v6.1.1**: Trusted network mode, video source weight system, Bangumi API priority, smart search variants, short drama fallback API, danmaku system enhancement, video cache LRU eviction, config subscription fix
 - **v6.1.0**: Performance monitoring system, traffic monitoring system, TanStack Query state management, Kvrocks persistence, Douban anti-crawler verification, Mikan Project integration, video caching system, short drama AI chat, enhanced ad filtering
 - **v6.0.0**: Homepage performance drastically optimized (CPU reduced to 50-80%), Puppeteer anti-scraping system, Douban mobile API fallback, Web Worker optimization, playback progress restore, dependency upgrades
 - **v5.9.3**: Traditional Chinese search support, download feature enhancement, TVBox source management enhancement, User-Agent comprehensive upgrade to 2026 latest versions, Baidu image proxy, fnOS deployment guide
 - **v5.9.2**: Douban Trailer System Enhancement, Proxy Configuration System, M3U8 Downloader 6x Speed Boost, EPG System Enhancement, Live Direct Connect Mode, Mobile Navigation Netflix-style Redesign
 - **v5.9.1**: Glassmorphism Design, Material UI CategoryBar, Netflix-style HeroBanner, AI Feature Comprehensive Enhancement, Douban Cache Optimization
-- **v5.9.0**: Multi-Provider OIDC (GitHub/Apple/Facebook/WeChat), Watch Room, M3U8 Download, Anime4K Super Resolution, Player Buffer Optimization
+- **v5.9.0**: Multi-Provider OIDC (GitHub/Apple/Facebook/WeChat), Watch Room, M3U8 Download, WebSR Super Resolution (formerly Anime4K), Player Buffer Optimization
 - **v5.8.0**: Next.js 16.1 + React 19 + Tailwind CSS 4.1, AI Chat Performance Optimization, Actor Works Viewer, Danmaku Settings Panel
 - **v5.7.1**: Liquid-glass Frosted Glass Control Bar, Douban Reviews, Global Favorites, Fallback API, Completed Series Episode Count
 - **v5.7.0**: Celebrity Avatars & Recommendations, Live Source Search, Image Proxy Optimization, Mobile Navigation Fixes

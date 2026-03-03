@@ -451,3 +451,4 @@ export function isSeriesCompleted(remarks?: string): boolean {
   // - 单独的"完"（但不包括"完整"）
   return /完结|已完结|全\d+集|完(?!整)/.test(remarks);
 }
+

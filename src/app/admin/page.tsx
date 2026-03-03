@@ -64,6 +64,7 @@ import { TVBoxTokenCell, TVBoxTokenModal } from '@/components/TVBoxTokenManager'
 import YouTubeConfig from '@/components/YouTubeConfig';
 import ShortDramaConfig from '@/components/ShortDramaConfig';
 import DownloadConfig from '@/components/OfflineDownloadConfig';
+import EmbyConfig from '@/components/EmbyConfig';
 import CustomAdFilterConfig from '@/components/CustomAdFilterConfig';
 import WatchRoomConfig from '@/components/WatchRoomConfig';
 import PerformanceMonitor from '@/components/admin/PerformanceMonitor';
@@ -290,6 +291,7 @@ interface SiteConfig {
   DisableYellowFilter: boolean;
   ShowAdultContent: boolean;
   FluidSearch: boolean;
+  EnableWebLive: boolean;
   EnablePuppeteer: boolean; // 豆瓣 Puppeteer 开关
   DoubanCookies?: string; // 豆瓣认证 Cookies
   // TMDB配置
@@ -5111,6 +5113,7 @@ const SiteConfigComponent = ({ config, refreshConfig }: { config: AdminConfig | 
     DisableYellowFilter: false,
     ShowAdultContent: false,
     FluidSearch: true,
+    EnableWebLive: false,
     // TMDB配置默认值
     TMDBApiKey: '',
     TMDBLanguage: 'zh-CN',
@@ -5190,6 +5193,7 @@ const SiteConfigComponent = ({ config, refreshConfig }: { config: AdminConfig | 
         DisableYellowFilter: config.SiteConfig.DisableYellowFilter || false,
         ShowAdultContent: config.SiteConfig.ShowAdultContent || false,
         FluidSearch: config.SiteConfig.FluidSearch || true,
+        EnableWebLive: config.SiteConfig.EnableWebLive ?? false,
         // TMDB配置
         TMDBApiKey: config.SiteConfig.TMDBApiKey || '',
         TMDBLanguage: config.SiteConfig.TMDBLanguage || 'zh-CN',
@@ -5872,6 +5876,38 @@ const SiteConfigComponent = ({ config, refreshConfig }: { config: AdminConfig | 
         </div>
         <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
           启用后搜索结果将实时流式返回，提升用户体验。
+        </p>
+      </div>
+
+      {/* 启用网页直播 */}
+      <div>
+        <div className='flex items-center justify-between'>
+          <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+            启用网页直播
+          </label>
+          <button
+            type='button'
+            onClick={() =>
+              setSiteSettings((prev) => ({
+                ...prev,
+                EnableWebLive: !prev.EnableWebLive,
+              }))
+            }
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${siteSettings.EnableWebLive
+              ? buttonStyles.toggleOn
+              : buttonStyles.toggleOff
+              }`}
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full ${buttonStyles.toggleThumb} transition-transform ${siteSettings.EnableWebLive
+                ? buttonStyles.toggleThumbOn
+                : buttonStyles.toggleThumbOff
+                }`}
+            />
+          </button>
+        </div>
+        <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
+          网页直播性能较差，会导致服务器内存泄露，建议谨慎开启。
         </p>
       </div>
 
@@ -6959,6 +6995,7 @@ function AdminPageClient() {
     aiRecommendConfig: false,
     youtubeConfig: false,
     shortDramaConfig: false,
+    embyConfig: false,
     downloadConfig: false,
     customAdFilter: false,
     watchRoomConfig: false,
@@ -7244,6 +7281,21 @@ function AdminPageClient() {
               onToggle={() => toggleTab('shortDramaConfig')}
             >
               <ShortDramaConfig config={config} refreshConfig={fetchConfig} />
+            </CollapsibleTab>
+
+            {/* Emby配置标签 */}
+            <CollapsibleTab
+              title='Emby私人影库'
+              icon={
+                <FolderOpen
+                  size={20}
+                  className='text-indigo-600 dark:text-indigo-400'
+                />
+              }
+              isExpanded={expandedTabs.embyConfig}
+              onToggle={() => toggleTab('embyConfig')}
+            >
+              <EmbyConfig config={config} refreshConfig={fetchConfig} />
             </CollapsibleTab>
 
             {/* 下载配置标签 */}

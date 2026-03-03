@@ -9,10 +9,13 @@ import { createPortal } from 'react-dom';
 import Hls from 'hls.js';
 import { Heart, ChevronUp, Download, X } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { toast } from 'sonner';
 
 import { useDownload } from '@/contexts/DownloadContext';
 import { useDanmu } from '@/hooks/useDanmu';
+import type { DanmuManualOverride } from '@/hooks/useDanmu';
 import DownloadEpisodeSelector from '@/components/download/DownloadEpisodeSelector';
+import DanmuManualMatchModal, { type DanmuManualSelection } from '@/components/DanmuManualMatchModal';
 import EpisodeSelector from '@/components/EpisodeSelector';
 import NetDiskSearchResults from '@/components/NetDiskSearchResults';
 import AcgSearch from '@/components/AcgSearch';
@@ -54,6 +57,19 @@ import { SearchResult } from '@/lib/types';
 import { getVideoResolutionFromM3u8, processImageUrl } from '@/lib/utils';
 import { useWatchRoomContextSafe } from '@/components/WatchRoomProvider';
 import { useWatchRoomSync } from './hooks/useWatchRoomSync';
+import {
+  useSavePlayRecordMutation,
+  useSaveFavoriteMutation,
+  useDeleteFavoriteMutation,
+} from './hooks/usePlayPageMutations';
+import {
+  useDoubanDetailsQuery,
+  useDoubanCommentsQuery,
+} from './hooks/usePlayPageQueries';
+import {
+  usePrefetchNextEpisode,
+  usePrefetchDoubanData,
+} from './hooks/usePlayPagePrefetch';
 
 // 扩展 HTMLVideoElement 类型以支持 hls 属性
 declare global {
@@ -76,6 +92,11 @@ function PlayPageClient() {
   const { createTask, setShowDownloadPanel } = useDownload();
   const watchRoom = useWatchRoomContextSafe();
 
+  // TanStack Query mutations
+  const savePlayRecordMutation = useSavePlayRecordMutation();
+  const saveFavoriteMutation = useSaveFavoriteMutation();
+  const deleteFavoriteMutation = useDeleteFavoriteMutation();
+
   // -----------------------------------------------------------------------------
   // 状态变量（State）
   // -----------------------------------------------------------------------------
@@ -97,16 +118,6 @@ function PlayPageClient() {
 
   // 收藏状态
   const [favorited, setFavorited] = useState(false);
-
-  // 豆瓣详情状态
-  const [movieDetails, setMovieDetails] = useState<any>(null);
-  const [loadingMovieDetails, setLoadingMovieDetails] = useState(false);
-  const [lastMovieDetailsFetchTime, setLastMovieDetailsFetchTime] = useState<number>(0); // 记录上次请求时间
-
-  // 豆瓣短评状态
-  const [movieComments, setMovieComments] = useState<any[]>([]);
-  const [loadingComments, setLoadingComments] = useState(false);
-  const [commentsError, setCommentsError] = useState<string | null>(null);
 
   // 返回顶部按钮显示状态
   const [showBackToTop, setShowBackToTop] = useState(false);
@@ -142,6 +153,8 @@ function PlayPageClient() {
 
   // 弹幕设置面板状态
   const [isDanmuSettingsPanelOpen, setIsDanmuSettingsPanelOpen] = useState(false);
+  const [isDanmuManualModalOpen, setIsDanmuManualModalOpen] = useState(false);
+  const [manualDanmuOverrides, setManualDanmuOverrides] = useState<Record<string, DanmuManualSelection>>({});
   const [, setDanmuSettingsVersion] = useState(0);
   const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
 
@@ -218,12 +231,14 @@ function PlayPageClient() {
     canvas: HTMLCanvasElement | null;
     weightsCache: Map<string, any>;
     isActive: boolean;
+    renderLoopActive: boolean;
   }>({
     instance: null,
     gpu: null,
     canvas: null,
     weightsCache: new Map(),
     isActive: false,
+    renderLoopActive: false,
   });
 
   const websrEnabledRef = useRef(websrEnabled);
@@ -297,11 +312,38 @@ function PlayPageClient() {
   const [videoDoubanId, setVideoDoubanId] = useState(
     parseInt(searchParams.get('douban_id') || '0') || 0
   );
+
+  // TanStack Query queries - 豆瓣详情和评论（依赖 videoDoubanId）
+  const {
+    data: movieDetails,
+    status: movieDetailsStatus,
+    error: movieDetailsError,
+  } = useDoubanDetailsQuery(videoDoubanId);
+
+  const {
+    data: movieComments,
+    status: commentsStatus,
+    error: commentsError,
+  } = useDoubanCommentsQuery(videoDoubanId);
+
+  // 兼容旧代码的 loading 状态
+  const loadingMovieDetails = movieDetailsStatus === 'pending';
+  const loadingComments = commentsStatus === 'pending';
+
   // 当前源和ID
   const [currentSource, setCurrentSource] = useState(
     searchParams.get('source') || ''
   );
   const [currentId, setCurrentId] = useState(searchParams.get('id') || '');
+
+  // 解析 source 参数以获取 embyKey（仅用于 API 调用）
+  const parseSourceForApi = (source: string): { source: string; embyKey?: string } => {
+    if (source.startsWith('emby_')) {
+      const key = source.substring(5);
+      return { source: 'emby', embyKey: key };
+    }
+    return { source };
+  };
 
   // 短剧ID（用于获取详情显示，不影响源搜索）
   const [shortdramaId] = useState(searchParams.get('shortdrama_id') || '');
@@ -384,6 +426,9 @@ function PlayPageClient() {
   const artRef = useRef<HTMLDivElement | null>(null);
 
   // 🚀 使用 useDanmu Hook 管理弹幕
+  const danmuScopeKey = `${videoTitle}_${videoYear}_${videoDoubanId}_${currentEpisodeIndex + 1}`;
+  const activeManualDanmuOverride: DanmuManualOverride | null = manualDanmuOverrides[danmuScopeKey] || null;
+
   const {
     externalDanmuEnabled,
     setExternalDanmuEnabled,
@@ -404,6 +449,7 @@ function PlayPageClient() {
     currentEpisodeIndex,
     currentSource,
     artPlayerRef,
+    manualOverride: activeManualDanmuOverride,
   });
 
   // ✅ 合并所有 ref 同步的 useEffect - 减少不必要的渲染
@@ -619,85 +665,14 @@ function PlayPageClient() {
         } finally {
           setLoadingBangumiDetails(false);
         }
-      } else {
-        // 加载豆瓣详情
-        if (loadingMovieDetails || movieDetails) {
-          return;
-        }
-
-        // 🎯 防止频繁重试：如果上次请求在1分钟内，则跳过
-        const now = Date.now();
-        const oneMinute = 60 * 1000; // 1分钟 = 60秒 = 60000毫秒
-        if (lastMovieDetailsFetchTime > 0 && now - lastMovieDetailsFetchTime < oneMinute) {
-          console.log(`⏱️ 距离上次请求不足1分钟，跳过重试（${Math.floor((now - lastMovieDetailsFetchTime) / 1000)}秒前）`);
-          return;
-        }
-
-        setLoadingMovieDetails(true);
-        setLastMovieDetailsFetchTime(now); // 记录本次请求时间
-        try {
-          const response = await getDoubanDetails(videoDoubanId.toString());
-          // 🎯 只有在数据有效（title 存在）时才设置 movieDetails
-          if (response.code === 200 && response.data && response.data.title) {
-            setMovieDetails(response.data);
-          } else if (response.code === 200 && response.data && !response.data.title) {
-            console.warn('⚠️ Douban 返回空数据（缺少标题），1分钟后将自动重试');
-            setMovieDetails(null);
-          }
-        } catch (error) {
-          console.error('Failed to load movie details:', error);
-          setMovieDetails(null);
-        } finally {
-          setLoadingMovieDetails(false);
-        }
       }
+      // 🚀 TanStack Query 会自动加载豆瓣详情和评论，无需手动 useEffect
     };
 
     loadMovieDetails();
-  }, [videoDoubanId, loadingMovieDetails, movieDetails, loadingBangumiDetails, bangumiDetails, lastMovieDetailsFetchTime]);
+  }, [videoDoubanId, loadingBangumiDetails, bangumiDetails]);
 
-  // 加载豆瓣短评
-  useEffect(() => {
-    const loadComments = async () => {
-      if (!videoDoubanId || videoDoubanId === 0 || detail?.source === 'shortdrama') {
-        return;
-      }
-
-      // 跳过bangumi ID
-      if (isBangumiId(videoDoubanId)) {
-        return;
-      }
-
-      // 如果已经加载过短评，不重复加载
-      if (loadingComments || movieComments.length > 0) {
-        return;
-      }
-
-      setLoadingComments(true);
-      setCommentsError(null);
-      try {
-        const response = await getDoubanComments({
-          id: videoDoubanId.toString(),
-          start: 0,
-          limit: 10,
-          sort: 'new_score'
-        });
-
-        if (response.code === 200 && response.data) {
-          setMovieComments(response.data.comments);
-        } else {
-          setCommentsError(response.message);
-        }
-      } catch (error) {
-        console.error('Failed to load comments:', error);
-        setCommentsError('加载短评失败');
-      } finally {
-        setLoadingComments(false);
-      }
-    };
-
-    loadComments();
-  }, [videoDoubanId, loadingComments, movieComments.length, detail?.source]);
+  // 🚀 豆瓣评论由 useDoubanCommentsQuery 自动加载，无需手动 useEffect
 
   // 加载短剧详情（仅用于显示简介等信息，不影响源搜索）
   useEffect(() => {
@@ -749,6 +724,7 @@ function PlayPageClient() {
   const [sourceSearchError, setSourceSearchError] = useState<string | null>(
     null
   );
+  const [backgroundSourcesLoading, setBackgroundSourcesLoading] = useState(false);
 
   // 优选和测速开关
   const [optimizationEnabled] = useState<boolean>(() => {
@@ -830,6 +806,22 @@ function PlayPageClient() {
     videoDoubanId: videoDoubanId,  // 传入豆瓣ID
     searchTitle: searchTitle,  // 传入搜索标题
     setCurrentEpisodeIndex,  // 传入切换集数的函数
+  });
+
+  // 🚀 数据预取 - 下一集预取（当播放进度达到80%时）
+  usePrefetchNextEpisode({
+    detail,
+    currentEpisodeIndex,
+    currentTime: currentPlayTime,
+    duration: videoDuration,
+    source: currentSource,
+    id: currentId,
+  });
+
+  // 🚀 数据预取 - 豆瓣数据预取（当视频加载时）
+  usePrefetchDoubanData({
+    videoDoubanId: videoDoubanId ? String(videoDoubanId) : null,
+    enabled: !!videoDoubanId,
   });
 
   // -----------------------------------------------------------------------------
@@ -2031,7 +2023,6 @@ function PlayPageClient() {
       const networkName = getWebsrNetworkName(websrModeRef.current, websrNetworkSizeRef.current);
 
       const websr = new WebSR({
-        source: video,
         canvas: canvas,
         weights: weights,
         network_name: networkName,
@@ -2041,9 +2032,23 @@ function PlayPageClient() {
       websrRef.current.instance = websr;
       websrRef.current.canvas = canvas;
       websrRef.current.isActive = true;
+      websrRef.current.renderLoopActive = true;
 
-      // 启动渲染
-      await websr.start();
+      // 使用 requestVideoFrameCallback 手动渲染循环
+      const renderFrame = () => {
+        if (!websrRef.current.renderLoopActive || !websrRef.current.instance) return;
+        websrRef.current.instance.render(video).then(() => {
+          if (websrRef.current.renderLoopActive) {
+            video.requestVideoFrameCallback(renderFrame);
+          }
+        }).catch((err: any) => {
+          console.warn('WebSR render error:', err);
+          if (websrRef.current.renderLoopActive) {
+            video.requestVideoFrameCallback(renderFrame);
+          }
+        });
+      };
+      video.requestVideoFrameCallback(renderFrame);
 
       // 隐藏原始视频
       video.style.opacity = '0';
@@ -2081,6 +2086,7 @@ function PlayPageClient() {
   const destroyWebSR = async () => {
     const ref = websrRef.current;
     ref.isActive = false;
+    ref.renderLoopActive = false;
 
     try {
       if (ref.instance) {
@@ -2364,6 +2370,7 @@ function PlayPageClient() {
 
             if (result.count > 0) {
               console.log('✅ 向播放器插件重新加载弹幕数据:', result.count, '条');
+              plugin.load(); // 清空已有弹幕
               plugin.load(result.data);
 
               // 恢复弹幕插件的状态
@@ -2399,7 +2406,8 @@ function PlayPageClient() {
   useEffect(() => {
     const fetchSourceDetail = async (
       source: string,
-      id: string
+      id: string,
+      title?: string
     ): Promise<SearchResult[]> => {
       try {
         let detailResponse;
@@ -2414,31 +2422,30 @@ function PlayPageClient() {
             `/api/shortdrama/detail?id=${id}&episode=1${titleParam}`
           );
         } else {
+          // 所有其他源（包括 Emby）统一使用 /api/detail
+          // 添加 title 参数用于搜索匹配
+          const titleParam = title ? `&title=${encodeURIComponent(title)}` : '';
           detailResponse = await fetch(
-            `/api/detail?source=${source}&id=${id}`
+            `/api/detail?source=${source}&id=${id}${titleParam}`
           );
         }
 
         if (!detailResponse.ok) {
           throw new Error('获取视频详情失败');
         }
+
         const detailData = (await detailResponse.json()) as SearchResult;
 
-        // 检查是否有有效的集数数据
-        if (!detailData.episodes || detailData.episodes.length === 0) {
-          throw new Error('该源没有可用的集数数据');
-        }
-
-        // 对于短剧源，还需要检查 title 和 poster 是否有效
+        // 对于短剧源，检查 title 和 poster 是否有效
         if (source === 'shortdrama') {
           if (!detailData.title || !detailData.poster) {
             throw new Error('短剧源数据不完整（缺少标题或海报）');
           }
         }
 
-        // 只有数据有效时才设置 availableSources
-        // 注意：这里不应该直接设置，因为后续逻辑会统一设置
-        // setAvailableSources([detailData]);
+        // 注意：不检查episodes是否为空，因为有些源可能需要后续处理
+        // 即使episodes为空，也返回数据，让调用方决定如何处理
+
         return [detailData];
       } catch (err) {
         console.error('获取视频详情失败:', err);
@@ -2475,43 +2482,54 @@ function PlayPageClient() {
 
             // 移除早期退出策略，让downstream的相关性评分发挥作用
 
-            // 处理搜索结果，使用智能模糊匹配（与downstream评分逻辑保持一致）
-            const filteredResults = data.results.filter(
+            // 处理搜索结果，使用分级匹配：精确匹配优先，避免短标题误匹配
+            const queryTitle = videoTitleRef.current.replaceAll(' ', '').toLowerCase();
+
+            const matchYearAndType = (result: SearchResult) => {
+              const yearMatch = videoYearRef.current
+                ? result.year.toLowerCase() === videoYearRef.current.toLowerCase()
+                : true;
+              const typeMatch = searchType
+                ? (searchType === 'tv' && result.episodes.length > 1) ||
+                  (searchType === 'movie' && result.episodes.length === 1)
+                : true;
+              return yearMatch && typeMatch;
+            };
+
+            // 第一优先级：精确匹配（标题完全相等，或去除数字/标点后相等）
+            const exactResults = data.results.filter(
               (result: SearchResult) => {
-                // 如果有 douban_id，优先使用 douban_id 精确匹配
                 if (videoDoubanIdRef.current && videoDoubanIdRef.current > 0 && result.douban_id) {
                   return result.douban_id === videoDoubanIdRef.current;
                 }
-
-                const queryTitle = videoTitleRef.current.replaceAll(' ', '').toLowerCase();
                 const resultTitle = result.title.replaceAll(' ', '').toLowerCase();
-
-                // 智能标题匹配：支持数字变体和标点符号变化
-                // 优先使用精确包含匹配，避免短标题（如"玫瑰"）匹配到包含该字的其他电影（如"玫瑰的故事"）
-                const titleMatch = resultTitle.includes(queryTitle) ||
-                  queryTitle.includes(resultTitle) ||
-                  // 移除数字和标点后匹配（针对"死神来了：血脉诅咒" vs "死神来了6：血脉诅咒"）
-                  resultTitle.replace(/\d+|[：:]/g, '') === queryTitle.replace(/\d+|[：:]/g, '') ||
-                  // 通用关键词匹配：仅当查询标题较长时（4个字符以上）才使用关键词匹配
-                  // 避免短标题（如"玫瑰"2字）被拆分匹配
-                  (queryTitle.length > 4 && checkAllKeywordsMatch(queryTitle, resultTitle));
-
-                const yearMatch = videoYearRef.current
-                  ? result.year.toLowerCase() === videoYearRef.current.toLowerCase()
-                  : true;
-                const typeMatch = searchType
-                  ? (searchType === 'tv' && result.episodes.length > 1) ||
-                    (searchType === 'movie' && result.episodes.length === 1)
-                  : true;
-
-                return titleMatch && yearMatch && typeMatch;
+                const exactMatch = resultTitle === queryTitle ||
+                  resultTitle.replace(/\d+|[：:]/g, '') === queryTitle.replace(/\d+|[：:]/g, '');
+                return exactMatch && matchYearAndType(result);
               }
             );
 
+            // 第二优先级：宽松包含匹配（仅当精确匹配无结果时使用）
+            let filteredResults = exactResults;
+            if (exactResults.length === 0) {
+              filteredResults = data.results.filter(
+                (result: SearchResult) => {
+                  if (videoDoubanIdRef.current && videoDoubanIdRef.current > 0 && result.douban_id) {
+                    return result.douban_id === videoDoubanIdRef.current;
+                  }
+                  const resultTitle = result.title.replaceAll(' ', '').toLowerCase();
+                  const titleMatch = resultTitle.includes(queryTitle) ||
+                    queryTitle.includes(resultTitle) ||
+                    (queryTitle.length > 4 && checkAllKeywordsMatch(queryTitle, resultTitle));
+                  return titleMatch && matchYearAndType(result);
+                }
+              );
+            }
+
             if (filteredResults.length > 0) {
-              console.log(`变体 "${variant}" 找到 ${filteredResults.length} 个精确匹配结果`);
+              console.log(`变体 "${variant}" 找到 ${filteredResults.length} 个匹配结果（${exactResults.length > 0 ? '精确' : '宽松'}匹配）`);
               bestResults = filteredResults;
-              break; // 找到精确匹配就停止
+              break; // 找到匹配就停止
             }
           }
         }
@@ -2568,26 +2586,40 @@ function PlayPageClient() {
             });
           } else {
             // 中文查询：宽松匹配，保持现有行为
-            console.log('使用中文宽松匹配策略');
-            relevantMatches = allCandidates.filter(result => {
-              const title = result.title.toLowerCase();
-              const normalizedQuery = queryTitle.replace(/[^\w\u4e00-\u9fff]/g, '');
-              const normalizedTitle = title.replace(/[^\w\u4e00-\u9fff]/g, '');
+            console.log('使用中文匹配策略（精确优先）');
+            const normalizedQuery = queryTitle.replace(/[^\w\u4e00-\u9fff]/g, '');
 
-              // 包含匹配或50%相似度
-              if (normalizedTitle.includes(normalizedQuery) || normalizedQuery.includes(normalizedTitle)) {
-                console.log(`中文包含匹配: "${result.title}"`);
-                return true;
-              }
-
-              const commonChars = Array.from(normalizedQuery).filter(char => normalizedTitle.includes(char)).length;
-              const similarity = commonChars / normalizedQuery.length;
-              if (similarity >= 0.5) {
-                console.log(`中文相似匹配 (${(similarity*100).toFixed(1)}%): "${result.title}"`);
-                return true;
-              }
-              return false;
+            // 先尝试精确匹配
+            const exactChinese = allCandidates.filter(result => {
+              const normalizedTitle = result.title.toLowerCase().replace(/[^\w\u4e00-\u9fff]/g, '');
+              const isExact = normalizedTitle === normalizedQuery ||
+                normalizedTitle.replace(/\d+/g, '') === normalizedQuery.replace(/\d+/g, '');
+              if (isExact) console.log(`中文精确匹配: "${result.title}"`);
+              return isExact;
             });
+
+            if (exactChinese.length > 0) {
+              relevantMatches = exactChinese;
+            } else {
+              // 精确无结果，降级到包含匹配
+              relevantMatches = allCandidates.filter(result => {
+                const title = result.title.toLowerCase();
+                const normalizedTitle = title.replace(/[^\w\u4e00-\u9fff]/g, '');
+
+                if (normalizedTitle.includes(normalizedQuery) || normalizedQuery.includes(normalizedTitle)) {
+                  console.log(`中文包含匹配: "${result.title}"`);
+                  return true;
+                }
+
+                const commonChars = Array.from(normalizedQuery).filter(char => normalizedTitle.includes(char)).length;
+                const similarity = commonChars / normalizedQuery.length;
+                if (similarity >= 0.5) {
+                  console.log(`中文相似匹配 (${(similarity*100).toFixed(1)}%): "${result.title}"`);
+                  return true;
+                }
+                return false;
+              });
+            }
           }
 
           console.log(`匹配结果: ${relevantMatches.length}/${allCandidates.length}`);
@@ -2632,76 +2664,62 @@ function PlayPageClient() {
           : '🔍 正在搜索播放源...'
       );
 
+      let detailData: SearchResult | null = null;
       let sourcesInfo: SearchResult[] = [];
 
-      // 对于短剧，直接获取详情，跳过搜索
-      if (currentSource === 'shortdrama' && currentId) {
-        sourcesInfo = await fetchSourceDetail(currentSource, currentId);
-        // 只有当短剧源有有效数据时才设置可用源列表
-        if (sourcesInfo.length > 0 && sourcesInfo[0].episodes && sourcesInfo[0].episodes.length > 0) {
-          await setAvailableSourcesWithWeight(sourcesInfo);
-        } else {
-          console.log('⚠️ 短剧源没有有效数据，不设置可用源列表');
-          setAvailableSources([]);
-        }
-      } else {
-        // 其他情况先搜索所有视频源
-        sourcesInfo = await fetchSourcesData(searchTitle || videoTitle);
-
-        if (
-          currentSource &&
-          currentId &&
-          !sourcesInfo.some(
-            (source) => source.source === currentSource && source.id === currentId
-          )
-        ) {
-          sourcesInfo = await fetchSourceDetail(currentSource, currentId);
-        }
-
-        // 如果有 shortdrama_id，额外添加短剧源到可用源列表
-        // 即使已经有其他源，也尝试添加短剧源到换源列表中
-        if (shortdramaId) {
-          try {
-            console.log('🔍 尝试获取短剧源详情，ID:', shortdramaId);
-            const shortdramaSource = await fetchSourceDetail('shortdrama', shortdramaId);
-            console.log('📦 短剧源返回数据:', shortdramaSource);
-
-            // 检查短剧源是否有有效数据（必须有 episodes 且 episodes 不为空）
-            if (shortdramaSource.length > 0 &&
-                shortdramaSource[0].episodes &&
-                shortdramaSource[0].episodes.length > 0) {
-              console.log('✅ 短剧源有有效数据，episodes 数量:', shortdramaSource[0].episodes.length);
-              // 检查是否已存在相同的短剧源，避免重复
-              const existingShortdrama = sourcesInfo.find(
-                (s) => s.source === 'shortdrama' && s.id === shortdramaId
-              );
-              if (!existingShortdrama) {
-                sourcesInfo.push(...shortdramaSource);
-                // 重新设置 availableSources 以包含短剧源（按权重排序）
-                sourcesInfo = await setAvailableSourcesWithWeight(sourcesInfo);
-                console.log('✅ 短剧源已添加到换源列表');
-              } else {
-                console.log('⚠️ 短剧源已存在，跳过添加');
-              }
-            } else {
-              console.log('⚠️ 短剧源没有有效的集数数据，跳过添加', {
-                length: shortdramaSource.length,
-                hasEpisodes: shortdramaSource[0]?.episodes,
-                episodesLength: shortdramaSource[0]?.episodes?.length
-              });
-            }
-          } catch (error) {
-            console.error('❌ 添加短剧源失败:', error);
+      // 如果已经有了source和id，优先通过单个详情接口快速获取
+      if (currentSource && currentId) {
+        // 先快速获取当前源的详情
+        try {
+          console.log('[Play] 获取当前源详情:', currentSource, currentId);
+          const currentSourceDetail = await fetchSourceDetail(
+            currentSource,
+            currentId,
+            searchTitle || videoTitle
+          );
+          console.log('[Play] 获取到的详情:', currentSourceDetail);
+          if (currentSourceDetail.length > 0) {
+            detailData = currentSourceDetail[0];
+            sourcesInfo = currentSourceDetail;
+            console.log('[Play] 设置 detailData 和 sourcesInfo 成功');
+          } else {
+            console.error('[Play] fetchSourceDetail 返回空数组');
           }
+        } catch (err) {
+          console.error('获取当前源详情失败:', err);
         }
+
+        // 异步获取其他源信息，不阻塞播放
+        setBackgroundSourcesLoading(true);
+        fetchSourcesData(searchTitle || videoTitle).then((sources) => {
+          // 合并当前源和搜索到的其他源
+          const allSources = [...sourcesInfo];
+          sources.forEach((source) => {
+            // 避免重复添加当前源
+            if (!(source.source === currentSource && source.id === currentId)) {
+              allSources.push(source);
+            }
+          });
+          setAvailableSources(allSources);
+          setBackgroundSourcesLoading(false);
+        }).catch((err) => {
+          console.error('异步获取其他源失败:', err);
+          setBackgroundSourcesLoading(false);
+        });
+      } else {
+        // 没有source和id，正常搜索流程
+        sourcesInfo = await fetchSourcesData(searchTitle || videoTitle);
       }
-      if (sourcesInfo.length === 0) {
+
+      if (!detailData && sourcesInfo.length === 0) {
         setError('未找到匹配结果');
         setLoading(false);
         return;
       }
 
-      let detailData: SearchResult = sourcesInfo[0];
+      if (!detailData) {
+        detailData = sourcesInfo[0];
+      }
       // 指定源和id且无需优选
       if (currentSource && currentId && !needPreferRef.current) {
         const target = sourcesInfo.find(
@@ -2709,6 +2727,15 @@ function PlayPageClient() {
         );
         if (target) {
           detailData = target;
+
+          // 如果是 emby 源且 episodes 为空，需要调用 detail 接口获取完整信息
+          if ((detailData.source === 'emby' || detailData.source.startsWith('emby_')) && (!detailData.episodes || detailData.episodes.length === 0)) {
+            console.log('[Play] Emby source has no episodes, fetching detail...');
+            const detailSources = await fetchSourceDetail(currentSource, currentId, searchTitle || videoTitle);
+            if (detailSources.length > 0) {
+              detailData = detailSources[0];
+            }
+          }
         } else {
           setError('未找到匹配结果');
           setLoading(false);
@@ -2724,10 +2751,43 @@ function PlayPageClient() {
         setLoadingStage('preferring');
         setLoadingMessage('⚡ 正在优选最佳播放源...');
 
-        detailData = await preferBestSource(sourcesInfo);
+        // 过滤掉 emby 源，它们不参与测速
+        const sourcesToTest = sourcesInfo.filter(s => {
+          // 检查是否为 emby 源（包括 emby 和 emby_xxx 格式）
+          if (s.source === 'emby' || s.source.startsWith('emby_')) return false;
+          return true;
+        });
+
+        const excludedSources = sourcesInfo.filter(s =>
+          s.source === 'emby' || s.source.startsWith('emby_')
+        );
+
+        if (sourcesToTest.length > 0) {
+          detailData = await preferBestSource(sourcesToTest);
+        } else if (excludedSources.length > 0) {
+          // 如果只有 emby 源，直接使用第一个
+          detailData = excludedSources[0];
+        } else {
+          detailData = sourcesInfo[0];
+        }
+      }
+
+      if (!detailData) {
+        setError('未找到匹配结果');
+        setLoading(false);
+        return;
       }
 
       console.log(detailData.source, detailData.id);
+
+      // 如果是 emby 源且 episodes 为空，需要调用 detail 接口获取完整信息
+      if ((detailData.source === 'emby' || detailData.source.startsWith('emby_')) && (!detailData.episodes || detailData.episodes.length === 0)) {
+        console.log('[Play] Emby source has no episodes, fetching detail...');
+        const detailSources = await fetchSourceDetail(detailData.source, detailData.id, detailData.title || videoTitleRef.current);
+        if (detailSources.length > 0) {
+          detailData = detailSources[0];
+        }
+      }
 
       setNeedPrefer(false);
       setCurrentSource(detailData.source);
@@ -2899,15 +2959,34 @@ function PlayPageClient() {
         return;
       }
 
+      // 如果是 emby 源且 episodes 为空，需要调用 detail 接口获取完整信息
+      let detailToUse = newDetail;
+      if ((newDetail.source === 'emby' || newDetail.source.startsWith('emby_')) && (!newDetail.episodes || newDetail.episodes.length === 0)) {
+        console.log('[Play] Emby source has no episodes after switch, fetching detail...');
+        try {
+          const { source: apiSource, embyKey } = parseSourceForApi(newSource);
+          const embyKeyParam = embyKey ? `&embyKey=${embyKey}` : '';
+          const detailResponse = await fetch(`/api/emby/detail?id=${newId}${embyKeyParam}`);
+          if (detailResponse.ok) {
+            const detailSources = (await detailResponse.json()) as SearchResult[];
+            if (detailSources.length > 0) {
+              detailToUse = detailSources[0];
+            }
+          }
+        } catch (err) {
+          console.error('[Play] Failed to fetch Emby detail:', err);
+        }
+      }
+
       // 🔥 换源时保持当前集数不变（除非新源集数不够）
       let targetIndex = currentEpisodeIndex;
 
       // 只有当新源的集数不够时才调整到最后一集或第一集
-      if (newDetail.episodes && newDetail.episodes.length > 0) {
-        if (targetIndex >= newDetail.episodes.length) {
+      if (detailToUse.episodes && detailToUse.episodes.length > 0) {
+        if (targetIndex >= detailToUse.episodes.length) {
           // 当前集数超出新源范围，跳转到新源的最后一集
-          targetIndex = newDetail.episodes.length - 1;
-          console.log(`⚠️ 当前集数(${currentEpisodeIndex})超出新源范围(${newDetail.episodes.length}集)，跳转到第${targetIndex + 1}集`);
+          targetIndex = detailToUse.episodes.length - 1;
+          console.log(`⚠️ 当前集数(${currentEpisodeIndex})超出新源范围(${detailToUse.episodes.length}集)，跳转到第${targetIndex + 1}集`);
           // 🔥 集数变化时，清除保存的临时进度
           const tempProgressKey = `temp_progress_${newSource}_${newId}_${currentEpisodeIndex}`;
           sessionStorage.removeItem(tempProgressKey);
@@ -2924,18 +3003,18 @@ function PlayPageClient() {
       const newUrl = new URL(window.location.href);
       newUrl.searchParams.set('source', newSource);
       newUrl.searchParams.set('id', newId);
-      newUrl.searchParams.set('year', newDetail.year);
+      newUrl.searchParams.set('year', detailToUse.year);
       newUrl.searchParams.set('index', targetIndex.toString());  // 🔥 同步URL的index参数
       window.history.replaceState({}, '', newUrl.toString());
 
-      setVideoTitle(newDetail.title || newTitle);
-      setVideoYear(newDetail.year);
-      setVideoCover(newDetail.poster);
+      setVideoTitle(detailToUse.title || newTitle);
+      setVideoYear(detailToUse.year);
+      setVideoCover(detailToUse.poster);
       // 优先保留URL参数中的豆瓣ID，如果URL中没有则使用详情数据中的
-      setVideoDoubanId(videoDoubanIdRef.current || newDetail.douban_id || 0);
+      setVideoDoubanId(videoDoubanIdRef.current || detailToUse.douban_id || 0);
       setCurrentSource(newSource);
       setCurrentId(newId);
-      setDetail(newDetail);
+      setDetail(detailToUse);
 
       // 🔥 只有当集数确实改变时才调用 setCurrentEpisodeIndex
       // 这样可以避免触发不必要的 useEffect 和集数切换逻辑
@@ -3245,27 +3324,25 @@ function PlayPageClient() {
       );
       const remarksToSave = sourceFromList?.remarks || detailRef.current?.remarks;
 
-      await savePlayRecord(currentSourceRef.current, currentIdRef.current, {
-        title: videoTitleRef.current,
-        source_name: detailRef.current?.source_name || '',
-        year: detailRef.current?.year,
-        cover: detailRef.current?.poster || '',
-        index: currentEpisodeIndexRef.current + 1, // 转换为1基索引
-        total_episodes: currentTotalEpisodes,
-        // 🔑 关键：不要在这里设置 original_episodes
-        // 让 savePlayRecord 自己处理：
-        // - 首次保存时会自动设置为 total_episodes
-        // - 后续保存时会从数据库读取并保持不变
-        // - 只有当用户看了新集数时才会更新
-        // 这样避免了播放器传入错误的 original_episodes（可能是更新后的值）
-        original_episodes: existingRecord?.original_episodes, // 只传递已有值，不自动填充
-        play_time: Math.floor(currentTime),
-        total_time: Math.floor(duration),
-        save_time: Date.now(),
-        search_title: searchTitle,
-        remarks: remarksToSave, // 优先使用搜索结果的 remarks，因为详情接口可能没有
-        douban_id: videoDoubanIdRef.current || detailRef.current?.douban_id || undefined, // 添加豆瓣ID
-        type: searchType || undefined, // 保存内容类型（anime/tv/movie）用于继续播放时正确请求详情
+      savePlayRecordMutation.mutate({
+        source: currentSourceRef.current,
+        id: currentIdRef.current,
+        record: {
+          title: videoTitleRef.current,
+          source_name: detailRef.current?.source_name || '',
+          year: detailRef.current?.year,
+          cover: detailRef.current?.poster || '',
+          index: currentEpisodeIndexRef.current + 1,
+          total_episodes: currentTotalEpisodes,
+          original_episodes: existingRecord?.original_episodes,
+          play_time: Math.floor(currentTime),
+          total_time: Math.floor(duration),
+          save_time: Date.now(),
+          search_title: searchTitle,
+          remarks: remarksToSave,
+          douban_id: videoDoubanIdRef.current || detailRef.current?.douban_id || undefined,
+          type: searchType || undefined,
+        },
       });
 
       lastSaveTimeRef.current = Date.now();
@@ -3442,17 +3519,21 @@ function PlayPageClient() {
             contentType = 'shortdrama';
           }
 
-          await saveFavorite(favSource, favId, {
-            title: videoTitleRef.current || detail.title || favoriteToUpdate.title,
-            source_name: detail.source_name || favoriteToUpdate.source_name || '',
-            year: detail.year || favoriteToUpdate.year || '',
-            cover: detail.poster || favoriteToUpdate.cover || '',
-            total_episodes: realEpisodes,
-            save_time: favoriteToUpdate.save_time || Date.now(),
-            search_title: favoriteToUpdate.search_title || searchTitle,
-            releaseDate: favoriteToUpdate.releaseDate,
-            remarks: favoriteToUpdate.remarks,
-            type: contentType,
+          saveFavoriteMutation.mutate({
+            source: favSource,
+            id: favId,
+            favorite: {
+              title: videoTitleRef.current || detail.title || favoriteToUpdate.title,
+              source_name: detail.source_name || favoriteToUpdate.source_name || '',
+              year: detail.year || favoriteToUpdate.year || '',
+              cover: detail.poster || favoriteToUpdate.cover || '',
+              total_episodes: realEpisodes,
+              save_time: favoriteToUpdate.save_time || Date.now(),
+              search_title: favoriteToUpdate.search_title || searchTitle,
+              releaseDate: favoriteToUpdate.releaseDate,
+              remarks: favoriteToUpdate.remarks,
+              type: contentType,
+            },
           });
 
           console.log('✅ 收藏数据更新成功');
@@ -3475,47 +3556,68 @@ function PlayPageClient() {
     )
       return;
 
-    try {
-      if (favorited) {
-        // 如果已收藏，删除收藏
-        await deleteFavorite(currentSourceRef.current, currentIdRef.current);
-        setFavorited(false);
-      } else {
-        // 根据 type_name 推断内容类型
-        const inferType = (typeName?: string): string | undefined => {
-          if (!typeName) return undefined;
-          const lowerType = typeName.toLowerCase();
-          if (lowerType.includes('短剧') || lowerType.includes('shortdrama') || lowerType.includes('short-drama') || lowerType.includes('short drama')) return 'shortdrama';
-          if (lowerType.includes('综艺') || lowerType.includes('variety')) return 'variety';
-          if (lowerType.includes('电影') || lowerType.includes('movie')) return 'movie';
-          if (lowerType.includes('电视剧') || lowerType.includes('剧集') || lowerType.includes('tv') || lowerType.includes('series')) return 'tv';
-          if (lowerType.includes('动漫') || lowerType.includes('动画') || lowerType.includes('anime')) return 'anime';
-          if (lowerType.includes('纪录片') || lowerType.includes('documentary')) return 'documentary';
-          return undefined;
-        };
-
-        // 根据 source 或 type_name 确定内容类型
-        let contentType = inferType(detailRef.current?.type_name);
-        // 如果 type_name 无法推断类型，检查 source 是否为 shortdrama
-        if (!contentType && currentSourceRef.current === 'shortdrama') {
-          contentType = 'shortdrama';
+    if (favorited) {
+      // 如果已收藏，删除收藏
+      deleteFavoriteMutation.mutate(
+        {
+          source: currentSourceRef.current,
+          id: currentIdRef.current,
+        },
+        {
+          onSuccess: () => {
+            setFavorited(false);
+          },
+          onError: (err) => {
+            console.error('删除收藏失败:', err);
+          },
         }
+      );
+    } else {
+      // 根据 type_name 推断内容类型
+      const inferType = (typeName?: string): string | undefined => {
+        if (!typeName) return undefined;
+        const lowerType = typeName.toLowerCase();
+        if (lowerType.includes('短剧') || lowerType.includes('shortdrama') || lowerType.includes('short-drama') || lowerType.includes('short drama')) return 'shortdrama';
+        if (lowerType.includes('综艺') || lowerType.includes('variety')) return 'variety';
+        if (lowerType.includes('电影') || lowerType.includes('movie')) return 'movie';
+        if (lowerType.includes('电视剧') || lowerType.includes('剧集') || lowerType.includes('tv') || lowerType.includes('series')) return 'tv';
+        if (lowerType.includes('动漫') || lowerType.includes('动画') || lowerType.includes('anime')) return 'anime';
+        if (lowerType.includes('纪录片') || lowerType.includes('documentary')) return 'documentary';
+        return undefined;
+      };
 
-        // 如果未收藏，添加收藏
-        await saveFavorite(currentSourceRef.current, currentIdRef.current, {
-          title: videoTitleRef.current,
-          source_name: detailRef.current?.source_name || '',
-          year: detailRef.current?.year,
-          cover: detailRef.current?.poster || '',
-          total_episodes: detailRef.current?.episodes.length || 1,
-          save_time: Date.now(),
-          search_title: searchTitle,
-          type: contentType,
-        });
-        setFavorited(true);
+      // 根据 source 或 type_name 确定内容类型
+      let contentType = inferType(detailRef.current?.type_name);
+      // 如果 type_name 无法推断类型，检查 source 是否为 shortdrama
+      if (!contentType && currentSourceRef.current === 'shortdrama') {
+        contentType = 'shortdrama';
       }
-    } catch (err) {
-      console.error('切换收藏失败:', err);
+
+      // 如果未收藏，添加收藏
+      saveFavoriteMutation.mutate(
+        {
+          source: currentSourceRef.current,
+          id: currentIdRef.current,
+          favorite: {
+            title: videoTitleRef.current,
+            source_name: detailRef.current?.source_name || '',
+            year: detailRef.current?.year,
+            cover: detailRef.current?.poster || '',
+            total_episodes: detailRef.current?.episodes.length || 1,
+            save_time: Date.now(),
+            search_title: searchTitle,
+            type: contentType,
+          },
+        },
+        {
+          onSuccess: () => {
+            setFavorited(true);
+          },
+          onError: (err) => {
+            console.error('添加收藏失败:', err);
+          },
+        }
+      );
     }
   };
 
@@ -4690,9 +4792,11 @@ function PlayPageClient() {
             console.log('外部弹幕加载结果:', result.count, '条');
 
             if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
+              const danmuPlugin = artPlayerRef.current.plugins.artplayerPluginDanmuku;
+              danmuPlugin.load(); // 清空已有弹幕
               if (result.count > 0) {
                 console.log('向播放器插件加载弹幕数据:', result.count, '条');
-                artPlayerRef.current.plugins.artplayerPluginDanmuku.load(result.data);
+                danmuPlugin.load(result.data);
                 artPlayerRef.current.notice.show = `已加载 ${result.count} 条弹幕`;
               } else {
                 console.log('没有弹幕数据可加载');
@@ -5425,7 +5529,7 @@ function PlayPageClient() {
             bangumiDetails={bangumiDetails}
             shortdramaDetails={shortdramaDetails}
             movieComments={movieComments}
-            commentsError={commentsError}
+            commentsError={commentsError?.message || null}
             loadingMovieDetails={loadingMovieDetails}
             loadingBangumiDetails={loadingBangumiDetails}
             loadingComments={loadingComments}
@@ -5559,7 +5663,9 @@ function PlayPageClient() {
                 // 重新加载外部弹幕（强制刷新）
                 const result = await loadExternalDanmu({ force: true });
                 if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
-                  artPlayerRef.current.plugins.artplayerPluginDanmuku.load(result.data);
+                  const danmuPlugin = artPlayerRef.current.plugins.artplayerPluginDanmuku;
+                  danmuPlugin.load(); // 清空已有弹幕
+                  danmuPlugin.load(result.data);
                   if (result.count > 0) {
                     artPlayerRef.current.notice.show = `已加载 ${result.count} 条弹幕`;
                   } else {
@@ -5568,11 +5674,65 @@ function PlayPageClient() {
                 }
                 return result.count;
               }}
+              isManualOverridden={!!activeManualDanmuOverride}
+              onManualMatch={() => {
+                setIsDanmuSettingsPanelOpen(false);
+                setIsDanmuManualModalOpen(true);
+              }}
+              onClearManualMatch={async () => {
+                setManualDanmuOverrides((prev) => {
+                  const next = { ...prev };
+                  delete next[danmuScopeKey];
+                  return next;
+                });
+                // Reload with auto matching
+                const result = await loadExternalDanmu({ force: true, manualOverride: null });
+                if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
+                  const danmuPlugin = artPlayerRef.current.plugins.artplayerPluginDanmuku;
+                  danmuPlugin.load(); // 清空已有弹幕
+                  danmuPlugin.load(result.data);
+                  artPlayerRef.current.notice.show = result.count > 0
+                    ? `已恢复自动匹配，加载 ${result.count} 条弹幕`
+                    : '已恢复自动匹配，暂无弹幕';
+                }
+              }}
             />
           </div>
         </div>,
         portalContainer
       )}
+
+      {/* 手动匹配弹幕弹窗 */}
+      <DanmuManualMatchModal
+        isOpen={isDanmuManualModalOpen}
+        defaultKeyword={videoTitle}
+        currentEpisode={currentEpisodeIndex + 1}
+        portalContainer={portalContainer}
+        onClose={() => setIsDanmuManualModalOpen(false)}
+        onApply={async (selection) => {
+          setManualDanmuOverrides((prev) => ({
+            ...prev,
+            [danmuScopeKey]: selection,
+          }));
+          setIsDanmuManualModalOpen(false);
+
+          const override: DanmuManualOverride = {
+            animeId: selection.animeId,
+            episodeId: selection.episodeId,
+            animeTitle: selection.animeTitle,
+            episodeTitle: selection.episodeTitle,
+          };
+          const result = await loadExternalDanmu({ force: true, manualOverride: override });
+          if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
+            const danmuPlugin = artPlayerRef.current.plugins.artplayerPluginDanmuku;
+            danmuPlugin.load(); // 清空已有弹幕
+            danmuPlugin.load(result.data);
+            artPlayerRef.current.notice.show = result.count > 0
+              ? `已手动匹配: ${selection.animeTitle} · ${selection.episodeTitle} (${result.count} 条)`
+              : `已手动匹配，但该集暂无弹幕`;
+          }
+        }}
+      />
 
       {/* WebSR 设置面板 */}
       {isWebSRSettingsPanelOpen && portalContainer && createPortal(
@@ -5806,27 +5966,89 @@ function PlayPageClient() {
           // 单集视频，直接下载当前
           const currentUrl = videoUrl;
           if (!currentUrl) {
-            alert('无法获取视频地址');
+            toast.error('无法获取视频地址');
             return;
           }
           if (!currentUrl.includes('.m3u8')) {
-            alert('仅支持M3U8格式视频下载');
+            toast.error('仅支持M3U8格式视频下载');
             return;
           }
           try {
-            await createTask(currentUrl, videoTitle || '视频', 'TS');
+            // 从 M3U8 URL 提取 origin 和 referer
+            const urlObj = new URL(currentUrl);
+            const origin = `${urlObj.protocol}//${urlObj.host}`;
+            const referer = currentUrl;
+
+            await createTask(currentUrl, videoTitle || '视频', 'TS', {
+              referer,
+              origin,
+            });
+
+            // 显示 Toast 通知
+            toast.success('下载已开始', {
+              description: videoTitle || '视频',
+              action: {
+                label: '查看下载',
+                onClick: () => setShowDownloadPanel(true)
+              },
+              duration: 5000,
+            });
           } catch (error) {
             console.error('创建下载任务失败:', error);
-            alert('创建下载任务失败: ' + (error as Error).message);
+            toast.error('创建下载任务失败', {
+              description: (error as Error).message,
+              duration: 5000,
+            });
           }
           return;
         }
 
-        // 批量下载多集
+        // 批量下载多集 - 立即显示 toast
+        const taskCount = episodeIndexes.length;
+        toast.success('下载已开始', {
+          description: taskCount === 1
+            ? `${videoTitle || '视频'}_第${episodeIndexes[0] + 1}集`
+            : `正在添加 ${taskCount} 个下载任务...`,
+          action: {
+            label: '查看下载',
+            onClick: () => setShowDownloadPanel(true)
+          },
+          duration: 5000,
+        });
+
+        let successCount = 0;
+        let hasAttempted = false;
         for (const episodeIndex of episodeIndexes) {
+          hasAttempted = true;
           try {
-            const episodeUrl = detail.episodes[episodeIndex];
+            let episodeUrl = detail.episodes[episodeIndex];
             if (!episodeUrl) continue;
+
+            // 检查是否为短剧格式，需要先解析
+            if (episodeUrl.startsWith('shortdrama:')) {
+              try {
+                const [, videoId, episode] = episodeUrl.split(':');
+                const nameParam = detail.drama_name ? `&name=${encodeURIComponent(detail.drama_name)}` : '';
+                const response = await fetch(
+                  `/api/shortdrama/parse?id=${videoId}&episode=${episode}${nameParam}`
+                );
+
+                if (response.ok) {
+                  const result = await response.json();
+                  episodeUrl = result.url || '';
+                  if (!episodeUrl) {
+                    console.warn(`第${episodeIndex + 1}集解析失败，跳过`);
+                    continue;
+                  }
+                } else {
+                  console.warn(`第${episodeIndex + 1}集解析失败，跳过`);
+                  continue;
+                }
+              } catch (parseError) {
+                console.error(`第${episodeIndex + 1}集短剧URL解析失败:`, parseError);
+                continue;
+              }
+            }
 
             // 检查是否是M3U8
             if (!episodeUrl.includes('.m3u8')) {
@@ -5836,10 +6058,33 @@ function PlayPageClient() {
 
             const episodeName = `第${episodeIndex + 1}集`;
             const downloadTitle = `${videoTitle || '视频'}_${episodeName}`;
-            await createTask(episodeUrl, downloadTitle, 'TS');
+
+            // 从 M3U8 URL 提取 origin 和 referer
+            const urlObj = new URL(episodeUrl);
+            const origin = `${urlObj.protocol}//${urlObj.host}`;
+            const referer = episodeUrl;
+
+            await createTask(episodeUrl, downloadTitle, 'TS', {
+              referer,
+              origin,
+            });
+            successCount++;
           } catch (error) {
             console.error(`创建第${episodeIndex + 1}集下载任务失败:`, error);
           }
+        }
+
+        // 如果有失败的任务，显示错误提示
+        if (successCount === 0 && hasAttempted) {
+          toast.error('下载失败', {
+            description: '无法创建下载任务，请查看控制台了解详情',
+            duration: 5000,
+          });
+        } else if (successCount < taskCount) {
+          toast.warning('部分任务创建失败', {
+            description: `成功添加 ${successCount}/${taskCount} 个下载任务`,
+            duration: 5000,
+          });
         }
       }}
       />

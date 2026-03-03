@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { loadedImageUrls } from '@/lib/imageCache';
 
 /**
  * Hook to preload images for better UX
@@ -24,7 +25,7 @@ export function useImagePreload(imageUrls: string[], enabled = true) {
     if (!enabled || !imageUrls.length) return;
 
     // Preload first few images
-    const urlsToPreload = imageUrls.slice(0, Math.min(10, imageUrls.length));
+    const urlsToPreload = imageUrls.slice(0, Math.min(30, imageUrls.length));
 
     urlsToPreload.forEach((url) => {
       if (!url) return;
@@ -51,6 +52,8 @@ export function useImagePreload(imageUrls: string[], enabled = true) {
       link.href = cleanUrl;
       // Set fetch priority to low (not blocking visible content)
       (link as any).fetchPriority = 'low';
+      // Write into shared cache when preload completes so VideoCard skips skeleton
+      link.onload = () => { loadedImageUrls.add(cleanUrl); };
 
       document.head.appendChild(link);
       addedLinksRef.current.push(link);

@@ -11,6 +11,75 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "6.2.0",
+    date: "2026-03-01",
+    added: [
+    "🔌 Emby私有库支持：集成Emby私有库支持，支持自动初始化和配置UI改进",
+    "⚙️ Emby高级选项：在配置UI中添加Emby高级选项设置",
+    "🔍 Emby搜索功能：为私有库添加实时Emby搜索功能，采用现代化UI设计，使用本地全文索引支持模糊匹配",
+    "👤 Emby用户配置：实现每用户独立的Emby配置系统，支持测试API功能",
+    "📭 Emby空状态UI：为无搜索结果添加空状态UI提示",
+    "🌐 Emby公共源：添加管理员公共源功能",
+    "💾 私有库功能增强：localStorage持久化排序偏好，手动刷新按钮，移动端显示分类总数",
+    "🎛️ EnableWebLive开关：添加EnableWebLive开关控制直播流访问",
+    "🖼️ 短剧图片缓存：实现短剧图片缓存和优先加载",
+    "♾️ 虚拟滚动无缝加载：为Emby和短剧实现虚拟滚动无缝无限加载，支持视口感知endReached阈值和自适应overscan"
+    ],
+    changed: [
+    "🏷️ 重命名'私人影库'为'Emby'：提升清晰度和用户理解，路由重命名为/emby",
+    "🔄 重构SettingsPanel组件：提取设置到独立的SettingsPanel组件，使用TanStack Query管理Emby配置",
+    "⚡ 迁移私有库到TanStack Query：使用TanStack Query重构私有库数据管理",
+    "🔐 数据库迁移：将扁平Redis键迁移到Hash结构，使用scrypt哈希密码",
+    "📦 虚拟网格重构：通过统一VirtualGrid将react-window迁移到@tanstack/react-virtual"
+    ],
+    fixed: [
+    "🔍 修复源查找和详情API：修复指定源和ID的源查找逻辑，常规API源使用基于搜索的详情获取，统一/api/detail中的Emby源详情处理",
+    "🔄 修复播放页初始化：修复detailData空值检查和后台加载状态，优化播放页初始化以支持直接源访问",
+    "📊 修复Emby详情和路由：修复Emby详情API返回SearchResult格式，修复Emby源详情请求路由到正确的API端点",
+    "🔐 修复Emby认证系统：修复API密钥和用户名/密码双重认证支持，使用/Users/Me端点进行API密钥认证，修复getCurrentUser方法中的API密钥认证处理",
+    "💾 修复Emby配置管理：修复Emby配置时自动获取并保存UserId，用户更新配置时清除EmbyClient缓存以立即应用更改，在详情API中使用用户特定配置而非全局配置",
+    "⚡ 优化UserEmbyConfig性能：重写为非受控输入以消除延迟，优化表单性能，修复每用户Emby配置并添加完整UI，改进保存UX体验",
+    "🎨 修复Emby私有库UI：修复自动初始化和配置UI改进，修复导航可见性和用户特定客户端解析，改进移动端UX体验",
+    "🎵 修复Emby播放问题：在HLS转码URL中添加PlaySessionId以解决片段加载错误，使用强制音频转码的HLS解决EAC3/TrueHD播放问题",
+    "📂 修复Emby搜索和过滤：将搜索结果范围限定到选定的库文件夹，修复繁体中文搜索无法匹配简体标题的问题",
+    "🏷️ 修复私有库显示问题：传递Emby源名称以防止收藏夹中显示'即将上映'标签，同步收藏状态和搜索卡片的悬停爱心显示，修复右键触发播放问题",
+    "🔧 更新动态路由参数以兼容Next.js 15",
+    "🎬 修复常规API源和视频加载覆盖层z-index问题",
+    "✅ 移除fetchSourceDetail中的剧集验证",
+    "🎯 恢复CapsuleSwitch中心对齐，用max-w-full替换w-full",
+    "🖼️ 优化图片加载性能：实现模块级图片缓存系统，在VideoCard和useImagePreload之间共享缓存，防止虚拟滚动重新挂载时闪烁，用仅透明度过渡替换模糊/缩放过渡，用onLoad替换Next.js 15+已废弃的onLoadingComplete",
+    "🎬 修复豆瓣虚拟滚动问题：修复虚拟模式双重无限滚动触发，通过在flushSync内释放锁消除加载更多闪烁，使用同步ref锁防止页面跳过，防止加载更多时单元格重新挂载闪烁和布局跳动",
+    "⚡ 优化虚拟滚动性能：使用统一容器偏移量提升VirtualGrid性能，增加初始页面大小以填充视口，在视口结束前800px预加载数据实现无缝滚动"
+    ]
+  },
+  {
+    version: "6.1.3",
+    date: "2026-02-23",
+    added: [
+    "🔬 WebSR超分辨率：升级至v0.0.15，用WebSR替换Anime4K-WebGPU实现多内容类型超分辨率，添加玻璃态设计风格设置面板",
+    "💬 弹幕手动匹配：添加手动弹幕匹配功能，支持搜索番剧、选择剧集、覆盖自动匹配结果",
+    "📥 M3U8下载器增强：在UserMenu添加下载管理器入口，支持IndexedDB持久化和Storage Buckets，页面刷新后可恢复下载任务",
+    "🔍 精确搜索过滤：添加精确搜索过滤功能",
+    "📺 FLV直播CORS代理支持：为FLV直播流添加CORS代理支持"
+    ],
+    changed: [
+    "⚡ TanStack Query全面迁移：全面用useQuery/useQueries/useMutation替换播放页、首页、HeroBanner、发布日历、搜索建议、播放统计、继续观看、UserMenu的数据获取逻辑，集成prefetching和乐观更新",
+    "⚡ 首页标签切换非阻塞优化：使用useTransition实现首页标签切换非阻塞渲染"
+    ],
+    fixed: [
+    "🎬 修复直播播放器错误覆盖层遮挡视频画面",
+    "🎨 迁移所有已废弃的Tailwind v4 opacity工具类到斜杠语法：修复YouTube缩略图被不透明覆盖层遮挡等Tailwind v4破坏性变更导致的样式问题",
+    "🔬 修复WebSR设置面板多项问题：关闭按钮pointer-events、面板结构与弹幕面板对齐、图标显示",
+    "🔔 减少噪音错误弹窗：仅对用户主动操作失败显示错误提示",
+    "🔧 修复/api/cache 401错误、hydration错误418及CMS代理Referer/Origin头缺失问题",
+    "🔍 修复源搜索精确标题匹配优先于子字符串匹配",
+    "🔄 修复播放记录乐观更新同步到continueWatching查询键及watching updates检查死循环",
+    "💬 修复弹幕系统多项问题：加载前未清空旧数据导致重复、模态框全屏portalContainer渲染、手动匹配损坏图片URL、搜索过早过滤无集数番剧、移动端响应式和iPhone安全区域适配",
+    "📥 修复下载系统多项问题：进度显示优化、页面刷新后恢复进度和任务、恢复时不自动弹出面板",
+    "👤 修复UserMenu初始化时强制刷新问题"
+    ]
+  },
+  {
     version: "6.1.2",
     date: "2026-02-09",
     added: [

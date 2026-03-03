@@ -7,6 +7,12 @@ import Link from 'next/link';
 import { useEffect, useState, useRef, useCallback, memo } from 'react';
 import { useAutoplay } from './hooks/useAutoplay';
 import { useSwipeGesture } from './hooks/useSwipeGesture';
+// 🚀 TanStack Query Queries & Mutations
+import {
+  useRefreshedTrailerUrlsQuery,
+  useRefreshTrailerUrlMutation,
+  useClearTrailerUrlMutation,
+} from '@/hooks/useHeroBannerQueries';
 
 interface BannerItem {
   id: string | number;
@@ -44,20 +50,11 @@ function HeroBanner({
   const [videoLoaded, setVideoLoaded] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // 存储刷新后的trailer URL（用于403自动重试，使用localStorage持久化）
-  const [refreshedTrailerUrls, setRefreshedTrailerUrls] = useState<Record<string, string>>(() => {
-    // 从 localStorage 加载已刷新的 URL
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = localStorage.getItem('refreshed-trailer-urls');
-        return stored ? JSON.parse(stored) : {};
-      } catch (error) {
-        console.error('[HeroBanner] 读取localStorage失败:', error);
-        return {};
-      }
-    }
-    return {};
-  });
+  // 🚀 TanStack Query - 刷新后的trailer URL缓存
+  // 替换 useState + localStorage 手动管理
+  const { data: refreshedTrailerUrls = {} } = useRefreshedTrailerUrlsQuery();
+  const refreshTrailerMutation = useRefreshTrailerUrlMutation();
+  const clearTrailerMutation = useClearTrailerUrlMutation();
 
   // 处理图片 URL，使用代理绕过防盗链
   const getProxiedImageUrl = (url: string) => {
@@ -86,49 +83,12 @@ function HeroBanner({
     return url;
   };
 
-  // 刷新过期的trailer URL（通过后端代理调用豆瓣移动端API，绕过缓存）
+  // 🚀 TanStack Query - 刷新过期的trailer URL
+  // 替换手动 useCallback + setState + localStorage
   const refreshTrailerUrl = useCallback(async (doubanId: number | string) => {
-    try {
-      console.log('[HeroBanner] 检测到trailer URL过期，重新获取:', doubanId);
-
-      // 🎯 调用专门的刷新API（不使用缓存，直接调用豆瓣移动端API）
-      const response = await fetch(`/api/douban/refresh-trailer?id=${doubanId}`);
-
-      if (!response.ok) {
-        console.error('[HeroBanner] 刷新trailer URL失败:', response.status);
-        return null;
-      }
-
-      const data = await response.json();
-      if (data.code === 200 && data.data?.trailerUrl) {
-        console.log('[HeroBanner] 成功获取新的trailer URL');
-
-        // 更新 state 并保存到 localStorage
-        setRefreshedTrailerUrls(prev => {
-          const updated = {
-            ...prev,
-            [doubanId]: data.data.trailerUrl
-          };
-
-          // 持久化到 localStorage
-          try {
-            localStorage.setItem('refreshed-trailer-urls', JSON.stringify(updated));
-          } catch (error) {
-            console.error('[HeroBanner] 保存到localStorage失败:', error);
-          }
-
-          return updated;
-        });
-
-        return data.data.trailerUrl;
-      } else {
-        console.warn('[HeroBanner] 未能获取新的trailer URL:', data.message);
-      }
-    } catch (error) {
-      console.error('[HeroBanner] 刷新trailer URL异常:', error);
-    }
-    return null;
-  }, []);
+    const result = await refreshTrailerMutation.mutateAsync({ doubanId });
+    return result;
+  }, [refreshTrailerMutation]);
 
   // 获取当前有效的trailer URL（优先使用刷新后的）
   const getEffectiveTrailerUrl = (item: BannerItem) => {
@@ -296,24 +256,10 @@ function HeroBanner({
 
                     // 检测是否是403错误（trailer URL过期）
                     if (item.douban_id) {
-                      // 如果localStorage中有URL，说明之前刷新过，但现在又失败了
-                      // 需要清除localStorage中的旧URL，重新刷新
+                      // 如果缓存中有URL，说明之前刷新过，但现在又失败了
+                      // 需要清除缓存中的旧URL，重新刷新
                       if (refreshedTrailerUrls[item.douban_id]) {
-                        console.log('[HeroBanner] localStorage中的URL也过期了，清除并重新获取');
-
-                        // 清除state和localStorage中的旧URL
-                        setRefreshedTrailerUrls(prev => {
-                          const updated = { ...prev };
-                          delete updated[item.douban_id];
-
-                          try {
-                            localStorage.setItem('refreshed-trailer-urls', JSON.stringify(updated));
-                          } catch (error) {
-                            console.error('[HeroBanner] 清除localStorage失败:', error);
-                          }
-
-                          return updated;
-                        });
+                        clearTrailerMutation.mutate({ doubanId: item.douban_id });
                       }
 
                       // 重新刷新URL

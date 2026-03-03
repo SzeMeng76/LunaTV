@@ -6,7 +6,7 @@ import { getAllPlayRecords, PlayRecord, generateStorageKey, forceRefreshPlayReco
 const WATCHING_UPDATES_CACHE_KEY = 'moontv_watching_updates';
 const LAST_CHECK_TIME_KEY = 'moontv_last_update_check';
 const ORIGINAL_EPISODES_CACHE_KEY = 'moontv_original_episodes'; // 新增：记录观看时的总集数
-const CACHE_DURATION = 60 * 60 * 1000; // 1小时缓存
+const CACHE_DURATION = 30 * 60 * 1000; // 30分钟缓存
 
 // 防重复修复标记
 const fixingRecords = new Set<string>();
