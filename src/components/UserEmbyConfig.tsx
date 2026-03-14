@@ -20,6 +20,7 @@ export const UserEmbyConfig = memo(({ initialConfig }: UserEmbyConfigProps) => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [testingIndex, setTestingIndex] = useState<number | null>(null);
+  const [authMode, setAuthMode] = useState<'apikey' | 'password'>('apikey');
 
   // Fetch public sources from admin
   const { data: publicSourcesData } = useQuery({
@@ -53,6 +54,7 @@ export const UserEmbyConfig = memo(({ initialConfig }: UserEmbyConfigProps) => {
   const refApiKey = useRef<HTMLInputElement>(null);
   const refUsername = useRef<HTMLInputElement>(null);
   const refPassword = useRef<HTMLInputElement>(null);
+  const refUserId = useRef<HTMLInputElement>(null);
 
   const clearRefs = () => {
     if (refKey.current) refKey.current.value = '';
@@ -61,12 +63,14 @@ export const UserEmbyConfig = memo(({ initialConfig }: UserEmbyConfigProps) => {
     if (refApiKey.current) refApiKey.current.value = '';
     if (refUsername.current) refUsername.current.value = '';
     if (refPassword.current) refPassword.current.value = '';
+    if (refUserId.current) refUserId.current.value = '';
   };
 
   const resetForm = () => {
     setFormChecks({ enabled: true, removeEmbyPrefix: false, appendMediaSourceId: false, transcodeMp4: false, proxyPlay: false });
     setEditingIndex(null);
     setShowAddForm(false);
+    setAuthMode('apikey');
     clearRefs();
   };
 
@@ -84,6 +88,13 @@ export const UserEmbyConfig = memo(({ initialConfig }: UserEmbyConfigProps) => {
       transcodeMp4: source.transcodeMp4 ?? false,
       proxyPlay: source.proxyPlay ?? false,
     });
+    if (source.ApiKey) {
+      setAuthMode('apikey');
+    } else if (source.Username) {
+      setAuthMode('password');
+    } else {
+      setAuthMode('apikey');
+    }
     setEditingIndex(index);
     setShowAddForm(false);
     setTimeout(() => {
@@ -93,6 +104,7 @@ export const UserEmbyConfig = memo(({ initialConfig }: UserEmbyConfigProps) => {
       if (refApiKey.current) refApiKey.current.value = source.ApiKey || '';
       if (refUsername.current) refUsername.current.value = source.Username || '';
       if (refPassword.current) refPassword.current.value = source.Password || '';
+      if (refUserId.current) refUserId.current.value = source.UserId || '';
     }, 0);
   };
 
@@ -142,9 +154,19 @@ export const UserEmbyConfig = memo(({ initialConfig }: UserEmbyConfigProps) => {
     const ApiKey = refApiKey.current?.value || '';
     const Username = refUsername.current?.value || '';
     const Password = refPassword.current?.value || '';
+    const UserId = refUserId.current?.value || '';
 
     if (!key || !name || !ServerURL) {
       toast.error('请填写必填字段：标识符、名称、服务器地址');
+      return;
+    }
+    // 根据认证方式验证
+    if (authMode === 'apikey' && !ApiKey) {
+      toast.error('使用密钥认证时，API Key 为必填项');
+      return;
+    }
+    if (authMode === 'password' && !Username) {
+      toast.error('使用账号认证时，用户名为必填项');
       return;
     }
     if (editingIndex === null && sources.some(s => s.key === key)) {
@@ -154,7 +176,7 @@ export const UserEmbyConfig = memo(({ initialConfig }: UserEmbyConfigProps) => {
 
     setIsLoading(true);
     try {
-      const completeFormData = { key, name, ServerURL, ApiKey, Username, Password, ...formChecks };
+      const completeFormData = { key, name, ServerURL, ApiKey, Username, Password, UserId, ...formChecks };
       const newSources = editingIndex !== null
         ? sources.map((s, i) => i === editingIndex ? completeFormData : s)
         : [...sources, completeFormData];
@@ -291,25 +313,79 @@ export const UserEmbyConfig = memo(({ initialConfig }: UserEmbyConfigProps) => {
               placeholder='http://192.168.1.100:8096' />
           </div>
 
+          {/* 认证方式切换 */}
           <div>
-            <label className='block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1'>API Key</label>
-            <input ref={refApiKey} type='text'
-              className='w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
-              placeholder='推荐使用 API Key' />
+            <label className='block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1'>认证方式 *</label>
+            <div className='flex gap-2'>
+              <button
+                type='button'
+                onClick={() => {
+                  setAuthMode('apikey');
+                  if (refUsername.current) refUsername.current.value = '';
+                  if (refPassword.current) refPassword.current.value = '';
+                }}
+                className={`flex-1 px-3 py-1.5 text-sm rounded-lg font-medium transition-colors ${
+                  authMode === 'apikey'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+              >
+                密钥认证
+              </button>
+              <button
+                type='button'
+                onClick={() => {
+                  setAuthMode('password');
+                  if (refApiKey.current) refApiKey.current.value = '';
+                }}
+                className={`flex-1 px-3 py-1.5 text-sm rounded-lg font-medium transition-colors ${
+                  authMode === 'password'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+              >
+                账号认证
+              </button>
+            </div>
           </div>
 
-          <div className='grid grid-cols-2 gap-2'>
-            <div>
-              <label className='block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1'>用户名</label>
-              <input ref={refUsername} type='text'
-                className='w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100' />
+          {/* 密钥认证 */}
+          {authMode === 'apikey' && (
+            <>
+              <div>
+                <label className='block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1'>API Key *</label>
+                <input ref={refApiKey} type='text'
+                  className='w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
+                  placeholder='在 Emby 控制台的 API 密钥页面生成' />
+              </div>
+              <div>
+                <label className='block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1'>用户 ID（可选）</label>
+                <input ref={refUserId} type='text'
+                  className='w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
+                  placeholder='留空则自动获取' />
+                <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
+                  不填则自动获取；如需指定其他用户可手动填写
+                </p>
+              </div>
+            </>
+          )}
+
+          {/* 账号认证 */}
+          {authMode === 'password' && (
+            <div className='grid grid-cols-2 gap-2'>
+              <div>
+                <label className='block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1'>用户名 *</label>
+                <input ref={refUsername} type='text'
+                  className='w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100' />
+              </div>
+              <div>
+                <label className='block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1'>密码（可选）</label>
+                <input ref={refPassword} type='password'
+                  className='w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
+                  placeholder='没有密码可留空' />
+              </div>
             </div>
-            <div>
-              <label className='block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1'>密码</label>
-              <input ref={refPassword} type='password'
-                className='w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100' />
-            </div>
-          </div>
+          )}
 
           <label className='flex items-center gap-2 text-sm'>
             <input type='checkbox' checked={formChecks.enabled}

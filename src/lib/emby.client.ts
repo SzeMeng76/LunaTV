@@ -125,9 +125,9 @@ export class EmbyClient {
     // 如果有 AuthToken，假设它是有效的
     if (this.authToken) return;
 
-    // 如果有用户名和密码，自动认证
-    if (this.username && this.password) {
-      const authResult = await this.authenticate(this.username, this.password);
+    // 如果有用户名，自动认证（密码可选）
+    if (this.username) {
+      const authResult = await this.authenticate(this.username, this.password || '');
       this.authToken = authResult.AccessToken;
       this.userId = authResult.User.Id;
     }
@@ -499,6 +499,7 @@ export class EmbyClient {
   }
 
   async getStreamUrl(itemId: string, direct = true, forceDirectUrl = false): Promise<string> {
+    await this.ensureAuthenticated();
     const token = this.apiKey || this.authToken;
 
     // 如果启用了代理播放且不是强制获取直接URL，返回代理URL

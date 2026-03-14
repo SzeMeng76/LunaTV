@@ -182,6 +182,11 @@ function HeroBanner({
 
   // 🎯 检查并刷新缺失的 trailer URL（组件挂载时）
   useEffect(() => {
+    // 如果禁用了视频，不需要刷新 trailer
+    if (!enableVideo) {
+      return;
+    }
+
     const checkAndRefreshMissingTrailers = async () => {
       for (const item of items) {
         // 如果有 douban_id 但没有 trailerUrl，尝试获取
@@ -195,7 +200,7 @@ function HeroBanner({
     // 延迟执行，避免阻塞初始渲染
     const timer = setTimeout(checkAndRefreshMissingTrailers, 1000);
     return () => clearTimeout(timer);
-  }, [items, refreshedTrailerUrls, refreshTrailerUrl]);
+  }, [items, refreshedTrailerUrls, refreshTrailerUrl, enableVideo]);
 
   return (
     <div

@@ -52,9 +52,9 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: '请填写 Emby 服务器地址' }, { status: 400 });
       }
 
-      if (!ApiKey && (!Username || !Password)) {
+      if (!ApiKey && !Username) {
         return NextResponse.json(
-          { error: '请填写 API Key 或用户名密码' },
+          { error: '请填写 API Key 或用户名' },
           { status: 400 }
         );
       }
@@ -68,10 +68,10 @@ export async function POST(request: NextRequest) {
 
       const client = new EmbyClient(testConfig);
 
-      // 如果使用用户名密码，先认证
-      if (!ApiKey && Username && Password) {
+      // 如果使用用户名，先认证（密码可选）
+      if (!ApiKey && Username) {
         try {
-          await client.authenticate(Username, Password);
+          await client.authenticate(Username, Password || '');
         } catch (error) {
           return NextResponse.json(
             { success: false, message: 'Emby 认证失败: ' + (error as Error).message },
