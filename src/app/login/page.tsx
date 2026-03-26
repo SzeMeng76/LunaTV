@@ -72,7 +72,7 @@ function LoginPageClient() {
   const [username, setUsername] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [shouldAskUsername, setShouldAskUsername] = useState(false);
+  const shouldAskUsername = process.env.NEXT_PUBLIC_STORAGE_TYPE !== 'localstorage';
   const [bingWallpaper, setBingWallpaper] = useState<string>('');
 
   // Telegram Magic Link 状态
@@ -109,14 +109,6 @@ function LoginPageClient() {
     };
 
     fetchBingWallpaper();
-  }, []);
-
-  // 在客户端挂载后设置配置
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const storageType = (window as any).RUNTIME_CONFIG?.STORAGE_TYPE;
-      setShouldAskUsername(storageType && storageType !== 'localstorage');
-    }
   }, []);
 
   // 获取 Telegram Magic Link 配置

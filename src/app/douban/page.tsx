@@ -137,37 +137,9 @@ function DoubanPageClient() {
 
   // 页面级别的AI权限检测 - 只检测一次
   useEffect(() => {
-    if (isAIRecommendFeatureDisabled()) {
-      setAiEnabled(false);
-      setAiCheckComplete(true);
-      return;
-    }
-
-    let cancelled = false;
-    (async () => {
-      try {
-        const response = await fetch('/api/ai-recommend', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            messages: [{ role: 'user', content: 'ping' }],
-          }),
-        });
-        if (!cancelled) {
-          setAiEnabled(response.status !== 403);
-          setAiCheckComplete(true);
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setAiEnabled(false);
-          setAiCheckComplete(true);
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
+    const disabled = isAIRecommendFeatureDisabled();
+    setAiEnabled(!disabled);
+    setAiCheckComplete(true);
   }, []); // 只在组件挂载时检测一次
 
 

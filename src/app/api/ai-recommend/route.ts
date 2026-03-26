@@ -583,6 +583,8 @@ ${context?.title ? `**关于当前影片（${context.title}）：**
 
       // 累积完整内容用于后处理
       let fullContent = '';
+      let thinkBuffer = ''; // 累积 <think> 块
+      let inThinkBlock = false; // 是否在 <think> 块内
 
       // 创建转换流处理OpenAI的SSE格式
       const transformStream = new TransformStream({
@@ -641,16 +643,38 @@ ${context?.title ? `**关于当前影片（${context.title}）：**
 
               try {
                 const json = JSON.parse(data);
-                const content = json.choices?.[0]?.delta?.content || '';
+                let content = json.choices?.[0]?.delta?.content || '';
 
                 if (content) {
-                  // 累积内容
-                  fullContent += content;
+                  // 过滤 <think>...</think> 块
+                  let filtered = '';
+                  for (let i = 0; i < content.length; i++) {
+                    if (!inThinkBlock) {
+                      thinkBuffer += content[i];
+                      if (thinkBuffer.endsWith('<think>')) {
+                        inThinkBlock = true;
+                        // 把 thinkBuffer 里 <think> 之前的内容输出
+                        filtered += thinkBuffer.slice(0, thinkBuffer.length - 7);
+                        thinkBuffer = '';
+                      } else if (!'<think>'.startsWith(thinkBuffer)) {
+                        filtered += thinkBuffer;
+                        thinkBuffer = '';
+                      }
+                    } else {
+                      thinkBuffer += content[i];
+                      if (thinkBuffer.endsWith('</think>')) {
+                        inThinkBlock = false;
+                        thinkBuffer = '';
+                      }
+                    }
+                  }
 
-                  // 转换为统一的SSE格式
-                  controller.enqueue(
-                    new TextEncoder().encode(`data: ${JSON.stringify({ text: content })}\n\n`)
-                  );
+                  if (filtered) {
+                    fullContent += filtered;
+                    controller.enqueue(
+                      new TextEncoder().encode(`data: ${JSON.stringify({ text: filtered })}\n\n`)
+                    );
+                  }
                 }
               } catch (e) {
                 // 忽略解析错误，继续处理下一行

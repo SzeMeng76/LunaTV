@@ -10,10 +10,11 @@
 - **存储**: 10GB 可用空间（推荐 20GB，用于视频缓存和数据库）
 - **网络**: 10Mbps 上行带宽（推荐 100Mbps）
 
-#### Zeabur / Vercel 云端部署
+#### Vercel / Render / EdgeOne 云端部署
 - **无需自备服务器**：平台自动分配资源
-- **Zeabur**: Developer Plan 提供最多 2 vCPU 和 4GB RAM（$5/月含 $5 credit，用量不超过则免费）
 - **Vercel**: 无服务器架构，按需自动扩容
+- **Render**: 免费版提供 750 小时/月运行时间，适合个人项目
+- **EdgeOne Pages**: 腾讯云边缘计算，国内访问友好
 
 #### ⚠️ 常见卡顿原因
 - ❌ **CPU 不足**：单核或低频 CPU 会导致视频转码和搜索缓慢
@@ -22,24 +23,6 @@
 - ❌ **磁盘 I/O 慢**：使用机械硬盘会影响数据库和缓存性能
 
 **💡 提示**：如果遇到卡顿问题，请先检查服务器配置是否满足最低要求！
-
----
-
-### ⚡ 一键部署到 Zeabur（最简单）
-
-点击下方按钮即可一键部署，自动配置 LunaTV + Kvrocks 数据库：
-
-[![Deploy on Zeabur](https://zeabur.com/button.svg)](https://zeabur.com/templates/2425O0/deploy)
-
-**优势**：
-- ✅ 无需配置，一键启动（自动部署完整环境）
-- ✅ 自动 HTTPS 和全球 CDN 加速
-- ✅ 持久化存储，数据永不丢失
-- ✅ 免费额度足够个人使用
-
-**⚠️ 重要提示**：部署完成后，需要在 Zeabur 中为 LunaTV 服务设置访问域名（Domain）才能在浏览器中访问。详见下方 [设置访问域名](#5-设置访问域名必须) 步骤。
-
-点击按钮后填写环境变量即可完成部署！详细说明见下方 [Zeabur 部署指南](#️-zeabur-部署推荐)。
 
 ---
 
@@ -220,114 +203,6 @@ docker-compose logs -f
 
 ---
 
-### ☁️ Zeabur 部署（推荐）
-
-Zeabur 是一站式云端部署平台，使用预构建的 Docker 镜像可以快速部署，无需等待构建。
-
-**部署步骤：**
-
-1. **添加 KVRocks 服务**（先添加数据库）
-   - 点击 "Add Service" > "Docker Images"
-   - 输入镜像名称：`apache/kvrocks`
-   - 配置端口：`6666` (TCP)
-   - **记住服务名称**（通常是 `apachekvrocks`）
-   - **配置持久化卷（重要）**：
-     * 在服务设置中找到 "Volumes" 部分
-     * 点击 "Add Volume" 添加新卷
-     * Volume ID: `kvrocks-data`（可自定义，仅支持字母、数字、连字符）
-     * Path: `/var/lib/kvrocks/db`
-     * 保存配置
-
-   > 💡 **重要提示**：持久化卷路径必须设置为 `/var/lib/kvrocks/db`（KVRocks 数据目录），这样配置文件保留在容器内，数据库文件持久化，重启后数据不会丢失！
-
-2. **添加 LunaTV 服务**
-   - 点击 "Add Service" > "Docker Images"
-   - 输入镜像名称：`ghcr.io/szemeng76/lunatv:latest`
-   - 配置端口：`3000` (HTTP)
-
-3. **配置环境变量**
-
-   在 LunaTV 服务的环境变量中添加：
-
-   ```env
-   # 必填：管理员账号
-   USERNAME=admin
-   PASSWORD=your_secure_password
-
-   # 必填：存储配置
-   NEXT_PUBLIC_STORAGE_TYPE=kvrocks
-   KVROCKS_URL=redis://apachekvrocks:6666
-   VIDEO_CACHE_DIR=/app/video-cache
-
-   # 可选：站点配置
-   SITE_BASE=https://your-domain.zeabur.app
-   NEXT_PUBLIC_SITE_NAME=LunaTV Enhanced
-   ANNOUNCEMENT=欢迎使用 LunaTV Enhanced Edition
-
-   # 可选：豆瓣代理配置（推荐）
-   NEXT_PUBLIC_DOUBAN_PROXY_TYPE=cmliussss-cdn-tencent
-   NEXT_PUBLIC_DOUBAN_IMAGE_PROXY_TYPE=cmliussss-cdn-tencent
-   ```
-
-   **注意**：
-   - 使用服务名称作为主机名：`redis://apachekvrocks:6666`
-   - 如果服务名称不同，请替换为实际名称
-   - 两个服务必须在同一个 Project 中
-
-4. **部署完成**
-   - Zeabur 会自动拉取镜像并启动服务
-   - 等待服务就绪后，需要手动设置访问域名（见下一步）
-
-#### 5. 设置访问域名（必须）
-
-   - 在 LunaTV 服务页面，点击 "Networking" 或 "网络" 标签
-   - 点击 "Generate Domain" 生成 Zeabur 提供的免费域名（如 `xxx.zeabur.app`）
-   - 或者绑定自定义域名：
-     * 点击 "Add Domain" 添加你的域名
-     * 按照提示配置 DNS CNAME 记录指向 Zeabur 提供的目标地址
-   - 设置完域名后即可通过域名访问 LunaTV
-
-6. **绑定自定义域名（可选）**
-   - 在服务设置中点击 "Domains"
-   - 添加你的自定义域名
-   - 配置 DNS CNAME 记录指向 Zeabur 提供的域名
-
-#### 🔄 更新 Docker 镜像
-
-当 Docker 镜像有新版本发布时，Zeabur 不会自动更新。需要手动触发更新。
-
-**更新步骤：**
-
-1. **进入服务页面**
-   - 点击需要更新的服务（LunaTV 或 KVRocks）
-
-2. **重启服务**
-   - 点击 **"服务状态"** 页面，再点击 **"重启当前版本"** 按钮
-   - Zeabur 会自动拉取最新的 `latest` 镜像并重新部署
-
-> 💡 **提示**：
-> - 使用 `latest` 标签时，Restart 会自动拉取最新镜像
-> - 生产环境推荐使用固定版本标签（如 `v5.5.6`）避免意外更新
-
-#### ✨ Zeabur 部署优势
-
-- ✅ **自动 HTTPS**：免费 SSL 证书自动配置
-- ✅ **全球 CDN**：自带全球加速
-- ✅ **零配置部署**：自动检测 Dockerfile
-- ✅ **服务发现**：容器间通过服务名称自动互联
-- ✅ **持久化存储**：支持数据卷挂载
-- ✅ **CI/CD 集成**：Git 推送自动部署
-- ✅ **实时日志**：Web 界面查看运行日志
-
-#### ⚠️ Zeabur 注意事项
-
-- **计费模式**：按实际使用的资源计费，免费额度足够小型项目使用
-- **区域选择**：建议选择离用户最近的区域部署
-- **服务网络**：同一 Project 中的服务通过服务名称互相访问（如 `apachekvrocks:6666`）
-- **持久化存储**：KVRocks 必须配置持久化卷到 `/var/lib/kvrocks/db` 目录，否则重启后数据丢失
-
----
-
 ### 🤗 Hugging Face Space 部署（免费）
 
 [Hugging Face Spaces](https://huggingface.co/spaces) 提供免费的 Docker 容器托管服务，配置为 **2 核 CPU、16GB 内存、50GB 存储**，非常适合个人使用。
@@ -493,6 +368,7 @@ your-space/
 
 #### ⚠️ EdgeOne Pages 注意事项
 
+- **`.nvmrc` 文件冲突**：项目根目录的 `.nvmrc` 文件可能导致 EdgeOne 构建失败，需要删除该文件或将其中的版本号修改为 EdgeOne 支持的版本后才能成功部署
 - **无 Docker 支持**：EdgeOne Pages 是无服务器平台，仅支持源码构建部署
 - **必须使用 Upstash**：无持久化文件系统，需要外部数据库
 - **函数执行限制**：单次请求有执行时间限制（通常 30 秒）
@@ -508,3 +384,164 @@ your-space/
 
 ---
 
+### ▲ Vercel 部署
+
+[Vercel](https://vercel.com/) 是 Next.js 官方推荐的部署平台，无服务器架构，自动扩容，适合全球用户访问。
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/SzeMeng76/LunaTV)
+
+#### 部署步骤
+
+1. **准备工作**
+   - 注册 [Vercel](https://vercel.com/) 账号
+   - 在 [Upstash](https://upstash.com/) 创建 Redis 实例（Vercel 无持久化存储）
+   - Fork 本项目到你的 GitHub 账号
+
+2. **导入项目**
+   - 登录 Vercel 控制台
+   - 点击 "Add New..." > "Project"
+   - 选择你 Fork 的 LunaTV 仓库并导入
+
+3. **配置构建设置**
+   - **Framework Preset**：`Next.js`（自动检测）
+   - **Build Command**：`pnpm build`（默认）
+   - **Output Directory**：`.next`（默认）
+   - **Install Command**：`pnpm install`（默认）
+
+4. **配置环境变量**
+
+   在项目 Settings > Environment Variables 中添加：
+
+   ```env
+   # 必填：管理员账号
+   USERNAME=admin
+   PASSWORD=your_secure_password
+
+   # 必填：存储配置（必须使用 Upstash）
+   NEXT_PUBLIC_STORAGE_TYPE=upstash
+   UPSTASH_URL=https://your-redis-instance.upstash.io
+   UPSTASH_TOKEN=AxxxxxxxxxxxxxxxxxxxxxxxxxxxQ==
+
+   # 推荐：禁用首页预告片（无持久化存储平台建议开启）
+   DISABLE_HERO_TRAILER=true
+
+   # 可选：站点配置
+   SITE_BASE=https://your-project.vercel.app
+   NEXT_PUBLIC_SITE_NAME=LunaTV Enhanced
+   ```
+
+5. **部署项目**
+   - 点击 "Deploy"
+   - 等待构建完成（首次约 3-5 分钟）
+   - 部署成功后会分配 `xxx.vercel.app` 域名
+
+6. **绑定自定义域名（可选）**
+   - 在项目 Settings > Domains 中添加自定义域名
+   - 按提示配置 DNS 记录
+
+#### ✨ Vercel 部署优势
+
+- ✅ **Next.js 官方平台**：最佳兼容性和性能优化
+- ✅ **自动 HTTPS**：免费 SSL 证书
+- ✅ **全球 CDN**：Edge Network 全球加速
+- ✅ **Git 自动部署**：推送代码自动触发构建
+- ✅ **无服务器架构**：按需自动扩容，无需管理服务器
+- ✅ **预览部署**：每个 PR 自动生成预览环境
+
+#### ⚠️ Vercel 注意事项
+
+- **必须使用 Upstash**：无持久化文件系统，需要外部数据库
+- **函数执行限制**：Hobby 计划 Serverless Functions 执行时间限制 60 秒
+- **不支持视频缓存**：无本地文件系统，视频缓存功能不可用
+- **带宽限制**：Hobby 计划每月 100GB 带宽
+- **国内访问**：部分地区可能需要自定义域名优化访问
+
+---
+
+### 🟢 Render 部署（免费）
+
+[Render](https://render.com/) 提供免费的 Web Service 托管，支持 Docker 部署，适合个人项目。
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/SzeMeng76/LunaTV)
+
+#### 方式一：Docker 部署（推荐）
+
+1. **准备工作**
+   - 注册 [Render](https://render.com/) 账号
+   - 在 [Upstash](https://upstash.com/) 创建 Redis 实例
+   - Fork 本项目到你的 GitHub 账号
+
+2. **创建 Web Service**
+   - 登录 Render Dashboard
+   - 点击 "New +" > "Web Service"
+   - 连接你的 GitHub 账号，选择 Fork 的 LunaTV 仓库
+
+3. **配置服务**
+   - **Name**：`lunatv`（自定义）
+   - **Region**：选择离用户最近的区域
+   - **Runtime**：`Docker`
+   - **Instance Type**：`Free`（免费版）或根据需求选择
+
+4. **配置环境变量**
+
+   在 Environment 中添加：
+
+   ```env
+   # 必填：管理员账号
+   USERNAME=admin
+   PASSWORD=your_secure_password
+
+   # 必填：存储配置（推荐使用 Upstash）
+   NEXT_PUBLIC_STORAGE_TYPE=upstash
+   UPSTASH_URL=https://your-redis-instance.upstash.io
+   UPSTASH_TOKEN=AxxxxxxxxxxxxxxxxxxxxxxxxxxxQ==
+
+   # 推荐：禁用首页预告片
+   DISABLE_HERO_TRAILER=true
+
+   # 可选：站点配置
+   SITE_BASE=https://your-service.onrender.com
+   NEXT_PUBLIC_SITE_NAME=LunaTV Enhanced
+   ```
+
+5. **部署**
+   - 点击 "Create Web Service"
+   - Render 会自动使用项目中的 Dockerfile 构建和部署
+   - 首次构建约 5-10 分钟
+   - 部署成功后会分配 `xxx.onrender.com` 域名
+
+#### 方式二：Node.js 原生部署
+
+如果不想使用 Docker，也可以作为 Node.js 服务部署：
+
+1. **创建 Web Service** 并选择 Git 仓库
+2. **配置构建设置**
+   - **Runtime**：`Node`
+   - **Build Command**：`pnpm install && pnpm build`
+   - **Start Command**：`pnpm start`
+   - **Node Version**：在 Environment 中设置 `NODE_VERSION=20`
+3. **配置环境变量**（同上）
+
+#### ✨ Render 部署优势
+
+- ✅ **免费版可用**：每月 750 小时免费运行时间
+- ✅ **Docker 原生支持**：直接使用项目 Dockerfile
+- ✅ **自动 HTTPS**：免费 SSL 证书
+- ✅ **Git 自动部署**：推送代码自动触发构建
+- ✅ **操作简单**：Web 界面配置，无需命令行
+
+#### ⚠️ Render 注意事项
+
+- **免费版冷启动**：15 分钟无访问后服务会休眠，再次访问需要约 30-60 秒启动
+- **免费版资源限制**：512MB 内存，0.1 CPU
+- **推荐使用 Upstash**：免费版磁盘不持久化，建议使用外部数据库
+- **构建时间限制**：免费版每月 750 分钟构建时间
+- **自定义域名**：免费版支持自定义域名
+
+#### 🔗 相关链接
+
+- [Render 文档](https://render.com/docs)
+- [Render 部署 Next.js](https://render.com/docs/deploy-nextjs-app)
+- [Upstash 免费 Redis](https://upstash.com/)
+
+---

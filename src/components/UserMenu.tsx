@@ -90,7 +90,7 @@ export const UserMenu: React.FC = () => {
   const { tasks, setShowDownloadPanel } = useDownload();
 
   // 🚀 TanStack Query - 数据失效工具
-  const { invalidatePlayRecords, invalidateFavorites } = useInvalidateUserMenuData();
+  const { invalidatePlayRecords } = useInvalidateUserMenuData();
 
   // Body 滚动锁定 - 使用 overflow 方式避免布局问题
   useEffect(() => {
@@ -265,25 +265,10 @@ export const UserMenu: React.FC = () => {
     }
   }, [authInfo, storageType]);
 
-  // 🚀 播放记录和收藏由 TanStack Query 自动管理
-  // 监听事件来触发 TanStack Query 缓存失效
+  // 监听watching-updates事件，刷新播放记录
   useEffect(() => {
     if (!dataQueryEnabled) return;
 
-    const handlePlayRecordsUpdate = () => {
-      console.log('UserMenu: 播放记录更新，invalidate query');
-      invalidatePlayRecords();
-    };
-
-    const handleFavoritesUpdate = () => {
-      console.log('UserMenu: 收藏更新，invalidate query');
-      invalidateFavorites();
-    };
-
-    window.addEventListener('playRecordsUpdated', handlePlayRecordsUpdate);
-    window.addEventListener('favoritesUpdated', handleFavoritesUpdate);
-
-    // 监听watching-updates事件，刷新播放记录
     const unsubscribeWatchingUpdates = subscribeToWatchingUpdatesEvent(() => {
       const updates = getDetailedWatchingUpdates();
       if (updates && updates.hasUpdates && updates.updatedCount > 0) {
@@ -293,11 +278,9 @@ export const UserMenu: React.FC = () => {
     });
 
     return () => {
-      window.removeEventListener('playRecordsUpdated', handlePlayRecordsUpdate);
-      window.removeEventListener('favoritesUpdated', handleFavoritesUpdate);
       unsubscribeWatchingUpdates();
     };
-  }, [dataQueryEnabled, invalidatePlayRecords, invalidateFavorites]);
+  }, [dataQueryEnabled, invalidatePlayRecords]);
 
 
   const handleMenuClick = async () => {

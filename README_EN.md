@@ -13,7 +13,7 @@
   <img src="public/logo.png" alt="LunaTV Logo" width="120">
 </div>
 
-> 🎬 **LunaTV Enhanced Edition** is a comprehensive video streaming platform based on MoonTV with extensive enhancements. Features include **YouTube Integration**, **Cloud Drive Search**, **AI Recommendations**, **Short Drama**, **IPTV Live TV**, **Bangumi Anime**, **Watch Statistics**, **Danmaku System**, and 50+ major feature additions for the ultimate viewing experience.
+> 🎬 **LunaTV Enhanced Edition** is a comprehensive video streaming platform based on MoonTV with extensive enhancements. Features include **YouTube Integration**, **Cloud Drive Search**, **AI Recommendations**, **Short Drama**, **IPTV Live TV**, **Bangumi Anime**, **Watch Statistics**, **Danmaku System**, and 60+ major feature additions for the ultimate viewing experience.
 
 <div align="center">
 
@@ -21,11 +21,11 @@
 ![React](https://img.shields.io/badge/React-19.0.0-61dafb?logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.8.3-3178c6?logo=typescript)
 ![TailwindCSS](https://img.shields.io/badge/TailwindCSS-4.1.18-38bdf8?logo=tailwindcss)
-![ArtPlayer](https://img.shields.io/badge/ArtPlayer-5.3.0-ff6b6b)
+![ArtPlayer](https://img.shields.io/badge/ArtPlayer-5.4.0-ff6b6b)
 ![HLS.js](https://img.shields.io/badge/HLS.js-1.6.15-ec407a)
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Docker Ready](https://img.shields.io/badge/Docker-ready-blue?logo=docker)
-![Version](https://img.shields.io/badge/Version-6.2.0-orange)
+![Version](https://img.shields.io/badge/Version-6.2.1-orange)
 
 </div>
 
@@ -33,7 +33,7 @@
 
 ## 📢 About
 
-This project is a deep fork of **MoonTV**, starting from **v4.3.1** and continuously iterated to the current **v6.2.0**, with 60+ major feature modules and 400+ detail optimizations. See [CHANGELOG](CHANGELOG) for all new features.
+This project is a deep fork of **MoonTV**, starting from **v4.3.1** and continuously iterated to the current **v6.2.1**, with 60+ major feature modules and 400+ detail optimizations. See [CHANGELOG](CHANGELOG) for all new features.
 
 ## ⚠️ Disclaimer
 
@@ -42,7 +42,7 @@ This project is for educational purposes only. Do not use for commercial purpose
 ## 💡 Key Enhancements
 
 ### 🎥 Content Ecosystem
-- **Emby Private Library**: Complete Emby media server integration → [Documentation](docs/integration/EMBY_GUIDE.md)
+- **Emby Private Library**: Complete Emby media server integration with passwordless login and auth mode switcher → [Documentation](docs/integration/EMBY_GUIDE.md)
 - **YouTube Integration**: Full YouTube search, playback, and live streaming
 - **Cloud Drive Search**: Advanced filtering and cache management
 - **ACG Torrent Search**: Mikan Project dual-source system
@@ -50,6 +50,12 @@ This project is for educational purposes only. Do not use for commercial purpose
 - **IPTV Live TV**: m3u/m3u8 subscription, FLV streaming, EPG guide
 - **Bangumi Anime**: Intelligent anime detection and API integration
 - **Traditional Chinese Search**: Smart conversion and multi-strategy search
+- **Search List View**: Grid/list dual view mode with image preview and quick play button
+
+### 🎬 Player Enhancements
+- **Ultrawide Monitor Support**: Video display mode control for ultrawide monitors
+- **Skip Presets**: Flexible intro/outro template system with import/export and validation
+- **Persistent Playback Rate**: Remember playback speed settings across sessions
 
 ### 🤖 AI Recommendation System
 - **AI Assistant**: GPT-5/o series models support, streaming → [Documentation](docs/features/AI_FEATURES.md)
@@ -134,10 +140,10 @@ pnpm dev
 - **Frontend**: Next.js 16.1.0 + React 19.0.0
 - **Language**: TypeScript 5.8.3
 - **Styling**: TailwindCSS 4.1.18
-- **Video Player**: ArtPlayer 5.3.0 + HLS.js 1.6.15
-- **State Management**: TanStack Query 5.90.21
+- **Video Player**: ArtPlayer 5.4.0 + HLS.js 1.6.15
+- **State Management**: TanStack Query 5.91.0
 - **Database**: Upstash Redis + Kvrocks
-- **Deployment**: Docker / Vercel
+- **Deployment**: Docker / Vercel / Render
 
 ## 📜 Changelog
 
@@ -159,7 +165,7 @@ This project is licensed under [CC BY-NC-SA 4.0](https://creativecommons.org/lic
 - ❌ You may not use this project for commercial purposes
 - ⚠️ If you remix, transform, or build upon the material, you must distribute your contributions under the same license
 
-© 2025 LunaTV Enhanced Edition & Contributors
+© 2025-2026 LunaTV Enhanced Edition & Contributors
 
 Based on [MoonTV](https://github.com/MoonTechLab/LunaTV).
 

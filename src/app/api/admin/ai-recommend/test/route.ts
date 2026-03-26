@@ -60,6 +60,7 @@ export async function POST(request: NextRequest) {
         messages: testMessages,
         max_tokens: 50,
         temperature: 0.1,
+        stream: false,
       }),
     });
 
@@ -82,7 +83,22 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    const result = await response.json();
+    const rawText = await response.text();
+    let result: any;
+    try {
+      result = JSON.parse(rawText);
+    } catch {
+      // SSE streaming response — extract first data line
+      const match = rawText.match(/^data:\s*(\{.*\})/m);
+      if (match) {
+        result = JSON.parse(match[1]);
+      } else {
+        return NextResponse.json({
+          error: 'API返回格式无法解析，可能是流式响应',
+          rawResponse: rawText.substring(0, 500)
+        }, { status: 400 });
+      }
+    }
     
     // 检查返回结果格式
     if (!result.choices || result.choices.length === 0) {

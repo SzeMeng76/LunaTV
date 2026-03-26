@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, no-console */
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type ChangeEventHandler, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   deleteSkipConfig,
@@ -12,28 +12,54 @@ import {
 } from '@/lib/db.client';
 
 
-// 快捷跳过预设
-interface QuickSkipPreset {
+// 跳过预设（片头片尾模板）
+interface SkipPreset {
   id: string;
   name: string;
-  duration: number; // 跳过时长（秒）
+  openingEnd: number;   // 片头结束时间（秒），0 表示不跳片头
+  endingStart: number;  // 片尾提前时间（秒，剩余模式），0 表示不跳片尾
 }
 
-const QUICK_SKIP_PRESETS_KEY = 'moontv_quick_skip_presets';
+const SKIP_PRESETS_KEY = 'moontv_skip_presets';
+const MAX_PRESET_COUNT = 20;
 
-function loadQuickSkipPresets(): QuickSkipPreset[] {
+function sanitizePresetList(input: unknown[]): SkipPreset[] {
+  return input
+    .map((item): SkipPreset | null => {
+      if (!item || typeof item !== 'object') return null;
+      const p = item as Record<string, unknown>;
+      const name = typeof p.name === 'string' ? p.name.trim().slice(0, 30) : '';
+      if (!name) return null;
+      const openingEnd = Math.max(0, Number(p.openingEnd) || 0);
+      const endingStart = Math.max(0, Number(p.endingStart) || 0);
+      // 至少要有一个有效值
+      if (openingEnd <= 0 && endingStart <= 0) return null;
+      return {
+        id: typeof p.id === 'string' && p.id ? p.id : Date.now().toString(),
+        name,
+        openingEnd,
+        endingStart,
+      };
+    })
+    .filter((item): item is SkipPreset => item !== null)
+    .slice(0, MAX_PRESET_COUNT);
+}
+
+function loadSkipPresets(): SkipPreset[] {
   if (typeof window === 'undefined') return [];
   try {
-    const raw = localStorage.getItem(QUICK_SKIP_PRESETS_KEY);
-    return raw ? JSON.parse(raw) : [];
+    const raw = localStorage.getItem(SKIP_PRESETS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? sanitizePresetList(parsed) : [];
   } catch {
     return [];
   }
 }
 
-function saveQuickSkipPresetsToStorage(presets: QuickSkipPreset[]): void {
+function saveSkipPresetsToStorage(presets: SkipPreset[]): void {
   if (typeof window === 'undefined') return;
-  localStorage.setItem(QUICK_SKIP_PRESETS_KEY, JSON.stringify(presets));
+  localStorage.setItem(SKIP_PRESETS_KEY, JSON.stringify(presets.slice(0, MAX_PRESET_COUNT)));
 }
 
 interface SkipControllerProps {
@@ -66,13 +92,23 @@ export default function SkipController({
   const [currentSkipSegment, setCurrentSkipSegment] = useState<SkipSegment | null>(null);
   const [newSegment, setNewSegment] = useState<Partial<SkipSegment>>({});
 
-  // 快捷跳过预设状态
-  const [quickSkipPresets, setQuickSkipPresets] = useState<QuickSkipPreset[]>(loadQuickSkipPresets);
+  // 跳过预设状态
+  const [skipPresets, setSkipPresets] = useState<SkipPreset[]>(loadSkipPresets);
   const [newPresetName, setNewPresetName] = useState('');
-  const [newPresetDuration, setNewPresetDuration] = useState('');
-  const [editingPresetId, setEditingPresetId] = useState<string | null>(null);
-  const [editPresetName, setEditPresetName] = useState('');
-  const [editPresetDuration, setEditPresetDuration] = useState('');
+  const [selectedPresetId, setSelectedPresetId] = useState('');
+
+  // 导入/导出相关状态
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [pendingImportedPresets, setPendingImportedPresets] = useState<SkipPreset[]>([]);
+  const [presetFeedback, setPresetFeedback] = useState('');
+  const importInputRef = useRef<HTMLInputElement | null>(null);
+
+  // 反馈信息自动清除
+  useEffect(() => {
+    if (!presetFeedback) return;
+    const timer = setTimeout(() => setPresetFeedback(''), 3000);
+    return () => clearTimeout(timer);
+  }, [presetFeedback]);
 
   // 新增状态：批量设置模式 - 支持分:秒格式
   // 🔑 初始化时直接从 localStorage 读取用户设置，避免重新挂载时重置为默认值
@@ -899,50 +935,162 @@ export default function SkipController({
     };
   }, [isSettingMode, handleCloseDialog]);
 
-  // 快捷跳过预设 - 添加预设
-  const handleAddPreset = useCallback(() => {
-    const name = newPresetName.trim();
-    const dur = timeToSeconds(newPresetDuration);
-    if (!name || dur <= 0) return;
-    const preset: QuickSkipPreset = { id: Date.now().toString(), name, duration: dur };
-    const updated = [...quickSkipPresets, preset];
-    setQuickSkipPresets(updated);
-    saveQuickSkipPresetsToStorage(updated);
-    setNewPresetName('');
-    setNewPresetDuration('');
-  }, [newPresetName, newPresetDuration, quickSkipPresets, timeToSeconds]);
-
-  // 快捷跳过预设 - 删除预设
-  const handleDeletePreset = useCallback((id: string) => {
-    const updated = quickSkipPresets.filter(p => p.id !== id);
-    setQuickSkipPresets(updated);
-    saveQuickSkipPresetsToStorage(updated);
-  }, [quickSkipPresets]);
-
-  // 快捷跳过预设 - 保存编辑
-  const handleSaveEditPreset = useCallback(() => {
-    if (!editingPresetId) return;
-    const name = editPresetName.trim();
-    const dur = timeToSeconds(editPresetDuration);
-    if (!name || dur <= 0) return;
-    const updated = quickSkipPresets.map(p =>
-      p.id === editingPresetId ? { ...p, name, duration: dur } : p
-    );
-    setQuickSkipPresets(updated);
-    saveQuickSkipPresetsToStorage(updated);
-    setEditingPresetId(null);
-  }, [editingPresetId, editPresetName, editPresetDuration, quickSkipPresets, timeToSeconds]);
-
-  // 快捷跳过预设 - 执行跳过
-  const handleQuickSkip = useCallback((preset: QuickSkipPreset) => {
-    if (!artPlayerRef.current) return;
-    const cur = artPlayerRef.current.currentTime || 0;
-    const target = Math.min(cur + preset.duration, artPlayerRef.current.duration || Infinity);
-    artPlayerRef.current.currentTime = target;
-    if (artPlayerRef.current.notice) {
-      artPlayerRef.current.notice.show = `${preset.name}: 跳过 ${secondsToTime(preset.duration)}`;
+  // 跳过预设 - 从当前配置新建预设
+  const handleCreatePreset = useCallback(() => {
+    const name = newPresetName.trim().slice(0, 30);
+    if (!name) {
+      setPresetFeedback('请输入预设名称');
+      return;
     }
-  }, [artPlayerRef, secondsToTime]);
+    if (skipPresets.length >= MAX_PRESET_COUNT) {
+      setPresetFeedback(`最多只能添加 ${MAX_PRESET_COUNT} 个预设`);
+      return;
+    }
+    if (skipPresets.some(p => p.name.toLowerCase() === name.toLowerCase())) {
+      setPresetFeedback('预设名称已存在');
+      return;
+    }
+    const openingEnd = timeToSeconds(batchSettings.openingEnd);
+    const endingStart = batchSettings.endingMode === 'remaining'
+      ? timeToSeconds(batchSettings.endingStart)
+      : 0; // 绝对模式暂不存入预设
+    if (openingEnd <= 0 && endingStart <= 0) {
+      setPresetFeedback('当前片头片尾都为 0，无法创建预设');
+      return;
+    }
+    const preset: SkipPreset = {
+      id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      name,
+      openingEnd,
+      endingStart,
+    };
+    const updated = [...skipPresets, preset];
+    setSkipPresets(updated);
+    saveSkipPresetsToStorage(updated);
+    setNewPresetName('');
+    setSelectedPresetId(preset.id);
+    setPresetFeedback(`已创建预设「${name}」`);
+  }, [newPresetName, skipPresets, batchSettings, timeToSeconds]);
+
+  // 跳过预设 - 套用到当前 batchSettings
+  const handleApplyPreset = useCallback(() => {
+    const preset = skipPresets.find(p => p.id === selectedPresetId);
+    if (!preset) {
+      setPresetFeedback('请先选择一个预设');
+      return;
+    }
+    setBatchSettings(prev => ({
+      ...prev,
+      openingStart: '0:00',
+      openingEnd: secondsToTime(preset.openingEnd),
+      endingMode: 'remaining',
+      endingStart: preset.endingStart > 0 ? secondsToTime(preset.endingStart) : prev.endingStart,
+      endingEnd: '',
+    }));
+    setPresetFeedback(`已套用预设「${preset.name}」`);
+  }, [skipPresets, selectedPresetId, secondsToTime]);
+
+  // 跳过预设 - 删除选中预设
+  const handleDeletePreset = useCallback(() => {
+    if (!selectedPresetId) {
+      setPresetFeedback('请先选择一个预设');
+      return;
+    }
+    const preset = skipPresets.find(p => p.id === selectedPresetId);
+    const updated = skipPresets.filter(p => p.id !== selectedPresetId);
+    setSkipPresets(updated);
+    saveSkipPresetsToStorage(updated);
+    setSelectedPresetId(updated[0]?.id || '');
+    if (preset) setPresetFeedback(`已删除预设「${preset.name}」`);
+  }, [skipPresets, selectedPresetId]);
+
+  // 跳过预设 - 用当前配置覆盖选中预设
+  const handleUpdatePreset = useCallback(() => {
+    const preset = skipPresets.find(p => p.id === selectedPresetId);
+    if (!preset) {
+      setPresetFeedback('请先选择一个预设');
+      return;
+    }
+    const openingEnd = timeToSeconds(batchSettings.openingEnd);
+    const endingStart = batchSettings.endingMode === 'remaining'
+      ? timeToSeconds(batchSettings.endingStart)
+      : 0;
+    const updated = skipPresets.map(p =>
+      p.id === selectedPresetId ? { ...p, openingEnd, endingStart } : p
+    );
+    setSkipPresets(updated);
+    saveSkipPresetsToStorage(updated);
+    setPresetFeedback(`已更新预设「${preset.name}」`);
+  }, [skipPresets, selectedPresetId, batchSettings, timeToSeconds]);
+
+  // 跳过预设 - 导出
+  const handleExportPresets = useCallback(() => {
+    if (skipPresets.length === 0) {
+      setPresetFeedback('没有预设可导出');
+      return;
+    }
+    const payload = JSON.stringify(skipPresets, null, 2);
+    const blob = new Blob([payload], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const date = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `lunatv-skip-presets-${date}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    setPresetFeedback('预设已导出');
+  }, [skipPresets]);
+
+  // 跳过预设 - 导入（选择文件后触发）
+  const handleImportPresets: ChangeEventHandler<HTMLInputElement> = useCallback((event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    file.text().then(text => {
+      try {
+        const parsed = JSON.parse(text);
+        if (!Array.isArray(parsed)) {
+          setPresetFeedback('导入失败：文件格式无效');
+          return;
+        }
+        const imported = sanitizePresetList(parsed);
+        if (imported.length === 0) {
+          setPresetFeedback('导入失败：未识别到有效预设');
+          return;
+        }
+        setPendingImportedPresets(imported);
+        setIsImportDialogOpen(true);
+      } catch {
+        setPresetFeedback('导入失败：文件内容无法解析');
+      }
+    });
+    event.target.value = '';
+  }, []);
+
+  // 跳过预设 - 确认导入
+  const handleConfirmImport = useCallback((mode: 'merge' | 'overwrite') => {
+    const byName = (name: string) => name.trim().toLowerCase();
+
+    const finalPresets = mode === 'overwrite'
+      ? sanitizePresetList(pendingImportedPresets)
+      : sanitizePresetList([
+          ...pendingImportedPresets,
+          ...skipPresets.filter(local =>
+            !pendingImportedPresets.some(
+              imp => imp.id === local.id || byName(imp.name) === byName(local.name),
+            ),
+          ),
+        ]);
+
+    setSkipPresets(finalPresets);
+    saveSkipPresetsToStorage(finalPresets);
+    setSelectedPresetId(finalPresets[0]?.id || '');
+    setPresetFeedback(`已导入 ${pendingImportedPresets.length} 条预设`);
+    setPendingImportedPresets([]);
+    setIsImportDialogOpen(false);
+  }, [pendingImportedPresets, skipPresets]);
 
   return (
     <div className="skip-controller">
@@ -960,22 +1108,6 @@ export default function SkipController({
               {currentSkipSegment.type === 'ending' && onNextEpisode ? '下一集 ▶' : '跳过'}
             </button>
           </div>
-        </div>
-      )}
-
-      {/* 快捷跳过预设按钮 - 播放器内底部 */}
-      {quickSkipPresets.length > 0 && !isSettingMode && (
-        <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-20 flex gap-2 animate-fade-in">
-          {quickSkipPresets.map((preset) => (
-            <button
-              key={preset.id}
-              onClick={() => handleQuickSkip(preset)}
-              className="px-3 py-1.5 bg-black/70 hover:bg-black/90 text-white rounded-lg text-xs font-medium backdrop-blur-sm border border-white/20 hover:border-white/40 transition-all hover:scale-105 whitespace-nowrap shadow-lg"
-              title={`跳过 ${secondsToTime(preset.duration)}`}
-            >
-              {preset.name}
-            </button>
-          ))}
         </div>
       )}
 
@@ -1224,80 +1356,185 @@ export default function SkipController({
             {/* 分割线 */}
             <div className="my-6 border-t border-gray-200 dark:border-gray-600"></div>
 
-            {/* 快捷跳过预设管理 */}
+            {/* 跳过预设组 */}
             <div className="mb-6 bg-linear-to-br from-amber-50/50 to-orange-50/50 dark:from-amber-900/20 dark:to-orange-900/20 p-5 rounded-xl border border-amber-100/50 dark:border-amber-800/50 backdrop-blur-sm">
-              <h4 className="font-semibold text-gray-900 dark:text-gray-100 border-b border-amber-200/50 dark:border-amber-700/50 pb-2 mb-4 flex items-center gap-2">
-                <span className="text-xl">⚡</span>
-                快捷跳过预设
-              </h4>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-                自定义跳过时长，播放时一键快进。适合片头片尾时长不固定的情况。
-              </p>
+              <input
+                ref={importInputRef}
+                type="file"
+                accept="application/json"
+                className="hidden"
+                onChange={handleImportPresets}
+              />
 
-              {/* 已有预设列表 */}
-              {quickSkipPresets.length > 0 && (
-                <div className="space-y-2 mb-4">
-                  {quickSkipPresets.map((preset) => (
-                    <div key={preset.id} className="flex items-center gap-2 p-2.5 bg-white/60 dark:bg-gray-700/60 rounded-lg border border-gray-200/50 dark:border-gray-600/50">
-                      {editingPresetId === preset.id ? (
-                        <>
-                          <input
-                            type="text"
-                            value={editPresetName}
-                            onChange={(e) => setEditPresetName(e.target.value)}
-                            className="flex-1 px-2 py-1 border border-gray-300/50 dark:border-gray-600/50 rounded bg-white/80 dark:bg-gray-700/80 text-gray-900 dark:text-gray-100 text-sm"
-                            placeholder="名称"
-                          />
-                          <input
-                            type="text"
-                            value={editPresetDuration}
-                            onChange={(e) => setEditPresetDuration(e.target.value)}
-                            className="w-20 px-2 py-1 border border-gray-300/50 dark:border-gray-600/50 rounded bg-white/80 dark:bg-gray-700/80 text-gray-900 dark:text-gray-100 text-sm"
-                            placeholder="时长"
-                          />
-                          <button onClick={handleSaveEditPreset} className="px-2 py-1 bg-green-500 hover:bg-green-600 text-white rounded text-xs transition-colors">保存</button>
-                          <button onClick={() => setEditingPresetId(null)} className="px-2 py-1 bg-gray-400 hover:bg-gray-500 text-white rounded text-xs transition-colors">取消</button>
-                        </>
-                      ) : (
-                        <>
-                          <span className="flex-1 text-sm font-medium text-gray-800 dark:text-gray-200">{preset.name}</span>
-                          <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-600 px-2 py-0.5 rounded">{secondsToTime(preset.duration)}</span>
-                          <button
-                            onClick={() => { setEditingPresetId(preset.id); setEditPresetName(preset.name); setEditPresetDuration(secondsToTime(preset.duration)); }}
-                            className="px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs transition-colors"
-                          >编辑</button>
-                          <button onClick={() => handleDeletePreset(preset.id)} className="px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs transition-colors">删除</button>
-                        </>
-                      )}
-                    </div>
-                  ))}
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <div>
+                  <h4 className="font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                    <span className="text-xl">⚡</span>
+                    跳过预设组
+                  </h4>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    一次设置片头片尾，多影片复用。选择预设后点「套用」，再保存到当前影片。
+                  </p>
                 </div>
-              )}
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  {skipPresets.length}/{MAX_PRESET_COUNT}
+                </span>
+              </div>
 
-              {/* 添加新预设 */}
-              <div className="flex items-center gap-2">
+              {/* 下拉选择 + 套用 */}
+              <div className="flex flex-col md:flex-row gap-2 mb-3">
+                <select
+                  value={selectedPresetId}
+                  onChange={(e) => setSelectedPresetId(e.target.value)}
+                  className="flex-1 px-3 py-2.5 border border-amber-300/50 dark:border-amber-600/50 rounded-lg bg-white/80 dark:bg-gray-700/80 text-gray-800 dark:text-gray-100 text-sm focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all"
+                >
+                  <option value="">选择一个预设</option>
+                  {skipPresets.map(preset => (
+                    <option key={preset.id} value={preset.id}>
+                      {preset.name} · 片头{secondsToTime(preset.openingEnd)}
+                      {preset.endingStart > 0 ? ` / 片尾提前${secondsToTime(preset.endingStart)}` : ''}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  onClick={handleApplyPreset}
+                  disabled={!selectedPresetId}
+                  className="px-4 py-2.5 rounded-lg bg-amber-600 text-white hover:bg-amber-700 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                >
+                  套用到当前
+                </button>
+              </div>
+
+              {/* 从当前配置新建预设 */}
+              <div className="flex flex-col md:flex-row gap-2 mb-3">
                 <input
                   type="text"
                   value={newPresetName}
                   onChange={(e) => setNewPresetName(e.target.value)}
-                  className="flex-1 px-3 py-2 border border-gray-300/50 dark:border-gray-600/50 rounded-lg bg-white/80 dark:bg-gray-700/80 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all"
-                  placeholder="预设名称 (如: 跳过片头)"
-                />
-                <input
-                  type="text"
-                  value={newPresetDuration}
-                  onChange={(e) => setNewPresetDuration(e.target.value)}
-                  className="w-24 px-3 py-2 border border-gray-300/50 dark:border-gray-600/50 rounded-lg bg-white/80 dark:bg-gray-700/80 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all"
-                  placeholder="时长 (1:30)"
+                  maxLength={30}
+                  className="flex-1 px-3 py-2.5 border border-amber-300/50 dark:border-amber-600/50 rounded-lg bg-white/80 dark:bg-gray-700/80 text-gray-800 dark:text-gray-100 text-sm focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all"
+                  placeholder="新建预设名,例如:国产剧通用90s/120s"
                 />
                 <button
-                  onClick={handleAddPreset}
-                  className="px-4 py-2 bg-linear-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-lg text-sm font-medium transition-all shadow-md hover:shadow-lg hover:scale-105"
+                  onClick={handleCreatePreset}
+                  className="px-4 py-2.5 rounded-lg bg-linear-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-sm font-medium transition-all shadow-md hover:shadow-lg hover:scale-105"
                 >
-                  添加
+                  以当前配置新建
                 </button>
               </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">时长格式: 1:30 (1分30秒) 或 90 (90秒)，播放时会显示在播放器底部</p>
+
+              {/* 操作按钮行 */}
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={handleUpdatePreset}
+                  disabled={!selectedPresetId}
+                  className="px-3 py-1.5 rounded-lg border border-amber-300 dark:border-amber-600 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs font-medium"
+                >
+                  用当前配置覆盖已选
+                </button>
+                <button
+                  onClick={handleDeletePreset}
+                  disabled={!selectedPresetId}
+                  className="px-3 py-1.5 rounded-lg border border-rose-300 dark:border-rose-600 text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs font-medium"
+                >
+                  删除已选
+                </button>
+                <button
+                  onClick={handleExportPresets}
+                  disabled={skipPresets.length === 0}
+                  className="px-3 py-1.5 rounded-lg border border-cyan-300 dark:border-cyan-600 text-cyan-700 dark:text-cyan-300 hover:bg-cyan-100 dark:hover:bg-cyan-900/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs font-medium"
+                >
+                  导出预设
+                </button>
+                <button
+                  onClick={() => importInputRef.current?.click()}
+                  className="px-3 py-1.5 rounded-lg border border-cyan-300 dark:border-cyan-600 text-cyan-700 dark:text-cyan-300 hover:bg-cyan-100 dark:hover:bg-cyan-900/30 transition-colors text-xs font-medium"
+                >
+                  导入预设
+                </button>
+                {presetFeedback && (
+                  <span className="text-xs text-emerald-600 dark:text-emerald-400">
+                    {presetFeedback}
+                  </span>
+                )}
+              </div>
+
+              {/* 导入确认对话框 */}
+              {isImportDialogOpen && (
+                <div className="mt-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/90 dark:bg-gray-900/70 p-3">
+                  {(() => {
+                    const byName = (name: string) => name.trim().toLowerCase();
+                    const overwriteCount = pendingImportedPresets.filter(imp =>
+                      skipPresets.some(
+                        local => local.id === imp.id || byName(local.name) === byName(imp.name),
+                      ),
+                    ).length;
+                    const addCount = pendingImportedPresets.length - overwriteCount;
+                    const conflictNames = Array.from(new Set(
+                      skipPresets
+                        .filter(local => pendingImportedPresets.some(
+                          imp => local.id === imp.id || byName(local.name) === byName(imp.name),
+                        ))
+                        .map(item => item.name),
+                    ));
+                    const conflictPreview = conflictNames.slice(0, 10);
+                    const hiddenCount = Math.max(conflictNames.length - conflictPreview.length, 0);
+
+                    return (
+                      <>
+                        <div className="text-sm text-gray-800 dark:text-gray-200 mb-2">
+                          检测到 {pendingImportedPresets.length} 条可导入预设
+                        </div>
+                        <div className="text-xs text-gray-600 dark:text-gray-300 mb-3">
+                          将覆盖 {overwriteCount} 条，新增 {addCount} 条
+                        </div>
+                        {conflictPreview.length > 0 && (
+                          <div className="mb-3 rounded-md border border-amber-200 bg-amber-50/70 p-2 dark:border-amber-700/60 dark:bg-amber-900/20">
+                            <div className="mb-1 text-xs text-amber-800 dark:text-amber-300">
+                              冲突预设（前 10 条）：
+                            </div>
+                            <div className="flex flex-wrap gap-1.5">
+                              {conflictPreview.map(name => (
+                                <span
+                                  key={name}
+                                  className="rounded-full border border-amber-300 bg-white/80 px-2 py-0.5 text-xs text-amber-900 dark:border-amber-600 dark:bg-amber-900/40 dark:text-amber-200"
+                                >
+                                  {name}
+                                </span>
+                              ))}
+                              {hiddenCount > 0 && (
+                                <span className="rounded-full border border-amber-300 bg-white/80 px-2 py-0.5 text-xs text-amber-900 dark:border-amber-600 dark:bg-amber-900/40 dark:text-amber-200">
+                                  还有 {hiddenCount} 条
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => handleConfirmImport('merge')}
+                      className="px-3 py-1.5 rounded-lg bg-cyan-600 text-white hover:bg-cyan-700 transition-colors text-xs font-medium"
+                    >
+                      合并导入
+                    </button>
+                    <button
+                      onClick={() => handleConfirmImport('overwrite')}
+                      className="px-3 py-1.5 rounded-lg bg-amber-600 text-white hover:bg-amber-700 transition-colors text-xs font-medium"
+                    >
+                      覆盖现有
+                    </button>
+                    <button
+                      onClick={() => { setPendingImportedPresets([]); setIsImportDialogOpen(false); }}
+                      className="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-xs font-medium"
+                    >
+                      取消
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* 传统单个设置模式 */}

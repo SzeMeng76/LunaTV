@@ -11,6 +11,39 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "6.2.1",
+    date: "2026-03-21",
+    added: [
+    "🔔 下载Toast通知：下载开始时显示即时Toast通知，提升下载体验",
+    "🎯 快速跳过预设：添加灵活的片头片尾快速跳过预设功能",
+    "🙈 隐藏短剧API配置：从管理后台隐藏短剧API配置项",
+    "🖥️ 超宽显示器视频显示模式：添加超宽显示器视频显示模式控制",
+    "🔓 Emby免密登录：支持Emby免密登录并添加认证模式切换器",
+    "🔍 搜索列表视图模式：添加带图片预览的搜索列表视图模式，支持列表项播放按钮",
+    "💾 播放速率持久化：持久化播放速率设置，增强跳过预设验证和导入导出功能"
+    ],
+    changed: [
+    "🔄 迁移UserEmbyConfig到sonner toast库：重构UserEmbyConfig组件使用sonner toast通知库",
+    "📦 升级TanStack包：@tanstack/react-query从5.90.21升级到5.91.0，@tanstack/react-virtual从3.13.22升级到3.13.23",
+    "📚 部署文档更新：移除Zeabur，添加Vercel/Render部署指南",
+    "🎬 升级ArtPlayer至5.4.0和弹幕插件至5.3.0",
+    "🔄 重构搜索：将EventSource迁移到experimental_streamedQuery",
+    "🎯 重构跳过预设：从快速跳过按钮重新设计为片头片尾模板"
+    ],
+    fixed: [
+    "📥 修复短剧下载系统：修复短剧下载功能、IndexedDB序列化问题和AES加密任务序列化错误，改善下载UX",
+    "🔧 修复短剧分类端点使用配置的短剧源：使用已配置的短剧源进行分类端点请求",
+    "🔑 修复EmbyClient构建流URL前确保认证：在构建流媒体URL之前确保已完成认证",
+    "🔒 修复短剧封面图SSL证书问题：代理短剧封面图片绕过过期SSL证书，证书无效时自动回退HTTP加载",
+    "🔍 修复详情获取搜索失败时回退直接ID查找：搜索方式获取详情失败时回退到直接ID查找",
+    "🎬 修复HeroBanner尊重DISABLE_HERO_TRAILER环境变量：HeroBanner正确响应禁用预告片环境变量",
+    "❤️ 修复切换视频源后收藏状态丢失：切换源后正确保持收藏状态，通过标题回退匹配并使用实际存储键切换收藏",
+    "🤖 修复AI系统多项问题：正确处理流式API响应并过滤think块，功能禁用时阻止未授权API调用，移除导致过多调用的API健康检查",
+    "🔄 集中查询缓存失效到QueryProvider：在QueryProvider中集中管理查询缓存失效",
+    "🔧 修复登录页用户名字段：通过NEXT_PUBLIC环境变量在构建时解析shouldAskUsername，消除用户名字段渲染延迟"
+    ]
+  },
+  {
     version: "6.2.0",
     date: "2026-03-01",
     added: [

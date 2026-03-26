@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getAvailableApiSites, getCacheTime } from '@/lib/config';
-import { searchFromApi } from '@/lib/downstream';
+import { getDetailFromApi, searchFromApi } from '@/lib/downstream';
 import { recordRequest, getDbQueryCount, resetDbQueryCount } from '@/lib/performance-monitor';
 
 export const runtime = 'nodejs';
@@ -200,18 +200,32 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(errorResponse, { status: 400 });
     }
 
-    // 使用搜索API获取结果，然后精确匹配source和id
-    // 这样可以确保获取到完整的episodes数据
-    const searchResults = await searchFromApi(apiSite, title.trim());
+    // 优先通过搜索匹配（如果有 title）
+    let result: any = null;
 
-    // 从搜索结果中精确匹配 source 和 id
-    const exactMatch = searchResults.find(
-      (item: any) =>
-        item.source?.toString() === sourceCode.toString() &&
-        item.id?.toString() === id.toString()
-    );
+    if (title.trim()) {
+      try {
+        const searchResults = await searchFromApi(apiSite, title.trim());
+        result = searchResults.find(
+          (item: any) =>
+            item.source?.toString() === sourceCode.toString() &&
+            item.id?.toString() === id.toString()
+        ) || null;
+      } catch {
+        // 搜索失败，继续尝试直接获取详情
+      }
+    }
 
-    if (!exactMatch) {
+    // Fallback: 直接通过 ID 获取详情
+    if (!result) {
+      try {
+        result = await getDetailFromApi(apiSite, id);
+      } catch {
+        // 直接获取也失败
+      }
+    }
+
+    if (!result) {
       const errorResponse = { error: '未找到匹配的视频源' };
       const errorSize = Buffer.byteLength(JSON.stringify(errorResponse), 'utf8');
 
@@ -230,8 +244,6 @@ export async function GET(request: NextRequest) {
 
       return NextResponse.json(errorResponse, { status: 404 });
     }
-
-    const result = exactMatch;
 
     const cacheTime = await getCacheTime();
 

@@ -34,35 +34,8 @@ const PageLayout = ({
 
   // 检查 AI 功能是否开启
   useEffect(() => {
-    if (isAIRecommendFeatureDisabled()) {
-      setAiEnabled(false);
-      return;
-    }
-
-    let cancelled = false;
-
-    (async () => {
-      try {
-        const response = await fetch('/api/ai-recommend', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            messages: [{ role: 'user', content: 'ping' }],
-          }),
-        });
-        if (!cancelled) {
-          setAiEnabled(response.status !== 403);
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setAiEnabled(true);
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
+    const disabled = isAIRecommendFeatureDisabled();
+    setAiEnabled(!disabled);
   }, []);
 
   if (useModernNav) {

@@ -71,6 +71,26 @@ import {
   usePrefetchDoubanData,
 } from './hooks/usePlayPagePrefetch';
 
+// 播放速率持久化
+const PLAYER_PLAYBACK_RATE_KEY = 'moontv_player_playback_rate';
+
+function sanitizePlaybackRate(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return 1.0;
+  const allowedRates = [0.5, 0.75, 1, 1.25, 1.5, 2, 3];
+  return allowedRates.includes(value) ? value : 1.0;
+}
+
+function loadPlaybackRate(): number {
+  if (typeof window === 'undefined') return 1.0;
+  try {
+    const raw = localStorage.getItem(PLAYER_PLAYBACK_RATE_KEY);
+    if (!raw) return 1.0;
+    return sanitizePlaybackRate(Number(raw));
+  } catch {
+    return 1.0;
+  }
+}
+
 // 扩展 HTMLVideoElement 类型以支持 hls 属性
 declare global {
   interface HTMLVideoElement {
@@ -719,8 +739,8 @@ function PlayPageClient() {
   const resumeTimeRef = useRef<number | null>(null);
   // 上次使用的音量，默认 0.7
   const lastVolumeRef = useRef<number>(0.7);
-  // 上次使用的播放速率，默认 1.0
-  const lastPlaybackRateRef = useRef<number>(1.0);
+  // 上次使用的播放速率，从 localStorage 恢复
+  const lastPlaybackRateRef = useRef<number>(loadPlaybackRate());
 
   const [sourceSearchLoading, setSourceSearchLoading] = useState(false);
   const [sourceSearchError, setSourceSearchError] = useState<string | null>(
@@ -5019,7 +5039,17 @@ function PlayPageClient() {
         lastVolumeRef.current = artPlayerRef.current.volume;
       });
       artPlayerRef.current.on('video:ratechange', () => {
-        lastPlaybackRateRef.current = artPlayerRef.current.playbackRate;
+        lastPlaybackRateRef.current = sanitizePlaybackRate(
+          artPlayerRef.current.playbackRate,
+        );
+        try {
+          localStorage.setItem(
+            PLAYER_PLAYBACK_RATE_KEY,
+            String(lastPlaybackRateRef.current),
+          );
+        } catch {
+          // ignore
+        }
       });
 
       // 监听全屏事件，进入全屏后自动隐藏控制栏 + 显示标题层
@@ -5164,8 +5194,7 @@ function PlayPageClient() {
           if (
             Math.abs(
               artPlayerRef.current.playbackRate - lastPlaybackRateRef.current
-            ) > 0.01 &&
-            isWebKit
+            ) > 0.01
           ) {
             artPlayerRef.current.playbackRate = lastPlaybackRateRef.current;
           }

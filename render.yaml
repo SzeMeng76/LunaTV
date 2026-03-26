@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: lunatv
+    runtime: image
+    image:
+      url: ghcr.io/szemeng76/lunatv:latest
+    numInstances: 1
+    plan: free
+    healthCheckPath: /
+    envVars:
+      - key: USERNAME
+        sync: false
+      - key: PASSWORD
+        sync: false
+      - key: NEXT_PUBLIC_STORAGE_TYPE
+        value: upstash
+      - key: UPSTASH_URL
+        sync: false
+      - key: UPSTASH_TOKEN
+        sync: false
+      - key: DISABLE_HERO_TRAILER
+        value: "true"

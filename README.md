@@ -13,7 +13,7 @@
   <img src="public/logo.png" alt="LunaTV Logo" width="120">
 </div>
 
-> 🎬 **LunaTV Enhanced Edition** 是基于 MoonTV 深度二次开发的全功能影视聚合播放平台。在原版基础上新增了 **YouTube 集成**、**网盘搜索**、**AI 推荐**、**短剧功能**、**IPTV 直播**、**Bangumi 动漫**、**播放统计**、**弹幕系统**等 50+ 重大功能增强，打造极致的在线观影体验。
+> 🎬 **LunaTV Enhanced Edition** 是基于 MoonTV 深度二次开发的全功能影视聚合播放平台。在原版基础上新增了 **YouTube 集成**、**网盘搜索**、**AI 推荐**、**短剧功能**、**IPTV 直播**、**Bangumi 动漫**、**播放统计**、**弹幕系统**等 60+ 重大功能增强，打造极致的在线观影体验。
 
 <div align="center">
 
@@ -21,11 +21,11 @@
 ![React](https://img.shields.io/badge/React-19.0.0-61dafb?logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.8.3-3178c6?logo=typescript)
 ![TailwindCSS](https://img.shields.io/badge/TailwindCSS-4.1.18-38bdf8?logo=tailwindcss)
-![ArtPlayer](https://img.shields.io/badge/ArtPlayer-5.3.0-ff6b6b)
+![ArtPlayer](https://img.shields.io/badge/ArtPlayer-5.4.0-ff6b6b)
 ![HLS.js](https://img.shields.io/badge/HLS.js-1.6.15-ec407a)
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Docker Ready](https://img.shields.io/badge/Docker-ready-blue?logo=docker)
-![Version](https://img.shields.io/badge/Version-6.2.0-orange)
+![Version](https://img.shields.io/badge/Version-6.2.1-orange)
 
 </div>
 
@@ -33,7 +33,7 @@
 
 ## 📢 项目说明
 
-本项目是在 **MoonTV** 基础上进行的深度二次开发版本，从 **v4.3.1** 版本开始，持续迭代至当前 **v6.2.0**，累计新增 60+ 重大功能模块，400+ 细节优化。所有新增功能详见 [CHANGELOG](CHANGELOG)。
+本项目是在 **MoonTV** 基础上进行的深度二次开发版本，从 **v4.3.1** 版本开始，持续迭代至当前 **v6.2.1**，累计新增 60+ 重大功能模块，400+ 细节优化。所有新增功能详见 [CHANGELOG](CHANGELOG)。
 
 ## ⚠️ 重要声明
 
@@ -42,7 +42,7 @@
 ## 💡 核心增强亮点
 
 ### 🎥 内容生态扩展
-- **Emby 私有库**：完整的 Emby 媒体服务器集成 → [详细文档](docs/integration/EMBY_GUIDE.md)
+- **Emby 私有库**：完整的 Emby 媒体服务器集成，支持免密登录和认证模式切换 → [详细文档](docs/integration/EMBY_GUIDE.md)
 - **YouTube 集成**：完整的 YouTube 搜索、播放、直播功能
 - **网盘搜索**：集成高级筛选和缓存管理的网盘资源搜索
 - **ACG 种子搜索**：Mikan Project 双源系统，丰富的动漫资源
@@ -50,6 +50,12 @@
 - **IPTV 直播**：m3u/m3u8 订阅、FLV 直播流、EPG 节目单
 - **Bangumi 动漫**：动漫信息智能检测、API 集成
 - **繁体中文搜索**：智能繁简转换、多策略搜索
+- **搜索列表视图**：支持列表/网格双视图模式切换，列表模式带图片预览和快捷播放
+
+### 🎬 播放器增强
+- **超宽显示器适配**：视频显示模式控制，完美支持超宽显示器
+- **片头片尾跳过预设**：灵活的片头片尾模板系统，支持导入导出和验证
+- **播放速率持久化**：记住播放速率设置，跨会话保持
 
 
 ### ⚡ 一键部署到 Zeabur（最简单）
@@ -474,10 +480,10 @@ pnpm dev
 - **前端框架**：Next.js 16.1.0 + React 19.0.0
 - **开发语言**：TypeScript 5.8.3
 - **样式方案**：TailwindCSS 4.1.18
-- **视频播放**：ArtPlayer 5.3.0 + HLS.js 1.6.15
-- **状态管理**：TanStack Query 5.90.21
+- **视频播放**：ArtPlayer 5.4.0 + HLS.js 1.6.15
+- **状态管理**：TanStack Query 5.91.0
 - **数据库**：Upstash Redis + Kvrocks
-- **部署方案**：Docker / Vercel
+- **部署方案**：Docker / Vercel / Render
 
 ## 📜 更新日志
 
@@ -499,7 +505,7 @@ pnpm dev
 - ❌ 您不得将本项目用于商业目的
 - ⚠️ 若您修改、转换或以本项目为基础进行创作，您必须以相同的许可协议分发您的作品
 
-© 2025 LunaTV Enhanced Edition & Contributors
+© 2025-2026 LunaTV Enhanced Edition & Contributors
 
 基于 [MoonTV](https://github.com/MoonTechLab/LunaTV) 进行二次开发。
 

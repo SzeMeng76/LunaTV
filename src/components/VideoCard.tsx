@@ -237,38 +237,9 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
       return;
     }
 
-    if (isAIRecommendFeatureDisabled()) {
-      setAiEnabledLocal(false);
-      setAiCheckCompleteLocal(true);
-      return;
-    }
-
-    let cancelled = false;
-
-    (async () => {
-      try {
-        const response = await fetch('/api/ai-recommend', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            messages: [{ role: 'user', content: 'ping' }],
-          }),
-        });
-        if (!cancelled) {
-          setAiEnabledLocal(response.status !== 403);
-          setAiCheckCompleteLocal(true);
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setAiEnabledLocal(false);
-          setAiCheckCompleteLocal(true);
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
+    const disabled = isAIRecommendFeatureDisabled();
+    setAiEnabledLocal(!disabled);
+    setAiCheckCompleteLocal(true);
   }, [aiEnabledProp, aiCheckCompleteProp]); // 依赖父组件传递的props
 
   // 🚀 使用 TanStack Query useMutation 优化收藏功能

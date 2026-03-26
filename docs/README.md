@@ -5,7 +5,7 @@
 ## 📚 文档导航
 
 ### 🚀 部署与配置
-- [部署指南](deployment/DEPLOYMENT.md) - Docker、本地部署、Vercel 部署完整指南
+- [部署指南](deployment/DEPLOYMENT.md) - Docker、Vercel、Render 等部署完整指南
 - [配置说明](deployment/CONFIGURATION.md) - 环境变量、功能配置详解
 - [观影房部署](deployment/WATCH_ROOM_DEPLOYMENT.md) - 多人同步观影功能部署
 
