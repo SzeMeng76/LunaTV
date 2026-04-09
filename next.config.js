@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Cloudflare 必须：静态导出
+  // Cloudflare 必須：靜態導出
   output: "export",
 
   reactStrictMode: false,
@@ -17,7 +17,7 @@ const nextConfig = {
     },
   },
 
-  experimental:
+  experimental: {
     optimizePackageImports: [
       'lucide-react',
       '@heroicons/react',
