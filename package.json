@@ -5,7 +5,6 @@
   "scripts": {
     "dev": "pnpm gen:manifest && next dev -H 0.0.0.0",
     "build": "pnpm gen:manifest && next build",
-    "deploy": "pnpm build && wrangler pages deploy .next",
     "start": "next start",
     "lint": "next lint",
     "lint:fix": "eslint src --fix && pnpm format",
@@ -105,7 +104,7 @@
     "prettier-plugin-tailwindcss": "^0.6.12",
     "tailwindcss": "^4.1.18",
     "typescript": "^5.8.3",
-    "webpack-obfuscator": "^3.5.1",
+    "webpack-obfuscator": "^3.5.1"
   },
   "lint-staged": {
     "**/*.{js,jsx,ts,tsx}": [
