@@ -106,7 +106,6 @@
     "tailwindcss": "^4.1.18",
     "typescript": "^5.8.3",
     "webpack-obfuscator": "^3.5.1",
-    "wrangler": "^3.104.0"
   },
   "lint-staged": {
     "**/*.{js,jsx,ts,tsx}": [
