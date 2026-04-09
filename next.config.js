@@ -1,16 +1,14 @@
 /** @type {import('next').NextConfig} */
-
 const nextConfig = {
-  // 生产环境始终使用 standalone 模式（Vercel/Docker/Render）
-  // 本地开发时（NODE_ENV !== 'production'）不使用 standalone
-  ...(process.env.NODE_ENV === 'production' ? { output: 'standalone' } : {}),
+  // ✅ Cloudflare 必须：静态导出模式（替换原有 standalone，兼容 Workers）
+  output: "export",
 
   reactStrictMode: false,
 
-  // Puppeteer/Chromium 相关包不进行 bundle（用于 Vercel serverless）
+  // Puppeteer/Chromium 相关包不进行 bundle
   serverExternalPackages: ['@sparticuz/chromium', 'puppeteer-core'],
 
-  // Next.js 16 使用 Turbopack，配置 SVG 加载
+  // Next.js 16 Turbopack SVG 加载
   turbopack: {
     root: __dirname,
     rules: {
@@ -21,9 +19,8 @@ const nextConfig = {
     },
   },
 
-  // 性能优化：包体积优化和模块化导入
+  // 性能优化：包体积优化
   experimental: {
-    // 自动优化大型库的导入，只打包实际使用的部分
     optimizePackageImports: [
       'lucide-react',
       '@heroicons/react',
@@ -32,9 +29,8 @@ const nextConfig = {
     ],
   },
 
-  // 图片优化配置
+  // ✅ Cloudflare 必须：关闭图片优化
   images: {
-    // 禁用 Next.js 图片优化（代理图片不兼容）
     unoptimized: true,
     remotePatterns: [
       {
@@ -47,6 +43,9 @@ const nextConfig = {
       },
     ],
   },
+
+  // ✅ Cloudflare 必须：路由后缀兼容（防止404）
+  trailingSlash: true,
 };
 
 module.exports = nextConfig;
