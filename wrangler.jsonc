@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "next-app",
+  "name": "lunatv",
   "compatibility_date": "2025-04-10",
   "pages": true,
   "site": "./.next"
