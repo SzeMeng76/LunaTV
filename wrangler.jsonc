@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "nextjs-app",
+  "name": "next-app",
   "compatibility_date": "2025-04-10",
   "pages": true,
   "site": "./.next"
