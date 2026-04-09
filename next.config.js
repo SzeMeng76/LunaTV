@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Cloudflare 必須：靜態導出
-  output: "export",
+  // 👇 最重要：关掉静态导出，改用兼容模式
+  output: "standalone",
 
   reactStrictMode: false,
 
@@ -34,7 +34,6 @@ const nextConfig = {
     ],
   },
 
-  // Cloudflare 路由兼容
   trailingSlash: true,
 };
 
