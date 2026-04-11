@@ -21,6 +21,11 @@ jobs:
           git remote add upstream https://github.com/SzeMeng76/LunaTV.git
           git fetch upstream
 
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
       - name: Merge upstream
         run: |
           git merge upstream/main --allow-unrelated-histories || true
