@@ -70,6 +70,7 @@ function RegisterPageClient() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -77,6 +78,7 @@ function RegisterPageClient() {
   const [registrationDisabled, setRegistrationDisabled] = useState(false);
   const [disabledReason, setDisabledReason] = useState('');
   const [bingWallpaper, setBingWallpaper] = useState<string>('');
+  const [requireInviteCode, setRequireInviteCode] = useState(false);
 
   const { siteName } = useSite();
 
@@ -101,21 +103,30 @@ function RegisterPageClient() {
   useEffect(() => {
     const checkRegistrationAvailable = async () => {
       try {
+        // 获取服务器配置
+        const configRes = await fetch('/api/server-config');
+        const configData = await configRes.json();
+
+        // 检查是否需要邀请码
+        if (configData.requireInviteCode) {
+          setRequireInviteCode(true);
+        }
+
         // 用空数据检测，这样不会创建用户但能得到正确的错误信息
         const res = await fetch('/api/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username: '', password: '', confirmPassword: '' }),
         });
-        
+
         const data = await res.json();
-        
+
         // 如果是localStorage模式，跳转登录
         if (data.error === 'localStorage 模式不支持用户注册') {
           router.replace('/login');
           return;
         }
-        
+
         // 如果是管理员关闭了注册
         if (data.error === '管理员已关闭用户注册功能') {
           setRegistrationDisabled(true);
@@ -123,7 +134,7 @@ function RegisterPageClient() {
           setShouldShowRegister(true);
           return;
         }
-        
+
         // 其他情况显示注册表单（包括用户名已存在等正常的验证错误）
         setShouldShowRegister(true);
       } catch (error) {
@@ -145,6 +156,11 @@ function RegisterPageClient() {
       return;
     }
 
+    if (requireInviteCode && !inviteCode) {
+      setError('请输入邀请码');
+      return;
+    }
+
     if (password !== confirmPassword) {
       setError('两次输入的密码不一致');
       return;
@@ -159,6 +175,7 @@ function RegisterPageClient() {
           username,
           password,
           confirmPassword,
+          inviteCode: inviteCode || undefined,
         }),
       });
 
@@ -365,6 +382,28 @@ function RegisterPageClient() {
               />
             </div>
           </div>
+
+          {requireInviteCode && (
+            <div className='group'>
+              <label htmlFor='inviteCode' className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+                邀请码
+              </label>
+              <div className='relative'>
+                <div className='absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none'>
+                  <Sparkles className='h-5 w-5 text-gray-400 dark:text-gray-500 group-focus-within:text-blue-500 transition-colors' />
+                </div>
+                <input
+                  id='inviteCode'
+                  type='text'
+                  autoComplete='off'
+                  className='block w-full pl-12 pr-4 py-3.5 rounded-xl border-0 text-gray-900 dark:text-gray-100 shadow-sm ring-2 ring-white/60 dark:ring-white/10 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:outline-none sm:text-base bg-white/80 dark:bg-zinc-800/80 backdrop-blur transition-all duration-300 hover:shadow-md uppercase'
+                  placeholder='请输入邀请码'
+                  value={inviteCode}
+                  onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                />
+              </div>
+            </div>
+          )}
 
           {error && (
             <div className='flex items-center gap-2 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 animate-slide-down'>

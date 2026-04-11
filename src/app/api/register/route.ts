@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { clearConfigCache, getConfig } from '@/lib/config';
 import { db } from '@/lib/db';
+import { useInviteCode, validateInviteCode } from '@/lib/invite-code';
 
 export const runtime = 'nodejs';
 
@@ -77,19 +78,38 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { username, password, confirmPassword } = await req.json();
+    const { username, password, confirmPassword, inviteCode } = await req.json();
 
     // 先检查配置中是否允许注册（在验证输入之前）
     let config: any;
     try {
       config = await getConfig();
       const allowRegister = config.UserConfig?.AllowRegister !== false; // 默认允许注册
+      const requireInviteCode = config.UserConfig?.RequireInviteCode === true; // 默认不需要邀请码
 
       if (!allowRegister) {
         return NextResponse.json(
           { error: '管理员已关闭用户注册功能' },
           { status: 403 }
         );
+      }
+
+      // 如果启用了邀请码系统，验证邀请码
+      if (requireInviteCode) {
+        if (!inviteCode || typeof inviteCode !== 'string') {
+          return NextResponse.json(
+            { error: '请输入邀请码' },
+            { status: 400 }
+          );
+        }
+
+        const validation = await validateInviteCode(inviteCode.trim().toUpperCase());
+        if (!validation.valid) {
+          return NextResponse.json(
+            { error: validation.error || '邀请码无效' },
+            { status: 400 }
+          );
+        }
       }
     } catch (err) {
       console.error('检查注册配置失败', err);
@@ -155,6 +175,17 @@ export async function POST(req: NextRequest) {
       } else {
         // V1 注册（无 tags，保持现有行为）
         await db.registerUser(username, password);
+      }
+
+      // 如果启用了邀请码系统，标记邀请码已使用
+      const requireInviteCode = config.UserConfig?.RequireInviteCode === true;
+      if (requireInviteCode && inviteCode) {
+        try {
+          await useInviteCode(inviteCode.trim().toUpperCase(), username);
+        } catch (inviteErr) {
+          console.error('标记邀请码使用失败:', inviteErr);
+          // 不影响注册流程，只记录错误
+        }
       }
 
       // 清除缓存，让 configSelfCheck 从数据库同步最新用户列表（包括 tags）

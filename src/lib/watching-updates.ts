@@ -1,6 +1,6 @@
 'use client';
 
-import { getAllPlayRecords, PlayRecord, generateStorageKey, forceRefreshPlayRecordsCache, savePlayRecord } from './db.client';
+import { getAllPlayRecords, PlayRecord, generateStorageKey, forceRefreshPlayRecordsCache, savePlayRecord, getAllReminders } from './db.client';
 
 // 缓存键
 const WATCHING_UPDATES_CACHE_KEY = 'moontv_watching_updates';
@@ -31,6 +31,7 @@ export interface WatchingUpdate {
   timestamp: number;
   updatedCount: number;
   continueWatchingCount: number; // 新增：需要继续观看的剧集数量
+  newReleasesCount: number; // 新增：新上映的剧集数量
   updatedSeries: {
     title: string;
     source_name: string;
@@ -42,10 +43,12 @@ export interface WatchingUpdate {
     totalEpisodes: number;
     hasNewEpisode: boolean;
     hasContinueWatching: boolean; // 新增：是否需要继续观看
+    hasNewRelease: boolean; // 新增：是否为新上映
     newEpisodes?: number;
     remainingEpisodes?: number; // 新增：剩余集数
     latestEpisodes?: number;
     remarks?: string; // 备注信息（如"已完结"）
+    releaseDate?: string; // 上映日期
   }[];
 }
 
@@ -54,6 +57,7 @@ interface WatchingUpdatesCache {
   timestamp: number;
   updatedCount: number;
   continueWatchingCount: number;
+  newReleasesCount: number;
   updatedSeries: WatchingUpdate['updatedSeries'];
 }
 
@@ -103,24 +107,12 @@ export async function checkWatchingUpdates(forceRefresh = false): Promise<void> 
       id: key
     }));
 
-    if (records.length === 0) {
-      console.log('无播放记录，跳过更新检查');
-      const emptyResult: WatchingUpdate = {
-        hasUpdates: false,
-        timestamp: currentTime,
-        updatedCount: 0,
-        continueWatchingCount: 0,
-        updatedSeries: []
-      };
-      cacheWatchingUpdates(emptyResult);
-      if (STORAGE_TYPE !== 'localstorage') {
-        memoryLastCheckTime = currentTime;
-      } else {
-        localStorage.setItem(LAST_CHECK_TIME_KEY, currentTime.toString());
-      }
-      notifyListeners(false);
-      return;
-    }
+    // 🔥 修复：即使没有播放记录，也要检查新上映的想看内容
+    // if (records.length === 0) {
+    //   console.log('无播放记录，跳过更新检查');
+    //   ...
+    // }
+    // 移除这个提前返回，让代码继续执行到检查新上映的部分
 
     // 筛选多集剧的记录（与Alpha版本保持一致，不限制是否看完）
     const candidateRecords = records.filter(record => {
@@ -128,7 +120,9 @@ export async function checkWatchingUpdates(forceRefresh = false): Promise<void> 
     });
 
     console.log(`找到 ${candidateRecords.length} 个可能有更新的剧集`);
-    console.log('候选记录详情:', candidateRecords.map(r => ({ title: r.title, index: r.index, total: r.total_episodes })));
+    if (candidateRecords.length > 0) {
+      console.log('候选记录详情:', candidateRecords.map(r => ({ title: r.title, index: r.index, total: r.total_episodes })));
+    }
 
     let hasAnyUpdates = false;
     let updatedCount = 0;
@@ -156,6 +150,7 @@ export async function checkWatchingUpdates(forceRefresh = false): Promise<void> 
           totalEpisodes: protectedTotalEpisodes,
           hasNewEpisode: updateInfo.hasUpdate,
           hasContinueWatching: updateInfo.hasContinueWatching,
+          hasNewRelease: false, // 播放记录不是新上映
           newEpisodes: updateInfo.newEpisodes,
           remainingEpisodes: updateInfo.remainingEpisodes,
           latestEpisodes: updateInfo.latestEpisodes,
@@ -192,6 +187,7 @@ export async function checkWatchingUpdates(forceRefresh = false): Promise<void> 
           totalEpisodes: record.total_episodes, // 错误时保持原有集数
           hasNewEpisode: false,
           hasContinueWatching: false,
+          hasNewRelease: false,
           newEpisodes: 0,
           remainingEpisodes: 0,
           latestEpisodes: record.total_episodes,
@@ -204,25 +200,112 @@ export async function checkWatchingUpdates(forceRefresh = false): Promise<void> 
 
     await Promise.all(updatePromises);
 
+    // 🎬 检查想看中的新上映内容
+    console.log('🎬 开始检查想看中的新上映内容...');
+    let newReleasesCount = 0;
+    try {
+      const reminders = await getAllReminders();
+      // 使用 Asia/Shanghai 时区获取今天的日期
+      const today = new Date().toLocaleDateString('zh-CN', {
+        timeZone: 'Asia/Shanghai',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      }).replace(/\//g, '-'); // 转换为 YYYY-MM-DD 格式
+
+      // 筛选有releaseDate且已上映的想看内容
+      const newReleases = Object.entries(reminders)
+        .filter(([key, reminder]) => {
+          // 必须有上映日期
+          if (!reminder.releaseDate) return false;
+
+          // 上映日期必须<=今天（已上映）
+          if (reminder.releaseDate > today) return false;
+
+          // 检查是否已经在播放记录中（避免重复）
+          const isInPlayRecords = records.some(r =>
+            r.title === reminder.title && r.year === reminder.year
+          );
+
+          return !isInPlayRecords;
+        })
+        .map(([key, reminder]) => {
+          const [sourceName, videoId] = key.split('+');
+
+          // 重新计算 remarks，显示已上映多少天
+          let remarksText = '已上映';
+          if (reminder.releaseDate) {
+            const releaseDate = reminder.releaseDate; // "YYYY-MM-DD"
+
+            if (releaseDate < today) {
+              // 已上映：计算天数差
+              const releaseParts = releaseDate.split('-').map(Number);
+              const todayParts = today.split('-').map(Number);
+              const releaseMs = new Date(releaseParts[0], releaseParts[1] - 1, releaseParts[2]).getTime();
+              const todayMs = new Date(todayParts[0], todayParts[1] - 1, todayParts[2]).getTime();
+              const daysAgo = Math.floor((todayMs - releaseMs) / (1000 * 60 * 60 * 24));
+              remarksText = `已上映${daysAgo}天`;
+            } else if (releaseDate === today) {
+              remarksText = '今日上映';
+            }
+          }
+
+          return {
+            title: reminder.title,
+            source_name: reminder.source_name,
+            year: reminder.year,
+            cover: reminder.cover,
+            sourceKey: sourceName || 'unknown',
+            videoId: videoId || 'unknown',
+            currentEpisode: 0,
+            totalEpisodes: reminder.total_episodes || 0,
+            hasNewEpisode: false,
+            hasContinueWatching: false,
+            hasNewRelease: true, // 标记为新上映
+            newEpisodes: 0,
+            remainingEpisodes: 0,
+            latestEpisodes: reminder.total_episodes || 0,
+            remarks: remarksText,
+            releaseDate: reminder.releaseDate,
+          };
+        });
+
+      if (newReleases.length > 0) {
+        console.log(`🎬 发现 ${newReleases.length} 部新上映的想看内容`);
+        updatedSeries.push(...newReleases);
+        newReleasesCount = newReleases.length;
+        hasAnyUpdates = true;
+      } else {
+        console.log('🎬 没有新上映的想看内容');
+      }
+    } catch (error) {
+      console.error('检查新上映内容失败:', error);
+    }
+
     // 🔧 修复：对 updatedSeries 进行排序，确保每次顺序一致，防止卡片闪烁
     // 排序规则：
-    // 1. 有新剧集的排在前面
-    // 2. 需要继续观看的排在后面
-    // 3. 相同类型按标题字母顺序排序
+    // 1. 新上映的排在最前面
+    // 2. 有新剧集的排在中间
+    // 3. 需要继续观看的排在后面
+    // 4. 相同类型按标题字母顺序排序
     updatedSeries.sort((a, b) => {
-      // 优先级1: 有新剧集的排在前面
+      // 优先级1: 新上映的排在最前面
+      if (a.hasNewRelease !== b.hasNewRelease) {
+        return a.hasNewRelease ? -1 : 1;
+      }
+      // 优先级2: 有新剧集的排在前面
       if (a.hasNewEpisode !== b.hasNewEpisode) {
         return a.hasNewEpisode ? -1 : 1;
       }
-      // 优先级2: 需要继续观看的排在后面
+      // 优先级3: 需要继续观看的排在后面
       if (a.hasContinueWatching !== b.hasContinueWatching) {
         return a.hasContinueWatching ? -1 : 1;
       }
-      // 优先级3: 按标题排序
+      // 优先级4: 按标题排序
       return a.title.localeCompare(b.title, 'zh-CN');
     });
 
-    console.log(`检查完成: ${hasAnyUpdates ? `发现${updatedCount}部剧集有新集数更新，${continueWatchingCount}部剧集需要继续观看` : '暂无更新'}`);
+    console.log(`检查完成: ${hasAnyUpdates ? `发现${newReleasesCount}部新上映，${updatedCount}部剧集有新集数更新，${continueWatchingCount}部剧集需要继续观看` : '暂无更新'}`);
 
     // 缓存结果
     const result: WatchingUpdate = {
@@ -230,6 +313,7 @@ export async function checkWatchingUpdates(forceRefresh = false): Promise<void> 
       timestamp: currentTime,
       updatedCount,
       continueWatchingCount,
+      newReleasesCount,
       updatedSeries
     };
 
@@ -484,6 +568,7 @@ function cacheWatchingUpdates(data: WatchingUpdate): void {
       timestamp: data.timestamp,
       updatedCount: data.updatedCount,
       continueWatchingCount: data.continueWatchingCount,
+      newReleasesCount: data.newReleasesCount,
       updatedSeries: data.updatedSeries
     };
     console.log('准备缓存的数据:', cacheData);
@@ -597,6 +682,7 @@ export function getDetailedWatchingUpdates(): WatchingUpdate | null {
         timestamp: memoryWatchingUpdatesCache.timestamp,
         updatedCount: memoryWatchingUpdatesCache.updatedCount,
         continueWatchingCount: memoryWatchingUpdatesCache.continueWatchingCount,
+        newReleasesCount: memoryWatchingUpdatesCache.newReleasesCount,
         updatedSeries: memoryWatchingUpdatesCache.updatedSeries
       };
       console.log('从内存缓存返回数据:', result);
@@ -625,6 +711,7 @@ export function getDetailedWatchingUpdates(): WatchingUpdate | null {
       timestamp: data.timestamp,
       updatedCount: data.updatedCount,
       continueWatchingCount: data.continueWatchingCount,
+      newReleasesCount: data.newReleasesCount || 0, // 兼容旧数据
       updatedSeries: data.updatedSeries
     };
     console.log('返回给页面的数据:', result);

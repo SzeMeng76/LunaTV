@@ -12,7 +12,8 @@ import { DEFAULT_USER_AGENT } from './user-agent';
 // 注意：所有源地址都经过实际测试验证（2025-10-06）
 const DOMESTIC_CANDIDATES: string[] = [
   // 国内优先源（经过验证的真实可用源）
-  'https://hub.gitmirror.com/raw.githubusercontent.com/FongMi/CatVodSpider/main/jar/custom_spider.jar', // GitMirror CDN (有效JAR)
+  'https://ghproxy.vip/https://raw.githubusercontent.com/FongMi/CatVodSpider/main/jar/custom_spider.jar', // ghproxy.vip CDN (有效JAR, 312ms)
+  'https://gh-proxy.com/https://raw.githubusercontent.com/FongMi/CatVodSpider/main/jar/custom_spider.jar', // gh-proxy.com CDN (有效JAR)
 ];
 
 const INTERNATIONAL_CANDIDATES: string[] = [
@@ -24,7 +25,6 @@ const INTERNATIONAL_CANDIDATES: string[] = [
 
 const PROXY_CANDIDATES: string[] = [
   // 代理源（经过测试的可用代理）
-  'https://gh-proxy.com/https://raw.githubusercontent.com/FongMi/CatVodSpider/main/jar/custom_spider.jar', // gh-proxy.com (有效JAR)
   'https://cors.isteed.cc/github.com/FongMi/CatVodSpider/raw/main/jar/custom_spider.jar', // CORS 代理 (有效JAR)
 ];
 

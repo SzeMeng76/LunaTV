@@ -30,6 +30,10 @@ const TVBoxSecurityConfig = ({ config, refreshConfig }: TVBoxSecurityConfigProps
     proxyUrl: 'https://corsapi.smone.workers.dev'
   });
 
+  const [customJarUrl, setCustomJarUrl] = useState('');
+  const [isTestingJar, setIsTestingJar] = useState(false);
+  const [jarTestResult, setJarTestResult] = useState<any>(null);
+
   const [newIP, setNewIP] = useState('');
   const [showToken, setShowToken] = useState(false);
   const [isDiagnosing, setIsDiagnosing] = useState(false);
@@ -60,6 +64,11 @@ const TVBoxSecurityConfig = ({ config, refreshConfig }: TVBoxSecurityConfigProps
         enabled: config.TVBoxProxyConfig.enabled ?? false,
         proxyUrl: config.TVBoxProxyConfig.proxyUrl || 'https://corsapi.smone.workers.dev'
       });
+    }
+
+    // 加载自定义 JAR URL
+    if (config?.CustomSpiderJar) {
+      setCustomJarUrl(config.CustomSpiderJar);
     }
   }, [config]);
 
@@ -107,6 +116,16 @@ const TVBoxSecurityConfig = ({ config, refreshConfig }: TVBoxSecurityConfigProps
         }
       }
 
+      // 验证自定义 JAR URL
+      if (customJarUrl) {
+        try {
+          new URL(customJarUrl);
+        } catch {
+          showMessage('error', '自定义 JAR URL 格式不正确');
+          return;
+        }
+      }
+
       // 保存安全配置
       const securityResponse = await fetch('/api/admin/tvbox-security', {
         method: 'POST',
@@ -135,12 +154,74 @@ const TVBoxSecurityConfig = ({ config, refreshConfig }: TVBoxSecurityConfigProps
         throw new Error(errorData.error || '保存代理配置失败');
       }
 
+      // 保存自定义 JAR URL
+      const jarResponse = await fetch('/api/tvbox/custom-jar', {
+        method: customJarUrl ? 'POST' : 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: customJarUrl ? JSON.stringify({ jarUrl: customJarUrl }) : undefined,
+      });
+
+      if (!jarResponse.ok) {
+        const errorData = await jarResponse.json();
+        throw new Error(errorData.error || '保存自定义 JAR 配置失败');
+      }
+
       showMessage('success', 'TVBox配置保存成功！');
       await refreshConfig();
     } catch (error) {
       showMessage('error', error instanceof Error ? error.message : '保存失败');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // 测试自定义 JAR URL
+  const handleTestJar = async () => {
+    if (!customJarUrl.trim()) {
+      showMessage('error', '请输入 JAR URL');
+      return;
+    }
+
+    setIsTestingJar(true);
+    setJarTestResult(null);
+
+    try {
+      const startTime = Date.now();
+      const proxyUrl = `/api/proxy/spider.jar?url=${encodeURIComponent(customJarUrl)}&refresh=1`;
+      const response = await fetch(proxyUrl, { method: 'HEAD' });
+      const responseTime = Date.now() - startTime;
+
+      const result = {
+        success: response.ok,
+        url: customJarUrl,
+        statusCode: response.status,
+        responseTime: responseTime,
+        size: response.headers.get('content-length'),
+        source: response.headers.get('x-spider-source'),
+        cached: response.headers.get('x-spider-cached'),
+        spiderSuccess: response.headers.get('x-spider-success'),
+        error: response.ok ? null : `HTTP ${response.status}: ${response.statusText}`,
+      };
+
+      setJarTestResult(result);
+
+      if (result.success) {
+        showMessage('success', '自定义 JAR 测试成功！');
+      } else {
+        showMessage('error', '自定义 JAR 测试失败');
+      }
+    } catch (error) {
+      const result = {
+        success: false,
+        url: customJarUrl,
+        error: error instanceof Error ? error.message : '未知错误',
+      };
+      setJarTestResult(result);
+      showMessage('error', '测试失败：' + result.error);
+    } finally {
+      setIsTestingJar(false);
     }
   };
 
@@ -765,6 +846,93 @@ const TVBoxSecurityConfig = ({ config, refreshConfig }: TVBoxSecurityConfigProps
             </div>
           </div>
         )}
+
+        {/* 自定义 JAR URL 配置 */}
+        <div className='bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border border-purple-200 dark:border-purple-700 rounded-lg p-4'>
+          <h3 className='text-sm font-semibold text-purple-900 dark:text-purple-300 mb-2'>
+            🔧 自定义 Spider JAR URL
+          </h3>
+          <p className='text-xs text-purple-700 dark:text-purple-300 mb-3'>
+            配置自定义 JAR 文件地址（如上传到国内网盘），所有请求将通过本地代理处理
+          </p>
+
+          <div className='space-y-3'>
+            <div className='flex flex-col sm:flex-row gap-2'>
+              <input
+                type='text'
+                value={customJarUrl}
+                onChange={(e) => setCustomJarUrl(e.target.value)}
+                placeholder='https://your-cdn.com/custom_spider.jar'
+                className='flex-1 px-3 py-2 border border-purple-300 dark:border-purple-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500'
+              />
+              <button
+                type='button'
+                onClick={handleTestJar}
+                disabled={isTestingJar || !customJarUrl.trim()}
+                className='px-4 py-2 bg-purple-500 hover:bg-purple-600 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors whitespace-nowrap'
+              >
+                {isTestingJar ? '测试中...' : '测试 JAR'}
+              </button>
+            </div>
+
+            {/* JAR 测试结果 */}
+            {jarTestResult && (
+              <div className={`p-3 rounded-lg border ${
+                jarTestResult.success
+                  ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700'
+                  : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700'
+              }`}>
+                <div className='flex items-start gap-2 mb-2'>
+                  {jarTestResult.success ? (
+                    <CheckCircle className='w-5 h-5 text-green-600 dark:text-green-400 shrink-0 mt-0.5' />
+                  ) : (
+                    <AlertCircle className='w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5' />
+                  )}
+                  <div className='flex-1'>
+                    <p className={`font-semibold text-sm ${
+                      jarTestResult.success
+                        ? 'text-green-900 dark:text-green-300'
+                        : 'text-red-900 dark:text-red-300'
+                    }`}>
+                      {jarTestResult.success ? '✅ 测试成功' : '❌ 测试失败'}
+                    </p>
+                    {jarTestResult.success && (
+                      <div className='mt-2 space-y-1 text-xs'>
+                        <div className='flex justify-between'>
+                          <span className='text-gray-600 dark:text-gray-400'>响应时间:</span>
+                          <span className='font-semibold text-gray-900 dark:text-white'>{jarTestResult.responseTime}ms</span>
+                        </div>
+                        {jarTestResult.size && (
+                          <div className='flex justify-between'>
+                            <span className='text-gray-600 dark:text-gray-400'>文件大小:</span>
+                            <span className='font-semibold text-gray-900 dark:text-white'>{Math.round(parseInt(jarTestResult.size) / 1024)}KB</span>
+                          </div>
+                        )}
+                        <div className='flex justify-between'>
+                          <span className='text-gray-600 dark:text-gray-400'>代理状态:</span>
+                          <span className='font-semibold text-gray-900 dark:text-white'>
+                            {jarTestResult.spiderSuccess === 'true' ? '✅ 成功' : '⚠️ 降级'}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    {jarTestResult.error && (
+                      <div className='mt-2 p-2 bg-red-100 dark:bg-red-900/30 rounded'>
+                        <span className='text-red-700 dark:text-red-300 text-xs'>{jarTestResult.error}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className='bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded p-3'>
+              <p className='text-xs text-blue-700 dark:text-blue-300'>
+                💡 <strong>提示：</strong>留空则使用默认 JAR 源。配置后，TVBox 将通过 <code className='bg-blue-100 dark:bg-blue-800 px-1 rounded'>/api/proxy/spider.jar?url=你的URL</code> 访问
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* 保存按钮 */}

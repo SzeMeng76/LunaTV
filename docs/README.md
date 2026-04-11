@@ -13,6 +13,7 @@
 - [AI 功能](features/AI_FEATURES.md) - AI 智能推荐、聊天助手详细说明
 - [下载功能](features/DOWNLOAD_FEATURES.md) - 离线下载、资源管理功能
 - [虚拟滚动指南](features/VIRTUAL_SCROLL_GUIDE.md) - 高性能列表渲染技术说明
+- [邀请码系统](INVITE_CODE_SYSTEM.md) - 邀请码注册系统配置和使用
 
 ### 🔌 第三方集成
 - [Emby 集成指南](integration/EMBY_GUIDE.md) - Emby 媒体服务器完整集成方案

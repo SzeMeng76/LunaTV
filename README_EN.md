@@ -25,7 +25,7 @@
 ![HLS.js](https://img.shields.io/badge/HLS.js-1.6.15-ec407a)
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Docker Ready](https://img.shields.io/badge/Docker-ready-blue?logo=docker)
-![Version](https://img.shields.io/badge/Version-6.2.1-orange)
+![Version](https://img.shields.io/badge/Version-6.3.0-orange)
 
 </div>
 
@@ -33,7 +33,7 @@
 
 ## 📢 About
 
-This project is a deep fork of **MoonTV**, starting from **v4.3.1** and continuously iterated to the current **v6.2.1**, with 60+ major feature modules and 400+ detail optimizations. See [CHANGELOG](CHANGELOG) for all new features.
+This project is a deep fork of **MoonTV**, starting from **v4.3.1** and continuously iterated to the current **v6.3.0**, with 60+ major feature modules and 400+ detail optimizations. See [CHANGELOG](CHANGELOG) for all new features.
 
 ## ⚠️ Disclaimer
 
@@ -42,11 +42,10 @@ This project is for educational purposes only. Do not use for commercial purpose
 ## 💡 Key Enhancements
 
 ### 🎥 Content Ecosystem
-- **Emby Private Library**: Complete Emby media server integration with passwordless login and auth mode switcher → [Documentation](docs/integration/EMBY_GUIDE.md)
+- **Emby Private Library**: Complete Emby media server integration with passwordless login, auth mode switcher, and multi-audio track playback → [Documentation](docs/integration/EMBY_GUIDE.md)
 - **YouTube Integration**: Full YouTube search, playback, and live streaming
 - **Cloud Drive Search**: Advanced filtering and cache management
 - **ACG Torrent Search**: Mikan Project dual-source system
-- **Short Drama**: Complete short drama search, playback, and details
 - **IPTV Live TV**: m3u/m3u8 subscription, FLV streaming, EPG guide
 - **Bangumi Anime**: Intelligent anime detection and API integration
 - **Traditional Chinese Search**: Smart conversion and multi-strategy search
@@ -56,6 +55,12 @@ This project is for educational purposes only. Do not use for commercial purpose
 - **Ultrawide Monitor Support**: Video display mode control for ultrawide monitors
 - **Skip Presets**: Flexible intro/outro template system with import/export and validation
 - **Persistent Playback Rate**: Remember playback speed settings across sessions
+- **Multi-Audio Track Support**: Auto-select browser-compatible audio tracks for Emby playback with track switching
+
+### 🔔 Content Tracking System
+- **Upcoming Content Reminders**: Complete watchlist and reminder system for upcoming content
+- **Auto Release Notifications**: Automatic push notifications when favorited content is released
+- **Invite Code System**: Registration system with invite codes, history tracking, and management
 
 ### 🤖 AI Recommendation System
 - **AI Assistant**: GPT-5/o series models support, streaming → [Documentation](docs/features/AI_FEATURES.md)

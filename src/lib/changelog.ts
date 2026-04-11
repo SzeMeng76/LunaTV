@@ -11,6 +11,30 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "6.3.0",
+    date: "2026-04-03",
+    added: [
+    "🎵 Emby多音轨支持：为Emby播放添加多音轨切换支持，自动选择浏览器兼容的音轨，支持剧集动态音轨获取",
+    "🔔 即将上映内容提醒系统：实现完整的即将上映内容关注列表和提醒系统，支持铃铛图标提醒、自动发布通知和关闭功能",
+    "🎨 UI增强：添加GlobalError自动关闭功能并增强弹幕剧集选择器",
+    "📦 TVBox功能增强：添加自定义JAR配置、增强JAR代理诊断功能并更新镜像源",
+    "🎟️ 邀请码注册系统：添加完整的邀请码注册系统，支持邀请码输入页面、历史记录和禁用功能"
+    ],
+    changed: [
+    "📦 升级@tanstack/react-query至5.96.1：升级@tanstack/react-query从5.95.0到5.96.1",
+    "🔄 迁移到TanStack Query queryOptions模式：重构为使用TanStack Query的queryOptions模式",
+    "🔇 禁用备用API剧集计数端点：禁用备用API剧集计数端点以减少日志噪音"
+    ],
+    fixed: [
+    "🎵 修复Emby音频和流媒体问题：修复流URL参数编码、添加音频流获取到详情API、解决无限加载问题",
+    "🔔 修复新发布通知系统：修复铃铛图标显示、提醒状态加载、无播放记录时的检查、日期计算时区问题和发布日期格式统一",
+    "🗑️ 移除失效的短剧API：移除已失效的短剧API",
+    "🌐 修复TVBox源问题：添加ghproxy.vip作为主要国内CDN、移除限速源、更新智能健康检查JAR源",
+    "💾 修复邀请码数据类型：将邀请码数据转换为字符串以兼容Redis hSet",
+    "🎬 修复ArtPlayer后台音频问题：在清理视频和HLS之前销毁ArtPlayer以防止后台音频播放"
+    ]
+  },
+  {
     version: "6.2.1",
     date: "2026-03-21",
     added: [

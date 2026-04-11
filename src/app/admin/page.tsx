@@ -38,6 +38,7 @@ import {
   Settings,
   Shield,
   TestTube,
+  Ticket,
   Tv,
   Upload,
   Users,
@@ -68,6 +69,7 @@ import EmbyConfig from '@/components/EmbyConfig';
 import CustomAdFilterConfig from '@/components/CustomAdFilterConfig';
 import WatchRoomConfig from '@/components/WatchRoomConfig';
 import PerformanceMonitor from '@/components/admin/PerformanceMonitor';
+import InviteCodeManager from '@/components/InviteCodeManager';
 import PageLayout from '@/components/PageLayout';
 
 // 统一按钮样式系统
@@ -934,6 +936,73 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                 </span>
               </div>
             </div>
+
+            {/* 需要邀请码注册设置 */}
+            {config.UserConfig.AllowRegister && (
+              <div className='p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700'>
+                <div className='flex items-center justify-between'>
+                  <div>
+                    <div className='font-medium text-gray-900 dark:text-gray-100'>
+                      需要邀请码注册
+                    </div>
+                    <div className='text-sm text-gray-600 dark:text-gray-400'>
+                      开启后，用户注册时必须提供有效的邀请码
+                    </div>
+                  </div>
+                  <div className='flex items-center'>
+                    <button
+                      type="button"
+                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 ${
+                        config.UserConfig.RequireInviteCode ? buttonStyles.toggleOn : buttonStyles.toggleOff
+                      }`}
+                      role="switch"
+                      aria-checked={config.UserConfig.RequireInviteCode}
+                      onClick={async () => {
+                        await withLoading('toggleRequireInviteCode', async () => {
+                          try {
+                            const response = await fetch('/api/admin/config', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                ...config,
+                                UserConfig: {
+                                  ...config.UserConfig,
+                                  RequireInviteCode: !config.UserConfig.RequireInviteCode
+                                }
+                              })
+                            });
+
+                            if (response.ok) {
+                              await refreshConfig();
+                              showAlert({
+                                type: 'success',
+                                title: '设置已更新',
+                                message: config.UserConfig.RequireInviteCode ? '已关闭邀请码注册' : '已开启邀请码注册',
+                                timer: 2000
+                              });
+                            } else {
+                              throw new Error('更新配置失败');
+                            }
+                          } catch (err) {
+                            showError(err instanceof Error ? err.message : '操作失败', showAlert);
+                          }
+                        });
+                      }}
+                    >
+                      <span
+                        aria-hidden="true"
+                        className={`pointer-events-none inline-block h-5 w-5 rounded-full ${buttonStyles.toggleThumb} shadow transform ring-0 transition duration-200 ease-in-out ${
+                          config.UserConfig.RequireInviteCode ? buttonStyles.toggleThumbOn : buttonStyles.toggleThumbOff
+                        }`}
+                      />
+                    </button>
+                    <span className='ml-3 text-sm font-medium text-gray-900 dark:text-gray-100'>
+                      {config.UserConfig.RequireInviteCode ? '开启' : '关闭'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* 自动清理非活跃用户设置 */}
             <div className='p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700'>
@@ -7004,6 +7073,7 @@ function AdminPageClient() {
     danmuApiConfig: false,
     telegramAuthConfig: false,
     oidcAuthConfig: false,
+    inviteCodeManager: false,
     configFile: false,
     cacheManager: false,
     dataMigration: false,
@@ -7171,6 +7241,20 @@ function AdminPageClient() {
                 refreshConfig={fetchConfig}
               />
             </CollapsibleTab>
+
+            {/* 邀请码管理标签 - 仅站长可见 */}
+            {role === 'owner' && (
+              <CollapsibleTab
+                title='邀请码管理'
+                icon={
+                  <Ticket size={20} className='text-blue-500 dark:text-blue-400' />
+                }
+                isExpanded={expandedTabs.inviteCodeManager}
+                onToggle={() => toggleTab('inviteCodeManager')}
+              >
+                <InviteCodeManager />
+              </CollapsibleTab>
+            )}
 
             {/* 视频源配置标签 */}
             <CollapsibleTab

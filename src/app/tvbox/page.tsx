@@ -174,6 +174,12 @@ export default function TVBoxConfigPage() {
   const [deepDiagnosticResult, setDeepDiagnosticResult] = useState<any>(null);
   const [deepDiagnosticLoading, setDeepDiagnosticLoading] = useState(false);
 
+  // 自定义 JAR URL 测试状态
+  const [customJarUrl, setCustomJarUrl] = useState('');
+  const [customJarTestResult, setCustomJarTestResult] = useState<any>(null);
+  const [customJarTestLoading, setCustomJarTestLoading] = useState(false);
+  const [hasCustomJarConfig, setHasCustomJarConfig] = useState(false); // 是否有管理员配置的自定义 JAR
+
   // Tab状态
   const [activeTab, setActiveTab] = useState<'basic' | 'smart-health' | 'jar-fix' | 'deep-diagnostic'>('basic');
 
@@ -199,7 +205,24 @@ export default function TVBoxConfigPage() {
 
   useEffect(() => {
     fetchSecurityConfig();
+    fetchCustomJarConfig(); // 获取自定义 JAR 配置
   }, [fetchSecurityConfig]);
+
+  // 获取自定义 JAR 配置
+  const fetchCustomJarConfig = async () => {
+    try {
+      const response = await fetch('/api/tvbox/custom-jar');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.enabled && data.jarUrl) {
+          setCustomJarUrl(data.jarUrl);
+          setHasCustomJarConfig(true);
+        }
+      }
+    } catch (error) {
+      console.error('获取自定义 JAR 配置失败:', error);
+    }
+  };
 
   const getConfigUrl = useCallback(() => {
     if (typeof window === 'undefined') return '';
@@ -364,6 +387,48 @@ export default function TVBoxConfigPage() {
       });
     } finally {
       setDeepDiagnosticLoading(false);
+    }
+  };
+
+  // 测试自定义 JAR URL 通过代理
+  const handleTestCustomJar = async () => {
+    if (!customJarUrl.trim()) {
+      alert('请输入 JAR URL');
+      return;
+    }
+
+    setCustomJarTestLoading(true);
+    setCustomJarTestResult(null);
+
+    try {
+      const startTime = Date.now();
+      // 通过本地代理测试自定义 JAR
+      const proxyUrl = `/api/proxy/spider.jar?url=${encodeURIComponent(customJarUrl)}&refresh=1`;
+      const response = await fetch(proxyUrl, { method: 'HEAD' });
+      const responseTime = Date.now() - startTime;
+
+      const result = {
+        success: response.ok,
+        url: customJarUrl,
+        proxyUrl: proxyUrl,
+        statusCode: response.status,
+        responseTime: responseTime,
+        size: response.headers.get('content-length'),
+        source: response.headers.get('x-spider-source'),
+        cached: response.headers.get('x-spider-cached'),
+        spiderSuccess: response.headers.get('x-spider-success'),
+        error: response.ok ? null : `HTTP ${response.status}: ${response.statusText}`,
+      };
+
+      setCustomJarTestResult(result);
+    } catch (error) {
+      setCustomJarTestResult({
+        success: false,
+        url: customJarUrl,
+        error: error instanceof Error ? error.message : '未知错误',
+      });
+    } finally {
+      setCustomJarTestLoading(false);
     }
   };
 
@@ -1121,23 +1186,41 @@ export default function TVBoxConfigPage() {
                     </div>
                   )}
 
-                  {/* 备用代理 */}
+                  {/* 本地代理信息 */}
                   {diagnosisResult.spider_backup && (
-                    <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                      <h3 className="font-semibold text-blue-900 dark:text-blue-300 mb-2">备用代理:</h3>
-                      <p className="font-mono text-xs text-blue-700 dark:text-blue-300 break-all">
-                        {diagnosisResult.spider_backup}
+                    <div className="p-4 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Globe className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                        <h3 className="font-semibold text-blue-900 dark:text-blue-300">🔄 本地代理端点</h3>
+                      </div>
+                      <p className="text-xs text-blue-700 dark:text-blue-300 mb-2">
+                        所有 JAR 文件通过本地代理提供，避免国内直连 GitHub 失败
                       </p>
+                      <div className="p-3 bg-white dark:bg-gray-800 rounded border border-blue-300 dark:border-blue-600">
+                        <p className="font-mono text-xs text-blue-700 dark:text-blue-300 break-all">
+                          {diagnosisResult.spider_backup}
+                        </p>
+                      </div>
+                      <div className="mt-2 flex items-start gap-2 text-xs text-blue-600 dark:text-blue-400">
+                        <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
+                        <span>TVBox 通过此代理下载 JAR，服务器自动从 GitHub 获取并缓存</span>
+                      </div>
                     </div>
                   )}
 
-                  {/* 候选列表 */}
+                  {/* 服务器端备选源 */}
                   {diagnosisResult.spider_candidates && diagnosisResult.spider_candidates.length > 0 && (
-                    <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                      <h3 className="font-semibold text-gray-900 dark:text-white mb-2">候选列表:</h3>
+                    <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-300 dark:border-gray-600">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Globe className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                        <h3 className="font-semibold text-gray-900 dark:text-white">服务器端备选源</h3>
+                      </div>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">
+                        这些是服务器自动选择的候选源，TVBox 无需直接访问，所有请求通过本地代理处理
+                      </p>
                       <div className="space-y-1">
                         {diagnosisResult.spider_candidates.map((candidate, idx) => (
-                          <div key={idx} className="font-mono text-xs text-gray-600 dark:text-gray-400 break-all">
+                          <div key={idx} className="font-mono text-xs text-gray-600 dark:text-gray-400 break-all pl-4 border-l-2 border-gray-300 dark:border-gray-600">
                             {idx + 1}. {candidate}
                           </div>
                         ))}
@@ -1590,6 +1673,110 @@ export default function TVBoxConfigPage() {
                   >
                     {deepDiagnosticLoading ? '诊断中...' : '开始诊断'}
                   </button>
+                </div>
+
+                {/* 自定义 JAR URL 测试 */}
+                <div className="mb-6 p-4 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg border border-purple-200 dark:border-purple-700">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Zap className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                    <h3 className="font-semibold text-purple-900 dark:text-purple-300">🔧 自定义 JAR 代理测试</h3>
+                  </div>
+
+                  {hasCustomJarConfig ? (
+                    <>
+                      <div className="mb-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded">
+                        <p className="text-sm text-blue-700 dark:text-blue-300 mb-2">
+                          ✅ 管理员已配置自定义 JAR URL
+                        </p>
+                        <div className="p-2 bg-white dark:bg-gray-800 rounded border border-blue-300 dark:border-blue-600">
+                          <p className="font-mono text-xs text-gray-900 dark:text-white break-all">
+                            {customJarUrl}
+                          </p>
+                        </div>
+                      </div>
+                      <p className="text-sm text-purple-700 dark:text-purple-300 mb-3">
+                        测试此自定义 JAR 通过本地代理的可用性
+                      </p>
+                      <div className="flex justify-end">
+                        <button
+                          onClick={handleTestCustomJar}
+                          disabled={customJarTestLoading}
+                          className="px-4 py-2 bg-purple-500 hover:bg-purple-600 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors whitespace-nowrap"
+                        >
+                          {customJarTestLoading ? '测试中...' : '测试代理'}
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded">
+                      <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                        ⚠️ 未配置自定义 JAR URL，使用默认源。如需配置，请前往管理后台 → TVBox 安全配置
+                      </p>
+                    </div>
+                  )}
+
+                  {/* 自定义 JAR 测试结果 */}
+                  {customJarTestResult && (
+                    <div className={`mt-3 p-3 rounded-lg border ${
+                      customJarTestResult.success
+                        ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700'
+                        : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700'
+                    }`}>
+                      <div className="flex items-start gap-2 mb-2">
+                        {customJarTestResult.success ? (
+                          <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400 shrink-0 mt-0.5" />
+                        ) : (
+                          <XCircle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+                        )}
+                        <div className="flex-1">
+                          <p className={`font-semibold ${
+                            customJarTestResult.success
+                              ? 'text-green-900 dark:text-green-300'
+                              : 'text-red-900 dark:text-red-300'
+                          }`}>
+                            {customJarTestResult.success ? '✅ 代理测试成功' : '❌ 代理测试失败'}
+                          </p>
+                          <div className="mt-2 space-y-1 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-gray-600 dark:text-gray-400">原始 URL:</span>
+                              <span className="font-mono text-xs text-gray-900 dark:text-white break-all ml-2">{customJarTestResult.url}</span>
+                            </div>
+                            {customJarTestResult.success && (
+                              <>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600 dark:text-gray-400">响应时间:</span>
+                                  <span className="font-semibold text-gray-900 dark:text-white">{customJarTestResult.responseTime}ms</span>
+                                </div>
+                                {customJarTestResult.size && (
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-600 dark:text-gray-400">文件大小:</span>
+                                    <span className="font-semibold text-gray-900 dark:text-white">{Math.round(parseInt(customJarTestResult.size) / 1024)}KB</span>
+                                  </div>
+                                )}
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600 dark:text-gray-400">代理状态:</span>
+                                  <span className="font-semibold text-gray-900 dark:text-white">
+                                    {customJarTestResult.spiderSuccess === 'true' ? '✅ 成功' : '⚠️ 降级'}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600 dark:text-gray-400">缓存状态:</span>
+                                  <span className="font-semibold text-gray-900 dark:text-white">
+                                    {customJarTestResult.cached === 'true' ? '已缓存' : '新获取'}
+                                  </span>
+                                </div>
+                              </>
+                            )}
+                            {customJarTestResult.error && (
+                              <div className="mt-2 p-2 bg-red-100 dark:bg-red-900/30 rounded">
+                                <span className="text-red-700 dark:text-red-300 text-xs">{customJarTestResult.error}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {deepDiagnosticResult && (

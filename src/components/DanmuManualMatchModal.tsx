@@ -56,6 +56,8 @@ export default function DanmuManualMatchModal({
   const [selectedAnimeId, setSelectedAnimeId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [applyingEpisodeId, setApplyingEpisodeId] = useState<number | null>(null);
+  const [episodeDescending, setEpisodeDescending] = useState(false);
+  const [episodeViewMode, setEpisodeViewMode] = useState<'list' | 'grid'>('list');
 
   const selectedAnime = useMemo(
     () => results.find((item) => item.animeId === selectedAnimeId) || null,
@@ -284,10 +286,58 @@ export default function DanmuManualMatchModal({
 
           {/* Right: Episode list */}
           <div className='md:flex md:min-h-0 md:flex-col'>
-            <div className='border-b border-white/10 px-4 py-2 text-xs text-slate-400 sm:px-5'>
-              {selectedAnime
-                ? `集数列表：${selectedAnime.animeTitle}`
-                : '集数列表'}
+            <div className='flex items-center justify-between border-b border-white/10 px-4 py-2 text-xs text-slate-400 sm:px-5'>
+              <span>
+                {selectedAnime
+                  ? `集数列表：${selectedAnime.animeTitle}`
+                  : '集数列表'}
+              </span>
+              {selectedAnime && selectedAnime.episodes.length > 0 && (
+                <div className='flex items-center gap-2'>
+                  {/* 倒序切换按钮 */}
+                  <button
+                    type='button'
+                    onClick={() => setEpisodeDescending((prev) => !prev)}
+                    className='rounded-md p-1.5 text-slate-400 transition hover:bg-white/10 hover:text-green-400'
+                    title={episodeDescending ? '切换正序' : '切换倒序'}
+                  >
+                    <svg className='h-4 w-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                      <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4' />
+                    </svg>
+                  </button>
+                  {/* 视图切换按钮 */}
+                  <div className='flex items-center gap-1 rounded-md bg-gray-800/80 p-1'>
+                    <button
+                      type='button'
+                      onClick={() => setEpisodeViewMode('list')}
+                      title='列表视图'
+                      className={`rounded px-1.5 py-1 text-xs font-medium transition-colors ${
+                        episodeViewMode === 'list'
+                          ? 'bg-green-600 text-white shadow-sm'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      <svg className='h-3.5 w-3.5' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                        <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01' />
+                      </svg>
+                    </button>
+                    <button
+                      type='button'
+                      onClick={() => setEpisodeViewMode('grid')}
+                      title='格子视图'
+                      className={`rounded px-1.5 py-1 text-xs font-medium transition-colors ${
+                        episodeViewMode === 'grid'
+                          ? 'bg-green-600 text-white shadow-sm'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      <svg className='h-3.5 w-3.5' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                        <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M4 4h6v6H4V4zm10 0h6v6h-6V4zM4 14h6v6H4v-6zm10 0h6v6h-6v-6z' />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
             <div className='p-3 sm:p-4 md:flex-1 md:overflow-y-auto'>
               {!selectedAnime ? (
@@ -295,53 +345,100 @@ export default function DanmuManualMatchModal({
                   请先选择左侧番剧
                 </div>
               ) : (
-                <div className='space-y-2'>
-                  {selectedAnime.episodes.map((ep, index) => {
-                    const currentMark = index + 1 === currentEpisode;
-                    const applying = applyingEpisodeId === ep.episodeId;
-                    return (
-                      <button
-                        key={ep.episodeId}
-                        type='button'
-                        disabled={applyingEpisodeId !== null}
-                        onClick={async () => {
-                          setApplyingEpisodeId(ep.episodeId);
-                          try {
-                            await onApply({
-                              animeId: selectedAnime.animeId,
-                              animeTitle: selectedAnime.animeTitle,
-                              episodeId: ep.episodeId,
-                              episodeTitle: ep.episodeTitle || `第${index + 1}集`,
-                            });
-                          } finally {
-                            setApplyingEpisodeId(null);
-                          }
-                        }}
-                        className={`flex w-full items-center justify-between gap-3 rounded-lg border px-3 py-2 text-left transition ${
-                          currentMark
-                            ? 'border-cyan-400/60 bg-cyan-500/10'
-                            : 'border-white/10 bg-white/5 hover:bg-white/10'
-                        } ${applyingEpisodeId !== null ? 'cursor-not-allowed opacity-70' : ''}`}
-                      >
-                        <span className='truncate text-sm text-slate-100'>
-                          {ep.episodeTitle || `第${index + 1}集`}
-                        </span>
-                        <span className='shrink-0 text-xs text-slate-400'>
-                          {applying ? (
-                            <span className='inline-flex items-center gap-1'>
-                              <Loader2 className='h-3.5 w-3.5 animate-spin' />
-                              应用中
+                <>
+                  {episodeViewMode === 'list' ? (
+                    <div className='space-y-2'>
+                      {(episodeDescending ? [...selectedAnime.episodes].reverse() : selectedAnime.episodes).map((ep, index) => {
+                        const originalIndex = episodeDescending ? selectedAnime.episodes.length - 1 - index : index;
+                        const currentMark = originalIndex + 1 === currentEpisode;
+                        const applying = applyingEpisodeId === ep.episodeId;
+                        return (
+                          <button
+                            key={ep.episodeId}
+                            type='button'
+                            disabled={applyingEpisodeId !== null}
+                            onClick={async () => {
+                              setApplyingEpisodeId(ep.episodeId);
+                              try {
+                                await onApply({
+                                  animeId: selectedAnime.animeId,
+                                  animeTitle: selectedAnime.animeTitle,
+                                  episodeId: ep.episodeId,
+                                  episodeTitle: ep.episodeTitle || `第${originalIndex + 1}集`,
+                                });
+                              } finally {
+                                setApplyingEpisodeId(null);
+                              }
+                            }}
+                            className={`flex w-full items-center justify-between gap-3 rounded-lg border px-3 py-2 text-left transition ${
+                              currentMark
+                                ? 'border-cyan-400/60 bg-cyan-500/10'
+                                : 'border-white/10 bg-white/5 hover:bg-white/10'
+                            } ${applyingEpisodeId !== null ? 'cursor-not-allowed opacity-70' : ''}`}
+                          >
+                            <span className='truncate text-sm text-slate-100'>
+                              {ep.episodeTitle || `第${originalIndex + 1}集`}
                             </span>
-                          ) : currentMark ? (
-                            '当前集'
-                          ) : (
-                            '使用此集'
-                          )}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
+                            <span className='shrink-0 text-xs text-slate-400'>
+                              {applying ? (
+                                <span className='inline-flex items-center gap-1'>
+                                  <Loader2 className='h-3.5 w-3.5 animate-spin' />
+                                  应用中
+                                </span>
+                              ) : currentMark ? (
+                                '当前集'
+                              ) : (
+                                '使用此集'
+                              )}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className='grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-3 lg:grid-cols-4'>
+                      {(episodeDescending ? [...selectedAnime.episodes].reverse() : selectedAnime.episodes).map((ep, index) => {
+                        const originalIndex = episodeDescending ? selectedAnime.episodes.length - 1 - index : index;
+                        const currentMark = originalIndex + 1 === currentEpisode;
+                        const applying = applyingEpisodeId === ep.episodeId;
+                        return (
+                          <button
+                            key={ep.episodeId}
+                            type='button'
+                            disabled={applyingEpisodeId !== null}
+                            onClick={async () => {
+                              setApplyingEpisodeId(ep.episodeId);
+                              try {
+                                await onApply({
+                                  animeId: selectedAnime.animeId,
+                                  animeTitle: selectedAnime.animeTitle,
+                                  episodeId: ep.episodeId,
+                                  episodeTitle: ep.episodeTitle || `第${originalIndex + 1}集`,
+                                });
+                              } finally {
+                                setApplyingEpisodeId(null);
+                              }
+                            }}
+                            className={`rounded-lg px-3 py-2 text-sm font-medium transition-all ${
+                              currentMark
+                                ? 'bg-cyan-500 text-white shadow-md'
+                                : 'bg-white/5 text-slate-100 hover:bg-white/10 border border-white/10'
+                            } ${applyingEpisodeId !== null ? 'cursor-not-allowed opacity-70' : ''}`}
+                            title={ep.episodeTitle || `第${originalIndex + 1}集`}
+                          >
+                            <div className='truncate'>
+                              {applying ? (
+                                <Loader2 className='h-4 w-4 animate-spin mx-auto' />
+                              ) : (
+                                originalIndex + 1
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>

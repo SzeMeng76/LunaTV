@@ -52,15 +52,22 @@ function processReleaseCalendar(input: WorkerInput): WorkerOutput {
   console.log('📅 [Worker] 开始处理数据:', releases.length, '条');
 
   // 过滤出即将上映和刚上映的作品（过去7天到未来90天）
-  const todayDate = new Date(today);
+  // 手动解析日期以避免时区问题
+  const todayParts = today.split('-').map(Number); // [YYYY, MM, DD]
+  const todayDate = new Date(todayParts[0], todayParts[1] - 1, todayParts[2]);
   todayDate.setHours(0, 0, 0, 0);
+
   const sevenDaysAgo = new Date(todayDate);
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
   const ninetyDaysLater = new Date(todayDate);
   ninetyDaysLater.setDate(ninetyDaysLater.getDate() + 90);
 
-  const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
-  const ninetyDaysStr = ninetyDaysLater.toISOString().split('T')[0];
+  // 手动格式化日期为 YYYY-MM-DD
+  const sevenDaysAgoStr = `${sevenDaysAgo.getFullYear()}-${String(sevenDaysAgo.getMonth() + 1).padStart(2, '0')}-${String(sevenDaysAgo.getDate()).padStart(2, '0')}`;
+  const ninetyDaysStr = `${ninetyDaysLater.getFullYear()}-${String(ninetyDaysLater.getMonth() + 1).padStart(2, '0')}-${String(ninetyDaysLater.getDate()).padStart(2, '0')}`;
+
+  console.log('📅 [Worker] 日期范围:', { today, sevenDaysAgoStr, ninetyDaysStr });
+  console.log('📅 [Worker] 前3条数据示例:', releases.slice(0, 3).map(r => ({ title: r.title, releaseDate: r.releaseDate })));
 
   const upcoming = releases.filter((item: ReleaseCalendarItem) => {
     const releaseDateStr = item.releaseDate;
@@ -127,9 +134,15 @@ function processReleaseCalendar(input: WorkerInput): WorkerOutput {
   console.log('📅 [Worker] 去重后:', uniqueUpcoming.length, '条');
 
   // 智能分配：按更细的时间段分类
-  const todayStr = todayDate.toISOString().split('T')[0];
-  const sevenDaysLaterStr = new Date(todayDate.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-  const thirtyDaysLaterStr = new Date(todayDate.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const todayStr = today; // 直接使用传入的 today 字符串
+
+  const sevenDaysLater = new Date(todayDate);
+  sevenDaysLater.setDate(sevenDaysLater.getDate() + 7);
+  const sevenDaysLaterStr = `${sevenDaysLater.getFullYear()}-${String(sevenDaysLater.getMonth() + 1).padStart(2, '0')}-${String(sevenDaysLater.getDate()).padStart(2, '0')}`;
+
+  const thirtyDaysLater = new Date(todayDate);
+  thirtyDaysLater.setDate(thirtyDaysLater.getDate() + 30);
+  const thirtyDaysLaterStr = `${thirtyDaysLater.getFullYear()}-${String(thirtyDaysLater.getMonth() + 1).padStart(2, '0')}-${String(thirtyDaysLater.getDate()).padStart(2, '0')}`;
 
   const recentlyReleased = uniqueUpcoming.filter((i: ReleaseCalendarItem) => i.releaseDate < todayStr);
   const releasingToday = uniqueUpcoming.filter((i: ReleaseCalendarItem) => i.releaseDate === todayStr);

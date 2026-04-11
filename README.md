@@ -25,7 +25,7 @@
 ![HLS.js](https://img.shields.io/badge/HLS.js-1.6.15-ec407a)
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Docker Ready](https://img.shields.io/badge/Docker-ready-blue?logo=docker)
-![Version](https://img.shields.io/badge/Version-6.2.1-orange)
+![Version](https://img.shields.io/badge/Version-6.3.0-orange)
 
 </div>
 
@@ -33,7 +33,7 @@
 
 ## 📢 项目说明
 
-本项目是在 **MoonTV** 基础上进行的深度二次开发版本，从 **v4.3.1** 版本开始，持续迭代至当前 **v6.2.1**，累计新增 60+ 重大功能模块，400+ 细节优化。所有新增功能详见 [CHANGELOG](CHANGELOG)。
+本项目是在 **MoonTV** 基础上进行的深度二次开发版本，从 **v4.3.1** 版本开始，持续迭代至当前 **v6.3.0**，累计新增 60+ 重大功能模块，400+ 细节优化。所有新增功能详见 [CHANGELOG](CHANGELOG)。
 
 ## ⚠️ 重要声明
 
@@ -42,11 +42,10 @@
 ## 💡 核心增强亮点
 
 ### 🎥 内容生态扩展
-- **Emby 私有库**：完整的 Emby 媒体服务器集成，支持免密登录和认证模式切换 → [详细文档](docs/integration/EMBY_GUIDE.md)
+- **Emby 私有库**：完整的 Emby 媒体服务器集成，支持免密登录、认证模式切换和多音轨播放 → [详细文档](docs/integration/EMBY_GUIDE.md)
 - **YouTube 集成**：完整的 YouTube 搜索、播放、直播功能
 - **网盘搜索**：集成高级筛选和缓存管理的网盘资源搜索
 - **ACG 种子搜索**：Mikan Project 双源系统，丰富的动漫资源
-- **短剧完整功能**：短剧搜索、播放、详情展示
 - **IPTV 直播**：m3u/m3u8 订阅、FLV 直播流、EPG 节目单
 - **Bangumi 动漫**：动漫信息智能检测、API 集成
 - **繁体中文搜索**：智能繁简转换、多策略搜索
@@ -56,6 +55,12 @@
 - **超宽显示器适配**：视频显示模式控制，完美支持超宽显示器
 - **片头片尾跳过预设**：灵活的片头片尾模板系统，支持导入导出和验证
 - **播放速率持久化**：记住播放速率设置，跨会话保持
+- **多音轨支持**：Emby 播放自动选择浏览器兼容音轨，支持音轨切换
+
+### 🔔 内容追踪系统
+- **即将上映提醒**：完整的即将上映内容关注列表和提醒系统
+- **自动发布通知**：收藏内容发布时自动推送通知
+- **邀请码系统**：支持邀请码注册、历史记录和管理功能
 
 
 ### ⚡ 一键部署到 Zeabur（最简单）

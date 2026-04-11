@@ -124,24 +124,27 @@ function ShortDramaCard({
       }
 
       try {
+        // 🔥 暂时注释掉备用API调用，避免后台日志报错（未配置备用API）
         // 优先尝试使用备用API（通过剧名获取集数，更快更可靠）
-        const episodeCountResponse = await fetch(
-          `/api/shortdrama/episode-count?name=${encodeURIComponent(drama.name)}`
-        );
+        // const episodeCountResponse = await fetch(
+        //   `/api/shortdrama/episode-count?name=${encodeURIComponent(drama.name)}`
+        // );
+        //
+        // if (episodeCountResponse.ok) {
+        //   const episodeCountData = await episodeCountResponse.json();
+        //   if (episodeCountData.episodeCount > 1) {
+        //     setRealEpisodeCount(episodeCountData.episodeCount);
+        //     setShowEpisodeCount(true);
+        //     // 使用统一缓存系统缓存结果
+        //     await setCache(cacheKey, episodeCountData.episodeCount, SHORTDRAMA_CACHE_EXPIRE.episodes);
+        //     return; // 成功获取，直接返回
+        //   }
+        // }
+        //
+        // // 备用API失败，fallback到主API解析方式
+        // console.log('备用API获取集数失败，尝试主API...');
 
-        if (episodeCountResponse.ok) {
-          const episodeCountData = await episodeCountResponse.json();
-          if (episodeCountData.episodeCount > 1) {
-            setRealEpisodeCount(episodeCountData.episodeCount);
-            setShowEpisodeCount(true);
-            // 使用统一缓存系统缓存结果
-            await setCache(cacheKey, episodeCountData.episodeCount, SHORTDRAMA_CACHE_EXPIRE.episodes);
-            return; // 成功获取，直接返回
-          }
-        }
-
-        // 备用API失败，fallback到主API解析方式
-        console.log('备用API获取集数失败，尝试主API...');
+        // 直接使用主API解析方式获取集数
 
         // 先尝试第1集（episode=0）
         let response = await fetch(`/api/shortdrama/parse?id=${drama.id}&episode=0&name=${encodeURIComponent(drama.name)}`);

@@ -96,6 +96,36 @@ export async function GET(request: NextRequest) {
       // 获取媒体详情
       const item = await client.getItem(id);
 
+      // 获取音轨信息（不影响主流程）
+      let audioStreams: any[] = [];
+      try {
+        console.log('========== [/api/detail] 开始获取音轨，itemId:', id);
+        audioStreams = await client.getAudioStreams(id);
+        console.log('========== [/api/detail] 获取到音轨数据:', audioStreams);
+      } catch (error) {
+        console.error('========== [/api/detail] 获取音轨失败（不影响播放）:', error);
+      }
+
+      // 🎵 自动选择浏览器兼容的音轨（AAC 优先）
+      const findCompatibleAudioTrack = (streams: any[]): number | undefined => {
+        // 优先选择 AAC stereo
+        const aacStereo = streams.find(s => s.codec === 'aac' && s.displayTitle?.includes('stereo'));
+        if (aacStereo) return aacStereo.index;
+
+        // 其次选择任意 AAC
+        const anyAac = streams.find(s => s.codec === 'aac');
+        if (anyAac) return anyAac.index;
+
+        // 最后选择 MP3
+        const mp3 = streams.find(s => s.codec === 'mp3');
+        if (mp3) return mp3.index;
+
+        return undefined;
+      };
+
+      const compatibleAudioIndex = findCompatibleAudioTrack(audioStreams);
+      console.log('========== [/api/detail] 选择的兼容音轨索引:', compatibleAudioIndex);
+
       let result: any;
 
       if (item.Type === 'Movie') {
@@ -109,9 +139,17 @@ export async function GET(request: NextRequest) {
           year: item.ProductionYear?.toString() || '',
           douban_id: 0,
           desc: item.Overview || '',
-          episodes: [await client.getStreamUrl(item.Id)],
+          episodes: [await client.getStreamUrl(item.Id, true, false, compatibleAudioIndex)],
           episodes_titles: [item.Name],
           proxyMode: false,
+          // 添加音轨信息
+          private_audio_streams: audioStreams.map(stream => ({
+            index: stream.index,
+            display_title: stream.displayTitle,
+            language: stream.language,
+            codec: stream.codec,
+            is_default: stream.isDefault,
+          })),
         };
       } else if (item.Type === 'Series') {
         // 剧集 - 获取所有季和集
@@ -131,6 +169,24 @@ export async function GET(request: NextRequest) {
           return (a.IndexNumber || 0) - (b.IndexNumber || 0);
         });
 
+        // 为每一集获取音轨并选择兼容的音轨
+        const episodeUrls = await Promise.all(
+          allEpisodes.map(async (ep) => {
+            try {
+              // 获取当前集的音轨
+              const epAudioStreams = await client.getAudioStreams(ep.Id);
+              const epCompatibleAudioIndex = findCompatibleAudioTrack(epAudioStreams);
+              console.log(`========== [/api/detail] 剧集 ${ep.Id} 选择的音轨索引:`, epCompatibleAudioIndex);
+
+              return await client.getStreamUrl(ep.Id, true, false, epCompatibleAudioIndex);
+            } catch (error) {
+              console.error(`========== [/api/detail] 获取剧集 ${ep.Id} 音轨失败:`, error);
+              // 失败时不指定音轨索引
+              return await client.getStreamUrl(ep.Id);
+            }
+          })
+        );
+
         result = {
           source: sourceCode,
           source_name: sourceName,
@@ -140,13 +196,21 @@ export async function GET(request: NextRequest) {
           year: item.ProductionYear?.toString() || '',
           douban_id: 0,
           desc: item.Overview || '',
-          episodes: await Promise.all(allEpisodes.map((ep) => client.getStreamUrl(ep.Id))),
+          episodes: episodeUrls,
           episodes_titles: allEpisodes.map((ep) => {
             const seasonNum = ep.ParentIndexNumber || 1;
             const episodeNum = ep.IndexNumber || 1;
             return `S${seasonNum.toString().padStart(2, '0')}E${episodeNum.toString().padStart(2, '0')}`;
           }),
           proxyMode: false,
+          // 添加音轨信息（Series 级别的，仅供参考）
+          private_audio_streams: audioStreams.map(stream => ({
+            index: stream.index,
+            display_title: stream.displayTitle,
+            language: stream.language,
+            codec: stream.codec,
+            is_default: stream.isDefault,
+          })),
         };
       } else {
         throw new Error('不支持的媒体类型');

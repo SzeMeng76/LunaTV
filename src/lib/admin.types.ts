@@ -30,6 +30,7 @@ export interface AdminConfig {
   };
   UserConfig: {
     AllowRegister?: boolean; // 是否允许用户注册，默认 true
+    RequireInviteCode?: boolean; // 是否需要邀请码注册，默认 false
     AutoCleanupInactiveUsers?: boolean; // 是否自动清理非活跃用户，默认 false
     InactiveUserDays?: number; // 非活跃用户保留天数，默认 7
     Users: {
@@ -235,6 +236,7 @@ export interface AdminConfig {
       proxyPlay?: boolean;               // 视频播放代理开关
     }>;
   };
+  CustomSpiderJar?: string;              // 自定义 Spider JAR URL（全局配置）
 }
 
 export interface AdminConfigResult {

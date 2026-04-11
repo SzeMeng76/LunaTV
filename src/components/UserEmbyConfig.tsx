@@ -4,13 +4,24 @@
 
 import { Check, Globe, Plus, X } from 'lucide-react';
 import { memo, useDeferredValue, useEffect, useRef, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, queryOptions } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 interface UserEmbyConfigProps {
   initialConfig: { sources: any[] };
   onClose?: () => void;
 }
+
+// Query Options 工厂函数
+const publicSourcesOptions = () => queryOptions({
+  queryKey: ['emby', 'public-sources'],
+  queryFn: async () => {
+    const res = await fetch('/api/emby/public-sources');
+    if (!res.ok) return { sources: [] };
+    return res.json();
+  },
+  staleTime: 5 * 60 * 1000,
+});
 
 export const UserEmbyConfig = memo(({ initialConfig }: UserEmbyConfigProps) => {
   const queryClient = useQueryClient();
@@ -23,15 +34,7 @@ export const UserEmbyConfig = memo(({ initialConfig }: UserEmbyConfigProps) => {
   const [authMode, setAuthMode] = useState<'apikey' | 'password'>('apikey');
 
   // Fetch public sources from admin
-  const { data: publicSourcesData } = useQuery({
-    queryKey: ['emby', 'public-sources'],
-    queryFn: async () => {
-      const res = await fetch('/api/emby/public-sources');
-      if (!res.ok) return { sources: [] };
-      return res.json();
-    },
-    staleTime: 5 * 60 * 1000,
-  });
+  const { data: publicSourcesData } = useQuery(publicSourcesOptions());
   const publicSources: any[] = publicSourcesData?.sources || [];
 
   useEffect(() => {

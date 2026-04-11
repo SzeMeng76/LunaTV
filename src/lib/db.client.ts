@@ -51,6 +51,21 @@ export interface Favorite {
   remarks?: string; // 备注信息（如"X天后上映"、"已上映"等）
 }
 
+// ---- 提醒类型 ----
+export interface Reminder {
+  title: string;
+  source_name: string;
+  year: string;
+  cover: string;
+  total_episodes: number;
+  save_time: number;
+  search_title?: string;
+  origin?: 'vod' | 'live';
+  type?: string; // 内容类型（movie/tv/variety/shortdrama等）
+  releaseDate: string; // 上映日期 (YYYY-MM-DD)，提醒必须有上映日期
+  remarks?: string; // 备注信息（如"X天后上映"、"今日上映"等）
+}
+
 // ---- 缓存数据结构 ----
 interface CacheData<T> {
   data: T;
@@ -61,6 +76,7 @@ interface CacheData<T> {
 interface UserCacheStore {
   playRecords?: CacheData<Record<string, PlayRecord>>;
   favorites?: CacheData<Record<string, Favorite>>;
+  reminders?: CacheData<Record<string, Reminder>>; // 添加提醒缓存
   searchHistory?: CacheData<string[]>;
   skipConfigs?: CacheData<Record<string, EpisodeSkipConfig>>;
   userStats?: CacheData<UserStats>; // 添加用户统计数据缓存
@@ -70,6 +86,7 @@ interface UserCacheStore {
 // ---- 常量 ----
 const PLAY_RECORDS_KEY = 'moontv_play_records';
 const FAVORITES_KEY = 'moontv_favorites';
+const REMINDERS_KEY = 'moontv_reminders'; // 提醒存储键
 const SEARCH_HISTORY_KEY = 'moontv_search_history';
 const USER_STATS_KEY = 'moontv_user_stats'; // 添加用户统计数据存储键
 
@@ -302,6 +319,35 @@ class HybridCacheManager {
 
     const userCache = this.getUserCache(username);
     userCache.favorites = this.createCacheData(data);
+    this.saveUserCache(username, userCache);
+  }
+
+  /**
+   * 获取缓存的提醒
+   */
+  getCachedReminders(): Record<string, Reminder> | null {
+    const username = this.getCurrentUsername();
+    if (!username) return null;
+
+    const userCache = this.getUserCache(username);
+    const cached = userCache.reminders;
+
+    if (cached && this.isCacheValid(cached)) {
+      return cached.data;
+    }
+
+    return null;
+  }
+
+  /**
+   * 缓存提醒
+   */
+  cacheReminders(data: Record<string, Reminder>): void {
+    const username = this.getCurrentUsername();
+    if (!username) return;
+
+    const userCache = this.getUserCache(username);
+    userCache.reminders = this.createCacheData(data);
     this.saveUserCache(username, userCache);
   }
 
@@ -539,7 +585,7 @@ const cacheManager = HybridCacheManager.getInstance();
  * 立即从数据库刷新对应类型的缓存以保持数据一致性
  */
 async function handleDatabaseOperationFailure(
-  dataType: 'playRecords' | 'favorites' | 'searchHistory',
+  dataType: 'playRecords' | 'favorites' | 'searchHistory' | 'reminders',
   error: any
 ): Promise<void> {
   console.error(`数据库操作失败 (${dataType}):`, error);
@@ -562,6 +608,13 @@ async function handleDatabaseOperationFailure(
         );
         cacheManager.cacheFavorites(freshData);
         eventName = 'favoritesUpdated';
+        break;
+      case 'reminders':
+        freshData = await fetchFromApi<Record<string, Reminder>>(
+          `/api/reminders`
+        );
+        cacheManager.cacheReminders(freshData);
+        eventName = 'remindersUpdated';
         break;
       case 'searchHistory':
         freshData = await fetchFromApi<string[]>(`/api/searchhistory`);
@@ -1736,6 +1789,7 @@ export function getCacheStatus(): {
 export type CacheUpdateEvent =
   | 'playRecordsUpdated'
   | 'favoritesUpdated'
+  | 'remindersUpdated' // 添加提醒更新事件
   | 'searchHistoryUpdated'
   | 'skipConfigsUpdated'
   | 'userStatsUpdated';
@@ -2484,6 +2538,303 @@ export async function clearUserStats(): Promise<void> {
   } catch (error) {
     console.error('清除用户统计数据失败:', error);
     throw error;
+  }
+}
+
+// ==================== 提醒相关函数 ====================
+
+/**
+ * 获取全部提醒。
+ * 数据库存储模式下使用混合缓存策略：优先返回缓存数据，后台异步同步最新数据。
+ */
+export async function getAllReminders(): Promise<Record<string, Reminder>> {
+  // 服务器端渲染阶段直接返回空
+  if (typeof window === 'undefined') {
+    return {};
+  }
+
+  // 数据库存储模式：使用混合缓存策略（包括 redis 和 upstash）
+  if (STORAGE_TYPE !== 'localstorage') {
+    // 优先从缓存获取数据
+    const cachedData = cacheManager.getCachedReminders();
+
+    if (cachedData) {
+      // 返回缓存数据，同时后台异步更新
+      fetchFromApi<Record<string, Reminder>>(`/api/reminders`)
+        .then((freshData) => {
+          // 只有数据真正不同时才更新缓存
+          if (JSON.stringify(cachedData) !== JSON.stringify(freshData)) {
+            cacheManager.cacheReminders(freshData);
+            // 触发数据更新事件
+            window.dispatchEvent(
+              new CustomEvent('remindersUpdated', {
+                detail: freshData,
+              })
+            );
+          }
+        })
+        .catch((err) => {
+          // 后台同步失败不影响用户使用，静默处理
+          console.warn('[后台同步] 提醒数据同步失败（不影响使用，已使用缓存数据）:', err);
+        });
+
+      return cachedData;
+    } else {
+      // 缓存为空，直接从 API 获取并缓存
+      try {
+        const freshData = await fetchFromApi<Record<string, Reminder>>(
+          `/api/reminders`
+        );
+        cacheManager.cacheReminders(freshData);
+        return freshData;
+      } catch (err) {
+        console.error('获取提醒失败:', err);
+        return {};
+      }
+    }
+  }
+
+  // localStorage 模式
+  try {
+    const raw = localStorage.getItem(REMINDERS_KEY);
+    if (!raw) return {};
+    return JSON.parse(raw) as Record<string, Reminder>;
+  } catch (err) {
+    console.error('读取提醒失败:', err);
+    return {};
+  }
+}
+
+/**
+ * 保存提醒。
+ * 数据库存储模式下使用乐观更新：先更新缓存，再异步同步到数据库。
+ */
+export async function saveReminder(
+  source: string,
+  id: string,
+  reminder: Reminder
+): Promise<void> {
+  const key = generateStorageKey(source, id);
+
+  // 数据库存储模式：乐观更新策略（包括 redis 和 upstash）
+  if (STORAGE_TYPE !== 'localstorage') {
+    // 立即更新缓存
+    const cachedReminders = cacheManager.getCachedReminders() || {};
+    cachedReminders[key] = reminder;
+    cacheManager.cacheReminders(cachedReminders);
+
+    // 触发立即更新事件
+    window.dispatchEvent(
+      new CustomEvent('remindersUpdated', {
+        detail: cachedReminders,
+      })
+    );
+
+    // 异步同步到数据库
+    try {
+      await fetchWithAuth('/api/reminders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ key, reminder }),
+      });
+    } catch (err) {
+      await handleDatabaseOperationFailure('reminders', err);
+      triggerGlobalError('保存提醒失败');
+      throw err;
+    }
+    return;
+  }
+
+  // localStorage 模式
+  if (typeof window === 'undefined') {
+    console.warn('无法在服务端保存提醒到 localStorage');
+    return;
+  }
+
+  try {
+    const allReminders = await getAllReminders();
+    allReminders[key] = reminder;
+    localStorage.setItem(REMINDERS_KEY, JSON.stringify(allReminders));
+    window.dispatchEvent(
+      new CustomEvent('remindersUpdated', {
+        detail: allReminders,
+      })
+    );
+  } catch (err) {
+    console.error('保存提醒失败:', err);
+    triggerGlobalError('保存提醒失败');
+    throw err;
+  }
+}
+
+/**
+ * 删除提醒。
+ * 数据库存储模式下使用乐观更新：先更新缓存，再异步同步到数据库。
+ */
+export async function deleteReminder(
+  source: string,
+  id: string
+): Promise<void> {
+  const key = generateStorageKey(source, id);
+
+  // 数据库存储模式：乐观更新策略（包括 redis 和 upstash）
+  if (STORAGE_TYPE !== 'localstorage') {
+    // 立即更新缓存
+    const cachedReminders = cacheManager.getCachedReminders() || {};
+    delete cachedReminders[key];
+    cacheManager.cacheReminders(cachedReminders);
+
+    // 触发立即更新事件
+    window.dispatchEvent(
+      new CustomEvent('remindersUpdated', {
+        detail: cachedReminders,
+      })
+    );
+
+    // 异步同步到数据库
+    try {
+      await fetchWithAuth(`/api/reminders?key=${encodeURIComponent(key)}`, {
+        method: 'DELETE',
+      });
+    } catch (err) {
+      await handleDatabaseOperationFailure('reminders', err);
+      triggerGlobalError('删除提醒失败');
+      throw err;
+    }
+    return;
+  }
+
+  // localStorage 模式
+  if (typeof window === 'undefined') {
+    console.warn('无法在服务端删除提醒到 localStorage');
+    return;
+  }
+
+  try {
+    const allReminders = await getAllReminders();
+    delete allReminders[key];
+    localStorage.setItem(REMINDERS_KEY, JSON.stringify(allReminders));
+    window.dispatchEvent(
+      new CustomEvent('remindersUpdated', {
+        detail: allReminders,
+      })
+    );
+  } catch (err) {
+    console.error('删除提醒失败:', err);
+    triggerGlobalError('删除提醒失败');
+    throw err;
+  }
+}
+
+/**
+ * 判断是否已设置提醒。
+ * 数据库存储模式下使用混合缓存策略：优先返回缓存数据，后台异步同步最新数据。
+ */
+export async function isReminded(
+  source: string,
+  id: string
+): Promise<boolean> {
+  const key = generateStorageKey(source, id);
+
+  // 数据库存储模式：使用混合缓存策略（包括 redis 和 upstash）
+  if (STORAGE_TYPE !== 'localstorage') {
+    const cachedReminders = cacheManager.getCachedReminders();
+
+    if (cachedReminders) {
+      // 返回缓存数据，同时后台异步更新
+      fetchFromApi<Record<string, Reminder>>(`/api/reminders`)
+        .then((freshData) => {
+          // 只有数据真正不同时才更新缓存
+          if (JSON.stringify(cachedReminders) !== JSON.stringify(freshData)) {
+            cacheManager.cacheReminders(freshData);
+            // 触发数据更新事件
+            window.dispatchEvent(
+              new CustomEvent('remindersUpdated', {
+                detail: freshData,
+              })
+            );
+          }
+        })
+        .catch((err) => {
+          // 后台同步失败不影响用户使用，静默处理
+          console.warn('[后台同步] 提醒数据同步失败（不影响使用，已使用缓存数据）:', err);
+        });
+
+      return !!cachedReminders[key];
+    } else {
+      // 缓存为空，直接从 API 获取并缓存
+      try {
+        const freshData = await fetchFromApi<Record<string, Reminder>>(
+          `/api/reminders`
+        );
+        cacheManager.cacheReminders(freshData);
+        return !!freshData[key];
+      } catch (err) {
+        console.error('检查提醒状态失败:', err);
+        return false;
+      }
+    }
+  }
+
+  // localStorage 模式
+  try {
+    const allReminders = await getAllReminders();
+    return !!allReminders[key];
+  } catch (err) {
+    console.error('检查提醒状态失败:', err);
+    return false;
+  }
+}
+
+/**
+ * 清空所有提醒。
+ * 数据库存储模式下使用乐观更新：先更新缓存，再异步同步到数据库。
+ */
+export async function clearAllReminders(): Promise<void> {
+  // 数据库存储模式：乐观更新策略（包括 redis 和 upstash）
+  if (STORAGE_TYPE !== 'localstorage') {
+    // 立即更新缓存
+    cacheManager.cacheReminders({});
+
+    // 触发立即更新事件
+    window.dispatchEvent(
+      new CustomEvent('remindersUpdated', {
+        detail: {},
+      })
+    );
+
+    // 异步同步到数据库
+    try {
+      await fetchWithAuth('/api/reminders', {
+        method: 'DELETE',
+      });
+    } catch (err) {
+      await handleDatabaseOperationFailure('reminders', err);
+      triggerGlobalError('清空提醒失败');
+      throw err;
+    }
+    return;
+  }
+
+  // localStorage 模式
+  if (typeof window === 'undefined') {
+    console.warn('无法在服务端清空提醒');
+    return;
+  }
+
+  try {
+    localStorage.setItem(REMINDERS_KEY, JSON.stringify({}));
+    window.dispatchEvent(
+      new CustomEvent('remindersUpdated', {
+        detail: {},
+      })
+    );
+  } catch (err) {
+    console.error('清空提醒失败:', err);
+    triggerGlobalError('清空提醒失败');
+    throw err;
   }
 }
 
