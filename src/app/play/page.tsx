@@ -2727,10 +2727,14 @@ function PlayPageClient() {
     // 🔥 标记正在切换集数（只在非换源时）
     if (!isSourceChangingRef.current) {
       isEpisodeChangingRef.current = true;
-      // 🔑 立即重置 SkipController 触发标志，允许新集数自动跳过片头片尾
-      isSkipControllerTriggeredRef.current = false;
+      // 🔥 关键修复：延迟重置 SkipController 触发标志，避免新集数立即触发跳过
+      // 给 SkipController 的冷却时间（3秒）足够的时间来防止重复触发
+      setTimeout(() => {
+        isSkipControllerTriggeredRef.current = false;
+        console.log('✅ 延迟重置自动跳过标志，允许新集数自动跳过片头片尾');
+      }, 3500); // 比 SkipController 的冷却时间（3000ms）稍长
       videoEndedHandledRef.current = false;
-      console.log('🔄 开始切换集数，重置自动跳过标志');
+      console.log('🔄 开始切换集数');
     }
 
     updateVideoUrl(detail, currentEpisodeIndex);
