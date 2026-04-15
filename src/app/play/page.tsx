@@ -400,6 +400,35 @@ function PlayPageClient() {
     websrNetworkSizeRef.current = websrNetworkSize;
   }, [websrEnabled, websrMode, websrContentType, websrNetworkSize]);
 
+  // 标准化年份用于匹配（处理 unknown、0、null 等无效值）
+  const normalizeYearForMatch = (value: string): string => {
+    const normalized = value.trim().toLowerCase();
+    if (
+      !normalized ||
+      normalized === 'unknown' ||
+      normalized === '0' ||
+      normalized === 'null' ||
+      normalized === 'undefined'
+    ) {
+      return '';
+    }
+
+    const matchedYear = normalized.match(/\d{4}/)?.[0];
+    return matchedYear || '';
+  };
+
+  const matchesRequestedYear = (
+    resultYear: string,
+    requestedYear: string,
+  ): boolean => {
+    const normalizedRequestedYear = normalizeYearForMatch(requestedYear);
+    if (!normalizedRequestedYear) {
+      return true;
+    }
+
+    return normalizeYearForMatch(resultYear) === normalizedRequestedYear;
+  };
+
   // 获取 HLS 缓冲配置（根据用户设置的模式）
   const getHlsBufferConfig = () => {
     const mode =
@@ -2905,9 +2934,10 @@ function PlayPageClient() {
             const queryTitle = videoTitleRef.current.replaceAll(' ', '').toLowerCase();
 
             const matchYearAndType = (result: SearchResult) => {
-              const yearMatch = videoYearRef.current
-                ? result.year.toLowerCase() === videoYearRef.current.toLowerCase()
-                : true;
+              const yearMatch = matchesRequestedYear(
+                result.year || '',
+                videoYearRef.current
+              );
               const typeMatch = searchType
                 ? (searchType === 'tv' && result.episodes.length > 1) ||
                   (searchType === 'movie' && result.episodes.length === 1)
