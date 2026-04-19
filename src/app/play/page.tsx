@@ -40,6 +40,7 @@ import DanmuSettingsPanel from '@/components/play/DanmuSettingsPanel';
 import WebSRSettingsPanel from '@/components/play/WebSRSettingsPanel';
 import artplayerPluginChromecast from '@/lib/artplayer-plugin-chromecast';
 import artplayerPluginLiquidGlass from '@/lib/artplayer-plugin-liquid-glass';
+import artplayerPluginSeekButtons from '@/lib/artplayer-plugin-seek-buttons';
 import { ClientCache } from '@/lib/client-cache';
 import {
   deleteFavorite,
@@ -4256,7 +4257,55 @@ function PlayPageClient() {
       // 使用动态导入的 Artplayer
       const Artplayer = (window as any).DynamicArtplayer;
       const artplayerPluginDanmuku = (window as any).DynamicArtplayerPluginDanmuku;
-      
+
+      // 提前添加弹幕插件按钮隐藏CSS，避免初始化时闪现
+      if (!document.getElementById('danmuku-controls-optimize')) {
+        const style = document.createElement('style');
+        style.id = 'danmuku-controls-optimize';
+        style.textContent = `
+          /* 隐藏弹幕开关按钮和发射器 */
+          .artplayer-plugin-danmuku .apd-toggle {
+            display: none !important;
+          }
+
+          .artplayer-plugin-danmuku .apd-emitter {
+            display: none !important;
+          }
+
+
+          /* 弹幕配置面板优化 - 修复全屏模式下点击问题 */
+          .artplayer-plugin-danmuku .apd-config {
+            position: relative;
+          }
+
+          .artplayer-plugin-danmuku .apd-config-panel {
+            /* 使用绝对定位而不是fixed，让ArtPlayer的动态定位生效 */
+            position: absolute !important;
+            /* 保持ArtPlayer原版的默认left: 0，让JS动态覆盖 */
+            /* 保留z-index确保层级正确 */
+            z-index: 2147483647 !important; /* 使用最大z-index确保在全屏模式下也能显示在最顶层 */
+            /* 确保面板可以接收点击事件 */
+            pointer-events: auto !important;
+            /* 添加一些基础样式确保可见性 */
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 6px;
+            backdrop-filter: blur(10px);
+          }
+
+          /* 全屏模式下的特殊优化 */
+          .artplayer[data-fullscreen="true"] .artplayer-plugin-danmuku .apd-config-panel {
+            /* 全屏时使用固定定位并调整位置 */
+            position: fixed !important;
+            top: auto !important;
+            bottom: 80px !important; /* 距离底部控制栏80px */
+            right: 20px !important; /* 距离右边20px */
+            left: auto !important;
+            z-index: 2147483647 !important;
+          }
+        `;
+        document.head.appendChild(style);
+      }
+
       // 创建新的播放器实例
       Artplayer.PLAYBACK_RATE = [0.5, 0.75, 1, 1.25, 1.5, 2, 3];
       Artplayer.USE_RAF = false;
@@ -4846,7 +4895,11 @@ function PlayPageClient() {
           ] : []),
           // 毛玻璃效果控制栏插件 - 现代化悬浮设计
           // CSS已优化：桌面98%宽度，移动端100%，按钮可自动缩小适应
-          artplayerPluginLiquidGlass()
+          artplayerPluginLiquidGlass(),
+          // 快进/快退按钮插件 - 在控制栏添加 ±10秒 按钮
+          artplayerPluginSeekButtons({
+            seekTime: 10, // 快进/快退 10 秒
+          }),
         ],
       });
 
@@ -5036,64 +5089,6 @@ function PlayPageClient() {
           
           artPlayerRef.current.on('video:play', handleFirstPlay);
         }
-
-        // 添加弹幕插件按钮选择性隐藏CSS
-        const optimizeDanmukuControlsCSS = () => {
-          if (document.getElementById('danmuku-controls-optimize')) return;
-
-          const style = document.createElement('style');
-          style.id = 'danmuku-controls-optimize';
-          style.textContent = `
-            /* 隐藏弹幕开关按钮和发射器 */
-            .artplayer-plugin-danmuku .apd-toggle {
-              display: none !important;
-            }
-
-            .artplayer-plugin-danmuku .apd-emitter {
-              display: none !important;
-            }
-
-            
-            /* 弹幕配置面板优化 - 修复全屏模式下点击问题 */
-            .artplayer-plugin-danmuku .apd-config {
-              position: relative;
-            }
-            
-            .artplayer-plugin-danmuku .apd-config-panel {
-              /* 使用绝对定位而不是fixed，让ArtPlayer的动态定位生效 */
-              position: absolute !important;
-              /* 保持ArtPlayer原版的默认left: 0，让JS动态覆盖 */
-              /* 保留z-index确保层级正确 */
-              z-index: 2147483647 !important; /* 使用最大z-index确保在全屏模式下也能显示在最顶层 */
-              /* 确保面板可以接收点击事件 */
-              pointer-events: auto !important;
-              /* 添加一些基础样式确保可见性 */
-              background: rgba(0, 0, 0, 0.8);
-              border-radius: 6px;
-              backdrop-filter: blur(10px);
-            }
-            
-            /* 全屏模式下的特殊优化 */
-            .artplayer[data-fullscreen="true"] .artplayer-plugin-danmuku .apd-config-panel {
-              /* 全屏时使用固定定位并调整位置 */
-              position: fixed !important;
-              top: auto !important;
-              bottom: 80px !important; /* 距离底部控制栏80px */
-              right: 20px !important; /* 距离右边20px */
-              left: auto !important;
-              z-index: 2147483647 !important;
-            }
-            
-            /* 确保全屏模式下弹幕面板内部元素可点击 */
-            .artplayer[data-fullscreen="true"] .artplayer-plugin-danmuku .apd-config-panel * {
-              pointer-events: auto !important;
-            }
-          `;
-          document.head.appendChild(style);
-        };
-        
-        // 应用CSS优化
-        optimizeDanmukuControlsCSS();
 
         // 精确解决弹幕菜单与进度条拖拽冲突 - 基于ArtPlayer原生拖拽逻辑
         const fixDanmakuProgressConflict = () => {
