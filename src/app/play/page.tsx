@@ -38,6 +38,7 @@ import VideoCoverDisplay from '@/components/play/VideoCoverDisplay';
 import PlayErrorDisplay from '@/components/play/PlayErrorDisplay';
 import DanmuSettingsPanel from '@/components/play/DanmuSettingsPanel';
 import WebSRSettingsPanel from '@/components/play/WebSRSettingsPanel';
+import { SeekButtonsSettingsPanel } from '@/components/play/SeekButtonsSettingsPanel';
 import artplayerPluginChromecast from '@/lib/artplayer-plugin-chromecast';
 import artplayerPluginLiquidGlass from '@/lib/artplayer-plugin-liquid-glass';
 import artplayerPluginSeekButtons from '@/lib/artplayer-plugin-seek-buttons';
@@ -289,6 +290,9 @@ function PlayPageClient() {
 
   // WebSR 设置面板状态
   const [isWebSRSettingsPanelOpen, setIsWebSRSettingsPanelOpen] = useState(false);
+
+  // 快进快退设置面板状态
+  const [isSeekButtonsSettingsPanelOpen, setIsSeekButtonsSettingsPanelOpen] = useState(false);
 
   // 下载选集面板状态
   const [showDownloadEpisodeSelector, setShowDownloadEpisodeSelector] = useState(false);
@@ -4648,6 +4652,18 @@ function PlayPageClient() {
               return modeNames[mode] || item.html;
             },
           },
+          {
+            html: '快进快退设置',
+            icon: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 17l-5-5 5-5M18 17l-5-5 5-5"/></svg>',
+            tooltip: '打开快进快退设置面板',
+            onClick: function () {
+              setIsSeekButtonsSettingsPanelOpen(true);
+              if (artPlayerRef.current) {
+                artPlayerRef.current.setting.show = false;
+              }
+              return '打开快进快退设置面板';
+            },
+          },
           ...(webGPUSupported ? [
             {
               name: '超分设置',
@@ -4898,7 +4914,8 @@ function PlayPageClient() {
           artplayerPluginLiquidGlass(),
           // 快进/快退按钮插件 - 在控制栏添加 ±10秒 按钮
           artplayerPluginSeekButtons({
-            seekTime: 10, // 快进/快退 10 秒
+            seekTime: parseInt(localStorage.getItem('seek_time') || '10', 10),
+            mobileLayout: (localStorage.getItem('seek_layout') || 'both') as 'both' | 'left' | 'right',
           }),
         ],
       });
@@ -6390,6 +6407,38 @@ function PlayPageClient() {
               }}
               webGPUSupported={webGPUSupported}
               processing={false}
+            />
+          </div>
+        </div>,
+        portalContainer
+      )}
+
+      {/* 快进快退设置面板 */}
+      {isSeekButtonsSettingsPanelOpen && portalContainer && createPortal(
+        <div style={{ all: 'initial', fontFamily: 'Inter, system-ui, sans-serif', position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 9999 }}>
+          <style>{`.seek-iso svg { fill: none !important; }`}</style>
+          <div className="seek-iso" style={{ pointerEvents: 'auto' }}>
+            <SeekButtonsSettingsPanel
+              isOpen={isSeekButtonsSettingsPanelOpen}
+              onClose={() => setIsSeekButtonsSettingsPanelOpen(false)}
+              settings={{
+                seekTime: parseInt(localStorage.getItem('seek_time') || '10', 10),
+                mobileLayout: (localStorage.getItem('seek_layout') || 'both') as 'both' | 'left' | 'right',
+              }}
+              onSettingsChange={(newSettings) => {
+                if (newSettings.seekTime !== undefined) {
+                  localStorage.setItem('seek_time', String(newSettings.seekTime));
+                }
+                if (newSettings.mobileLayout !== undefined) {
+                  localStorage.setItem('seek_layout', newSettings.mobileLayout);
+                }
+
+                // 实时更新插件（像弹幕一样）
+                if (artPlayerRef.current?.plugins?.artplayerPluginSeekButtons) {
+                  artPlayerRef.current.plugins.artplayerPluginSeekButtons.config(newSettings);
+                  artPlayerRef.current.notice.show = '设置已更新';
+                }
+              }}
             />
           </div>
         </div>,
