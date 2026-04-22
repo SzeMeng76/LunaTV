@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 验证网盘类型
-    const validCloudTypes = ['baidu', 'aliyun', 'quark', 'tianyi', 'uc', 'mobile', '115', 'pikpak', 'xunlei', '123', 'magnet', 'ed2k'];
+    const validCloudTypes = ['baidu', 'aliyun', 'quark', 'guangya', 'tianyi', 'uc', 'mobile', '115', 'pikpak', 'xunlei', '123', 'magnet', 'ed2k'];
     for (const type of netDiskConfig.enabledCloudTypes) {
       if (!validCloudTypes.includes(type)) {
         return NextResponse.json({ error: `Invalid cloud type: ${type}` }, { status: 400 });

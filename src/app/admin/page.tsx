@@ -7297,7 +7297,7 @@ const NetDiskConfig = ({
     enabled: true,
     pansouUrl: 'https://so.252035.xyz',
     timeout: 30,
-    enabledCloudTypes: ['baidu', 'aliyun', 'quark', 'tianyi', 'uc', 'mobile', '115', 'pikpak', 'xunlei', '123', 'magnet', 'ed2k']
+    enabledCloudTypes: ['baidu', 'aliyun', 'quark', 'guangya', 'tianyi', 'uc', 'mobile', '115', 'pikpak', 'xunlei', '123', 'magnet', 'ed2k']
   });
 
   // 网盘类型选项
@@ -7305,6 +7305,7 @@ const NetDiskConfig = ({
     { key: 'baidu', name: '百度网盘', icon: '📁' },
     { key: 'aliyun', name: '阿里云盘', icon: '☁️' },
     { key: 'quark', name: '夸克网盘', icon: '⚡' },
+    { key: 'guangya', name: '光鸭云盘', icon: '🦆' },
     { key: 'tianyi', name: '天翼云盘', icon: '📱' },
     { key: 'uc', name: 'UC网盘', icon: '🌐' },
     { key: 'mobile', name: '移动云盘', icon: '📲' },
