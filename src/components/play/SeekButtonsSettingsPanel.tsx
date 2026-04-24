@@ -336,7 +336,7 @@ export const SeekButtonsSettingsPanel = memo(function SeekButtonsSettingsPanel({
                 lineHeight: '1.5',
               }}
             >
-              💡 单手模式：按钮显示双向箭头，点击左半边快退，右半边快进
+              💡 单手模式：按钮显示双向箭头，点击上半边快退，下半边快进
             </div>
           </div>
         </div>
