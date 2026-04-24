@@ -36,7 +36,37 @@ interface EmbyItem {
       Codec?: string;
       IsExternal?: boolean;
       DeliveryUrl?: string;
+      IsDefault?: boolean;
     }>;
+  }>;
+}
+
+interface AudioStream {
+  index: number;
+  displayTitle?: string;
+  language?: string;
+  codec?: string;
+  isDefault: boolean;
+}
+
+interface PlaybackInfoResponse {
+  MediaSources?: Array<{
+    MediaStreams?: Array<{
+      Type?: string;
+      Index?: number;
+      DisplayTitle?: string;
+      Language?: string;
+      Codec?: string;
+      IsDefault?: boolean;
+    }>;
+  }>;
+  MediaStreams?: Array<{
+    Type?: string;
+    Index?: number;
+    DisplayTitle?: string;
+    Language?: string;
+    Codec?: string;
+    IsDefault?: boolean;
   }>;
 }
 
@@ -125,9 +155,9 @@ export class EmbyClient {
     // 如果有 AuthToken，假设它是有效的
     if (this.authToken) return;
 
-    // 如果有用户名和密码，自动认证
-    if (this.username && this.password) {
-      const authResult = await this.authenticate(this.username, this.password);
+    // 如果有用户名，自动认证（密码可选）
+    if (this.username) {
+      const authResult = await this.authenticate(this.username, this.password || '');
       this.authToken = authResult.AccessToken;
       this.userId = authResult.User.Id;
     }
@@ -498,7 +528,114 @@ export class EmbyClient {
     }
   }
 
-  async getStreamUrl(itemId: string, direct = true, forceDirectUrl = false): Promise<string> {
+  /**
+   * 获取媒体项的音轨列表
+   */
+  async getAudioStreams(itemId: string): Promise<AudioStream[]> {
+    await this.ensureAuthenticated();
+
+    if (!this.userId) {
+      throw new Error('未配置 Emby 用户 ID');
+    }
+
+    const token = this.apiKey || this.authToken;
+
+    console.log('🎵 [Client] 开始获取音轨，itemId:', itemId, 'userId:', this.userId);
+
+    // 尝试从 PlaybackInfo 获取音轨信息
+    try {
+      const playbackInfoUrl = `${this.serverUrl}/Items/${itemId}/PlaybackInfo?UserId=${this.userId}${token ? `&api_key=${token}` : ''}`;
+
+      console.log('🎵 [Client] 请求 PlaybackInfo:', playbackInfoUrl);
+
+      const response = await fetch(playbackInfoUrl, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify({
+          UserId: this.userId,
+          StartTimeTicks: 0,
+          IsPlayback: true,
+          AutoOpenLiveStream: true,
+        }),
+      });
+
+      console.log('🎵 [Client] PlaybackInfo 响应状态:', response.status);
+
+      if (response.ok) {
+        const data: PlaybackInfoResponse = await response.json();
+        console.log('🎵 [Client] PlaybackInfo 数据:', data);
+
+        const streams = data.MediaSources?.[0]?.MediaStreams || data.MediaStreams || [];
+        console.log('🎵 [Client] 所有流:', streams);
+
+        const audioStreams = streams
+          .filter(stream => stream.Type?.toLowerCase() === 'audio')
+          .map(stream => ({
+            index: stream.Index ?? -1,
+            displayTitle: stream.DisplayTitle,
+            language: stream.Language,
+            codec: stream.Codec,
+            isDefault: stream.IsDefault ?? false,
+          }))
+          .filter(stream => stream.index >= 0)
+          .sort((a, b) => a.index - b.index);
+
+        console.log('🎵 [Client] 过滤后的音频流:', audioStreams);
+
+        if (audioStreams.length > 0) {
+          return audioStreams;
+        }
+      }
+    } catch (error) {
+      console.warn('🎵 [Client] 从 PlaybackInfo 获取音轨失败，尝试从 Item 详情获取:', error);
+    }
+
+    // 回退：从 Item 详情获取（显式请求 MediaStreams 字段）
+    try {
+      console.log('🎵 [Client] 尝试从 Item 详情获取音轨');
+
+      // 直接请求 MediaStreams 字段，而不是通过 getItem
+      const itemDetailUrl = `${this.serverUrl}/Items/${itemId}?Fields=MediaStreams${token ? `&api_key=${token}` : ''}`;
+      console.log('🎵 [Client] 请求 Item 详情:', itemDetailUrl);
+
+      const response = await fetch(itemDetailUrl, {
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+
+      if (!response.ok) {
+        console.error('🎵 [Client] Item 详情请求失败:', response.status);
+        return [];
+      }
+
+      const item: any = await response.json();
+      console.log('🎵 [Client] Item 详情响应:', item);
+
+      const streams = item.MediaStreams || [];
+      console.log('🎵 [Client] Item MediaStreams:', streams);
+
+      const audioStreams = streams
+        .filter((stream: any) => stream.Type?.toLowerCase() === 'audio')
+        .map((stream: any) => ({
+          index: stream.Index ?? -1,
+          displayTitle: stream.DisplayTitle,
+          language: stream.Language,
+          codec: stream.Codec,
+          isDefault: stream.IsDefault ?? false,
+        }))
+        .filter((stream: AudioStream) => stream.index >= 0)
+        .sort((a, b) => a.index - b.index);
+
+      console.log('🎵 [Client] 从 Item 获取的音频流:', audioStreams);
+      return audioStreams;
+    } catch (error) {
+      console.error('🎵 [Client] 获取音轨信息失败:', error);
+      return [];
+    }
+  }
+
+  async getStreamUrl(itemId: string, direct = true, forceDirectUrl = false, audioStreamIndex?: number): Promise<string> {
+    await this.ensureAuthenticated();
     const token = this.apiKey || this.authToken;
 
     // 如果启用了代理播放且不是强制获取直接URL，返回代理URL
@@ -515,39 +652,68 @@ export class EmbyClient {
         proxyUrl += `&embyKey=${this.embyKey}`;
       }
 
+      // 如果指定了音轨，添加到查询参数
+      if (typeof audioStreamIndex === 'number' && audioStreamIndex >= 0) {
+        proxyUrl += `&audioStreamIndex=${audioStreamIndex}`;
+      }
+
       return proxyUrl;
     }
 
-    // 原有的直接播放逻辑
-    let url: string;
+    // 原有的直接播放逻辑 - 使用 URLSearchParams 构建查询参数
+    const query = new URLSearchParams();
 
     if (direct) {
       // 选项3: 转码mp4 - 使用 HLS 强制音频转码
       if (this.transcodeMp4) {
         // 生成唯一的 PlaySessionId
         const playSessionId = `${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
-        // 使用 HLS 端点并强制音频转码为 AAC，避免 EAC3/TrueHD 兼容性问题
-        url = `${this.serverUrl}/Videos/${itemId}/master.m3u8?api_key=${token}&AudioCodec=aac&AudioBitrate=320000&MaxAudioChannels=6&PlaySessionId=${playSessionId}`;
-      } else {
-        url = `${this.serverUrl}/Videos/${itemId}/stream?Static=true&api_key=${token}`;
-      }
+        query.set('api_key', token || '');
+        query.set('AudioCodec', 'aac');
+        query.set('AudioBitrate', '320000');
+        query.set('MaxAudioChannels', '6');
+        query.set('PlaySessionId', playSessionId);
 
-      // 选项2: 拼接MediaSourceId参数
-      if (this.appendMediaSourceId && !this.transcodeMp4) {
-        try {
-          const playbackInfo = await this.getPlaybackInfo(itemId);
-          if (playbackInfo.MediaSourceId) {
-            url += `&MediaSourceId=${playbackInfo.MediaSourceId}`;
-          }
-        } catch (error) {
-          // 继续使用不带 MediaSourceId 的 URL
+        if (typeof audioStreamIndex === 'number' && audioStreamIndex >= 0) {
+          query.set('AudioStreamIndex', String(audioStreamIndex));
         }
+
+        return `${this.serverUrl}/Videos/${encodeURIComponent(itemId)}/master.m3u8?${query.toString()}`;
+      } else {
+        query.set('static', 'true');
+        if (token) {
+          query.set('api_key', token);
+        }
+
+        if (typeof audioStreamIndex === 'number' && audioStreamIndex >= 0) {
+          query.set('AudioStreamIndex', String(audioStreamIndex));
+        }
+
+        // 选项2: 拼接MediaSourceId参数
+        if (this.appendMediaSourceId) {
+          try {
+            const playbackInfo = await this.getPlaybackInfo(itemId);
+            if (playbackInfo.MediaSourceId) {
+              query.set('MediaSourceId', playbackInfo.MediaSourceId);
+            }
+          } catch (error) {
+            // 继续使用不带 MediaSourceId 的 URL
+          }
+        }
+
+        return `${this.serverUrl}/Videos/${encodeURIComponent(itemId)}/stream?${query.toString()}`;
       }
     } else {
-      url = `${this.serverUrl}/Videos/${itemId}/master.m3u8?api_key=${token}`;
-    }
+      if (token) {
+        query.set('api_key', token);
+      }
 
-    return url;
+      if (typeof audioStreamIndex === 'number' && audioStreamIndex >= 0) {
+        query.set('AudioStreamIndex', String(audioStreamIndex));
+      }
+
+      return `${this.serverUrl}/Videos/${encodeURIComponent(itemId)}/master.m3u8?${query.toString()}`;
+    }
   }
 
   getSubtitles(item: EmbyItem): Array<{ url: string; language: string; label: string }> {

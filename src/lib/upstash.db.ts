@@ -11,6 +11,7 @@ import {
   IStorage,
   PlayRecord,
   PlayStatsResult,
+  Reminder,
   UserPlayStat,
 } from './types';
 
@@ -158,6 +159,48 @@ export class UpstashRedisStorage implements IStorage {
     await withRetry(() => this.client.del(this.favHashKey(userName)));
   }
 
+  // ---------- 提醒 ----------
+  private reminderHashKey(user: string) {
+    return `u:${user}:reminder`; // 一个用户的所有提醒存在一个 Hash 中
+  }
+
+  async getReminder(userName: string, key: string): Promise<Reminder | null> {
+    const val = await withRetry(() =>
+      this.client.hget(this.reminderHashKey(userName), key)
+    );
+    return val ? (val as Reminder) : null;
+  }
+
+  async setReminder(
+    userName: string,
+    key: string,
+    reminder: Reminder
+  ): Promise<void> {
+    await withRetry(() =>
+      this.client.hset(this.reminderHashKey(userName), { [key]: reminder })
+    );
+  }
+
+  async getAllReminders(userName: string): Promise<Record<string, Reminder>> {
+    const all = await withRetry(() =>
+      this.client.hgetall(this.reminderHashKey(userName))
+    );
+    if (!all || Object.keys(all).length === 0) return {};
+    const result: Record<string, Reminder> = {};
+    for (const [field, value] of Object.entries(all)) {
+      if (value) result[field] = value as Reminder;
+    }
+    return result;
+  }
+
+  async deleteReminder(userName: string, key: string): Promise<void> {
+    await withRetry(() => this.client.hdel(this.reminderHashKey(userName), key));
+  }
+
+  async deleteAllReminders(userName: string): Promise<void> {
+    await withRetry(() => this.client.del(this.reminderHashKey(userName)));
+  }
+
   // ---------- 批量写入（利用 Hash，hset 支持多字段，只算1条命令）----------
   async setPlayRecordsBatch(
     userName: string,
@@ -248,6 +291,7 @@ export class UpstashRedisStorage implements IStorage {
     // 直接删除 Hash key（无需 KEYS 扫描）
     await withRetry(() => this.client.del(this.prHashKey(userName)));
     await withRetry(() => this.client.del(this.favHashKey(userName)));
+    await withRetry(() => this.client.del(this.reminderHashKey(userName)));
     await withRetry(() => this.client.del(this.skipHashKey(userName)));
     await withRetry(() => this.client.del(this.episodeSkipHashKey(userName)));
 

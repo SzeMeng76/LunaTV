@@ -16,9 +16,6 @@ import { DEFAULT_USER_AGENT } from './user-agent';
 // 新的视频源 API（资源站采集接口）- 用于分类和搜索
 const SHORTDRAMA_API_BASE = 'https://wwzy.tv/api.php/provide/vod';
 
-// 解析 API（乱短剧API）- 用于 parse 解析播放地址
-const SHORTDRAMA_PARSE_API_BASE = 'https://api.r2afosne.dpdns.org';
-
 // 检测是否为移动端环境
 const isMobile = () => {
   if (typeof window === 'undefined') return false;
@@ -448,22 +445,15 @@ export async function parseShortDramaEpisode(
     }
 
     const timestamp = Date.now();
-    const apiUrl = isMobile()
-      ? `/api/shortdrama/parse?${params.toString()}&_t=${timestamp}`
-      : `${SHORTDRAMA_PARSE_API_BASE}/vod/parse/single?${params.toString()}`;
+    const apiUrl = `/api/shortdrama/parse?${params.toString()}&_t=${timestamp}`;
 
-    const fetchOptions: RequestInit = isMobile() ? {
+    const fetchOptions: RequestInit = {
       cache: 'no-store',
       headers: {
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Pragma': 'no-cache',
         'Expires': '0'
       }
-    } : {
-      headers: {
-        'User-Agent': DEFAULT_USER_AGENT,
-        'Accept': 'application/json',
-      },
     };
 
     const response = await fetch(apiUrl, fetchOptions);
@@ -542,22 +532,15 @@ export async function parseShortDramaBatch(
     }
 
     const timestamp = Date.now();
-    const apiUrl = isMobile()
-      ? `/api/shortdrama/parse?${params.toString()}&_t=${timestamp}`
-      : `${SHORTDRAMA_PARSE_API_BASE}/vod/parse/batch?${params.toString()}`;
+    const apiUrl = `/api/shortdrama/parse?${params.toString()}&_t=${timestamp}`;
 
-    const fetchOptions: RequestInit = isMobile() ? {
+    const fetchOptions: RequestInit = {
       cache: 'no-store',
       headers: {
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Pragma': 'no-cache',
         'Expires': '0'
       }
-    } : {
-      headers: {
-        'User-Agent': DEFAULT_USER_AGENT,
-        'Accept': 'application/json',
-      },
     };
 
     const response = await fetch(apiUrl, fetchOptions);
@@ -589,22 +572,15 @@ export async function parseShortDramaAll(
     }
 
     const timestamp = Date.now();
-    const apiUrl = isMobile()
-      ? `/api/shortdrama/parse?${params.toString()}&_t=${timestamp}`
-      : `${SHORTDRAMA_PARSE_API_BASE}/vod/parse/all?${params.toString()}`;
+    const apiUrl = `/api/shortdrama/parse?${params.toString()}&_t=${timestamp}`;
 
-    const fetchOptions: RequestInit = isMobile() ? {
+    const fetchOptions: RequestInit = {
       cache: 'no-store',
       headers: {
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Pragma': 'no-cache',
         'Expires': '0'
       }
-    } : {
-      headers: {
-        'User-Agent': DEFAULT_USER_AGENT,
-        'Accept': 'application/json',
-      },
     };
 
     const response = await fetch(apiUrl, fetchOptions);

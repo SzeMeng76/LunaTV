@@ -83,7 +83,8 @@ function generateRecommendations(
     const successfulDomesticSources = testResults.filter(
       (r) =>
         r.success &&
-        (r.url.includes('iqiq.io') ||
+        (r.url.includes('ghproxy.vip') ||
+          r.url.includes('gh-proxy.com') ||
           r.url.includes('cors.isteed.cc'))
     );
 
@@ -160,7 +161,8 @@ export async function GET(request: NextRequest) {
 
     // 测试关键源的可达性（使用实际验证过的源）
     const testSources = [
-      'https://raw.iqiq.io/FongMi/CatVodSpider/main/jar/custom_spider.jar',
+      'https://ghproxy.vip/https://raw.githubusercontent.com/FongMi/CatVodSpider/main/jar/custom_spider.jar',
+      'https://gh-proxy.com/https://raw.githubusercontent.com/FongMi/CatVodSpider/main/jar/custom_spider.jar',
       'https://raw.githubusercontent.com/FongMi/CatVodSpider/main/jar/custom_spider.jar',
       'https://raw.githubusercontent.com/qlql765/CatVodTVSpider-by-zhixc/main/jar/custom_spider.jar',
       'https://raw.githubusercontent.com/gaotianliuyun/gao/master/jar/custom_spider.jar',

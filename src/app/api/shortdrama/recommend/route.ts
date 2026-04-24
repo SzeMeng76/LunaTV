@@ -9,9 +9,6 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const fetchCache = 'force-no-store';
 
-// 备用 API（乱短剧API）
-const FALLBACK_API_BASE = 'https://api.r2afosne.dpdns.org';
-
 // 从单个短剧源获取数据（通过分类名称查找）
 async function fetchFromShortDramaSource(
   api: string,
@@ -77,44 +74,6 @@ async function fetchFromShortDramaSource(
     author: item.vod_actor || '',
     backdrop: item.vod_pic_slide || item.vod_pic || '',
     vote_average: parseFloat(item.vod_score) || 0,
-  }));
-}
-
-// 从备用 API（乱短剧API）获取推荐数据
-async function fetchFromFallbackApi(size: number) {
-  console.log('🔄 尝试备用API: 乱短剧API');
-
-  const apiUrl = `${FALLBACK_API_BASE}/vod/recommend?size=${size}`;
-
-  const response = await fetch(apiUrl, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-      'Accept': 'application/json',
-    },
-    signal: AbortSignal.timeout(10000),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Fallback API HTTP error! status: ${response.status}`);
-  }
-
-  const data = await response.json();
-  const items = data.items || [];
-
-  console.log(`✅ 备用API返回 ${items.length} 条数据`);
-
-  return items.slice(0, size).map((item: any) => ({
-    id: item.vod_id,
-    name: item.vod_name,
-    cover: item.vod_pic || '',
-    update_time: new Date().toISOString(),
-    score: parseFloat(item.vod_score) || 0,
-    episode_count: parseInt(item.vod_remarks?.replace(/[^\d]/g, '') || '1'),
-    description: '',
-    author: '',
-    backdrop: item.vod_pic || '',
-    vote_average: parseFloat(item.vod_score) || 0,
-    _source: 'fallback_api',
   }));
 }
 
@@ -189,14 +148,7 @@ async function getRecommendedShortDramasInternal(
       );
     } catch (fallbackError) {
       console.error('默认源也失败:', fallbackError);
-      // 尝试备用API
-      try {
-        console.log('⚠️ 默认源失败，尝试备用API');
-        return await fetchFromFallbackApi(size);
-      } catch (fallbackApiError) {
-        console.error('备用API也失败:', fallbackApiError);
-        return [];
-      }
+      return [];
     }
   }
 }

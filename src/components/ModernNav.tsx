@@ -5,7 +5,7 @@
 import { Cat, Clover, Film, FolderOpen, Globe, Home, MoreHorizontal, PlaySquare, Radio, Search, Sparkles, Star, Tv, X } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, queryOptions } from '@tanstack/react-query';
 
 import { FastLink } from './FastLink';
 import { ThemeToggle } from './ThemeToggle';
@@ -24,6 +24,30 @@ interface ModernNavProps {
   showAIButton?: boolean;
   onAIButtonClick?: () => void;
 }
+
+// Query Options 工厂函数
+const userEmbyConfigOptions = () => queryOptions({
+  queryKey: ['user', 'emby-config'],
+  queryFn: async () => {
+    const res = await fetch('/api/user/emby-config');
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.config;
+  },
+  staleTime: 5 * 60 * 1000,
+  retry: false,
+});
+
+const publicSourcesOptions = () => queryOptions({
+  queryKey: ['emby', 'public-sources'],
+  queryFn: async () => {
+    const res = await fetch('/api/emby/public-sources');
+    if (!res.ok) return { sources: [] };
+    return res.json();
+  },
+  staleTime: 5 * 60 * 1000,
+  retry: false,
+});
 
 export default function ModernNav({ showAIButton = false, onAIButtonClick }: ModernNavProps = {}) {
   const router = useRouter();
@@ -93,29 +117,10 @@ export default function ModernNav({ showAIButton = false, onAIButtonClick }: Mod
   ]);
 
   // 检查用户是否配置了 Emby
-  const { data: userEmbyConfig } = useQuery({
-    queryKey: ['user', 'emby-config'],
-    queryFn: async () => {
-      const res = await fetch('/api/user/emby-config');
-      if (!res.ok) return null;
-      const data = await res.json();
-      return data.config;
-    },
-    staleTime: 5 * 60 * 1000,
-    retry: false,
-  });
+  const { data: userEmbyConfig } = useQuery(userEmbyConfigOptions());
 
   // 检查管理员是否设置了公共源
-  const { data: publicSourcesData } = useQuery({
-    queryKey: ['emby', 'public-sources'],
-    queryFn: async () => {
-      const res = await fetch('/api/emby/public-sources');
-      if (!res.ok) return { sources: [] };
-      return res.json();
-    },
-    staleTime: 5 * 60 * 1000,
-    retry: false,
-  });
+  const { data: publicSourcesData } = useQuery(publicSourcesOptions());
 
   useEffect(() => {
     const runtimeConfig = (window as any).RUNTIME_CONFIG;

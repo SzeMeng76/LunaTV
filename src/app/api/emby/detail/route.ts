@@ -12,6 +12,8 @@ export async function GET(request: NextRequest) {
   const itemId = searchParams.get('id');
   const embyKey = searchParams.get('embyKey') || undefined;
 
+  console.log('========== EMBY DETAIL API CALLED ==========', { itemId, embyKey });
+
   if (!itemId) {
     return NextResponse.json({ error: '缺少媒体ID' }, { status: 400 });
   }
@@ -34,6 +36,19 @@ export async function GET(request: NextRequest) {
 
     // 获取媒体详情
     const item = await client.getItem(itemId);
+
+    // 获取音轨信息（不影响主流程）
+    let audioStreams: any[] = [];
+    console.log('========== BEFORE getAudioStreams ==========');
+    try {
+      console.log('🎵 [API] 开始获取音轨，itemId:', itemId);
+      audioStreams = await client.getAudioStreams(itemId);
+      console.log('🎵 [API] 获取到音轨数据:', audioStreams);
+      console.log('========== AFTER getAudioStreams, length:', audioStreams.length);
+    } catch (error) {
+      console.error('🎵 [API] 获取音轨失败（不影响播放）:', error);
+      console.error('========== getAudioStreams ERROR ==========', error);
+    }
 
     // 构建 episodes 数组（电影返回单个playUrl，电视剧返回所有剧集的playUrl）
     let episodesUrls: string[] = [];
@@ -70,6 +85,14 @@ export async function GET(request: NextRequest) {
       rating: item.CommunityRating || 0,
       overview: item.Overview || '',
       episodes: episodesUrls,
+      // 添加音轨信息
+      private_audio_streams: audioStreams.map(stream => ({
+        index: stream.index,
+        display_title: stream.displayTitle,
+        language: stream.language,
+        codec: stream.codec,
+        is_default: stream.isDefault,
+      })),
     }]);
   } catch (error) {
     console.error('获取 Emby 详情失败:', error);

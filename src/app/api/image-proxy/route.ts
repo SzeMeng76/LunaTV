@@ -1,7 +1,37 @@
 import { NextResponse } from 'next/server';
 import { DEFAULT_USER_AGENT } from '@/lib/user-agent';
+import * as https from 'https';
 
 export const runtime = 'nodejs';
+
+// https agent with rejectUnauthorized: false for expired-cert image CDNs
+const insecureHttpsAgent = new https.Agent({ rejectUnauthorized: false });
+
+async function fetchWithInsecureHttps(imageUrl: string, fetchHeaders: HeadersInit): Promise<Response> {
+  return new Promise((resolve, reject) => {
+    const urlObj = new URL(imageUrl);
+    const options = {
+      hostname: urlObj.hostname,
+      path: urlObj.pathname + urlObj.search,
+      method: 'GET',
+      agent: insecureHttpsAgent,
+      headers: fetchHeaders as Record<string, string>,
+    };
+    const req = https.request(options, (res) => {
+      const chunks: Buffer[] = [];
+      res.on('data', (chunk) => chunks.push(chunk));
+      res.on('end', () => {
+        const body = Buffer.concat(chunks);
+        resolve(new Response(body, {
+          status: res.statusCode ?? 200,
+          headers: res.headers as Record<string, string>,
+        }));
+      });
+    });
+    req.on('error', reject);
+    req.end();
+  });
+}
 
 // 图片代理接口 - 解决防盗链和 Mixed Content 问题
 export async function GET(request: Request) {
@@ -39,10 +69,20 @@ export async function GET(request: Request) {
       'Connection': 'keep-alive',
     };
 
-    const imageResponse = await fetch(imageUrl, {
-      signal: controller.signal,
-      headers: fetchHeaders,
-    });
+    let imageResponse: Response;
+    try {
+      imageResponse = await fetch(imageUrl, {
+        signal: controller.signal,
+        headers: fetchHeaders,
+      });
+    } catch (fetchError: any) {
+      // SSL cert error (e.g. expired cert) - retry with rejectUnauthorized: false
+      if (imageUrl.startsWith('https://') && (fetchError.code === 'CERT_HAS_EXPIRED' || fetchError.cause?.code === 'CERT_HAS_EXPIRED' || fetchError.message?.includes('certificate'))) {
+        imageResponse = await fetchWithInsecureHttps(imageUrl, fetchHeaders);
+      } else {
+        throw fetchError;
+      }
+    }
 
     clearTimeout(timeoutId);
 

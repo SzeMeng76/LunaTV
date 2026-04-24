@@ -29,6 +29,7 @@ export async function GET(request: NextRequest) {
     StorageType: process.env.NEXT_PUBLIC_STORAGE_TYPE || 'localstorage',
     Version: CURRENT_VERSION,
     DownloadEnabled: config.DownloadConfig?.enabled ?? true,
+    requireInviteCode: config.UserConfig?.RequireInviteCode ?? false,
   };
 
   // 添加 Telegram 登录配置（仅公开必要信息）

@@ -23,6 +23,7 @@ const CLOUD_TYPES = {
   baidu: { name: '百度网盘', color: 'bg-blue-500', lightColor: 'bg-blue-500/10 hover:bg-blue-500/20', icon: '📁', domain: 'pan.baidu.com' },
   aliyun: { name: '阿里云盘', color: 'bg-orange-500', lightColor: 'bg-orange-500/10 hover:bg-orange-500/20', icon: '☁️', domain: 'alipan.com' },
   quark: { name: '夸克网盘', color: 'bg-purple-500', lightColor: 'bg-purple-500/10 hover:bg-purple-500/20', icon: '⚡', domain: 'pan.quark.cn' },
+  guangya: { name: '光鸭云盘', color: 'bg-amber-500', lightColor: 'bg-amber-500/10 hover:bg-amber-500/20', icon: '🦆', domain: 'guangya.com' },
   tianyi: { name: '天翼云盘', color: 'bg-red-500', lightColor: 'bg-red-500/10 hover:bg-red-500/20', icon: '📱', domain: 'cloud.189.cn' },
   uc: { name: 'UC网盘', color: 'bg-green-500', lightColor: 'bg-green-500/10 hover:bg-green-500/20', icon: '🌐', domain: 'drive.uc.cn' },
   mobile: { name: '移动云盘', color: 'bg-cyan-500', lightColor: 'bg-cyan-500/10 hover:bg-cyan-500/20', icon: '📲', domain: 'caiyun.139.com' },

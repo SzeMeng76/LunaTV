@@ -2,6 +2,7 @@
 
 import { AlertCircle, CheckCircle2, Save, KeyRound, Globe, Plus, Trash2, Edit2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 interface OIDCProvider {
   id: string;
@@ -599,12 +600,13 @@ export function OIDCAuthConfig({ config, providers = [], onSave, onSaveProviders
       </div>
 
       {/* Provider 编辑模态框 */}
-      {editingProvider && (
+      {editingProvider && createPortal(
         <ProviderEditModal
           provider={editingProvider}
           onSave={handleSaveProvider}
           onCancel={() => setEditingProvider(null)}
-        />
+        />,
+        document.body
       )}
     </div>
   );

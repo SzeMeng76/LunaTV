@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery, useQueryClient, queryOptions, infiniteQueryOptions } from '@tanstack/react-query';
 import { ArrowDownWideNarrow, ArrowUpNarrowWide, Film, RefreshCw, Search, X } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -45,6 +45,99 @@ interface EmbyListPage {
 }
 
 const PAGE_SIZE = 20;
+
+// Query Options 工厂函数
+const embySourcesOptions = (embyEnabled: boolean) => queryOptions({
+  queryKey: ['emby', 'sources'],
+  queryFn: async () => {
+    const res = await fetch('/api/emby/sources');
+    const data = await res.json();
+    return (data.sources ?? []) as EmbySourceOption[];
+  },
+  enabled: embyEnabled,
+  staleTime: 5 * 60 * 1000,
+  gcTime: 10 * 60 * 1000,
+});
+
+const embyViewsOptions = (embyEnabled: boolean, embyKey?: string) => queryOptions({
+  queryKey: ['emby', 'views', embyKey],
+  queryFn: async () => {
+    const params = new URLSearchParams();
+    if (embyKey) params.append('embyKey', embyKey);
+    const res = await fetch(`/api/emby/views?${params.toString()}`);
+    const data = await res.json();
+    return (data.success ? data.views : []) as EmbyView[];
+  },
+  enabled: embyEnabled && !!embyKey,
+  staleTime: 5 * 60 * 1000,
+  gcTime: 10 * 60 * 1000,
+});
+
+const embyListOptions = (
+  embyEnabled: boolean,
+  embyKey?: string,
+  selectedView?: string,
+  sortBy?: string,
+  sortOrder?: string
+) => infiniteQueryOptions({
+  queryKey: ['emby', 'list', embyKey, selectedView, sortBy, sortOrder],
+  queryFn: async ({ pageParam, signal }) => {
+    const params = new URLSearchParams({
+      page: String(pageParam),
+      pageSize: String(PAGE_SIZE),
+      sortBy: sortBy || 'PremiereDate',
+      sortOrder: sortOrder || 'Descending',
+    });
+    if (selectedView !== 'all') params.append('parentId', selectedView || '');
+    if (embyKey) params.append('embyKey', embyKey);
+
+    const res = await fetch(`/api/emby/list?${params.toString()}`, { signal });
+    if (!res.ok) throw new Error('获取列表失败');
+    const data = await res.json();
+
+    return {
+      list: (data.list ?? []).map((item: any): Video => ({
+        id: item.id,
+        title: item.title,
+        poster: item.poster,
+        year: item.year,
+        rating: item.rating,
+        mediaType: item.mediaType,
+      })),
+      totalPages: data.totalPages ?? 0,
+      currentPage: data.currentPage ?? pageParam,
+      total: data.total ?? 0,
+    } satisfies EmbyListPage;
+  },
+  initialPageParam: 1,
+  getNextPageParam: (lastPage) =>
+    lastPage.currentPage < lastPage.totalPages ? lastPage.currentPage + 1 : undefined,
+  enabled: embyEnabled && !!embyKey,
+  staleTime: 2 * 60 * 1000,
+  gcTime: 5 * 60 * 1000,
+});
+
+const embySearchOptions = (
+  embyEnabled: boolean,
+  embyKey?: string,
+  selectedView?: string,
+  searchKeyword?: string
+) => queryOptions({
+  queryKey: ['emby', 'search', embyKey, selectedView, searchKeyword],
+  queryFn: async ({ signal }) => {
+    const params = new URLSearchParams({ keyword: searchKeyword || '' });
+    if (embyKey) params.append('embyKey', embyKey);
+    if (selectedView && selectedView !== 'all') params.append('parentId', selectedView);
+    const res = await fetch(`/api/emby/search?${params.toString()}`, { signal });
+    if (!res.ok) throw new Error('搜索失败');
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    return (data.videos ?? []) as Video[];
+  },
+  enabled: embyEnabled && !!embyKey && (searchKeyword?.trim().length ?? 0) > 0,
+  staleTime: 60 * 1000,
+  gcTime: 5 * 60 * 1000,
+});
 
 export default function PrivateLibraryPage() {
   const router = useRouter();
@@ -113,17 +206,7 @@ export default function PrivateLibraryPage() {
   const embyEnabled = runtimeConfig.EMBY_ENABLED && mounted;
 
   // ── 1. Emby 源列表 ────────────────────────────────────────────────────────
-  const { data: sourcesData } = useQuery({
-    queryKey: ['emby', 'sources'],
-    queryFn: async () => {
-      const res = await fetch('/api/emby/sources');
-      const data = await res.json();
-      return (data.sources ?? []) as EmbySourceOption[];
-    },
-    enabled: embyEnabled,
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-  });
+  const { data: sourcesData } = useQuery(embySourcesOptions(embyEnabled));
 
   const embySourceOptions = sourcesData ?? [];
   const currentEmbySource = embySourceOptions.find(s => s.key === embyKey);
@@ -137,19 +220,9 @@ export default function PrivateLibraryPage() {
   }, [embyKey, embySourceOptions]);
 
   // ── 2. Emby 媒体库 Views ──────────────────────────────────────────────────
-  const { data: viewsData, isLoading: loadingViews } = useQuery({
-    queryKey: ['emby', 'views', embyKey],
-    queryFn: async () => {
-      const params = new URLSearchParams();
-      if (embyKey) params.append('embyKey', embyKey);
-      const res = await fetch(`/api/emby/views?${params.toString()}`);
-      const data = await res.json();
-      return (data.success ? data.views : []) as EmbyView[];
-    },
-    enabled: embyEnabled && !!embyKey,
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-  });
+  const { data: viewsData, isLoading: loadingViews } = useQuery(
+    embyViewsOptions(embyEnabled, embyKey)
+  );
 
   const embyViews = viewsData ?? [];
 
@@ -162,43 +235,7 @@ export default function PrivateLibraryPage() {
     isLoading: loading,
     isError,
     error: listError,
-  } = useInfiniteQuery({
-    queryKey: ['emby', 'list', embyKey, selectedView, sortBy, sortOrder],
-    queryFn: async ({ pageParam, signal }) => {
-      const params = new URLSearchParams({
-        page: String(pageParam),
-        pageSize: String(PAGE_SIZE),
-        sortBy,
-        sortOrder,
-      });
-      if (selectedView !== 'all') params.append('parentId', selectedView);
-      if (embyKey) params.append('embyKey', embyKey);
-
-      const res = await fetch(`/api/emby/list?${params.toString()}`, { signal });
-      if (!res.ok) throw new Error('获取列表失败');
-      const data = await res.json();
-
-      return {
-        list: (data.list ?? []).map((item: any): Video => ({
-          id: item.id,
-          title: item.title,
-          poster: item.poster,
-          year: item.year,
-          rating: item.rating,
-          mediaType: item.mediaType,
-        })),
-        totalPages: data.totalPages ?? 0,
-        currentPage: data.currentPage ?? pageParam,
-        total: data.total ?? 0,
-      } satisfies EmbyListPage;
-    },
-    initialPageParam: 1,
-    getNextPageParam: (lastPage) =>
-      lastPage.currentPage < lastPage.totalPages ? lastPage.currentPage + 1 : undefined,
-    enabled: embyEnabled && !!embyKey,
-    staleTime: 2 * 60 * 1000,
-    gcTime: 5 * 60 * 1000,
-  });
+  } = useInfiniteQuery(embyListOptions(embyEnabled, embyKey, selectedView, sortBy, sortOrder));
 
   // 把所有分页数据拍平成一个列表
   const videos = useMemo(
@@ -229,22 +266,9 @@ export default function PrivateLibraryPage() {
   }, [hasNextPage, isFetchingNextPage, fetchNextPage, useVirtualization]);
 
   // ── 4. Emby 搜索 ──────────────────────────────────────────────────────────
-  const { data: searchData, isFetching: isSearching } = useQuery({
-    queryKey: ['emby', 'search', embyKey, selectedView, searchKeyword],
-    queryFn: async ({ signal }) => {
-      const params = new URLSearchParams({ keyword: searchKeyword });
-      if (embyKey) params.append('embyKey', embyKey);
-      if (selectedView && selectedView !== 'all') params.append('parentId', selectedView);
-      const res = await fetch(`/api/emby/search?${params.toString()}`, { signal });
-      if (!res.ok) throw new Error('搜索失败');
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      return (data.videos ?? []) as Video[];
-    },
-    enabled: embyEnabled && !!embyKey && searchKeyword.trim().length > 0,
-    staleTime: 60 * 1000,
-    gcTime: 5 * 60 * 1000,
-  });
+  const { data: searchData, isFetching: isSearching } = useQuery(
+    embySearchOptions(embyEnabled, embyKey, selectedView, searchKeyword)
+  );
 
   const searchResults = searchData ?? [];
   const isSearchMode = searchKeyword.trim().length > 0;
