@@ -22,10 +22,10 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.8.3-3178c6?logo=typescript)
 ![TailwindCSS](https://img.shields.io/badge/TailwindCSS-4.1.18-38bdf8?logo=tailwindcss)
 ![ArtPlayer](https://img.shields.io/badge/ArtPlayer-5.4.0-ff6b6b)
-![HLS.js](https://img.shields.io/badge/HLS.js-1.6.15-ec407a)
+![HLS.js](https://img.shields.io/badge/HLS.js-1.6.16-ec407a)
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Docker Ready](https://img.shields.io/badge/Docker-ready-blue?logo=docker)
-![Version](https://img.shields.io/badge/Version-6.3.0-orange)
+![Version](https://img.shields.io/badge/Version-6.4.0-orange)
 
 </div>
 
@@ -33,7 +33,7 @@
 
 ## 📢 项目说明
 
-本项目是在 **MoonTV** 基础上进行的深度二次开发版本，从 **v4.3.1** 版本开始，持续迭代至当前 **v6.3.0**，累计新增 60+ 重大功能模块，400+ 细节优化。所有新增功能详见 [CHANGELOG](CHANGELOG)。
+本项目是在 **MoonTV** 基础上进行的深度二次开发版本，从 **v4.3.1** 版本开始，持续迭代至当前 **v6.4.0**，累计新增 60+ 重大功能模块，400+ 细节优化。所有新增功能详见 [CHANGELOG](CHANGELOG)。
 
 ## ⚠️ 重要声明
 
@@ -42,16 +42,18 @@
 ## 💡 核心增强亮点
 
 ### 🎥 内容生态扩展
+- **多人观影房**：支持同步播放、屏幕共享、实时聊天、语音通话，WebRTC 实时传输，画质预设可调 → [详细文档](docs/deployment/WATCH_ROOM_DEPLOYMENT.md)
 - **Emby 私有库**：完整的 Emby 媒体服务器集成，支持免密登录、认证模式切换和多音轨播放 → [详细文档](docs/integration/EMBY_GUIDE.md)
 - **YouTube 集成**：完整的 YouTube 搜索、播放、直播功能
 - **网盘搜索**：集成高级筛选和缓存管理的网盘资源搜索
 - **ACG 种子搜索**：Mikan Project 双源系统，丰富的动漫资源
-- **IPTV 直播**：m3u/m3u8 订阅、FLV 直播流、EPG 节目单
+- **IPTV 直播**：m3u/m3u8 订阅、FLV 直播流、EPG 节目单、M3U 导入导出
 - **Bangumi 动漫**：动漫信息智能检测、API 集成
 - **繁体中文搜索**：智能繁简转换、多策略搜索
 - **搜索列表视图**：支持列表/网格双视图模式切换，列表模式带图片预览和快捷播放
 
 ### 🎬 播放器增强
+- **快进快退按钮**：可自定义时间间隔的快进快退按钮，Netflix 风格设计，响应式布局
 - **超宽显示器适配**：视频显示模式控制，完美支持超宽显示器
 - **片头片尾跳过预设**：灵活的片头片尾模板系统，支持导入导出和验证
 - **播放速率持久化**：记住播放速率设置，跨会话保持
@@ -124,6 +126,7 @@ pnpm dev
 - 🤖 [AI 功能详解](docs/features/AI_FEATURES.md)
 - 📥 [下载功能](docs/features/DOWNLOAD_FEATURES.md)
 - 📺 [虚拟滚动指南](docs/features/VIRTUAL_SCROLL_GUIDE.md)
+- 🎥 [观影房部署](docs/deployment/WATCH_ROOM_DEPLOYMENT.md)
 
 ### 集成指南
 - 🎬 [Emby 集成](docs/integration/EMBY_GUIDE.md)

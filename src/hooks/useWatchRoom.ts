@@ -8,6 +8,8 @@ import type {
   Member,
   PlayState,
   Room,
+  RoomType,
+  ScreenState,
   ServerToClientEvents,
 } from '@/types/watch-room.types';
 
@@ -35,6 +37,7 @@ export interface UseWatchRoomReturn {
     description: string;
     password?: string;
     isPublic: boolean;
+    roomType?: RoomType;
   }) => Promise<{ success: boolean; room?: Room; error?: string }>;
 
   joinRoom: (roomId: string, password?: string) => Promise<{ success: boolean; room?: Room; members?: Member[]; error?: string }>;
@@ -53,6 +56,15 @@ export interface UseWatchRoomReturn {
 
   // 直播控制
   changeLiveChannel: (state: LiveState) => void;
+
+  // 屏幕共享控制
+  registerScreenHelper: (roomId: string, ownerToken: string) => Promise<{ success: boolean; error?: string }>;
+  startScreenShare: (state: ScreenState) => void;
+  stopScreenShare: () => void;
+  notifyViewerReady: () => void;
+  sendScreenOffer: (targetUserId: string, offer: RTCSessionDescriptionInit) => void;
+  sendScreenAnswer: (targetUserId: string, answer: RTCSessionDescriptionInit) => void;
+  sendScreenIceCandidate: (targetUserId: string, candidate: RTCIceCandidateInit) => void;
 
   // 聊天
   sendMessage: (content: string, type?: 'text' | 'emoji') => void;
@@ -198,6 +210,33 @@ export function useWatchRoom(options: UseWatchRoomOptions): UseWatchRoomReturn {
       setCurrentRoom((prev) => prev ? { ...prev, currentState: state } : null);
     });
 
+    // 屏幕共享事件
+    newSocket.on('screen:start', (state: ScreenState) => {
+      console.log('[WatchRoom] Screen share started:', state);
+      setCurrentRoom((prev) => prev ? { ...prev, currentState: state } : null);
+    });
+
+    newSocket.on('screen:stop', () => {
+      console.log('[WatchRoom] Screen share stopped');
+      setCurrentRoom((prev) => prev ? { ...prev, currentState: null } : null);
+    });
+
+    newSocket.on('screen:viewer-ready', (data) => {
+      console.log('[WatchRoom] Viewer ready:', data.userId);
+    });
+
+    newSocket.on('screen:offer', (data) => {
+      console.log('[WatchRoom] Screen offer received from:', data.userId);
+    });
+
+    newSocket.on('screen:answer', (data) => {
+      console.log('[WatchRoom] Screen answer received from:', data.userId);
+    });
+
+    newSocket.on('screen:ice', (data) => {
+      console.log('[WatchRoom] Screen ICE candidate received from:', data.userId);
+    });
+
     newSocket.on('state:cleared', () => {
       console.log('[WatchRoom] State cleared');
       // 清除房间的 currentState
@@ -242,6 +281,7 @@ export function useWatchRoom(options: UseWatchRoomOptions): UseWatchRoomReturn {
     description: string;
     password?: string;
     isPublic: boolean;
+    roomType?: RoomType;
   }) => {
     if (!socket || !connected) {
       return { success: false, error: '未连接到服务器' };
@@ -355,6 +395,76 @@ export function useWatchRoom(options: UseWatchRoomOptions): UseWatchRoomReturn {
     }
   }, [socket, connected]);
 
+  // 屏幕共享控制
+  const registerScreenHelper = useCallback(async (roomId: string, ownerToken: string) => {
+    if (!socket || !connected) {
+      return { success: false, error: '未连接到服务器' };
+    }
+
+    return new Promise<{ success: boolean; error?: string }>((resolve) => {
+      socket.emit('screen:helper-register', { roomId, ownerToken }, (response) => {
+        resolve(response);
+      });
+    });
+  }, [socket, connected]);
+
+  const startScreenShare = useCallback((state: ScreenState) => {
+    if (socket && connected) {
+      socket.emit('screen:start', state);
+      setCurrentRoom((prev) => prev ? { ...prev, currentState: state } : null);
+    }
+  }, [socket, connected]);
+
+  const stopScreenShare = useCallback(() => {
+    if (socket && connected) {
+      socket.emit('screen:stop');
+      setCurrentRoom((prev) => prev ? { ...prev, currentState: null } : null);
+    }
+  }, [socket, connected]);
+
+  const notifyViewerReady = useCallback(() => {
+    if (socket && connected) {
+      socket.emit('screen:viewer-ready');
+    }
+  }, [socket, connected]);
+
+  const sendScreenOffer = useCallback((targetUserId: string, offer: RTCSessionDescriptionInit) => {
+    if (socket && connected) {
+      socket.emit('screen:offer', {
+        targetUserId,
+        offer: {
+          type: offer.type as 'offer' | 'answer',
+          sdp: offer.sdp || '',
+        }
+      });
+    }
+  }, [socket, connected]);
+
+  const sendScreenAnswer = useCallback((targetUserId: string, answer: RTCSessionDescriptionInit) => {
+    if (socket && connected) {
+      socket.emit('screen:answer', {
+        targetUserId,
+        answer: {
+          type: answer.type as 'offer' | 'answer',
+          sdp: answer.sdp || '',
+        }
+      });
+    }
+  }, [socket, connected]);
+
+  const sendScreenIceCandidate = useCallback((targetUserId: string, candidate: RTCIceCandidateInit) => {
+    if (socket && connected) {
+      socket.emit('screen:ice', {
+        targetUserId,
+        candidate: {
+          candidate: candidate.candidate || '',
+          sdpMLineIndex: candidate.sdpMLineIndex,
+          sdpMid: candidate.sdpMid,
+        }
+      });
+    }
+  }, [socket, connected]);
+
   const clearState = useCallback(async () => {
     if (!socket || !connected) {
       return { success: false, error: '未连接到服务器' };
@@ -412,6 +522,13 @@ export function useWatchRoom(options: UseWatchRoomOptions): UseWatchRoomReturn {
     pause,
     changeVideo,
     changeLiveChannel,
+    registerScreenHelper,
+    startScreenShare,
+    stopScreenShare,
+    notifyViewerReady,
+    sendScreenOffer,
+    sendScreenAnswer,
+    sendScreenIceCandidate,
     clearState,
     sendMessage,
     connect,

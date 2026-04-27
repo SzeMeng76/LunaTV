@@ -4664,6 +4664,37 @@ function PlayPageClient() {
               return '打开快进快退设置面板';
             },
           },
+          {
+            name: '控制栏遮挡度',
+            html: '控制栏遮挡度',
+            icon: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><path d="M3 9h18M9 21V9"></path></svg>',
+            tooltip: (() => {
+              const opacity = parseFloat(localStorage.getItem('control_bar_opacity') || '0.5');
+              return `${Math.round(opacity * 100)}%`;
+            })(),
+            range: [
+              parseFloat(localStorage.getItem('control_bar_opacity') || '0.5'),
+              0.0,
+              0.8,
+              0.1
+            ],
+            onChange: function (item: any) {
+              const opacity = item.range[0];
+              localStorage.setItem('control_bar_opacity', opacity.toString());
+
+              // 实时应用透明度到毛玻璃容器
+              const liquidGlass = document.querySelector('.art-liquid-glass') as HTMLElement;
+              if (liquidGlass) {
+                // 调整背景色透明度
+                liquidGlass.style.setProperty('background-color', `rgba(0, 0, 0, ${opacity})`, 'important');
+                // 同时调整模糊效果：透明度越低，模糊越少
+                const blurAmount = Math.max(0, opacity * 15); // 0-12px
+                liquidGlass.style.setProperty('backdrop-filter', `blur(${blurAmount}px)`, 'important');
+              }
+
+              return `${Math.round(opacity * 100)}%`;
+            },
+          },
           ...(webGPUSupported ? [
             {
               name: '超分设置',
@@ -4935,6 +4966,17 @@ function PlayPageClient() {
         const savedObjectFit = localStorage.getItem('video_object_fit') || 'contain';
         if (video) {
           video.style.objectFit = savedObjectFit;
+        }
+
+        // 🎨 应用保存的控制栏透明度设置（毛玻璃效果）
+        const savedOpacity = parseFloat(localStorage.getItem('control_bar_opacity') || '0.5');
+        const liquidGlass = document.querySelector('.art-liquid-glass') as HTMLElement;
+        if (liquidGlass) {
+          // 调整背景色透明度
+          liquidGlass.style.setProperty('background-color', `rgba(0, 0, 0, ${savedOpacity})`, 'important');
+          // 同时调整模糊效果：透明度越低，模糊越少
+          const blurAmount = Math.max(0, savedOpacity * 15); // 0-12px
+          liquidGlass.style.setProperty('backdrop-filter', `blur(${blurAmount}px)`, 'important');
         }
 
         // 添加分辨率徽章layer
