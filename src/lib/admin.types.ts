@@ -237,6 +237,29 @@ export interface AdminConfig {
     }>;
   };
   CustomSpiderJar?: string;              // 自定义 Spider JAR URL（全局配置）
+  BilibiliConfig?: {
+    enabled: boolean;                    // 是否启用B站功能
+    // 登录信息（可选）
+    sessdata?: string;                   // SESSDATA Cookie
+    bili_jct?: string;                   // bili_jct Cookie
+    buvid3?: string;                     // buvid3 设备标识
+    dedeuserid?: string;                 // DedeUserID
+    // 登录状态
+    loginStatus?: 'not_logged_in' | 'logged_in' | 'expired';
+    loginTime?: number;                  // 登录时间戳
+    expireTime?: number;                 // Cookie 过期时间戳
+    // 用户信息
+    userInfo?: {
+      mid: number;                       // 用户ID
+      username: string;                  // 用户名
+      face: string;                      // 头像URL
+      isVip: boolean;                    // 是否大会员
+      vipType: number;                   // 会员类型 1:月度 2:年度
+      vipExpireDate: number;             // 会员到期时间戳
+    };
+    // 最后检查时间
+    lastCheckTime?: number;
+  };
 }
 
 export interface AdminConfigResult {

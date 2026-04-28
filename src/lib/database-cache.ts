@@ -66,6 +66,7 @@ export class DatabaseCacheManager {
       danmu: { count: 0, size: 0 },
       netdisk: { count: 0, size: 0 },
       youtube: { count: 0, size: 0 },
+      bilibili: { count: 0, size: 0 },
       total: { count: 0, size: 0 }
     };
 
@@ -241,6 +242,10 @@ export class DatabaseCacheManager {
           stats.youtube.count++;
           stats.youtube.size += size;
         }
+        else if (key.startsWith('bilibili-search')) {
+          stats.bilibili.count++;
+          stats.bilibili.size += size;
+        }
         // 移除了search和other分类，只统计明确的缓存类型
 
         stats.total.count++;
@@ -275,6 +280,7 @@ export class DatabaseCacheManager {
           danmu: formatBytes(redisStats.danmu.size),
           netdisk: formatBytes(redisStats.netdisk.size),
           youtube: formatBytes(redisStats.youtube.size),
+          bilibili: formatBytes(redisStats.bilibili.size),
           total: formatBytes(redisStats.total.size)
         }
       };
@@ -288,6 +294,7 @@ export class DatabaseCacheManager {
       danmu: { count: 0, size: 0 },
       netdisk: { count: 0, size: 0 },
       youtube: { count: 0, size: 0 },
+      bilibili: { count: 0, size: 0 },
       total: { count: 0, size: 0 }
     };
 
@@ -300,6 +307,7 @@ export class DatabaseCacheManager {
         key.startsWith('danmu-cache') ||
         key.startsWith('netdisk-search') ||
         key.startsWith('youtube-search') ||
+        key.startsWith('bilibili-search') ||
         key.startsWith('search-') ||
         key.startsWith('cache-') ||
         key === 'lunatv_danmu_cache'
@@ -346,6 +354,10 @@ export class DatabaseCacheManager {
           stats.youtube.count++;
           stats.youtube.size += size;
         }
+        else if (key.startsWith('bilibili-search')) {
+          stats.bilibili.count++;
+          stats.bilibili.size += size;
+        }
         // 移除了search和other分类，只统计明确的缓存类型
 
         stats.total.count++;
@@ -365,13 +377,14 @@ export class DatabaseCacheManager {
         danmu: formatBytes(stats.danmu.size),
         netdisk: formatBytes(stats.netdisk.size),
         youtube: formatBytes(stats.youtube.size),
+        bilibili: formatBytes(stats.bilibili.size),
         total: formatBytes(stats.total.size)
       }
     };
   }
 
   // 清理指定类型的缓存
-  static async clearCacheByType(type: 'douban' | 'shortdrama' | 'tmdb' | 'danmu' | 'netdisk' | 'youtube'): Promise<number> {
+  static async clearCacheByType(type: 'douban' | 'shortdrama' | 'tmdb' | 'danmu' | 'netdisk' | 'youtube' | 'bilibili'): Promise<number> {
     let clearedCount = 0;
     
     try {
@@ -433,7 +446,7 @@ export class DatabaseCacheManager {
           await db.clearExpiredCache('youtube-search');
           // 清理localStorage中的YouTube缓存（兜底）
           if (typeof localStorage !== 'undefined') {
-            const keys = Object.keys(localStorage).filter(key => 
+            const keys = Object.keys(localStorage).filter(key =>
               key.startsWith('youtube-search')
             );
             keys.forEach(key => {
@@ -443,6 +456,21 @@ export class DatabaseCacheManager {
             console.log(`🗑️ localStorage中清理了 ${keys.length} 个YouTube搜索缓存项`);
           }
           console.log('🗑️ YouTube搜索缓存清理完成');
+          break;
+        case 'bilibili':
+          await db.clearExpiredCache('bilibili-search');
+          // 清理localStorage中的Bilibili缓存（兜底）
+          if (typeof localStorage !== 'undefined') {
+            const keys = Object.keys(localStorage).filter(key =>
+              key.startsWith('bilibili-search')
+            );
+            keys.forEach(key => {
+              localStorage.removeItem(key);
+              clearedCount++;
+            });
+            console.log(`🗑️ localStorage中清理了 ${keys.length} 个Bilibili搜索缓存项`);
+          }
+          console.log('🗑️ Bilibili搜索缓存清理完成');
           break;
       }
       
