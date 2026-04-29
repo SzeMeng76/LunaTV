@@ -23,6 +23,7 @@ interface CacheStats {
   danmu: { count: number; size: number };
   netdisk: { count: number; size: number };
   youtube: { count: number; size: number };
+  bilibili: { count: number; size: number };
   search: { count: number; size: number };
   other: { count: number; size: number };
   total: { count: number; size: number };
@@ -34,6 +35,7 @@ interface CacheStats {
     danmu: string;
     netdisk: string;
     youtube: string;
+    bilibili: string;
     search: string;
     other: string;
     total: string;
@@ -90,6 +92,13 @@ const CACHE_TYPES: CacheType[] = [
     description: 'YouTube视频搜索结果缓存（API和演示模式）',
     icon: VideoCameraIcon,
     color: 'text-red-600 bg-red-100'
+  },
+  {
+    key: 'bilibili',
+    name: 'Bilibili搜索',
+    description: 'Bilibili视频和番剧搜索结果缓存',
+    icon: VideoCameraIcon,
+    color: 'text-pink-600 bg-pink-100'
   }
 ];
 

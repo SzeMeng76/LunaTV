@@ -514,6 +514,14 @@ export async function configSelfCheck(adminConfig: AdminConfig): Promise<AdminCo
     };
   }
 
+  // 确保 Bilibili 配置有默认值
+  if (!adminConfig.BilibiliConfig) {
+    adminConfig.BilibiliConfig = {
+      enabled: true,                                    // 默认启用（无需API Key）
+      loginStatus: 'not_logged_in',                     // 默认未登录
+    };
+  }
+
   // 🔥 OIDC 配置迁移：从单 Provider 迁移到多 Provider
   if (adminConfig.OIDCAuthConfig && !adminConfig.OIDCProviders) {
     // 自动识别 Provider ID
