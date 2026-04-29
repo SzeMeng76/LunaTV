@@ -60,6 +60,7 @@
     "react-dom": "^19.0.0",
     "react-icons": "^5.4.0",
     "react-markdown": "^10.1.0",
+    "react-select": "^5.10.2",
     "redis": "^4.6.7",
     "remark-gfm": "^4.0.1",
     "socket.io-client": "^4.8.3",

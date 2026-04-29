@@ -5595,12 +5595,35 @@ function PlayPageClient() {
         }
       });
 
-      // 监听全屏事件，进入全屏后自动隐藏控制栏 + 显示标题层
+      // 监听全屏事件，进入全屏后自动隐藏控制栏 + 显示标题层 + 应用透明度
       artPlayerRef.current.on('fullscreen', (isFullscreen: boolean) => {
         const titleLayer = artPlayerRef.current?.layers['fullscreen-title'];
         if (titleLayer) {
           titleLayer.style.display = isFullscreen ? 'block' : 'none';
         }
+
+        // 应用保存的透明度设置
+        const liquidGlass = artPlayerRef.current?.template?.$player?.querySelector('.art-liquid-glass') as HTMLElement | null;
+        if (liquidGlass) {
+          const savedOpacity = parseFloat(localStorage.getItem('control_bar_opacity') || '0.5');
+          if (isFullscreen) {
+            // 全屏：禁用 backdrop-filter，使用渐变 + 阴影（根据用户透明度调整）
+            liquidGlass.style.setProperty('backdrop-filter', 'none', 'important');
+            liquidGlass.style.setProperty('-webkit-backdrop-filter', 'none', 'important');
+            liquidGlass.style.setProperty('background-color', 'transparent', 'important');
+            liquidGlass.style.setProperty('background-image', `linear-gradient(to top, rgba(0, 0, 0, ${savedOpacity}), rgba(0, 0, 0, ${savedOpacity * 0.6}), transparent)`, 'important');
+            liquidGlass.style.setProperty('box-shadow', `0 -10px 30px rgba(0, 0, 0, ${savedOpacity * 0.8})`, 'important');
+          } else {
+            // 非全屏：恢复毛玻璃效果
+            const blurAmount = Math.max(0, savedOpacity * 15);
+            liquidGlass.style.setProperty('backdrop-filter', `blur(${blurAmount}px)`, 'important');
+            liquidGlass.style.setProperty('-webkit-backdrop-filter', `blur(${blurAmount}px)`, 'important');
+            liquidGlass.style.setProperty('background-color', `rgba(0, 0, 0, ${savedOpacity})`, 'important');
+            liquidGlass.style.setProperty('background-image', 'none', 'important');
+            liquidGlass.style.setProperty('box-shadow', 'none', 'important');
+          }
+        }
+
         if (isFullscreen) {
           // 进入全屏后，延迟100ms触发控制栏自动隐藏
           setTimeout(() => {

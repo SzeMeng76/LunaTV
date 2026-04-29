@@ -4,6 +4,7 @@
 import { ChevronUp, Grid2x2, List, Play, Search, X } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import Select from 'react-select';
 import { useQuery, experimental_streamedQuery as streamedQuery } from '@tanstack/react-query';
 
 import {
@@ -359,12 +360,19 @@ function SearchPageClient() {
   
   // YouTube搜索相关状态
   const [youtubeResults, setYoutubeResults] = useState<any[] | null>(null);
+  const [youtubePopular, setYoutubePopular] = useState<any[] | null>(null); // 热门推荐
+  const [youtubePopularLoading, setYoutubePopularLoading] = useState(false);
+  const [youtubePopularPageToken, setYoutubePopularPageToken] = useState<string | null>(null); // YouTube分页token
+  const [youtubePopularHasMore, setYoutubePopularHasMore] = useState(true); // 是否还有更多
   const [youtubeLoading, setYoutubeLoading] = useState(false);
   const [youtubeError, setYoutubeError] = useState<string | null>(null);
   const [youtubeWarning, setYoutubeWarning] = useState<string | null>(null);
   const [youtubeContentType, setYoutubeContentType] = useState<'all' | 'music' | 'movie' | 'educational' | 'gaming' | 'sports' | 'news'>('all');
   const [youtubeSortOrder, setYoutubeSortOrder] = useState<'relevance' | 'date' | 'rating' | 'viewCount' | 'title'>('relevance');
-  const [youtubeMode, setYoutubeMode] = useState<'search' | 'direct'>('search'); // 新增：YouTube模式
+  const [youtubeMode, setYoutubeMode] = useState<'search' | 'popular'>('popular'); // YouTube模式：搜索或热门推荐
+  const [youtubeRegion, setYoutubeRegion] = useState<string>('US'); // 热门视频地区
+  const [youtubeRegions, setYoutubeRegions] = useState<Array<{id: string, name: string}>>([]);
+  const [youtubeRegionsLoading, setYoutubeRegionsLoading] = useState(false);
 
   // Bilibili搜索相关状态
   const [bilibiliResults, setBilibiliResults] = useState<any[] | null>(null);
@@ -1007,6 +1015,96 @@ function SearchPageClient() {
     }
   };
 
+  // YouTube热门推荐函数
+  const handleYoutubePopular = async (regionCode = youtubeRegion, loadMore = false) => {
+    setYoutubePopularLoading(true);
+    setYoutubeError(null);
+    setYoutubeWarning(null);
+
+    try {
+      let url = `/api/youtube/popular?regionCode=${regionCode}`;
+      if (loadMore && youtubePopularPageToken) {
+        url += `&pageToken=${youtubePopularPageToken}`;
+      }
+      console.log(`🔥 YouTube热门: loadMore=${loadMore}, pageToken=${youtubePopularPageToken}, url=${url}`);
+
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        if (loadMore) {
+          setYoutubePopular(prev => [...(prev || []), ...(data.videos || [])]);
+        } else {
+          setYoutubePopular(data.videos || []);
+        }
+
+        setYoutubePopularPageToken(data.nextPageToken || null);
+        setYoutubePopularHasMore(!!data.nextPageToken);
+        console.log(`✅ YouTube热门加载成功: videos=${data.videos?.length}, nextPageToken=${data.nextPageToken}`);
+
+        // 如果有警告信息，设置警告状态
+        if (data.warning) {
+          setYoutubeWarning(data.warning);
+        }
+      } else {
+        setYoutubeError(data.error || 'YouTube热门视频获取失败');
+        if (!loadMore) {
+          setYoutubePopular([]);
+        }
+      }
+    } catch (error: any) {
+      console.error('YouTube热门视频请求失败:', error);
+      setYoutubeError('YouTube热门视频请求失败，请稍后重试');
+      if (!loadMore) {
+        setYoutubePopular([]);
+      }
+    } finally {
+      setYoutubePopularLoading(false);
+    }
+  };
+
+  // 获取YouTube地区列表
+  const fetchYoutubeRegions = async () => {
+    setYoutubeRegionsLoading(true);
+
+    try {
+      const response = await fetch('/api/youtube/regions');
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setYoutubeRegions(data.regions || []);
+      } else {
+        console.error('获取YouTube地区列表失败:', data.error);
+        // 设置默认地区列表
+        setYoutubeRegions([
+          { id: 'US', name: '美国 (United States)' },
+          { id: 'GB', name: '英国 (United Kingdom)' },
+          { id: 'JP', name: '日本 (Japan)' },
+          { id: 'KR', name: '韩国 (South Korea)' },
+          { id: 'TW', name: '台湾 (Taiwan)' },
+          { id: 'HK', name: '香港 (Hong Kong)' },
+          { id: 'SG', name: '新加坡 (Singapore)' },
+          { id: 'MY', name: '马来西亚 (Malaysia)' }
+        ]);
+      }
+    } catch (error: any) {
+      console.error('获取YouTube地区列表请求失败:', error);
+      // 设置默认地区列表
+      setYoutubeRegions([
+        { id: 'US', name: '美国 (United States)' },
+        { id: 'GB', name: '英国 (United Kingdom)' },
+        { id: 'JP', name: '日本 (Japan)' },
+        { id: 'KR', name: '韩国 (South Korea)' },
+        { id: 'TW', name: '台湾 (Taiwan)' },
+        { id: 'HK', name: '香港 (Hong Kong)' },
+        { id: 'SG', name: '新加坡 (Singapore)' },
+        { id: 'MY', name: '马来西亚 (Malaysia)' }
+      ]);
+    } finally {
+      setYoutubeRegionsLoading(false);
+    }
+  };
+
   // Bilibili搜索函数
   const handleBilibiliSearch = async (query: string) => {
     if (!query.trim()) return;
@@ -1043,11 +1141,13 @@ function SearchPageClient() {
     setBilibiliPopularLoading(true);
 
     try {
-      const response = await fetch('/api/bilibili/popular?pn=1&ps=20');
+      console.log(`🔥 Bilibili热门首次加载`);
+      const response = await fetch(`/api/bilibili/popular?pn=1&ps=50`);
       const data = await response.json();
 
       if (response.ok && data.success) {
         setBilibiliPopular(data.videos || []);
+        console.log(`✅ Bilibili热门加载成功: ${data.videos?.length} 个视频`);
       } else {
         console.error('获取热门视频失败:', data.error);
         setBilibiliPopular([]);
@@ -1163,9 +1263,11 @@ function SearchPageClient() {
         setAcgTriggerSearch(prev => !prev);
       }
     } else if (searchType === 'youtube') {
-      // YouTube搜索
-      router.push(`/search?q=${encodeURIComponent(trimmed)}`);
-      handleYouTubeSearch(trimmed);
+      // YouTube搜索 - 只在搜索模式下执行
+      if (youtubeMode === 'search') {
+        router.push(`/search?q=${encodeURIComponent(trimmed)}`);
+        handleYouTubeSearch(trimmed);
+      }
     } else if (searchType === 'bilibili') {
       // Bilibili搜索 - 只在搜索模式下执行
       if (bilibiliMode === 'search') {
@@ -1284,11 +1386,21 @@ function SearchPageClient() {
                     setNetdiskTotal(0);
                     setTmdbActorResults(null);
                     setTmdbActorError(null);
-                    // 如果当前有搜索词，立即触发YouTube搜索
-                    const currentQuery = searchQuery.trim() || searchParams?.get('q');
-                    if (currentQuery && showResults) {
-                      // 如果已经在YouTube标签，或者是新切换，都强制重新搜索
-                      setTimeout(() => handleYouTubeSearch(currentQuery), 0);
+                    // 如果是热门推荐模式，加载热门视频和地区列表
+                    if (youtubeMode === 'popular') {
+                      if (!youtubePopular) {
+                        setTimeout(() => handleYoutubePopular(), 0);
+                      }
+                      if (youtubeRegions.length === 0) {
+                        setTimeout(() => fetchYoutubeRegions(), 0);
+                      }
+                    }
+                    // 如果是搜索模式且当前有搜索词，立即触发YouTube搜索
+                    if (youtubeMode === 'search') {
+                      const currentQuery = searchQuery.trim() || searchParams?.get('q');
+                      if (currentQuery && showResults) {
+                        setTimeout(() => handleYouTubeSearch(currentQuery), 0);
+                      }
                     }
                   }}
                   className={`flex-shrink-0 px-4 sm:px-6 py-3 text-sm sm:text-base font-bold rounded-xl transition-all duration-300 whitespace-nowrap min-w-[110px] sm:min-w-0 ${
@@ -1422,7 +1534,9 @@ function SearchPageClient() {
 
         {/* 搜索结果或搜索历史 */}
         <div className='max-w-[95%] mx-auto mt-12 overflow-visible'>
-          {showResults ? (
+          {showResults ||
+           (searchType === 'youtube' && (youtubeMode === 'popular' || youtubeResults)) ||
+           (searchType === 'bilibili' && (bilibiliMode === 'popular' || bilibiliResults)) ? (
             <section className='mb-12'>
               {searchType === 'netdisk' ? (
                 /* 网盘搜索结果 */
@@ -1599,14 +1713,14 @@ function SearchPageClient() {
                 <>
                   <div className='mb-4'>
                     <h2 className='text-xl font-bold text-gray-800 dark:text-gray-200'>
-                      YouTube视频
-                      {youtubeLoading && youtubeMode === 'search' && (
+                      {youtubeMode === 'search' ? 'YouTube搜索' : '🔥 YouTube热门推荐'}
+                      {(youtubeLoading || youtubePopularLoading) && (
                         <span className='ml-2 inline-block align-middle'>
                           <span className='inline-block h-3 w-3 border-2 border-gray-300 border-t-red-500 rounded-full animate-spin'></span>
                         </span>
                       )}
                     </h2>
-                    
+
                     {/* YouTube模式切换 */}
                     <div className='mt-3 flex items-center gap-2'>
                       <div className='inline-flex items-center bg-gray-100 dark:bg-gray-800 rounded-lg p-1 space-x-1'>
@@ -1614,7 +1728,8 @@ function SearchPageClient() {
                           type='button'
                           onClick={() => {
                             setYoutubeMode('search');
-                            // 切换到搜索模式时清除直接播放相关状态
+                            // 切换到搜索模式时清除热门推荐
+                            setYoutubePopular(null);
                             setYoutubeError(null);
                             setYoutubeWarning(null);
                           }}
@@ -1624,47 +1739,39 @@ function SearchPageClient() {
                               : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
                           }`}
                         >
-                          🔍 搜索视频
+                          🔍 搜索
                         </button>
                         <button
                           type='button'
                           onClick={() => {
-                            setYoutubeMode('direct');
-                            // 切换到直接播放模式时清除搜索结果
+                            setYoutubeMode('popular');
+                            // 切换到热门推荐模式时清除搜索结果
                             setYoutubeResults(null);
                             setYoutubeError(null);
                             setYoutubeWarning(null);
+                            // 如果还没加载热门推荐，立即加载
+                            if (!youtubePopular) {
+                              handleYoutubePopular();
+                            }
+                            // 如果还没加载地区列表，立即加载
+                            if (youtubeRegions.length === 0) {
+                              fetchYoutubeRegions();
+                            }
                           }}
                           className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                            youtubeMode === 'direct'
+                            youtubeMode === 'popular'
                               ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
                               : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
                           }`}
                         >
-                          🔗 直接播放
+                          🔥 热门推荐
                         </button>
                       </div>
                     </div>
                   </div>
 
                   {/* YouTube内容区域 */}
-                  {youtubeMode === 'direct' ? (
-                    /* 直接播放模式 */
-                    <div className='space-y-4'>
-                      <div className='bg-blue-50 border border-blue-200 rounded-lg p-4 dark:bg-blue-900/20 dark:border-blue-800'>
-                        <div className='flex items-center text-blue-800 dark:text-blue-200 mb-2'>
-                          <svg className='w-5 h-5 mr-2' fill='currentColor' viewBox='0 0 20 20'>
-                            <path fillRule='evenodd' d='M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z' clipRule='evenodd' />
-                          </svg>
-                          <span className='font-medium'>💡 直接播放YouTube视频</span>
-                        </div>
-                        <p className='text-blue-700 dark:text-blue-300 text-sm'>
-                          粘贴任意YouTube链接，无需搜索即可直接播放视频。支持所有常见的YouTube链接格式。
-                        </p>
-                      </div>
-                      <DirectYouTubePlayer />
-                    </div>
-                  ) : (
+                  {youtubeMode === 'search' ? (
                     /* 搜索模式 */
                     <>
                       {/* 内容类型选择器 */}
@@ -1768,7 +1875,134 @@ function SearchPageClient() {
                         </div>
                       ) : !youtubeLoading ? (
                         <div className='text-center text-gray-500 py-8 dark:text-gray-400'>
-                          未找到相关YouTube视频
+                          在上方搜索框输入关键词
+                          <br />
+                          开始搜索YouTube视频
+                        </div>
+                      ) : null}
+                    </>
+                  ) : (
+                    /* 热门推荐模式 */
+                    <>
+                      {/* 地区选择器 */}
+                      <div className='mt-3 mb-4'>
+                        <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+                          选择地区：
+                        </label>
+                        <Select
+                          value={youtubeRegions.find(r => r.id === youtubeRegion) ? { value: youtubeRegion, label: youtubeRegions.find(r => r.id === youtubeRegion)!.name } : null}
+                          onChange={(option) => {
+                            if (option) {
+                              setYoutubeRegion(option.value);
+                              // 切换地区时重置分页
+                              setYoutubePopularPageToken(null);
+                              setYoutubePopularHasMore(true);
+                              handleYoutubePopular(option.value);
+                            }
+                          }}
+                          options={youtubeRegions
+                            .sort((a, b) => a.name.localeCompare(b.name))
+                            .map((region) => ({
+                              value: region.id,
+                              label: region.name
+                            }))}
+                          isDisabled={youtubePopularLoading}
+                          isSearchable={true}
+                          placeholder='搜索或选择地区...'
+                          noOptionsMessage={() => '未找到匹配的地区'}
+                          className='max-w-md'
+                          classNamePrefix='react-select'
+                          styles={{
+                            control: (base, state) => ({
+                              ...base,
+                              borderColor: state.isFocused ? '#ef4444' : '#d1d5db',
+                              boxShadow: state.isFocused ? '0 0 0 2px rgba(239, 68, 68, 0.2)' : 'none',
+                              '&:hover': {
+                                borderColor: '#ef4444'
+                              }
+                            }),
+                            option: (base, state) => ({
+                              ...base,
+                              backgroundColor: state.isSelected ? '#ef4444' : state.isFocused ? '#fee2e2' : 'white',
+                              color: state.isSelected ? 'white' : '#1f2937',
+                              '&:active': {
+                                backgroundColor: '#ef4444'
+                              }
+                            })
+                          }}
+                        />
+                      </div>
+
+                      {/* 警告信息显示 */}
+                      {youtubeWarning && (
+                        <div className='mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg dark:bg-yellow-900/20 dark:border-yellow-800'>
+                          <div className='flex items-center text-yellow-800 dark:text-yellow-200'>
+                            <svg className='w-4 h-4 mr-2' fill='currentColor' viewBox='0 0 20 20'>
+                              <path fillRule='evenodd' d='M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z' clipRule='evenodd' />
+                            </svg>
+                            <span className='text-sm'>{youtubeWarning}</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 错误信息显示 */}
+                      {youtubeError ? (
+                        <div className='text-center py-8'>
+                          <div className='text-red-500 mb-2'>{youtubeError}</div>
+                          <button
+                            onClick={() => handleYoutubePopular()}
+                            className='px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition-colors'
+                          >
+                            重试
+                          </button>
+                        </div>
+                      ) : youtubePopular && youtubePopular.length > 0 ? (
+                        <>
+                          <div className='mb-3 text-sm text-gray-500 dark:text-gray-400'>
+                            当前显示 {youtubeRegions.find(r => r.id === youtubeRegion)?.name || youtubeRegion} 的热门视频
+                          </div>
+                          <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
+                            {youtubePopular.map((video, index) => (
+                              <YouTubeVideoCard key={video.id || index} video={video} />
+                            ))}
+                          </div>
+
+                          {/* 加载更多按钮 */}
+                          {youtubePopularHasMore && (
+                            <div className='mt-6 text-center'>
+                              <button
+                                onClick={() => handleYoutubePopular(youtubeRegion, true)}
+                                disabled={youtubePopularLoading}
+                                className='relative px-8 py-4 rounded-2xl bg-gradient-to-r from-red-50 via-pink-50 to-rose-50 dark:from-red-900/20 dark:via-pink-900/20 dark:to-rose-900/20 border border-red-200/50 dark:border-red-700/50 shadow-lg backdrop-blur-sm overflow-hidden hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed'
+                              >
+                                {youtubePopularLoading ? (
+                                  <>
+                                    <div className='absolute inset-0 bg-gradient-to-r from-red-400/10 via-pink-400/10 to-rose-400/10 animate-pulse'></div>
+                                    <div className='relative flex items-center gap-3 justify-center'>
+                                      <div className='relative'>
+                                        <div className='animate-spin rounded-full h-6 w-6 border-[3px] border-red-200 dark:border-red-800'></div>
+                                        <div className='absolute inset-0 animate-spin rounded-full h-6 w-6 border-[3px] border-transparent border-t-red-500 dark:border-t-red-400'></div>
+                                      </div>
+                                      <div className='flex items-center gap-1'>
+                                        <span className='text-sm font-medium text-gray-700 dark:text-gray-300'>加载中</span>
+                                        <span className='flex gap-0.5'>
+                                          <span className='animate-bounce' style={{ animationDelay: '0ms' }}>.</span>
+                                          <span className='animate-bounce' style={{ animationDelay: '150ms' }}>.</span>
+                                          <span className='animate-bounce' style={{ animationDelay: '300ms' }}>.</span>
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </>
+                                ) : (
+                                  <span className='text-sm font-medium text-gray-700 dark:text-gray-300'>👆 点我加载更多</span>
+                                )}
+                              </button>
+                            </div>
+                          )}
+                        </>
+                      ) : !youtubePopularLoading ? (
+                        <div className='text-center text-gray-500 py-8 dark:text-gray-400'>
+                          暂无热门推荐内容
                         </div>
                       ) : null}
                     </>
@@ -2290,7 +2524,7 @@ function SearchPageClient() {
               )}
 
               {/* YouTube特殊模式显示 - 在搜索历史之后 */}
-              {searchType === 'youtube' && (
+              {(searchType as string) === 'youtube' && (
                 <section className='mb-12'>
                   <div className='mb-4'>
                     <h2 className='text-xl font-bold text-gray-800 dark:text-gray-200'>
@@ -2318,41 +2552,34 @@ function SearchPageClient() {
                         <button
                           type='button'
                           onClick={() => {
-                            setYoutubeMode('direct');
+                            setYoutubeMode('popular');
+                            setYoutubePopular(null);
                             setYoutubeResults(null);
                             setYoutubeError(null);
                             setYoutubeWarning(null);
+                            // 加载热门推荐
+                            if (!youtubePopular) {
+                              handleYoutubePopular();
+                            }
+                            // 加载地区列表
+                            if (youtubeRegions.length === 0) {
+                              fetchYoutubeRegions();
+                            }
                           }}
                           className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                            youtubeMode === 'direct'
+                            youtubeMode === 'popular'
                               ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
                               : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
                           }`}
                         >
-                          🔗 直接播放
+                          🔥 热门推荐
                         </button>
                       </div>
                     </div>
                   </div>
 
                   {/* YouTube内容区域 */}
-                  {youtubeMode === 'direct' ? (
-                    /* 直接播放模式 */
-                    <div className='space-y-4'>
-                      <div className='bg-blue-50 border border-blue-200 rounded-lg p-4 dark:bg-blue-900/20 dark:border-blue-800'>
-                        <div className='flex items-center text-blue-800 dark:text-blue-200 mb-2'>
-                          <svg className='w-5 h-5 mr-2' fill='currentColor' viewBox='0 0 20 20'>
-                            <path fillRule='evenodd' d='M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z' clipRule='evenodd' />
-                          </svg>
-                          <span className='font-medium'>💡 直接播放YouTube视频</span>
-                        </div>
-                        <p className='text-blue-700 dark:text-blue-300 text-sm'>
-                          粘贴任意YouTube链接，无需搜索即可直接播放视频。支持所有常见的YouTube链接格式。
-                        </p>
-                      </div>
-                      <DirectYouTubePlayer />
-                    </div>
-                  ) : (
+                  {youtubeMode === 'search' ? (
                     /* 搜索模式提示 */
                     <div className='text-center text-gray-500 py-8 dark:text-gray-400'>
                       <div className='mb-4'>
@@ -2363,12 +2590,23 @@ function SearchPageClient() {
                       <p className='text-lg mb-2'>在上方搜索框输入关键词</p>
                       <p className='text-sm'>开始搜索YouTube视频</p>
                     </div>
+                  ) : (
+                    /* 热门推荐模式提示 */
+                    <div className='text-center text-gray-500 py-8 dark:text-gray-400'>
+                      <div className='mb-4'>
+                        <svg className='w-16 h-16 mx-auto text-gray-300 dark:text-gray-600' fill='currentColor' viewBox='0 0 20 20'>
+                          <path fillRule='evenodd' d='M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z' clipRule='evenodd' />
+                        </svg>
+                      </div>
+                      <p className='text-lg mb-2'>点击上方"热门推荐"按钮</p>
+                      <p className='text-sm'>查看YouTube热门视频</p>
+                    </div>
                   )}
                 </section>
               )}
 
               {/* Bilibili特殊模式显示 - 在搜索历史之后 */}
-              {searchType === 'bilibili' && (
+              {(searchType as string) === 'bilibili' && (
                 <section className='mb-12'>
                   <div className='mb-4'>
                     <h2 className='text-xl font-bold text-gray-800 dark:text-gray-200'>
