@@ -182,9 +182,11 @@ const BilibiliUpuserCard = ({ upuser }: BilibiliUpuserCardProps) => {
                           <p className="text-xs text-gray-900 dark:text-gray-100 line-clamp-2">
                             {video.title}
                           </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
-                            {formatNumber(video.play)} 播放
-                          </p>
+                          {video.play && video.play !== '0' && (
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              {formatNumber(video.play)} 播放
+                            </p>
+                          )}
                         </div>
                       </div>
                     )}

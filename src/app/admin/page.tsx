@@ -35,6 +35,7 @@ import {
   ExternalLink,
   FileText,
   FolderOpen,
+  Layout,
   Settings,
   Shield,
   TestTube,
@@ -70,6 +71,7 @@ import DownloadConfig from '@/components/OfflineDownloadConfig';
 import EmbyConfig from '@/components/EmbyConfig';
 import CustomAdFilterConfig from '@/components/CustomAdFilterConfig';
 import WatchRoomConfig from '@/components/WatchRoomConfig';
+import HomePageConfig from '@/components/HomePageConfig';
 import PerformanceMonitor from '@/components/admin/PerformanceMonitor';
 import InviteCodeManager from '@/components/InviteCodeManager';
 import PageLayout from '@/components/PageLayout';
@@ -7546,6 +7548,7 @@ function AdminPageClient() {
     sourceTest: false,
     liveSource: false,
     siteConfig: false,
+    homePageConfig: false,
     categoryConfig: false,
     netdiskConfig: false,
     aiRecommendConfig: false,
@@ -7711,6 +7714,21 @@ function AdminPageClient() {
               onToggle={() => toggleTab('siteConfig')}
             >
               <SiteConfigComponent config={config} refreshConfig={fetchConfig} />
+            </CollapsibleTab>
+
+            {/* 首页模块配置标签 */}
+            <CollapsibleTab
+              title='首页模块配置'
+              icon={
+                <Layout
+                  size={20}
+                  className='text-gray-600 dark:text-gray-400'
+                />
+              }
+              isExpanded={expandedTabs.homePageConfig}
+              onToggle={() => toggleTab('homePageConfig')}
+            >
+              <HomePageConfig config={config} refreshConfig={fetchConfig} />
             </CollapsibleTab>
 
             {/* 用户配置标签 */}

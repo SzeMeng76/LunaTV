@@ -902,7 +902,7 @@ function DoubanPageClient() {
 
   return (
     <PageLayout activePath={getActivePath()}>
-      <div className='overflow-visible -mt-6 md:mt-0'>
+      <div className='overflow-visible -mt-6 md:mt-0 pb-40 md:pb-safe-bottom'>
         {/* 页面标题和选择器 */}
         <div className='mb-6 sm:mb-8 space-y-4 sm:space-y-6'>
           {/* 页面标题 */}

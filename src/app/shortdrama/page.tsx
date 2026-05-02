@@ -198,7 +198,7 @@ export default function ShortDramaPage() {
 
   return (
     <PageLayout activePath="/shortdrama">
-      <div className="min-h-screen -mt-6 md:mt-0">
+      <div className="min-h-screen -mt-6 md:mt-0 pb-40 md:pb-safe-bottom">
         <div className="">
           {/* 页面标题 */}
           <div className="mb-6">

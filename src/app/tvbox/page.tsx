@@ -434,7 +434,7 @@ export default function TVBoxConfigPage() {
 
   return (
     <PageLayout activePath="/tvbox">
-      <div className="max-w-4xl mx-auto p-4 md:p-6">
+      <div className="max-w-4xl mx-auto p-4 md:p-6 pb-40 md:pb-safe-bottom">
         {/* 页面标题 */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-4">

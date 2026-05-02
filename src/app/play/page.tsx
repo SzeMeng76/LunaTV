@@ -4832,8 +4832,12 @@ function PlayPageClient() {
 
                     // 🎯 动态弹幕密度控制 - 根据当前屏幕上的弹幕数量决定是否显示
                     const currentVisibleCount = document.querySelectorAll('.art-danmuku [data-state="emit"]').length;
-                    const maxConcurrentDanmu = devicePerformance === 'high' ? 60 :
-                                             devicePerformance === 'medium' ? 40 : 25;
+
+                    // 🎯 全屏时降低弹幕密度，避免控制栏卡顿
+                    const isFullscreen = artPlayerRef.current?.fullscreen;
+                    const maxConcurrentDanmu = isFullscreen
+                      ? (devicePerformance === 'high' ? 40 : devicePerformance === 'medium' ? 25 : 15)
+                      : (devicePerformance === 'high' ? 60 : devicePerformance === 'medium' ? 40 : 25);
 
                     if (currentVisibleCount >= maxConcurrentDanmu) {
                       // 🔥 当弹幕密度过高时，随机丢弃部分弹幕，保持流畅性
@@ -6022,7 +6026,7 @@ function PlayPageClient() {
   return (
     <>
       <PageLayout activePath='/play'>
-      <div className='flex flex-col gap-3 py-4 px-5 lg:px-[3rem] 2xl:px-20'>
+      <div className='flex flex-col gap-3 py-4 px-5 lg:px-[3rem] 2xl:px-20 pb-40 md:pb-safe-bottom'>
         {/* 第一行：影片标题 */}
         <div className='py-1'>
           <h1 className='text-xl font-semibold text-gray-900 dark:text-gray-100'>
