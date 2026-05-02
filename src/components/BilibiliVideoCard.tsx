@@ -187,9 +187,9 @@ const BilibiliVideoCard = ({ video }: BilibiliVideoCardProps) => {
         </div>
 
         {/* 播放数据（仅视频） */}
-        {!isBangumi && (video.play || video.favorites || video.review) && (
+        {!isBangumi && (video.play > 0 || video.favorites > 0 || video.review > 0) && (
           <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400 mb-3">
-            {video.play && (
+            {video.play > 0 && (
               <span className="flex items-center">
                 <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M8 5v14l11-7z"/>
@@ -197,7 +197,7 @@ const BilibiliVideoCard = ({ video }: BilibiliVideoCardProps) => {
                 {formatNumber(video.play)}
               </span>
             )}
-            {video.favorites && (
+            {video.favorites > 0 && (
               <span className="flex items-center">
                 <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/>
@@ -205,7 +205,7 @@ const BilibiliVideoCard = ({ video }: BilibiliVideoCardProps) => {
                 {formatNumber(video.favorites)}
               </span>
             )}
-            {video.review && (
+            {video.review > 0 && (
               <span className="flex items-center">
                 <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4V4c0-1.1-.9-2-2-2zm0 15.17L18.83 16H4V4h16v13.17z"/>

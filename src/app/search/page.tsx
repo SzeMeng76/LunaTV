@@ -1312,7 +1312,7 @@ function SearchPageClient() {
 
   return (
     <PageLayout activePath='/search'>
-      <div className='overflow-visible mb-10 -mt-6 md:mt-0'>
+      <div className='overflow-visible mb-10 -mt-6 md:mt-0 pb-40 md:pb-safe-bottom'>
         {/* 搜索框区域 - 美化版 */}
         <div className='mb-8'>
           {/* 搜索类型选项卡 - 移动优先响应式设计 */}

@@ -25,7 +25,7 @@
 ![HLS.js](https://img.shields.io/badge/HLS.js-1.6.16-ec407a)
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Docker Ready](https://img.shields.io/badge/Docker-ready-blue?logo=docker)
-![Version](https://img.shields.io/badge/Version-6.4.0-orange)
+![Version](https://img.shields.io/badge/Version-6.5.0-orange)
 
 </div>
 
@@ -33,7 +33,7 @@
 
 ## 📢 About
 
-This project is a deep fork of **MoonTV**, starting from **v4.3.1** and continuously iterated to the current **v6.4.0**, with 60+ major feature modules and 400+ detail optimizations. See [CHANGELOG](CHANGELOG) for all new features.
+This project is a deep fork of **MoonTV**, starting from **v4.3.1** and continuously iterated to the current **v6.5.0**, with 60+ major feature modules and 400+ detail optimizations. See [CHANGELOG](CHANGELOG) for all new features.
 
 ## ⚠️ Disclaimer
 
@@ -44,7 +44,8 @@ This project is for educational purposes only. Do not use for commercial purpose
 ### 🎥 Content Ecosystem
 - **Multi-User Watch Room**: Synchronized playback, screen sharing, real-time chat, voice calls, WebRTC streaming, adjustable quality presets → [Documentation](docs/deployment/WATCH_ROOM_DEPLOYMENT.md)
 - **Emby Private Library**: Complete Emby media server integration with passwordless login, auth mode switcher, and multi-audio track playback → [Documentation](docs/integration/EMBY_GUIDE.md)
-- **YouTube Integration**: Full YouTube search, playback, and live streaming
+- **YouTube Integration**: Full YouTube search, playback, live streaming, popular videos with region selector
+- **Bilibili Integration**: Bilibili search and playback with UP主 videos, popular videos, QR code login, cookie management
 - **Cloud Drive Search**: Advanced filtering and cache management
 - **ACG Torrent Search**: Mikan Project dual-source system
 - **IPTV Live TV**: m3u/m3u8 subscription, FLV streaming, EPG guide, M3U import/export
@@ -53,6 +54,7 @@ This project is for educational purposes only. Do not use for commercial purpose
 - **Search List View**: Grid/list dual view mode with image preview and quick play button
 
 ### 🎬 Player Enhancements
+- **Control Bar Opacity Control**: Customizable control bar obstruction (10-80%), real-time transparency and blur adjustment for better subtitle visibility
 - **Seek Buttons**: Customizable seek forward/backward buttons with Netflix-style design and responsive layout
 - **Ultrawide Monitor Support**: Video display mode control for ultrawide monitors
 - **Skip Presets**: Flexible intro/outro template system with import/export and validation
@@ -148,7 +150,7 @@ pnpm dev
 - **Frontend**: Next.js 16.1.0 + React 19.0.0
 - **Language**: TypeScript 5.8.3
 - **Styling**: TailwindCSS 4.1.18
-- **Video Player**: ArtPlayer 5.4.0 + HLS.js 1.6.15
+- **Video Player**: ArtPlayer 5.4.0 + HLS.js 1.6.16
 - **State Management**: TanStack Query 5.91.0
 - **Database**: Upstash Redis + Kvrocks
 - **Deployment**: Docker / Vercel / Render

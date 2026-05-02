@@ -25,7 +25,7 @@
 ![HLS.js](https://img.shields.io/badge/HLS.js-1.6.16-ec407a)
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Docker Ready](https://img.shields.io/badge/Docker-ready-blue?logo=docker)
-![Version](https://img.shields.io/badge/Version-6.4.0-orange)
+![Version](https://img.shields.io/badge/Version-6.5.0-orange)
 
 </div>
 
@@ -33,7 +33,7 @@
 
 ## 📢 项目说明
 
-本项目是在 **MoonTV** 基础上进行的深度二次开发版本，从 **v4.3.1** 版本开始，持续迭代至当前 **v6.4.0**，累计新增 60+ 重大功能模块，400+ 细节优化。所有新增功能详见 [CHANGELOG](CHANGELOG)。
+本项目是在 **MoonTV** 基础上进行的深度二次开发版本，从 **v4.3.1** 版本开始，持续迭代至当前 **v6.5.0**，累计新增 60+ 重大功能模块，400+ 细节优化。所有新增功能详见 [CHANGELOG](CHANGELOG)。
 
 ## ⚠️ 重要声明
 
@@ -44,7 +44,8 @@
 ### 🎥 内容生态扩展
 - **多人观影房**：支持同步播放、屏幕共享、实时聊天、语音通话，WebRTC 实时传输，画质预设可调 → [详细文档](docs/deployment/WATCH_ROOM_DEPLOYMENT.md)
 - **Emby 私有库**：完整的 Emby 媒体服务器集成，支持免密登录、认证模式切换和多音轨播放 → [详细文档](docs/integration/EMBY_GUIDE.md)
-- **YouTube 集成**：完整的 YouTube 搜索、播放、直播功能
+- **YouTube 集成**：完整的 YouTube 搜索、播放、直播功能，支持热门视频和地区选择器
+- **Bilibili 集成**：Bilibili 搜索和播放功能，支持 UP主视频、热门视频、QR码登录、Cookie管理
 - **网盘搜索**：集成高级筛选和缓存管理的网盘资源搜索
 - **ACG 种子搜索**：Mikan Project 双源系统，丰富的动漫资源
 - **IPTV 直播**：m3u/m3u8 订阅、FLV 直播流、EPG 节目单、M3U 导入导出
@@ -53,6 +54,7 @@
 - **搜索列表视图**：支持列表/网格双视图模式切换，列表模式带图片预览和快捷播放
 
 ### 🎬 播放器增强
+- **控制栏透明度控制**：可自定义控制栏遮挡度（10-80%），实时调整透明度和模糊效果，改善字幕可见性
 - **快进快退按钮**：可自定义时间间隔的快进快退按钮，Netflix 风格设计，响应式布局
 - **超宽显示器适配**：视频显示模式控制，完美支持超宽显示器
 - **片头片尾跳过预设**：灵活的片头片尾模板系统，支持导入导出和验证
@@ -148,7 +150,7 @@ pnpm dev
 - **前端框架**：Next.js 16.1.0 + React 19.0.0
 - **开发语言**：TypeScript 5.8.3
 - **样式方案**：TailwindCSS 4.1.18
-- **视频播放**：ArtPlayer 5.4.0 + HLS.js 1.6.15
+- **视频播放**：ArtPlayer 5.4.0 + HLS.js 1.6.16
 - **状态管理**：TanStack Query 5.91.0
 - **数据库**：Upstash Redis + Kvrocks
 - **部署方案**：Docker / Vercel / Render
