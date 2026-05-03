@@ -498,9 +498,13 @@ function HomeClient({ initialConfig }: {
   useEffect(() => {
     if (!homeData) return;
 
+    let isMounted = true;
+    const timeouts: NodeJS.Timeout[] = [];
+    const abortController = new AbortController();
+
     // 延迟加载电影详情 - 只在显示电影模块时加载
     if (state.homePageConfig.showHotMovies && homeData.hotMovies.length > 0) {
-      setTimeout(() => {
+      const timeout = setTimeout(() => {
         Promise.all(
           homeData.hotMovies.slice(0, 2).map(async (movie) => {
             try {
@@ -519,23 +523,26 @@ function HomeClient({ initialConfig }: {
             return null;
           })
         ).then((results) => {
-          dispatch({
-            type: 'UPDATE_HOT_MOVIES',
-            payload: (prev) => {
-              const base = prev.length > 0 ? prev : homeData.hotMovies;
-              return base.map(m => {
-                const detail = results.find(r => r?.id === m.id);
-                return detail ? { ...m, ...detail } : m;
-              });
-            }
-          });
+          if (isMounted) {
+            dispatch({
+              type: 'UPDATE_HOT_MOVIES',
+              payload: (prev) => {
+                const base = prev.length > 0 ? prev : homeData.hotMovies;
+                return base.map(m => {
+                  const detail = results.find(r => r?.id === m.id);
+                  return detail ? { ...m, ...detail } : m;
+                });
+              }
+            });
+          }
         });
       }, 2000);
+      timeouts.push(timeout);
     }
 
     // 延迟加载剧集详情 - 只在显示剧集模块时加载
     if (state.homePageConfig.showHotTvShows && homeData.hotTvShows.length > 0) {
-      setTimeout(() => {
+      const timeout = setTimeout(() => {
         Promise.all(
           homeData.hotTvShows.slice(0, 2).map(async (show) => {
             try {
@@ -554,27 +561,30 @@ function HomeClient({ initialConfig }: {
             return null;
           })
         ).then((results) => {
-          dispatch({
-            type: 'UPDATE_HOT_TV_SHOWS',
-            payload: (prev) => {
-              const base = prev.length > 0 ? prev : homeData.hotTvShows;
-              return base.map(s => {
-                const detail = results.find(r => r?.id === s.id);
-                return detail ? { ...s, ...detail } : s;
-              });
-            }
-          });
+          if (isMounted) {
+            dispatch({
+              type: 'UPDATE_HOT_TV_SHOWS',
+              payload: (prev) => {
+                const base = prev.length > 0 ? prev : homeData.hotTvShows;
+                return base.map(s => {
+                  const detail = results.find(r => r?.id === s.id);
+                  return detail ? { ...s, ...detail } : s;
+                });
+              }
+            });
+          }
         });
       }, 2000);
+      timeouts.push(timeout);
     }
 
     // 延迟加载动漫详情 - 只在显示动漫模块时加载
     if (state.homePageConfig.showNewAnime && homeData.hotAnime.length > 0) {
-      setTimeout(() => {
+      const timeout = setTimeout(() => {
         const anime = homeData.hotAnime[0];
         getDoubanDetails(anime.id)
           .then((detailsRes) => {
-            if (detailsRes.code === 200 && detailsRes.data) {
+            if (isMounted && detailsRes.code === 200 && detailsRes.data) {
               dispatch({
                 type: 'UPDATE_HOT_ANIME',
                 payload: (prev) => {
@@ -585,18 +595,21 @@ function HomeClient({ initialConfig }: {
             }
           })
           .catch((error) => {
-            console.warn(`获取动漫 ${anime.id} 详情失败:`, error);
+            if (isMounted) {
+              console.warn(`获取动漫 ${anime.id} 详情失败:`, error);
+            }
           });
       }, 3000);
+      timeouts.push(timeout);
     }
 
     // 延迟加载综艺详情 - 只在显示综艺模块时加载
     if (state.homePageConfig.showHotVariety && homeData.hotVarietyShows.length > 0) {
-      setTimeout(() => {
+      const timeout = setTimeout(() => {
         const show = homeData.hotVarietyShows[0];
         getDoubanDetails(show.id)
           .then((detailsRes) => {
-            if (detailsRes.code === 200 && detailsRes.data) {
+            if (isMounted && detailsRes.code === 200 && detailsRes.data) {
               dispatch({
                 type: 'UPDATE_HOT_VARIETY_SHOWS',
                 payload: (prev) => {
@@ -607,13 +620,18 @@ function HomeClient({ initialConfig }: {
             }
           })
           .catch((error) => {
-            console.warn(`获取综艺 ${show.id} 详情失败:`, error);
+            if (isMounted) {
+              console.warn(`获取综艺 ${show.id} 详情失败:`, error);
+            }
           });
       }, 3000);
+      timeouts.push(timeout);
     }
 
     // 🔄 异步加载即将上映数据
-    fetch('/api/release-calendar?limit=100')
+    fetch('/api/release-calendar?limit=100', {
+      signal: abortController.signal,
+    })
       .then(res => {
         if (!res.ok) {
           console.error('获取即将上映数据失败，状态码:', res.status);
@@ -622,6 +640,8 @@ function HomeClient({ initialConfig }: {
         return res.json();
       })
       .then(upcomingData => {
+        if (!isMounted) return;
+
         if (upcomingData?.items) {
           const releases = upcomingData.items;
           console.log('📅 获取到的即将上映数据:', releases.length, '条');
@@ -632,6 +652,8 @@ function HomeClient({ initialConfig }: {
               workerRef.current = new Worker(new URL('../workers/releaseCalendar.worker.ts', import.meta.url));
 
               workerRef.current.onmessage = (e: MessageEvent) => {
+                if (!isMounted) return;
+
                 const { selectedItems, stats, error } = e.data;
 
                 if (error) {
@@ -645,12 +667,15 @@ function HomeClient({ initialConfig }: {
               };
 
               workerRef.current.onerror = (error) => {
+                if (!isMounted) return;
                 console.error('📅 [Worker] 错误:', error);
                 dispatch({ type: 'SET_UPCOMING_RELEASES', payload: [] });
               };
             } catch (error) {
-              console.error('📅 [Worker] 初始化失败:', error);
-              dispatch({ type: 'SET_UPCOMING_RELEASES', payload: [] });
+              if (isMounted) {
+                console.error('📅 [Worker] 初始化失败:', error);
+                dispatch({ type: 'SET_UPCOMING_RELEASES', payload: [] });
+              }
             }
           }
 
@@ -675,9 +700,18 @@ function HomeClient({ initialConfig }: {
         }
       })
       .catch(error => {
-        console.warn('获取即将上映数据失败:', error);
-        dispatch({ type: 'SET_UPCOMING_RELEASES', payload: [] });
+        if (isMounted && (error as Error).name !== 'AbortError') {
+          console.warn('获取即将上映数据失败:', error);
+          dispatch({ type: 'SET_UPCOMING_RELEASES', payload: [] });
+        }
       });
+
+    // Cleanup function
+    return () => {
+      isMounted = false;
+      abortController.abort();
+      timeouts.forEach(timeout => clearTimeout(timeout));
+    };
   }, [homeData, state.homePageConfig]);
 
   // 🚀 TanStack Query - 使用 useMutation 管理清空收藏操作

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Film, Popcorn, Star, Sparkles } from 'lucide-react';
 
 /**
@@ -29,35 +29,57 @@ export function CinematicLoadingFallback() {
   const [messageIndex, setMessageIndex] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
   const [bingWallpaper, setBingWallpaper] = useState<string>('');
+  const isMountedRef = useRef(true);
 
   // Fetch Bing wallpaper
   useEffect(() => {
+    const abortController = new AbortController();
+
     const fetchBingWallpaper = async () => {
       try {
-        const response = await fetch('/api/bing-wallpaper');
+        const response = await fetch('/api/bing-wallpaper', {
+          signal: abortController.signal,
+        });
         const data = await response.json();
-        if (data.url) {
+        if (data.url && isMountedRef.current) {
           setBingWallpaper(data.url);
         }
       } catch (error) {
-        console.log('Failed to fetch Bing wallpaper:', error);
+        if (isMountedRef.current && (error as Error).name !== 'AbortError') {
+          console.log('Failed to fetch Bing wallpaper:', error);
+        }
       }
     };
 
     fetchBingWallpaper();
+
+    return () => {
+      abortController.abort();
+    };
   }, []);
 
   // Fade in after mount
   useEffect(() => {
-    setIsVisible(true);
+    if (isMountedRef.current) {
+      setIsVisible(true);
+    }
   }, []);
 
   // Rotate messages every 2.5 seconds
   useEffect(() => {
     const interval = setInterval(() => {
-      setMessageIndex((prev) => (prev + 1) % loadingMessages.length);
+      if (isMountedRef.current) {
+        setMessageIndex((prev) => (prev + 1) % loadingMessages.length);
+      }
     }, 2500);
     return () => clearInterval(interval);
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
   }, []);
 
   const currentMessage = loadingMessages[messageIndex];
