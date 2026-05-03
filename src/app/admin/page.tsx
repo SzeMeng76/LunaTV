@@ -285,6 +285,23 @@ interface LoadingState {
   [key: string]: boolean;
 }
 
+// 根据名称自动生成 Key
+const generateKeyFromName = (name: string): string => {
+  if (!name) return '';
+
+  const initials = name
+    .split('')
+    .map((char) => {
+      if (/[a-zA-Z]/.test(char)) return char.toUpperCase();
+      if (/[0-9]/.test(char)) return char;
+      const result = pinyin(char, { pattern: 'first' });
+      return result || char;
+    })
+    .join('');
+
+  return initials || name.substring(0, 4).toUpperCase();
+};
+
 const useLoadingState = () => {
   const [loadingStates, setLoadingStates] = useState<LoadingState>({});
 
@@ -3811,22 +3828,6 @@ const VideoSourceConfig = ({
       (r) => r.status === 'no_results' || r.status === 'invalid',
     ).length;
   }, [validationResults]);
-
-  const generateKeyFromName = (name: string): string => {
-    if (!name) return '';
-
-    const initials = name
-      .split('')
-      .map((char) => {
-        if (/[a-zA-Z]/.test(char)) return char.toUpperCase();
-        if (/[0-9]/.test(char)) return char;
-        const result = pinyin(char, { pattern: 'first' });
-        return result || char;
-      })
-      .join('');
-
-    return initials || name.substring(0, 4).toUpperCase();
-  };
 
   const handleAddSource = () => {
     if (!newSource.name || !newSource.key || !newSource.api) return;

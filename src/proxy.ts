@@ -117,7 +117,17 @@ async function getTrustedNetworkConfig(
 // 从 API 获取游客浏览配置（直接读数据库，不走缓存）
 async function getGuestBrowseConfig(request: NextRequest): Promise<boolean> {
   try {
+    // 自动识别协议：Docker 容器内部使用 HTTP，外部使用原协议
     const url = new URL('/api/server-config', request.url);
+    const isDocker = process.env.DOCKER_BUILD === 'true';
+    
+    if (isDocker) {
+      // Docker 环境：使用 HTTP + localhost
+      url.protocol = 'http:';
+      url.hostname = 'localhost';
+      url.port = '3000';
+    }
+    
     url.searchParams.set('key', 'SiteConfig');
 
     console.log('[GuestMode] Fetching SiteConfig from:', url.toString());

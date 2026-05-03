@@ -150,6 +150,11 @@ function HeroBanner({
     onSwipeRight: handlePrev,
   });
 
+  // 早期返回检查（必须在所有 Hook 之后）
+  if (!items || items.length === 0) {
+    return null;
+  }
+
   // 预加载背景图片（只预加载当前和相邻的图片，优化性能）
   useEffect(() => {
     // 预加载当前、前一张、后一张
@@ -169,10 +174,6 @@ function HeroBanner({
     });
   }, [items, currentIndex]);
 
-  if (!items || items.length === 0) {
-    return null;
-  }
-
   const currentItem = items[currentIndex];
   const backgroundImage = getHDBackdrop(currentItem.backdrop) || currentItem.poster;
 
@@ -185,7 +186,7 @@ function HeroBanner({
     enableVideo,
   });
 
-  // 🎯 检查并刷新缺失的 trailer URL（组件挂载时）
+  //  检查并刷新缺失的 trailer URL（组件挂载时）
   useEffect(() => {
     // 如果禁用了视频，不需要刷新 trailer
     if (!enableVideo) {

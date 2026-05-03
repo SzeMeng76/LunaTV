@@ -72,7 +72,16 @@ export const UserMenu: React.FC = () => {
   const [isContinueWatchingOpen, setIsContinueWatchingOpen] = useState(false);
   const [isFavoritesOpen, setIsFavoritesOpen] = useState(false);
   const [authInfo, setAuthInfo] = useState<AuthInfo | null>(null);
-  const [isGuest, setIsGuest] = useState(false);
+  const [isGuest, setIsGuest] = useState(() => {
+    // 初始化时检查 cookie，确保服务端和客户端一致
+    if (typeof window !== 'undefined') {
+      const guestCookie = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('guest_mode='));
+      return !!guestCookie && guestCookie.split('=')[1] === 'true';
+    }
+    return false;
+  });
   const [storageType, setStorageType] = useState<string>(() => {
     // 🔧 优化：直接从 RUNTIME_CONFIG 读取初始值，避免默认值导致的多次渲染
     if (typeof window !== 'undefined') {
