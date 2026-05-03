@@ -3,6 +3,7 @@
 import { Suspense } from 'react';
 import { getConfig } from '@/lib/config';
 import HomeClient from './HomeClient';
+import { CinematicLoadingFallback } from '@/components/CinematicLoadingFallback';
 
 // 🔥 Server Component - 获取配置并传递给客户端
 export default async function Home() {
@@ -24,7 +25,7 @@ export default async function Home() {
   // 客户端的 useHomePageQueries 会根据配置条件性地获取数据
 
   return (
-    <Suspense>
+    <Suspense fallback={<CinematicLoadingFallback />}>
       <HomeClient initialConfig={homePageConfig} />
     </Suspense>
   );

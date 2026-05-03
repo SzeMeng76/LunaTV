@@ -57,21 +57,26 @@ export function useRefreshTrailerUrlMutation() {
     mutationFn: async ({ doubanId }) => {
       console.log('[HeroBanner] 检测到trailer URL过期，重新获取:', doubanId);
 
-      const response = await fetch(`/api/douban/refresh-trailer?id=${doubanId}`);
+      try {
+        const response = await fetch(`/api/douban/refresh-trailer?id=${doubanId}`);
 
-      if (!response.ok) {
-        console.error('[HeroBanner] 刷新trailer URL失败:', response.status);
+        if (!response.ok) {
+          console.error('[HeroBanner] 刷新trailer URL失败:', response.status);
+          return null;
+        }
+
+        const data = await response.json();
+        if (data.code === 200 && data.data?.trailerUrl) {
+          console.log('[HeroBanner] 成功获取新的trailer URL');
+          return data.data.trailerUrl;
+        }
+
+        console.warn('[HeroBanner] 未能获取新的trailer URL:', data.message);
+        return null;
+      } catch (error) {
+        console.error('[HeroBanner] 刷新trailer URL时发生网络错误:', error);
         return null;
       }
-
-      const data = await response.json();
-      if (data.code === 200 && data.data?.trailerUrl) {
-        console.log('[HeroBanner] 成功获取新的trailer URL');
-        return data.data.trailerUrl;
-      }
-
-      console.warn('[HeroBanner] 未能获取新的trailer URL:', data.message);
-      return null;
     },
     onSuccess: (newUrl, { doubanId }) => {
       if (newUrl) {
@@ -92,6 +97,9 @@ export function useRefreshTrailerUrlMutation() {
           }
         );
       }
+    },
+    onError: (error, { doubanId }) => {
+      console.error('[HeroBanner] Mutation失败:', { doubanId, error });
     },
   });
 }
