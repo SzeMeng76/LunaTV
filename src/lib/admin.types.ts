@@ -27,6 +27,8 @@ export interface AdminConfig {
     CustomAdFilterVersion?: number;
     // 默认用户组
     DefaultUserTags?: string[];
+    // 访客模式
+    AllowGuestBrowse?: boolean;
   };
   UserConfig: {
     AllowRegister?: boolean; // 是否允许用户注册，默认 true
@@ -46,20 +48,20 @@ export interface AdminConfig {
       oidcSub?: string; // OIDC的唯一标识符(sub字段)
       embyConfig?: {
         sources: Array<{
-          key: string;                       // 唯一标识
-          name: string;                      // 显示名称
-          enabled: boolean;                  // 是否启用
-          ServerURL: string;                 // Emby服务器地址
-          ApiKey?: string;                   // API Key（推荐方式）
-          Username?: string;                 // 用户名
-          Password?: string;                 // 密码
-          UserId?: string;                   // 用户ID
-          AuthToken?: string;                // 认证令牌
-          Libraries?: string[];              // 媒体库ID
-          removeEmbyPrefix?: boolean;        // 移除/emby前缀
-          appendMediaSourceId?: boolean;     // 拼接MediaSourceId参数
-          transcodeMp4?: boolean;            // 转码mp4
-          proxyPlay?: boolean;               // 视频播放代理
+          key: string; // 唯一标识
+          name: string; // 显示名称
+          enabled: boolean; // 是否启用
+          ServerURL: string; // Emby服务器地址
+          ApiKey?: string; // API Key（推荐方式）
+          Username?: string; // 用户名
+          Password?: string; // 密码
+          UserId?: string; // 用户ID
+          AuthToken?: string; // 认证令牌
+          Libraries?: string[]; // 媒体库ID
+          removeEmbyPrefix?: boolean; // 移除/emby前缀
+          appendMediaSourceId?: boolean; // 拼接MediaSourceId参数
+          transcodeMp4?: boolean; // 转码mp4
+          proxyPlay?: boolean; // 视频播放代理
         }>;
       };
     }[];
@@ -90,7 +92,7 @@ export interface AdminConfig {
   LiveConfig?: {
     key: string;
     name: string;
-    url: string;  // m3u 地址
+    url: string; // m3u 地址
     ua?: string;
     epg?: string; // 节目单
     isTvBox?: boolean;
@@ -99,163 +101,163 @@ export interface AdminConfig {
     disabled?: boolean;
   }[];
   NetDiskConfig?: {
-    enabled: boolean;                    // 是否启用网盘搜索
-    pansouUrl: string;                   // PanSou服务地址
-    timeout: number;                     // 请求超时时间(秒)
-    enabledCloudTypes: string[];         // 启用的网盘类型
+    enabled: boolean; // 是否启用网盘搜索
+    pansouUrl: string; // PanSou服务地址
+    timeout: number; // 请求超时时间(秒)
+    enabledCloudTypes: string[]; // 启用的网盘类型
   };
   AIRecommendConfig?: {
-    enabled: boolean;                    // 是否启用AI推荐功能
-    apiUrl: string;                      // OpenAI兼容API地址
-    apiKey: string;                      // API密钥
-    model: string;                       // 模型名称
-    temperature: number;                 // 温度参数 0-2
-    maxTokens: number;                   // 最大token数
+    enabled: boolean; // 是否启用AI推荐功能
+    apiUrl: string; // OpenAI兼容API地址
+    apiKey: string; // API密钥
+    model: string; // 模型名称
+    temperature: number; // 温度参数 0-2
+    maxTokens: number; // 最大token数
     // 🔥 智能协调器（Orchestrator）配置
-    enableOrchestrator?: boolean;        // 是否启用智能协调器（意图分析+联网搜索）
-    enableWebSearch?: boolean;           // 是否启用联网搜索
-    tavilyApiKeys?: string[];            // Tavily API Keys（支持多个轮询，1000次/月免费）
+    enableOrchestrator?: boolean; // 是否启用智能协调器（意图分析+联网搜索）
+    enableWebSearch?: boolean; // 是否启用联网搜索
+    tavilyApiKeys?: string[]; // Tavily API Keys（支持多个轮询，1000次/月免费）
   };
   YouTubeConfig?: {
-    enabled: boolean;                    // 是否启用YouTube搜索功能
-    apiKey: string;                      // YouTube Data API v3密钥
-    enableDemo: boolean;                 // 是否启用演示模式
-    maxResults: number;                  // 每页最大搜索结果数
-    enabledRegions: string[];            // 启用的地区代码列表
-    enabledCategories: string[];         // 启用的视频分类列表
+    enabled: boolean; // 是否启用YouTube搜索功能
+    apiKey: string; // YouTube Data API v3密钥
+    enableDemo: boolean; // 是否启用演示模式
+    maxResults: number; // 每页最大搜索结果数
+    enabledRegions: string[]; // 启用的地区代码列表
+    enabledCategories: string[]; // 启用的视频分类列表
   };
   TVBoxSecurityConfig?: {
-    enableAuth: boolean;                 // 是否启用Token验证
-    token: string;                       // 访问Token
-    enableIpWhitelist: boolean;          // 是否启用IP白名单
-    allowedIPs: string[];               // 允许的IP地址列表
-    enableRateLimit: boolean;            // 是否启用频率限制
-    rateLimit: number;                   // 每分钟允许的请求次数
+    enableAuth: boolean; // 是否启用Token验证
+    token: string; // 访问Token
+    enableIpWhitelist: boolean; // 是否启用IP白名单
+    allowedIPs: string[]; // 允许的IP地址列表
+    enableRateLimit: boolean; // 是否启用频率限制
+    rateLimit: number; // 每分钟允许的请求次数
   };
   TVBoxProxyConfig?: {
-    enabled: boolean;                    // 是否为TVBox启用Cloudflare Worker代理
-    proxyUrl: string;                    // Cloudflare Worker代理地址（例如：https://corsapi.smone.workers.dev）
+    enabled: boolean; // 是否为TVBox启用Cloudflare Worker代理
+    proxyUrl: string; // Cloudflare Worker代理地址（例如：https://corsapi.smone.workers.dev）
   };
   VideoProxyConfig?: {
-    enabled: boolean;                    // 是否为普通视频源启用Cloudflare Worker代理
-    proxyUrl: string;                    // Cloudflare Worker代理地址（例如：https://corsapi.smone.workers.dev）
+    enabled: boolean; // 是否为普通视频源启用Cloudflare Worker代理
+    proxyUrl: string; // Cloudflare Worker代理地址（例如：https://corsapi.smone.workers.dev）
   };
   TelegramAuthConfig?: {
-    enabled: boolean;                    // 是否启用Telegram登录
-    botToken: string;                    // Telegram Bot Token
-    botUsername: string;                 // Telegram Bot Username
-    autoRegister: boolean;               // 是否自动注册新用户
+    enabled: boolean; // 是否启用Telegram登录
+    botToken: string; // Telegram Bot Token
+    botUsername: string; // Telegram Bot Username
+    autoRegister: boolean; // 是否自动注册新用户
     buttonSize: 'large' | 'medium' | 'small'; // 按钮大小
-    showAvatar: boolean;                 // 是否显示用户头像
-    requestWriteAccess: boolean;         // 是否请求发送消息权限
+    showAvatar: boolean; // 是否显示用户头像
+    requestWriteAccess: boolean; // 是否请求发送消息权限
   };
   // 旧的单 Provider 配置（保留用于向后兼容）
   OIDCAuthConfig?: {
-    enabled: boolean;                    // 是否启用OIDC登录
-    enableRegistration: boolean;         // 是否启用OIDC注册
-    issuer: string;                      // OIDC Issuer URL (用于自动发现)
-    authorizationEndpoint: string;       // 授权端点
-    tokenEndpoint: string;               // Token端点
-    userInfoEndpoint: string;            // 用户信息端点
-    clientId: string;                    // OIDC Client ID
-    clientSecret: string;                // OIDC Client Secret
-    buttonText: string;                  // OIDC登录按钮文字
-    minTrustLevel: number;               // 最低信任等级（仅LinuxDo网站有效，为0时不判断）
+    enabled: boolean; // 是否启用OIDC登录
+    enableRegistration: boolean; // 是否启用OIDC注册
+    issuer: string; // OIDC Issuer URL (用于自动发现)
+    authorizationEndpoint: string; // 授权端点
+    tokenEndpoint: string; // Token端点
+    userInfoEndpoint: string; // 用户信息端点
+    clientId: string; // OIDC Client ID
+    clientSecret: string; // OIDC Client Secret
+    buttonText: string; // OIDC登录按钮文字
+    minTrustLevel: number; // 最低信任等级（仅LinuxDo网站有效，为0时不判断）
   };
   // 新的多 Provider 配置
   OIDCProviders?: {
-    id: string;                          // Provider ID (google, github, microsoft, linuxdo, custom)
-    name: string;                        // 显示名称
-    enabled: boolean;                    // 是否启用此Provider
-    enableRegistration: boolean;         // 是否启用注册
-    issuer: string;                      // OIDC Issuer URL
-    authorizationEndpoint: string;       // 授权端点
-    tokenEndpoint: string;               // Token端点
-    userInfoEndpoint: string;            // 用户信息端点
-    clientId: string;                    // Client ID
-    clientSecret: string;                // Client Secret
-    buttonText: string;                  // 按钮文字
-    minTrustLevel: number;               // 最低信任等级
+    id: string; // Provider ID (google, github, microsoft, linuxdo, custom)
+    name: string; // 显示名称
+    enabled: boolean; // 是否启用此Provider
+    enableRegistration: boolean; // 是否启用注册
+    issuer: string; // OIDC Issuer URL
+    authorizationEndpoint: string; // 授权端点
+    tokenEndpoint: string; // Token端点
+    userInfoEndpoint: string; // 用户信息端点
+    clientId: string; // Client ID
+    clientSecret: string; // Client Secret
+    buttonText: string; // 按钮文字
+    minTrustLevel: number; // 最低信任等级
   }[];
   ShortDramaConfig?: {
-    primaryApiUrl: string;               // 主API地址
-    alternativeApiUrl: string;           // 备用API地址（私密）
-    enableAlternative: boolean;          // 是否启用备用API
+    primaryApiUrl: string; // 主API地址
+    alternativeApiUrl: string; // 备用API地址（私密）
+    enableAlternative: boolean; // 是否启用备用API
   };
   DownloadConfig?: {
-    enabled: boolean;                    // 是否启用下载功能（全局开关）
+    enabled: boolean; // 是否启用下载功能（全局开关）
   };
   WatchRoomConfig?: {
-    enabled: boolean;                    // 是否启用观影室功能
-    serverUrl: string;                   // 外部观影室服务器地址
-    authKey: string;                     // 观影室服务器认证密钥
+    enabled: boolean; // 是否启用观影室功能
+    serverUrl: string; // 外部观影室服务器地址
+    authKey: string; // 观影室服务器认证密钥
   };
   DoubanConfig?: {
-    enablePuppeteer: boolean;            // 是否启用 Puppeteer 绕过 Challenge（默认 false）
-    cookies?: string;                    // 豆瓣认证 Cookies（包含 dbcl2, frodotk_db, ck 等）
+    enablePuppeteer: boolean; // 是否启用 Puppeteer 绕过 Challenge（默认 false）
+    cookies?: string; // 豆瓣认证 Cookies（包含 dbcl2, frodotk_db, ck 等）
   };
   CronConfig?: {
-    enableAutoRefresh: boolean;          // 是否启用自动刷新播放记录和收藏（默认 true）
-    maxRecordsPerRun: number;            // 每次运行最多处理的记录数（默认 100）
-    onlyRefreshRecent: boolean;          // 仅刷新最近活跃的记录（默认 true）
-    recentDays: number;                  // 最近活跃的天数定义（默认 30）
-    onlyRefreshOngoing: boolean;         // 仅刷新连载中的剧集（默认 true）
+    enableAutoRefresh: boolean; // 是否启用自动刷新播放记录和收藏（默认 true）
+    maxRecordsPerRun: number; // 每次运行最多处理的记录数（默认 100）
+    onlyRefreshRecent: boolean; // 仅刷新最近活跃的记录（默认 true）
+    recentDays: number; // 最近活跃的天数定义（默认 30）
+    onlyRefreshOngoing: boolean; // 仅刷新连载中的剧集（默认 true）
   };
   TrustedNetworkConfig?: {
-    enabled: boolean;                    // 是否启用信任网络模式（内网免登录）
-    trustedIPs: string[];               // 信任的IP/CIDR列表（如 192.168.0.0/16, 10.0.0.0/8）
+    enabled: boolean; // 是否启用信任网络模式（内网免登录）
+    trustedIPs: string[]; // 信任的IP/CIDR列表（如 192.168.0.0/16, 10.0.0.0/8）
   };
   DanmuApiConfig?: {
-    enabled: boolean;                    // 是否启用弹幕API（默认启用）
-    useCustomApi: boolean;               // 是否使用自定义API（false则使用默认API）
-    customApiUrl: string;                // 自定义弹幕API地址
-    customToken: string;                 // 自定义API Token
-    timeout: number;                     // 请求超时时间（秒），默认15
+    enabled: boolean; // 是否启用弹幕API（默认启用）
+    useCustomApi: boolean; // 是否使用自定义API（false则使用默认API）
+    customApiUrl: string; // 自定义弹幕API地址
+    customToken: string; // 自定义API Token
+    timeout: number; // 请求超时时间（秒），默认15
   };
   EmbyConfig?: {
     // 多源配置
     Sources?: Array<{
-      key: string;                       // 唯一标识，如 'emby1', 'emby2'
-      name: string;                      // 显示名称，如 '家庭Emby', '公司Emby'
-      enabled: boolean;                  // 是否启用
-      ServerURL: string;                 // Emby服务器地址
-      ApiKey?: string;                   // API Key（推荐方式）
-      Username?: string;                 // 用户名（或使用API Key）
-      Password?: string;                 // 密码
-      UserId?: string;                   // 用户ID（登录后获取）
-      AuthToken?: string;                // 认证令牌（用户名密码登录后获取）
-      Libraries?: string[];              // 要显示的媒体库ID（可选，默认全部）
-      LastSyncTime?: number;             // 最后同步时间戳
-      ItemCount?: number;                // 媒体项数量
-      isDefault?: boolean;               // 是否为默认源（用于向后兼容）
-      isPublic?: boolean;                // 是否对所有用户开放（公共源）
+      key: string; // 唯一标识，如 'emby1', 'emby2'
+      name: string; // 显示名称，如 '家庭Emby', '公司Emby'
+      enabled: boolean; // 是否启用
+      ServerURL: string; // Emby服务器地址
+      ApiKey?: string; // API Key（推荐方式）
+      Username?: string; // 用户名（或使用API Key）
+      Password?: string; // 密码
+      UserId?: string; // 用户ID（登录后获取）
+      AuthToken?: string; // 认证令牌（用户名密码登录后获取）
+      Libraries?: string[]; // 要显示的媒体库ID（可选，默认全部）
+      LastSyncTime?: number; // 最后同步时间戳
+      ItemCount?: number; // 媒体项数量
+      isDefault?: boolean; // 是否为默认源（用于向后兼容）
+      isPublic?: boolean; // 是否对所有用户开放（公共源）
       // 高级流媒体选项
-      removeEmbyPrefix?: boolean;        // 播放链接移除/emby前缀
-      appendMediaSourceId?: boolean;     // 拼接MediaSourceId参数
-      transcodeMp4?: boolean;            // 转码mp4
-      proxyPlay?: boolean;               // 视频播放代理开关
+      removeEmbyPrefix?: boolean; // 播放链接移除/emby前缀
+      appendMediaSourceId?: boolean; // 拼接MediaSourceId参数
+      transcodeMp4?: boolean; // 转码mp4
+      proxyPlay?: boolean; // 视频播放代理开关
     }>;
   };
-  CustomSpiderJar?: string;              // 自定义 Spider JAR URL（全局配置）
+  CustomSpiderJar?: string; // 自定义 Spider JAR URL（全局配置）
   BilibiliConfig?: {
-    enabled: boolean;                    // 是否启用B站功能
+    enabled: boolean; // 是否启用B站功能
     // 登录信息（可选）
-    sessdata?: string;                   // SESSDATA Cookie
-    bili_jct?: string;                   // bili_jct Cookie
-    buvid3?: string;                     // buvid3 设备标识
-    dedeuserid?: string;                 // DedeUserID
+    sessdata?: string; // SESSDATA Cookie
+    bili_jct?: string; // bili_jct Cookie
+    buvid3?: string; // buvid3 设备标识
+    dedeuserid?: string; // DedeUserID
     // 登录状态
     loginStatus?: 'not_logged_in' | 'logged_in' | 'expired';
-    loginTime?: number;                  // 登录时间戳
-    expireTime?: number;                 // Cookie 过期时间戳
+    loginTime?: number; // 登录时间戳
+    expireTime?: number; // Cookie 过期时间戳
     // 用户信息
     userInfo?: {
-      mid: number;                       // 用户ID
-      username: string;                  // 用户名
-      face: string;                      // 头像URL
-      isVip: boolean;                    // 是否大会员
-      vipType: number;                   // 会员类型 1:月度 2:年度
-      vipExpireDate: number;             // 会员到期时间戳
+      mid: number; // 用户ID
+      username: string; // 用户名
+      face: string; // 头像URL
+      isVip: boolean; // 是否大会员
+      vipType: number; // 会员类型 1:月度 2:年度
+      vipExpireDate: number; // 会员到期时间戳
     };
     // 最后检查时间
     lastCheckTime?: number;
@@ -269,6 +271,7 @@ export interface AdminConfig {
     showNewAnime: boolean;
     showHotVariety: boolean;
     showHotShortDramas: boolean;
+    allowGuestBrowse?: boolean;
   };
 }
 

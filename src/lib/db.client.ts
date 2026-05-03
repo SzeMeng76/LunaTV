@@ -683,9 +683,18 @@ async function fetchWithAuth(
 ): Promise<Response> {
   const res = await fetchWithTimeout(url, options);
   if (!res.ok) {
-    // 如果是 401 未授权，跳转到登录页面
+    // 如果是 401 未授权，检查是否为游客模式
     if (res.status === 401) {
-      // 调用 logout 接口
+      const guestCookie = document.cookie
+        .split(';')
+        .find((c) => c.trim().startsWith('guest_mode='));
+
+      if (guestCookie) {
+        // 游客模式下，返回空数据而不是跳转
+        return new Response(JSON.stringify({}), { status: 200 });
+      }
+
+      // 非游客模式，执行原有跳转逻辑
       try {
         await fetch('/api/logout', {
           method: 'POST',

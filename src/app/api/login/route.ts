@@ -121,6 +121,14 @@ export async function POST(req: NextRequest) {
         secure: false, // 根据协议自动设置
       });
 
+      // 清除访客模式 cookie
+      response.cookies.set('guest_mode', '', {
+        path: '/',
+        expires: new Date(0),
+        sameSite: 'lax',
+        httpOnly: false,
+      });
+
       return response;
     }
 
@@ -156,6 +164,14 @@ export async function POST(req: NextRequest) {
         sameSite: 'lax', // 改为 lax 以支持 PWA
         httpOnly: false, // PWA 需要客户端可访问
         secure: false, // 根据协议自动设置
+      });
+
+      // 清除访客模式 cookie
+      response.cookies.set('guest_mode', '', {
+        path: '/',
+        expires: new Date(0),
+        sameSite: 'lax',
+        httpOnly: false,
       });
 
       return response;
@@ -197,6 +213,14 @@ export async function POST(req: NextRequest) {
         sameSite: 'lax',
         httpOnly: false,
         secure: false,
+      });
+
+      // 清除访客模式 cookie
+      response.cookies.set('guest_mode', '', {
+        path: '/',
+        expires: new Date(0),
+        sameSite: 'lax',
+        httpOnly: false,
       });
 
       return response;

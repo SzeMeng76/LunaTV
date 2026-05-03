@@ -542,7 +542,7 @@ export default function SourceBrowserPage() {
     if (mergedYear) params.set('year', mergedYear);
     if (previewDoubanId) params.set('douban_id', String(previewDoubanId));
     params.set('prefer', 'true');
-    router.push(`/play?${params.toString()}`);
+    window.open(`/play?${params.toString()}`, '_blank');
   };
 
   return (

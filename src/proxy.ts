@@ -5,7 +5,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthInfoFromCookie } from '@/lib/auth';
 
 // 信任网络配置缓存（从 API 获取）
-let trustedNetworkCache: { enabled: boolean; trustedIPs: string[] } | null = null;
+let trustedNetworkCache: { enabled: boolean; trustedIPs: string[] } | null =
+  null;
 let trustedNetworkCacheTime = 0;
 let trustedNetworkFetched = false;
 let trustedNetworkVersion = ''; // 跟踪配置版本，用于立即失效缓存
@@ -13,23 +14,31 @@ let trustedNetworkVersion = ''; // 跟踪配置版本，用于立即失效缓存
 const CACHE_TTL = 86400000; // 24 小时缓存（配置变化时通过 cookie 版本号立即刷新）
 
 // 从环境变量获取信任网络配置（优先）
-function getTrustedNetworkFromEnv(): { enabled: boolean; trustedIPs: string[] } | null {
+function getTrustedNetworkFromEnv(): {
+  enabled: boolean;
+  trustedIPs: string[];
+} | null {
   const trustedIPs = process.env.TRUSTED_NETWORK_IPS;
   if (!trustedIPs) return null;
 
   return {
     enabled: true,
-    trustedIPs: trustedIPs.split(',').map(ip => ip.trim()).filter(Boolean),
+    trustedIPs: trustedIPs
+      .split(',')
+      .map((ip) => ip.trim())
+      .filter(Boolean),
   };
 }
 
 // 从 API 获取信任网络配置（数据库）
-async function getTrustedNetworkFromAPI(request: NextRequest): Promise<{ enabled: boolean; trustedIPs: string[] } | null> {
+async function getTrustedNetworkFromAPI(
+  request: NextRequest,
+): Promise<{ enabled: boolean; trustedIPs: string[] } | null> {
   const now = Date.now();
 
   // 检查缓存是否有效
   if (trustedNetworkFetched && trustedNetworkCache !== null) {
-    if ((now - trustedNetworkCacheTime) < CACHE_TTL) {
+    if (now - trustedNetworkCacheTime < CACHE_TTL) {
       if (!trustedNetworkCache.enabled) {
         return null;
       }
@@ -39,7 +48,7 @@ async function getTrustedNetworkFromAPI(request: NextRequest): Promise<{ enabled
 
   // 如果已经获取过且结果是"未配置"，使用长缓存时间
   if (trustedNetworkFetched && trustedNetworkCache === null) {
-    if ((now - trustedNetworkCacheTime) < CACHE_TTL) {
+    if (now - trustedNetworkCacheTime < CACHE_TTL) {
       return null;
     }
   }
@@ -84,7 +93,9 @@ async function getTrustedNetworkFromAPI(request: NextRequest): Promise<{ enabled
 }
 
 // 获取信任网络配置（环境变量优先，然后数据库）
-async function getTrustedNetworkConfig(request: NextRequest): Promise<{ enabled: boolean; trustedIPs: string[] } | null> {
+async function getTrustedNetworkConfig(
+  request: NextRequest,
+): Promise<{ enabled: boolean; trustedIPs: string[] } | null> {
   // 环境变量优先
   const envConfig = getTrustedNetworkFromEnv();
   if (envConfig) return envConfig;
@@ -101,6 +112,29 @@ async function getTrustedNetworkConfig(request: NextRequest): Promise<{ enabled:
 
   // 尝试从数据库获取（内部已处理禁用状态的缓存优化）
   return await getTrustedNetworkFromAPI(request);
+}
+
+// 从 API 获取游客浏览配置（直接读数据库，不走缓存）
+async function getGuestBrowseConfig(request: NextRequest): Promise<boolean> {
+  try {
+    const url = new URL('/api/server-config', request.url);
+    url.searchParams.set('key', 'SiteConfig');
+
+    const response = await fetch(url.toString(), {
+      headers: { 'x-internal-request': 'true' },
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      if (data.SiteConfig) {
+        return data.SiteConfig.AllowGuestBrowse ?? false;
+      }
+    }
+  } catch {
+    // 忽略错误
+  }
+
+  return false;
 }
 
 // 获取客户端 IP
@@ -135,7 +169,9 @@ function isIPInCIDR(clientIP: string, cidr: string): boolean {
     if (cidr.includes('/')) {
       const [network] = cidr.split('/');
       // 简化：检查是否以相同前缀开始
-      return clientIP.toLowerCase().startsWith(network.toLowerCase().replace(/:+$/, ''));
+      return clientIP
+        .toLowerCase()
+        .startsWith(network.toLowerCase().replace(/:+$/, ''));
     }
     return clientIP.toLowerCase() === cidr.toLowerCase();
   }
@@ -149,11 +185,20 @@ function isIPInCIDR(clientIP: string, cidr: string): boolean {
     const clientParts = clientIP.split('.').map(Number);
 
     if (clientParts.length !== 4 || networkParts.length !== 4) return false;
-    if (clientParts.some(p => isNaN(p)) || networkParts.some(p => isNaN(p))) return false;
+    if (clientParts.some((p) => isNaN(p)) || networkParts.some((p) => isNaN(p)))
+      return false;
 
     // 转换为 32 位整数
-    const networkInt = (networkParts[0] << 24) | (networkParts[1] << 16) | (networkParts[2] << 8) | networkParts[3];
-    const clientInt = (clientParts[0] << 24) | (clientParts[1] << 16) | (clientParts[2] << 8) | clientParts[3];
+    const networkInt =
+      (networkParts[0] << 24) |
+      (networkParts[1] << 16) |
+      (networkParts[2] << 8) |
+      networkParts[3];
+    const clientInt =
+      (clientParts[0] << 24) |
+      (clientParts[1] << 16) |
+      (clientParts[2] << 8) |
+      clientParts[3];
 
     // 生成掩码
     const maskInt = mask === 0 ? 0 : (~0 << (32 - mask)) >>> 0;
@@ -167,7 +212,7 @@ function isIPInCIDR(clientIP: string, cidr: string): boolean {
 
 // 检查 IP 是否在信任网络中
 function isIPTrusted(clientIP: string, trustedIPs: string[]): boolean {
-  return trustedIPs.some(trustedIP => isIPInCIDR(clientIP, trustedIP.trim()));
+  return trustedIPs.some((trustedIP) => isIPInCIDR(clientIP, trustedIP.trim()));
 }
 
 // 生成信任网络的自动登录 cookie
@@ -255,24 +300,65 @@ export async function proxy(request: NextRequest) {
 async function handleAuthentication(
   request: NextRequest,
   pathname: string,
-  response?: NextResponse
+  response?: NextResponse,
 ) {
   // 🔥 检查信任网络模式（环境变量优先，然后数据库）
   const trustedNetworkConfig = await getTrustedNetworkConfig(request);
-  if (trustedNetworkConfig?.enabled && trustedNetworkConfig.trustedIPs.length > 0) {
+  if (
+    trustedNetworkConfig?.enabled &&
+    trustedNetworkConfig.trustedIPs.length > 0
+  ) {
     const clientIP = getClientIP(request);
 
     if (isIPTrusted(clientIP, trustedNetworkConfig.trustedIPs)) {
-      console.log(`[Middleware] Trusted network auto-login for IP: ${clientIP}`);
+      console.log(
+        `[Middleware] Trusted network auto-login for IP: ${clientIP}`,
+      );
 
       // 检查是否已经有有效的认证 cookie
       const existingAuth = getAuthInfoFromCookie(request);
-      if (existingAuth && (existingAuth.password || existingAuth.trustedNetwork || existingAuth.signature)) {
+      if (
+        existingAuth &&
+        (existingAuth.password ||
+          existingAuth.trustedNetwork ||
+          existingAuth.signature)
+      ) {
         return response || NextResponse.next();
       }
 
       // 没有认证 cookie，自动生成并设置
       return generateTrustedAuthCookie(request);
+    }
+  }
+
+  // 🔥 检查游客浏览模式
+  const allowGuestBrowse = await getGuestBrowseConfig(request);
+  if (allowGuestBrowse) {
+    // 游客模式：允许访问首页和浏览页面，但限制需要登录的功能
+    const guestAllowedPaths = [
+      '/',
+      '/douban',
+      '/play',
+      '/search',
+      '/shortdrama',
+      '/bilibili',
+      '/youtube',
+      '/live',
+    ];
+    const isGuestAllowed = guestAllowedPaths.some(
+      (p) => pathname === p || pathname.startsWith(p + '/'),
+    );
+
+    if (isGuestAllowed) {
+      // 设置游客标记 cookie
+      const guestResponse = response || NextResponse.next();
+      guestResponse.cookies.set('guest_mode', 'true', {
+        httpOnly: false,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 24 * 60 * 60, // 1 天
+      });
+      return guestResponse;
     }
   }
 
@@ -315,7 +401,7 @@ async function handleAuthentication(
     const isValidSignature = await verifySignature(
       authInfo.username,
       authInfo.signature,
-      process.env.PASSWORD || ''
+      process.env.PASSWORD || '',
     );
 
     // 签名验证通过即可
@@ -332,7 +418,7 @@ async function handleAuthentication(
 async function verifySignature(
   data: string,
   signature: string,
-  secret: string
+  secret: string,
 ): Promise<boolean> {
   const encoder = new TextEncoder();
   const keyData = encoder.encode(secret);
@@ -345,12 +431,12 @@ async function verifySignature(
       keyData,
       { name: 'HMAC', hash: 'SHA-256' },
       false,
-      ['verify']
+      ['verify'],
     );
 
     // 将十六进制字符串转换为Uint8Array
     const signatureBuffer = new Uint8Array(
-      signature.match(/.{1,2}/g)?.map((byte) => parseInt(byte, 16)) || []
+      signature.match(/.{1,2}/g)?.map((byte) => parseInt(byte, 16)) || [],
     );
 
     // 验证签名
@@ -358,7 +444,7 @@ async function verifySignature(
       'HMAC',
       key,
       signatureBuffer,
-      messageData
+      messageData,
     );
   } catch (error) {
     console.error('签名验证失败:', error);
@@ -369,7 +455,7 @@ async function verifySignature(
 // 处理认证失败的情况
 function handleAuthFailure(
   request: NextRequest,
-  pathname: string
+  pathname: string,
 ): NextResponse {
   // 如果是 API 路由，返回 401 状态码
   if (pathname.startsWith('/api')) {
@@ -396,6 +482,26 @@ function shouldSkipAuth(pathname: string): boolean {
     '/screenshot.png',
     '/api/telegram/', // Telegram API 端点
     '/api/cache/', // 缓存 API 端点（内部使用，无需认证）
+    // 公开浏览 API
+    '/api/douban', // 豆瓣
+    '/api/shortdrama', // 短剧
+    '/api/bilibili', // B站
+    '/api/youtube', // YouTube
+    '/api/tmdb', // TMDB
+    '/api/proxy/', // 代理（Bangumi、图片等）
+    '/api/search', // 搜索
+    '/api/release-calendar', // 发布日历
+    '/api/acg/', // ACG
+    '/api/image-proxy', // 图片代理
+    '/api/video-proxy', // 视频代理
+    '/api/ad-filter', // 广告过滤
+    '/api/danmu-external', // 弹幕
+    '/api/netdisk/', // 网盘搜索
+    '/api/detail', // 详情
+    '/api/sources', // 数据源列表
+    '/api/source-weights', // 数据源权重
+    '/api/skipconfigs', // 跳过配置
+    '/api/live/', // 直播
   ];
 
   return skipPaths.some((path) => pathname.startsWith(path));
@@ -404,6 +510,6 @@ function shouldSkipAuth(pathname: string): boolean {
 // 配置middleware匹配规则
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|login|register|oidc-register|warning|api/login|api/register|api/logout|api/cron|api/server-config|api/tvbox|api/live/merged|api/parse|api/bing-wallpaper|api/proxy/|api/telegram/|api/auth/oidc/|api/watch-room/).*)',
+    '/((?!_next/static|_next/image|favicon.ico|login|register|oidc-register|warning|api/login|api/register|api/logout|api/cron|api/server-config|api/tvbox|api/live/merged|api/parse|api/bing-wallpaper|api/proxy/|api/telegram/|api/auth/oidc/|api/watch-room/|api/douban|api/shortdrama|api/bilibili|api/youtube|api/tmdb|api/search|api/release-calendar|api/acg/|api/image-proxy|api/video-proxy|api/ad-filter|api/danmu-external|api/netdisk/|api/detail|api/sources|api/source-weights|api/skipconfigs|api/live/|live).*)',
   ],
 };

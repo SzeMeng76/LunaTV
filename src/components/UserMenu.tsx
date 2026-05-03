@@ -72,6 +72,7 @@ export const UserMenu: React.FC = () => {
   const [isContinueWatchingOpen, setIsContinueWatchingOpen] = useState(false);
   const [isFavoritesOpen, setIsFavoritesOpen] = useState(false);
   const [authInfo, setAuthInfo] = useState<AuthInfo | null>(null);
+  const [isGuest, setIsGuest] = useState(false);
   const [storageType, setStorageType] = useState<string>(() => {
     // 🔧 优化：直接从 RUNTIME_CONFIG 读取初始值，避免默认值导致的多次渲染
     if (typeof window !== 'undefined') {
@@ -198,8 +199,27 @@ export const UserMenu: React.FC = () => {
     if (typeof window !== 'undefined') {
       const auth = getAuthInfoFromBrowserCookie();
       setAuthInfo(auth);
+
+      const guestCookie = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('guest_mode='));
+      setIsGuest(!!guestCookie && guestCookie.split('=')[1] === 'true');
     }
   }, []);
+
+  // 监听 authInfo 变化，重新检查 guest 状态
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const guestCookie = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('guest_mode='));
+      const hasGuestCookie = !!guestCookie && guestCookie.split('=')[1] === 'true';
+      const hasAuthInfo = !!authInfo?.username;
+
+      // 如果有认证信息，则不是访客；否则检查 cookie
+      setIsGuest(!hasAuthInfo && hasGuestCookie);
+    }
+  }, [authInfo]);
 
   // 🚀 观影室配置和下载配置由 TanStack Query 自动管理
 
@@ -577,38 +597,97 @@ export const UserMenu: React.FC = () => {
 
       {/* 菜单面板 */}
       <div className='fixed top-14 right-4 w-56 bg-white dark:bg-gray-900 rounded-lg shadow-xl z-1001 border border-gray-200/50 dark:border-gray-700/50 overflow-hidden select-none'>
-        {/* 用户信息区域 */}
-        <div className='px-3 py-2.5 border-b border-gray-200 dark:border-gray-700 bg-linear-to-r from-gray-50 to-gray-100/50 dark:from-gray-800 dark:to-gray-800/50'>
-          <div className='space-y-1'>
-            <div className='flex items-center justify-between'>
-              <span className='text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
-                当前用户
-              </span>
-              <span
-                className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium ${(authInfo?.role || 'user') === 'owner'
-                  ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
-                  : (authInfo?.role || 'user') === 'admin'
-                    ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
-                    : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-                  }`}
-              >
-                {getRoleText(authInfo?.role || 'user')}
-              </span>
-            </div>
-            <div className='flex items-center justify-between'>
-              <div className='font-semibold text-gray-900 dark:text-gray-100 text-sm truncate'>
-                {authInfo?.username || 'default'}
+        {isGuest ? (
+          /* 访客模式菜单 */
+          <div className='py-1'>
+            {/* 访客信息区域 */}
+            <div className='px-3 py-2.5 border-b border-gray-200 dark:border-gray-700 bg-linear-to-r from-gray-50 to-gray-100/50 dark:from-gray-800 dark:to-gray-800/50'>
+              <div className='space-y-1'>
+                <div className='flex items-center justify-between'>
+                  <span className='text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
+                    当前用户
+                  </span>
+                  <span className='inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'>
+                    访客
+                  </span>
+                </div>
               </div>
-              <div className='text-[10px] text-gray-400 dark:text-gray-500'>
-                数据存储：
-                {storageType === 'localstorage' ? '本地' : storageType}
+            </div>
+
+            {/* 登录按钮 */}
+            <button
+              onClick={() => {
+                setIsOpen(false);
+                router.push('/login');
+              }}
+              className='w-full px-3 py-2 text-left flex items-center gap-2.5 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-[background-color] duration-150 ease-in-out text-sm'
+            >
+              <User className='w-4 h-4 text-gray-500 dark:text-gray-400' />
+              <span className='font-medium'>登录</span>
+            </button>
+
+            {/* 分割线 */}
+            <div className='my-1 border-t border-gray-200 dark:border-gray-700'></div>
+
+            {/* 版本信息 */}
+            <button
+              onClick={() => {
+                setIsVersionPanelOpen(true);
+                handleCloseMenu();
+              }}
+              className='w-full px-3 py-2 text-center flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors text-xs'
+            >
+              <div className='flex items-center gap-1'>
+                <span className='font-mono'>v{CURRENT_VERSION}</span>
+                {!isChecking &&
+                  updateStatus &&
+                  updateStatus !== UpdateStatus.FETCH_FAILED && (
+                    <div
+                      className={`w-2 h-2 rounded-full -translate-y-2 ${updateStatus === UpdateStatus.HAS_UPDATE
+                        ? 'bg-yellow-500'
+                        : updateStatus === UpdateStatus.NO_UPDATE
+                          ? 'bg-green-400'
+                          : ''
+                        }`}
+                    ></div>
+                  )}
+              </div>
+            </button>
+          </div>
+        ) : (
+          <>
+          {/* 用户信息区域 */}
+          <div className='px-3 py-2.5 border-b border-gray-200 dark:border-gray-700 bg-linear-to-r from-gray-50 to-gray-100/50 dark:from-gray-800 dark:to-gray-800/50'>
+            <div className='space-y-1'>
+              <div className='flex items-center justify-between'>
+                <span className='text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
+                  当前用户
+                </span>
+                <span
+                  className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium ${(authInfo?.role || 'user') === 'owner'
+                    ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
+                    : (authInfo?.role || 'user') === 'admin'
+                      ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
+                      : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                    }`}
+                >
+                  {getRoleText(authInfo?.role || 'user')}
+                </span>
+              </div>
+              <div className='flex items-center justify-between'>
+                <div className='font-semibold text-gray-900 dark:text-gray-100 text-sm truncate'>
+                  {authInfo?.username || 'default'}
+                </div>
+                <div className='text-[10px] text-gray-400 dark:text-gray-500'>
+                  数据存储：
+                  {storageType === 'localstorage' ? '本地' : storageType}
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* 菜单项 */}
-        <div className='py-1'>
+          {/* 菜单项 */}
+          <div className='py-1'>
           {/* 设置按钮 */}
           <button
             onClick={handleSettings}
@@ -795,7 +874,9 @@ export const UserMenu: React.FC = () => {
                 )}
             </div>
           </button>
-        </div>
+          </div>
+          </>
+        )}
       </div>
     </>
   );

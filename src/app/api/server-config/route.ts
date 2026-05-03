@@ -24,6 +24,13 @@ export async function GET(request: NextRequest) {
     });
   }
 
+  // 内部请求：返回 SiteConfig（用于 middleware 检查游客浏览配置）
+  if (isInternalRequest && requestedKey === 'SiteConfig') {
+    return NextResponse.json({
+      SiteConfig: config.SiteConfig || null,
+    });
+  }
+
   const result: any = {
     SiteName: config.SiteConfig.SiteName,
     StorageType: process.env.NEXT_PUBLIC_STORAGE_TYPE || 'localstorage',

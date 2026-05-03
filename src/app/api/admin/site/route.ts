@@ -47,6 +47,7 @@ export async function POST(request: NextRequest) {
       TMDBApiKey,
       TMDBLanguage,
       EnableTMDBActorSearch,
+      AllowGuestBrowse,
       cronConfig,
     } = body as {
       SiteName: string;
@@ -66,6 +67,7 @@ export async function POST(request: NextRequest) {
       TMDBApiKey?: string;
       TMDBLanguage?: string;
       EnableTMDBActorSearch?: boolean;
+      AllowGuestBrowse?: boolean;
       cronConfig?: {
         enableAutoRefresh: boolean;
         maxRecordsPerRun: number;
@@ -123,6 +125,7 @@ export async function POST(request: NextRequest) {
       TMDBApiKey: TMDBApiKey || '',
       TMDBLanguage: TMDBLanguage || 'zh-CN',
       EnableTMDBActorSearch: EnableTMDBActorSearch || false,
+      AllowGuestBrowse: AllowGuestBrowse ?? false,
     };
 
     // 更新豆瓣配置
