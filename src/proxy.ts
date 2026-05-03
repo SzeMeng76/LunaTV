@@ -120,18 +120,25 @@ async function getGuestBrowseConfig(request: NextRequest): Promise<boolean> {
     const url = new URL('/api/server-config', request.url);
     url.searchParams.set('key', 'SiteConfig');
 
+    console.log('[GuestMode] Fetching SiteConfig from:', url.toString());
+
     const response = await fetch(url.toString(), {
       headers: { 'x-internal-request': 'true' },
     });
 
+    console.log('[GuestMode] Response status:', response.status);
+
     if (response.ok) {
       const data = await response.json();
+      console.log('[GuestMode] SiteConfig data:', JSON.stringify(data.SiteConfig));
       if (data.SiteConfig) {
-        return data.SiteConfig.AllowGuestBrowse ?? false;
+        const allowGuest = data.SiteConfig.AllowGuestBrowse ?? false;
+        console.log('[GuestMode] AllowGuestBrowse:', allowGuest);
+        return allowGuest;
       }
     }
-  } catch {
-    // 忽略错误
+  } catch (error) {
+    console.error('[GuestMode] Error fetching config:', error);
   }
 
   return false;
@@ -332,7 +339,10 @@ async function handleAuthentication(
   }
 
   // 🔥 检查游客浏览模式
+  console.log('[GuestMode] Checking guest browse mode for pathname:', pathname);
   const allowGuestBrowse = await getGuestBrowseConfig(request);
+  console.log('[GuestMode] allowGuestBrowse result:', allowGuestBrowse);
+  
   if (allowGuestBrowse) {
     // 游客模式：允许访问首页和浏览页面，但限制需要登录的功能
     const guestAllowedPaths = [
@@ -349,8 +359,11 @@ async function handleAuthentication(
       (p) => pathname === p || pathname.startsWith(p + '/'),
     );
 
+    console.log('[GuestMode] isGuestAllowed:', isGuestAllowed, 'for pathname:', pathname);
+
     if (isGuestAllowed) {
       // 设置游客标记 cookie
+      console.log('[GuestMode] Setting guest_mode cookie');
       const guestResponse = response || NextResponse.next();
       guestResponse.cookies.set('guest_mode', 'true', {
         httpOnly: false,
