@@ -294,66 +294,6 @@ function HeroBanner({
     };
   }, [currentIndex, items, refreshedTrailerUrls, refreshTrailerUrl, enableVideo]);
 
-  // 🔥 修复第一个视频不自动播放的问题
-  // 当 trailer URL 准备好时，确保 video 元素正确加载和播放
-  useEffect(() => {
-    if (!enableVideo || !videoRef.current || !isMountedRef.current) return;
-
-    const currentItem = items[currentIndex];
-    if (!currentItem) return;
-
-    const trailerUrl = getEffectiveTrailerUrl(currentItem);
-    if (!trailerUrl) {
-      console.log('[HeroBanner] 当前item没有trailer URL:', currentItem.title);
-      return;
-    }
-
-    const video = videoRef.current;
-
-    // 检查 video 的 src 是否已经设置
-    const currentSrc = video.querySelector('source')?.src;
-    const expectedSrc = getProxiedVideoUrl(trailerUrl);
-
-    console.log('[HeroBanner] 检查视频状态:', {
-      title: currentItem.title,
-      currentIndex,
-      hasSrc: !!currentSrc,
-      srcMatch: currentSrc === expectedSrc,
-      paused: video.paused,
-      readyState: video.readyState,
-    });
-
-    // 如果 src 已经正确设置，但视频还没开始播放，尝试播放
-    if (currentSrc === expectedSrc && video.paused) {
-      console.log('[HeroBanner] Trailer URL 已准备好，尝试播放视频:', currentItem.title);
-
-      // 确保视频已加载足够的数据
-      if (video.readyState >= 2) { // HAVE_CURRENT_DATA or higher
-        console.log('[HeroBanner] 视频数据已准备好 (readyState >= 2)，立即播放');
-        video.play().catch((error) => {
-          console.warn('[HeroBanner] 视频播放失败:', error);
-        });
-      } else {
-        // 如果数据还没准备好，等待 loadeddata 事件
-        console.log('[HeroBanner] 视频数据未准备好，等待 loadeddata 事件');
-        const handleLoadedData = () => {
-          console.log('[HeroBanner] loadeddata 事件触发，尝试播放');
-          if (isMountedRef.current && video.paused) {
-            video.play().catch((error) => {
-              console.warn('[HeroBanner] 视频播放失败 (loadeddata):', error);
-            });
-          }
-        };
-        video.addEventListener('loadeddata', handleLoadedData, { once: true });
-
-        // 清理函数
-        return () => {
-          video.removeEventListener('loadeddata', handleLoadedData);
-        };
-      }
-    }
-  }, [currentIndex, items, refreshedTrailerUrls, enableVideo]);
-
   // Cleanup on unmount
   useEffect(() => {
     return () => {
