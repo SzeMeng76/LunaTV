@@ -352,7 +352,7 @@ function HeroBanner({
         };
       }
     }
-  }, [currentIndex, items, refreshedTrailerUrls, enableVideo, getEffectiveTrailerUrl]);
+  }, [currentIndex, items, refreshedTrailerUrls, enableVideo]);
 
   // Cleanup on unmount
   useEffect(() => {
