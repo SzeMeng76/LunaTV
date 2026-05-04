@@ -204,61 +204,94 @@ function HomeClient({ initialConfig }: {
   } = state;
 
   // 🚀 从 TanStack Query 获取首页数据，本地状态作为详情增强
+  // 🔥 保留上一次的数据，避免 refetch 时数据暂时为空导致 HeroBanner 卸载
+  const prevHotMoviesRef = useRef<any[]>([]);
   const hotMovies = useMemo(() => {
     const cached = homeData?.hotMovies || [];
+    // 如果有新数据，更新 ref 并返回
+    if (cached.length > 0) {
+      prevHotMoviesRef.current = cached;
+    }
+    // 如果新数据为空且正在加载，使用上一次的数据
+    const dataToUse = cached.length === 0 && homeFetching ? prevHotMoviesRef.current : cached;
+
     // 合并本地详情数据
-    if (state.hotMovies.length > 0 && cached.length > 0) {
-      return cached.map(m => {
+    if (state.hotMovies.length > 0 && dataToUse.length > 0) {
+      return dataToUse.map(m => {
         const local = state.hotMovies.find(lm => lm.id === m.id);
         return local ? { ...m, ...local } : m;
       });
     }
-    return cached;
-  }, [homeData?.hotMovies, state.hotMovies]);
+    return dataToUse;
+  }, [homeData?.hotMovies, state.hotMovies, homeFetching]);
 
+  const prevHotTvShowsRef = useRef<any[]>([]);
   const hotTvShows = useMemo(() => {
     const cached = homeData?.hotTvShows || [];
-    if (state.hotTvShows.length > 0 && cached.length > 0) {
-      return cached.map(s => {
+    if (cached.length > 0) {
+      prevHotTvShowsRef.current = cached;
+    }
+    const dataToUse = cached.length === 0 && homeFetching ? prevHotTvShowsRef.current : cached;
+
+    if (state.hotTvShows.length > 0 && dataToUse.length > 0) {
+      return dataToUse.map(s => {
         const local = state.hotTvShows.find(ls => ls.id === s.id);
         return local ? { ...s, ...local } : s;
       });
     }
-    return cached;
-  }, [homeData?.hotTvShows, state.hotTvShows]);
+    return dataToUse;
+  }, [homeData?.hotTvShows, state.hotTvShows, homeFetching]);
 
+  const prevHotVarietyShowsRef = useRef<any[]>([]);
   const hotVarietyShows = useMemo(() => {
     const cached = homeData?.hotVarietyShows || [];
-    if (state.hotVarietyShows.length > 0 && cached.length > 0) {
-      return cached.map(s => {
+    if (cached.length > 0) {
+      prevHotVarietyShowsRef.current = cached;
+    }
+    const dataToUse = cached.length === 0 && homeFetching ? prevHotVarietyShowsRef.current : cached;
+
+    if (state.hotVarietyShows.length > 0 && dataToUse.length > 0) {
+      return dataToUse.map(s => {
         const local = state.hotVarietyShows.find(ls => ls.id === s.id);
         return local ? { ...s, ...local } : s;
       });
     }
-    return cached;
-  }, [homeData?.hotVarietyShows, state.hotVarietyShows]);
+    return dataToUse;
+  }, [homeData?.hotVarietyShows, state.hotVarietyShows, homeFetching]);
 
+  const prevHotAnimeRef = useRef<any[]>([]);
   const hotAnime = useMemo(() => {
     const cached = homeData?.hotAnime || [];
-    if (state.hotAnime.length > 0 && cached.length > 0) {
-      return cached.map(a => {
+    if (cached.length > 0) {
+      prevHotAnimeRef.current = cached;
+    }
+    const dataToUse = cached.length === 0 && homeFetching ? prevHotAnimeRef.current : cached;
+
+    if (state.hotAnime.length > 0 && dataToUse.length > 0) {
+      return dataToUse.map(a => {
         const local = state.hotAnime.find(la => la.id === a.id);
         return local ? { ...a, ...local } : a;
       });
     }
-    return cached;
-  }, [homeData?.hotAnime, state.hotAnime]);
+    return dataToUse;
+  }, [homeData?.hotAnime, state.hotAnime, homeFetching]);
 
+  const prevHotShortDramasRef = useRef<any[]>([]);
   const hotShortDramas = useMemo(() => {
     const cached = homeData?.hotShortDramas || [];
-    if (state.hotShortDramas.length > 0 && cached.length > 0) {
-      return cached.map(d => {
+    if (cached.length > 0) {
+      prevHotShortDramasRef.current = cached;
+    }
+    const dataToUse = cached.length === 0 && homeFetching ? prevHotShortDramasRef.current : cached;
+
+    if (state.hotShortDramas.length > 0 && dataToUse.length > 0) {
+      return dataToUse.map(d => {
         const local = state.hotShortDramas.find(ld => ld.id === d.id);
         return local ? { ...d, ...local } : d;
       });
     }
-    return cached;
-  }, [homeData?.hotShortDramas, state.hotShortDramas]);
+    return dataToUse;
+  }, [homeData?.hotShortDramas, state.hotShortDramas, homeFetching]);
 
   const bangumiCalendarData = homeData?.bangumiCalendar || [];
 
@@ -498,13 +531,9 @@ function HomeClient({ initialConfig }: {
   useEffect(() => {
     if (!homeData) return;
 
-    let isMounted = true;
-    const timeouts: NodeJS.Timeout[] = [];
-    const abortController = new AbortController();
-
     // 延迟加载电影详情 - 只在显示电影模块时加载
     if (state.homePageConfig.showHotMovies && homeData.hotMovies.length > 0) {
-      const timeout = setTimeout(() => {
+      setTimeout(() => {
         Promise.all(
           homeData.hotMovies.slice(0, 2).map(async (movie) => {
             try {
@@ -523,26 +552,23 @@ function HomeClient({ initialConfig }: {
             return null;
           })
         ).then((results) => {
-          if (isMounted) {
-            dispatch({
-              type: 'UPDATE_HOT_MOVIES',
-              payload: (prev) => {
-                const base = prev.length > 0 ? prev : homeData.hotMovies;
-                return base.map(m => {
-                  const detail = results.find(r => r?.id === m.id);
-                  return detail ? { ...m, ...detail } : m;
-                });
-              }
-            });
-          }
+          dispatch({
+            type: 'UPDATE_HOT_MOVIES',
+            payload: (prev) => {
+              const base = prev.length > 0 ? prev : homeData.hotMovies;
+              return base.map(m => {
+                const detail = results.find(r => r?.id === m.id);
+                return detail ? { ...m, ...detail } : m;
+              });
+            }
+          });
         });
       }, 2000);
-      timeouts.push(timeout);
     }
 
     // 延迟加载剧集详情 - 只在显示剧集模块时加载
     if (state.homePageConfig.showHotTvShows && homeData.hotTvShows.length > 0) {
-      const timeout = setTimeout(() => {
+      setTimeout(() => {
         Promise.all(
           homeData.hotTvShows.slice(0, 2).map(async (show) => {
             try {
@@ -561,30 +587,27 @@ function HomeClient({ initialConfig }: {
             return null;
           })
         ).then((results) => {
-          if (isMounted) {
-            dispatch({
-              type: 'UPDATE_HOT_TV_SHOWS',
-              payload: (prev) => {
-                const base = prev.length > 0 ? prev : homeData.hotTvShows;
-                return base.map(s => {
-                  const detail = results.find(r => r?.id === s.id);
-                  return detail ? { ...s, ...detail } : s;
-                });
-              }
-            });
-          }
+          dispatch({
+            type: 'UPDATE_HOT_TV_SHOWS',
+            payload: (prev) => {
+              const base = prev.length > 0 ? prev : homeData.hotTvShows;
+              return base.map(s => {
+                const detail = results.find(r => r?.id === s.id);
+                return detail ? { ...s, ...detail } : s;
+              });
+            }
+          });
         });
       }, 2000);
-      timeouts.push(timeout);
     }
 
     // 延迟加载动漫详情 - 只在显示动漫模块时加载
     if (state.homePageConfig.showNewAnime && homeData.hotAnime.length > 0) {
-      const timeout = setTimeout(() => {
+      setTimeout(() => {
         const anime = homeData.hotAnime[0];
         getDoubanDetails(anime.id)
           .then((detailsRes) => {
-            if (isMounted && detailsRes.code === 200 && detailsRes.data) {
+            if (detailsRes.code === 200 && detailsRes.data) {
               dispatch({
                 type: 'UPDATE_HOT_ANIME',
                 payload: (prev) => {
@@ -595,21 +618,18 @@ function HomeClient({ initialConfig }: {
             }
           })
           .catch((error) => {
-            if (isMounted) {
-              console.warn(`获取动漫 ${anime.id} 详情失败:`, error);
-            }
+            console.warn(`获取动漫 ${anime.id} 详情失败:`, error);
           });
       }, 3000);
-      timeouts.push(timeout);
     }
 
     // 延迟加载综艺详情 - 只在显示综艺模块时加载
     if (state.homePageConfig.showHotVariety && homeData.hotVarietyShows.length > 0) {
-      const timeout = setTimeout(() => {
+      setTimeout(() => {
         const show = homeData.hotVarietyShows[0];
         getDoubanDetails(show.id)
           .then((detailsRes) => {
-            if (isMounted && detailsRes.code === 200 && detailsRes.data) {
+            if (detailsRes.code === 200 && detailsRes.data) {
               dispatch({
                 type: 'UPDATE_HOT_VARIETY_SHOWS',
                 payload: (prev) => {
@@ -620,18 +640,13 @@ function HomeClient({ initialConfig }: {
             }
           })
           .catch((error) => {
-            if (isMounted) {
-              console.warn(`获取综艺 ${show.id} 详情失败:`, error);
-            }
+            console.warn(`获取综艺 ${show.id} 详情失败:`, error);
           });
       }, 3000);
-      timeouts.push(timeout);
     }
 
     // 🔄 异步加载即将上映数据
-    fetch('/api/release-calendar?limit=100', {
-      signal: abortController.signal,
-    })
+    fetch('/api/release-calendar?limit=100')
       .then(res => {
         if (!res.ok) {
           console.error('获取即将上映数据失败，状态码:', res.status);
@@ -640,8 +655,6 @@ function HomeClient({ initialConfig }: {
         return res.json();
       })
       .then(upcomingData => {
-        if (!isMounted) return;
-
         if (upcomingData?.items) {
           const releases = upcomingData.items;
           console.log('📅 获取到的即将上映数据:', releases.length, '条');
@@ -652,8 +665,6 @@ function HomeClient({ initialConfig }: {
               workerRef.current = new Worker(new URL('../workers/releaseCalendar.worker.ts', import.meta.url));
 
               workerRef.current.onmessage = (e: MessageEvent) => {
-                if (!isMounted) return;
-
                 const { selectedItems, stats, error } = e.data;
 
                 if (error) {
@@ -667,15 +678,12 @@ function HomeClient({ initialConfig }: {
               };
 
               workerRef.current.onerror = (error) => {
-                if (!isMounted) return;
                 console.error('📅 [Worker] 错误:', error);
                 dispatch({ type: 'SET_UPCOMING_RELEASES', payload: [] });
               };
             } catch (error) {
-              if (isMounted) {
-                console.error('📅 [Worker] 初始化失败:', error);
-                dispatch({ type: 'SET_UPCOMING_RELEASES', payload: [] });
-              }
+              console.error('📅 [Worker] 初始化失败:', error);
+              dispatch({ type: 'SET_UPCOMING_RELEASES', payload: [] });
             }
           }
 
@@ -700,18 +708,9 @@ function HomeClient({ initialConfig }: {
         }
       })
       .catch(error => {
-        if (isMounted && (error as Error).name !== 'AbortError') {
-          console.warn('获取即将上映数据失败:', error);
-          dispatch({ type: 'SET_UPCOMING_RELEASES', payload: [] });
-        }
+        console.warn('获取即将上映数据失败:', error);
+        dispatch({ type: 'SET_UPCOMING_RELEASES', payload: [] });
       });
-
-    // Cleanup function
-    return () => {
-      isMounted = false;
-      abortController.abort();
-      timeouts.forEach(timeout => clearTimeout(timeout));
-    };
   }, [homeData, state.homePageConfig]);
 
   // 🚀 TanStack Query - 使用 useMutation 管理清空收藏操作
@@ -728,12 +727,18 @@ function HomeClient({ initialConfig }: {
 
   // 🔥 Show cinematic loading screen while data is being fetched
   // This ensures users see the beautiful loading animation instead of skeleton screens
-  if (loading) {
-    return <CinematicLoadingFallback />;
-  }
+  // 🔥 Use overlay instead of unmounting to prevent component remount issues
+  const showCinematicLoading = loading;
 
   return (
     <PageLayout>
+      {/* 🔥 Cinematic loading overlay - doesn't unmount content */}
+      {showCinematicLoading && (
+        <div className="fixed inset-0 z-50">
+          <CinematicLoadingFallback />
+        </div>
+      )}
+
       {/* Telegram 新用户欢迎弹窗 */}
       <TelegramWelcomeModal />
 
@@ -1217,7 +1222,7 @@ function HomeClient({ initialConfig }: {
             // 首页视图
             <>
               {/* Hero Banner 轮播 */}
-              {state.homePageConfig.showHeroBanner && !loading && (hotMovies.length > 0 || hotTvShows.length > 0 || hotVarietyShows.length > 0 || hotShortDramas.length > 0) && (
+              {state.homePageConfig.showHeroBanner && (hotMovies.length > 0 || hotTvShows.length > 0 || hotVarietyShows.length > 0 || hotShortDramas.length > 0) && (
                 <section className='mb-8'>
                   <HeroBanner
                     items={[
@@ -1291,7 +1296,7 @@ function HomeClient({ initialConfig }: {
                 console.log('🔍 即将上映 section 渲染检查:', { loading, upcomingReleasesCount: upcomingReleases.length });
                 return null;
               })()}
-              {state.homePageConfig.showUpcomingReleases && !loading && upcomingReleases.length > 0 && (
+              {state.homePageConfig.showUpcomingReleases && upcomingReleases.length > 0 && (
                 <section className='mb-8'>
                   <div className='mb-4 flex items-center justify-between'>
                     <SectionTitle title="即将上映" icon={Calendar} iconColor="text-orange-500" />

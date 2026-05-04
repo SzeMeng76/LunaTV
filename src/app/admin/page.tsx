@@ -47,6 +47,7 @@ import {
   X,
 } from 'lucide-react';
 import { GripVertical, KeyRound, MessageSquare } from 'lucide-react';
+import { pinyin } from 'pinyin-pro';
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -116,6 +117,27 @@ const buttonStyles = {
   toggleThumbOff: 'translate-x-1',
   // 快速操作按钮样式
   quickAction: 'px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md transition-colors',
+};
+
+/**
+ * 根据名称自动生成 Key（中文转拼音首字母）
+ * @param name 源名称
+ * @returns 生成的 Key
+ */
+const generateKeyFromName = (name: string): string => {
+  if (!name) return '';
+
+  const initials = name
+    .split('')
+    .map((char) => {
+      if (/[a-zA-Z]/.test(char)) return char.toUpperCase();
+      if (/[0-9]/.test(char)) return char;
+      const result = pinyin(char, { pattern: 'first', toneType: 'none' });
+      return result || char;
+    })
+    .join('');
+
+  return initials || name.substring(0, 4).toUpperCase();
 };
 
 // 通用弹窗组件
@@ -4150,7 +4172,8 @@ const VideoSourceConfig = ({
               onChange={(e) => {
                 const name = e.target.value;
                 const isAdult = /^(AV-|成人|伦理|福利|里番|R18)/i.test(name);
-                setNewSource((prev) => ({ ...prev, name, is_adult: isAdult }));
+                const autoKey = generateKeyFromName(name);
+                setNewSource((prev) => ({ ...prev, name, key: autoKey, is_adult: isAdult }));
               }}
               className='px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
             />
@@ -6952,9 +6975,11 @@ const LiveSourceConfig = ({
               type='text'
               placeholder='名称'
               value={newLiveSource.name}
-              onChange={(e) =>
-                setNewLiveSource((prev) => ({ ...prev, name: e.target.value }))
-              }
+              onChange={(e) => {
+                const name = e.target.value;
+                const autoKey = generateKeyFromName(name);
+                setNewLiveSource((prev) => ({ ...prev, name, key: autoKey }));
+              }}
               className='px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
             />
             <input

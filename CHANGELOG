@@ -1,3 +1,19 @@
+## [6.5.1] - 2026-05-04
+
+### Added
+
+- 🗄️ Redis全局缓存预告片URL：实现基于Redis的全局缓存机制，减少对豆瓣API的请求次数，所有用户共享缓存，支持Kvrocks和Upstash，24小时TTL
+
+### Fixed
+
+- 🐛 修复加载屏幕导致组件重复挂载问题：将CinematicLoadingFallback从替换整个页面改为overlay覆盖方式，防止HeroBanner等组件在loading时被卸载和重新挂载
+- 🔄 修复无限trailer URL请求问题：解决因组件频繁mount/unmount导致的疯狂请求豆瓣API问题，避免IP被封
+- 🚫 防止失败预告片无限重试：为没有预告片的视频添加NO_TRAILER标记（24小时后重试），为服务端错误添加FAILED标记（5分钟后重试），避免重复请求导致API限流
+- ⏱️ 限制预告片请求频率：每次最多请求3个预告片，请求之间延迟2秒，防止短时间内连续请求触发豆瓣API限流
+- 🔧 修复所有模块的mount/unmount问题：移除HeroBanner和即将上映模块的!loading条件，使用useRef保留数据避免refetch时组件卸载，彻底解决重复请求问题
+- 🎬 优化登录注册页面体验：转换注册页面为服务端组件，消除白屏闪烁，添加渐变背景到加载状态，优化页面导航过渡效果
+- 🎨 修复Bilibili统计显示：当数值为零时隐藏Bilibili统计信息以改善用户体验
+
 ## [6.5.0] - 2026-05-02
 
 ### Added
