@@ -1,0 +1,16 @@
+ # 必填：管理员账号
+USERNAME=admin
+PASSWORD=your_secure_password
+
+# 必填：存储配置
+NEXT_PUBLIC_STORAGE_TYPE=kvrocks
+KVROCKS_URL=redis://192.168.1.13:6668
+
+# 可选：站点配置
+#SITE_BASE=https://your-domain.zeabur.app
+NEXT_PUBLIC_SITE_NAME=LunaTV Enhanced
+ANNOUNCEMENT=欢迎使用 LunaTV Enhanced Edition
+
+# 可选：豆瓣代理配置（推荐）
+NEXT_PUBLIC_DOUBAN_PROXY_TYPE=cmliussss-cdn-tencent
+NEXT_PUBLIC_DOUBAN_IMAGE_PROXY_TYPE=cmliussss-cdn-tencent
