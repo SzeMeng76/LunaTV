@@ -96,6 +96,8 @@ export async function POST(request: NextRequest) {
       DisableYellowFilter,
       FluidSearch,
       EnableWebLive: EnableWebLive ?? false,
+      EnableAdFilter: false, // 或 true，取决于你的需求
+      AdFilterCode: '', // 广告过滤规则代码，默认为空字符串
     };
 
     // 写入数据库

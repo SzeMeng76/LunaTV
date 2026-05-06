@@ -6,6 +6,7 @@ export function getAuthInfoFromCookie(request: NextRequest): {
   username?: string;
   signature?: string;
   timestamp?: number;
+  role?: 'owner' | 'admin' | 'user';
 } | null {
   const authCookie = request.cookies.get('auth');
 

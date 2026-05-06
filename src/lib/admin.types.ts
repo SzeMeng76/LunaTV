@@ -17,6 +17,9 @@ export interface AdminConfig {
     DisableYellowFilter: boolean;
     FluidSearch: boolean;
     EnableWebLive: boolean;
+    // 新增：去广告设置
+    EnableAdFilter: boolean; // 是否启用去广告过滤
+    AdFilterCode: string; // 去广告函数代码（filterAdsFromM3U8 的源码）
   };
   UserConfig: {
     Users: {
@@ -49,7 +52,7 @@ export interface AdminConfig {
   LiveConfig?: {
     key: string;
     name: string;
-    url: string;  // m3u 地址
+    url: string; // m3u 地址
     ua?: string;
     epg?: string; // 节目单
     from: 'config' | 'custom';

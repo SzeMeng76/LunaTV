@@ -116,6 +116,21 @@ export interface DoubanItem {
   poster: string;
   rate: string;
   year: string;
+  // 详细信息字段
+  directors?: string[];
+  screenwriters?: string[];
+  cast?: string[];
+  genres?: string[];
+  countries?: string[];
+  languages?: string[];
+  episodes?: number;
+  episode_length?: number;
+  movie_duration?: number;
+  first_aired?: string;
+  plot_summary?: string;
+  // 🎬 Netflix风格字段
+  backdrop?: string; // 高清背景图（用于HeroBanner）
+  trailerUrl?: string; // 预告片视频URL
 }
 
 export interface DoubanResult {
