@@ -26,7 +26,7 @@ COPY . .
 ENV DOCKER_ENV=true
 
 # 调试代码
-RUN pnpm run build --verbose   # 或者直接打印 next 版本
+RUN pnpm run build --verbose
 RUN node --version && pnpm --version
 RUN ls -la
 
