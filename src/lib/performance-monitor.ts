@@ -137,7 +137,7 @@ export function collectSystemMetrics(): SystemMetrics {
   }
 
   const memUsage = process.memoryUsage();
-  const os = require('os');
+  import os from 'os';//const os = require('os');
 
   // 如果基线未初始化（模块加载时初始化失败），现在初始化
   if (lastCpuUsage === null || lastCpuTime === null) {
