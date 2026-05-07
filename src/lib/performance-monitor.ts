@@ -7,8 +7,13 @@
  * 不再持久化到 Kvrocks，以防止 WAL 爆满
  */
 
-import { RequestMetrics, HourlyMetrics, SystemMetrics } from './performance.types';
+import {
+  RequestMetrics,
+  HourlyMetrics,
+  SystemMetrics,
+} from './performance.types';
 import { db } from './db';
+import * as os from 'os'; // ✅ 新增：导入 os 模块
 
 // 内存中的请求数据缓存（最近48小时）
 const requestCache: RequestMetrics[] = [];
@@ -132,12 +137,12 @@ export function collectSystemMetrics(): SystemMetrics {
   // 环境检测：确保在 Node.js 环境中运行
   if (typeof process === 'undefined' || !process.versions?.node) {
     throw new Error(
-      'collectSystemMetrics() can only be called in Node.js environment'
+      'collectSystemMetrics() can only be called in Node.js environment',
     );
   }
 
   const memUsage = process.memoryUsage();
-  import os from 'os';//const os = require('os');
+  // ❌ 删除原来的 const os = require('os'); 现在直接使用顶部的 os 导入
 
   // 如果基线未初始化（模块加载时初始化失败），现在初始化
   if (lastCpuUsage === null || lastCpuTime === null) {
@@ -224,11 +229,11 @@ export function recordSystemMetrics(): void {
  */
 export function aggregateMetrics(
   startTime: number,
-  endTime: number
+  endTime: number,
 ): HourlyMetrics {
   // 过滤时间范围内的请求
   const requests = requestCache.filter(
-    (r) => r.timestamp >= startTime && r.timestamp < endTime
+    (r) => r.timestamp >= startTime && r.timestamp < endTime,
   );
 
   if (requests.length === 0) {
@@ -251,13 +256,13 @@ export function aggregateMetrics(
   // 计算基础指标
   const totalRequests = requests.length;
   const successRequests = requests.filter(
-    (r) => r.statusCode >= 200 && r.statusCode < 300
+    (r) => r.statusCode >= 200 && r.statusCode < 300,
   ).length;
   const errorRequests = requests.filter((r) => r.statusCode >= 400).length;
 
   const durations = requests.map((r) => r.duration);
   const avgDuration = Math.round(
-    durations.reduce((a, b) => a + b, 0) / durations.length
+    durations.reduce((a, b) => a + b, 0) / durations.length,
   );
   const maxDuration = Math.max(...durations);
 
@@ -270,7 +275,7 @@ export function aggregateMetrics(
   const totalDbQueries = requests.reduce((sum, r) => sum + r.dbQueries, 0);
   const totalTraffic = requests.reduce(
     (sum, r) => sum + r.requestSize + r.responseSize,
-    0
+    0,
   );
 
   return {
@@ -310,7 +315,7 @@ export function getRecentMetrics(hours: number): HourlyMetrics[] {
  */
 export async function getRecentRequests(
   limit = 100,
-  hours?: number
+  hours?: number,
 ): Promise<RequestMetrics[]> {
   // 持久化已禁用，直接使用内存缓存
 
@@ -338,13 +343,13 @@ export async function getCurrentStatus() {
 
   const systemMetrics = collectSystemMetrics();
   const recentRequests = requestCache.filter(
-    (r) => r.timestamp > Date.now() - 60000 // 最近1分钟
+    (r) => r.timestamp > Date.now() - 60000, // 最近1分钟
   );
 
   // 计算流量/分钟（请求大小 + 响应大小）
   const trafficPerMinute = recentRequests.reduce(
     (sum, r) => sum + r.requestSize + r.responseSize,
-    0
+    0,
   );
 
   return {
@@ -355,7 +360,7 @@ export async function getCurrentStatus() {
       recentRequests.length > 0
         ? Math.round(
             recentRequests.reduce((sum, r) => sum + r.duration, 0) /
-              recentRequests.length
+              recentRequests.length,
           )
         : 0,
     trafficPerMinute, // 字节数
@@ -391,9 +396,12 @@ export function startAutoCollection(): void {
   console.log('🚀 启动性能监控自动数据收集...');
 
   // 每 1 小时收集一次系统指标
-  collectionInterval = setInterval(() => {
-    recordSystemMetrics();
-  }, 60 * 60 * 1000); // 1小时
+  collectionInterval = setInterval(
+    () => {
+      recordSystemMetrics();
+    },
+    60 * 60 * 1000,
+  ); // 1小时
 }
 
 /**
