@@ -25,6 +25,11 @@ COPY . .
 # 在构建阶段也显式设置 DOCKER_ENV，
 ENV DOCKER_ENV=true
 
+# 调试代码
+RUN pnpm run build --verbose   # 或者直接打印 next 版本
+RUN node --version && pnpm --version
+RUN ls -la
+
 # 生成生产构建
 RUN pnpm run build
 
