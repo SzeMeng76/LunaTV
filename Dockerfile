@@ -26,6 +26,7 @@ COPY . .
 ENV DOCKER_ENV=true
 
 # 生成生产构建
+RUN pnpm build 2>&1 | tee /dev/stderr
 RUN pnpm run build
 
 # ---- 第 3 阶段：生成运行时镜像 ----
