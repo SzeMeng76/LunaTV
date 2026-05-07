@@ -24,7 +24,7 @@ COPY . .
 
 # 在构建阶段也显式设置 DOCKER_ENV，
 ENV DOCKER_ENV=true
-    NEXT_DISABLE_ESLINT=1
+ENV NEXT_DISABLE_ESLINT=1
 
 # 生成生产构建
 RUN pnpm run build
