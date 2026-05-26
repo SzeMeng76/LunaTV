@@ -25,6 +25,18 @@ const loadingMessages = [
   { icon: Sparkles, text: '正在寻找最适合您的推荐...', emoji: '✨' },
 ];
 
+// Pre-computed star positions to avoid SSR hydration mismatch from Math.random()
+const STARS = [
+  { left: '59.86%', top: '52.30%', delay: '2.0s', duration: '4.33s' },
+  { left: '22.09%', top: '29.00%', delay: '1.79s', duration: '4.19s' },
+  { left: '39.46%', top: '49.96%', delay: '1.63s', duration: '4.80s' },
+  { left: '47.80%', top: '44.92%', delay: '0.09s', duration: '3.44s' },
+  { left: '20.14%', top: '19.25%', delay: '2.13s', duration: '4.34s' },
+  { left: '63.22%', top: '30.79%', delay: '2.87s', duration: '3.45s' },
+  { left: '54.01%', top: '26.82%', delay: '0.94s', duration: '3.05s' },
+  { left: '5.55%', top: '70.96%', delay: '1.96s', duration: '3.49s' },
+];
+
 export function CinematicLoadingFallback() {
   const [messageIndex, setMessageIndex] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
@@ -83,15 +95,15 @@ export function CinematicLoadingFallback() {
 
       {/* Subtle animated background stars */}
       <div className="absolute inset-0 overflow-hidden">
-        {[...Array(8)].map((_, i) => (
+        {STARS.map((star, i) => (
           <div
             key={i}
             className="absolute w-1 h-1 bg-white rounded-full animate-twinkle"
             style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 3}s`,
-              animationDuration: `${3 + Math.random() * 2}s`,
+              left: star.left,
+              top: star.top,
+              animationDelay: star.delay,
+              animationDuration: star.duration,
             }}
           />
         ))}

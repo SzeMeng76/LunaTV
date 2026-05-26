@@ -64,7 +64,7 @@ export class DbManager {
     // 启动时自动触发数据迁移（异步，不阻塞构造）
     if (this.storage && typeof (this.storage as any).migrateData === 'function') {
       (this.storage as any).migrateData().then(async () => {
-        if (typeof (this.storage as any).migratePasswords === 'function') {
+        if (this.storage && typeof (this.storage as any).migratePasswords === 'function') {
           await (this.storage as any).migratePasswords();
         }
       }).catch((err: any) => {
@@ -286,14 +286,14 @@ export class DbManager {
     enabledApis?: string[]
   ): Promise<void> {
     incrementDbQuery();
-    if (typeof (this.storage as any).createUserV2 === 'function') {
+    if (this.storage && typeof (this.storage as any).createUserV2 === 'function') {
       await (this.storage as any).createUserV2(userName, password, role, tags, oidcSub, enabledApis);
     }
   }
 
   async verifyUserV2(userName: string, password: string): Promise<boolean> {
     incrementDbQuery();
-    if (typeof (this.storage as any).verifyUserV2 === 'function') {
+    if (this.storage && typeof (this.storage as any).verifyUserV2 === 'function') {
       return (this.storage as any).verifyUserV2(userName, password);
     }
     return false;
@@ -301,7 +301,7 @@ export class DbManager {
 
   async checkUserExistV2(userName: string): Promise<boolean> {
     incrementDbQuery();
-    if (typeof (this.storage as any).checkUserExistV2 === 'function') {
+    if (this.storage && typeof (this.storage as any).checkUserExistV2 === 'function') {
       return (this.storage as any).checkUserExistV2(userName);
     }
     return false;
@@ -309,7 +309,7 @@ export class DbManager {
 
   async getUserByOidcSub(oidcSub: string): Promise<string | null> {
     incrementDbQuery();
-    if (typeof (this.storage as any).getUserByOidcSub === 'function') {
+    if (this.storage && typeof (this.storage as any).getUserByOidcSub === 'function') {
       return (this.storage as any).getUserByOidcSub(oidcSub);
     }
     return null;
@@ -325,7 +325,7 @@ export class DbManager {
     oidcSub?: string;
   } | null> {
     incrementDbQuery();
-    if (typeof (this.storage as any).getUserInfoV2 === 'function') {
+    if (this.storage && typeof (this.storage as any).getUserInfoV2 === 'function') {
       return (this.storage as any).getUserInfoV2(userName);
     }
     return null;
@@ -350,7 +350,7 @@ export class DbManager {
   // 获取全部用户名
   async getAllUsers(): Promise<string[]> {
     incrementDbQuery();
-    if (typeof (this.storage as any).getAllUsers === 'function') {
+    if (this.storage && typeof (this.storage as any).getAllUsers === 'function') {
       return (this.storage as any).getAllUsers();
     }
     return [];
@@ -359,7 +359,7 @@ export class DbManager {
   // ---------- 管理员配置 ----------
   async getAdminConfig(): Promise<AdminConfig | null> {
     incrementDbQuery();
-    if (typeof (this.storage as any).getAdminConfig === 'function') {
+    if (this.storage && typeof (this.storage as any).getAdminConfig === 'function') {
       return (this.storage as any).getAdminConfig();
     }
     return null;
@@ -367,7 +367,7 @@ export class DbManager {
 
   async saveAdminConfig(config: AdminConfig): Promise<void> {
     incrementDbQuery();
-    if (typeof (this.storage as any).setAdminConfig === 'function') {
+    if (this.storage && typeof (this.storage as any).setAdminConfig === 'function') {
       await (this.storage as any).setAdminConfig(config);
     }
   }
@@ -379,7 +379,7 @@ export class DbManager {
     id: string
   ): Promise<EpisodeSkipConfig | null> {
     incrementDbQuery();
-    if (typeof (this.storage as any).getSkipConfig === 'function') {
+    if (this.storage && typeof (this.storage as any).getSkipConfig === 'function') {
       return (this.storage as any).getSkipConfig(userName, source, id);
     }
     return null;
@@ -392,7 +392,7 @@ export class DbManager {
     config: EpisodeSkipConfig
   ): Promise<void> {
     incrementDbQuery();
-    if (typeof (this.storage as any).setSkipConfig === 'function') {
+    if (this.storage && typeof (this.storage as any).setSkipConfig === 'function') {
       await (this.storage as any).setSkipConfig(userName, source, id, config);
     }
   }
@@ -403,7 +403,7 @@ export class DbManager {
     id: string
   ): Promise<void> {
     incrementDbQuery();
-    if (typeof (this.storage as any).deleteSkipConfig === 'function') {
+    if (this.storage && typeof (this.storage as any).deleteSkipConfig === 'function') {
       await (this.storage as any).deleteSkipConfig(userName, source, id);
     }
   }
@@ -412,7 +412,7 @@ export class DbManager {
     userName: string
   ): Promise<{ [key: string]: EpisodeSkipConfig }> {
     incrementDbQuery();
-    if (typeof (this.storage as any).getAllSkipConfigs === 'function') {
+    if (this.storage && typeof (this.storage as any).getAllSkipConfigs === 'function') {
       return (this.storage as any).getAllSkipConfigs(userName);
     }
     return {};
@@ -425,7 +425,7 @@ export class DbManager {
     id: string
   ): Promise<EpisodeSkipConfig | null> {
     incrementDbQuery();
-    if (typeof (this.storage as any).getEpisodeSkipConfig === 'function') {
+    if (this.storage && typeof (this.storage as any).getEpisodeSkipConfig === 'function') {
       return (this.storage as any).getEpisodeSkipConfig(userName, source, id);
     }
     return null;
@@ -438,7 +438,7 @@ export class DbManager {
     config: EpisodeSkipConfig
   ): Promise<void> {
     incrementDbQuery();
-    if (typeof (this.storage as any).saveEpisodeSkipConfig === 'function') {
+    if (this.storage && typeof (this.storage as any).saveEpisodeSkipConfig === 'function') {
       await (this.storage as any).saveEpisodeSkipConfig(userName, source, id, config);
     }
   }
@@ -449,7 +449,7 @@ export class DbManager {
     id: string
   ): Promise<void> {
     incrementDbQuery();
-    if (typeof (this.storage as any).deleteEpisodeSkipConfig === 'function') {
+    if (this.storage && typeof (this.storage as any).deleteEpisodeSkipConfig === 'function') {
       await (this.storage as any).deleteEpisodeSkipConfig(userName, source, id);
     }
   }
@@ -458,7 +458,7 @@ export class DbManager {
     userName: string
   ): Promise<{ [key: string]: EpisodeSkipConfig }> {
     incrementDbQuery();
-    if (typeof (this.storage as any).getAllEpisodeSkipConfigs === 'function') {
+    if (this.storage && typeof (this.storage as any).getAllEpisodeSkipConfigs === 'function') {
       return (this.storage as any).getAllEpisodeSkipConfigs(userName);
     }
     return {};
@@ -467,7 +467,7 @@ export class DbManager {
   // ---------- 数据清理 ----------
   async clearAllData(): Promise<void> {
     incrementDbQuery();
-    if (typeof (this.storage as any).clearAllData === 'function') {
+    if (this.storage && typeof (this.storage as any).clearAllData === 'function') {
       await (this.storage as any).clearAllData();
     } else {
       throw new Error('存储类型不支持清空数据操作');
@@ -507,7 +507,7 @@ export class DbManager {
   // ---------- 播放统计相关 ----------
   async getPlayStats(): Promise<PlayStatsResult> {
     incrementDbQuery();
-    if (typeof (this.storage as any).getPlayStats === 'function') {
+    if (this.storage && typeof (this.storage as any).getPlayStats === 'function') {
       return (this.storage as any).getPlayStats();
     }
 
@@ -538,7 +538,7 @@ export class DbManager {
 
   async getUserPlayStat(userName: string): Promise<UserPlayStat> {
     incrementDbQuery();
-    if (typeof (this.storage as any).getUserPlayStat === 'function') {
+    if (this.storage && typeof (this.storage as any).getUserPlayStat === 'function') {
       return (this.storage as any).getUserPlayStat(userName);
     }
 
@@ -556,7 +556,7 @@ export class DbManager {
 
   async getContentStats(limit = 10): Promise<ContentStat[]> {
     incrementDbQuery();
-    if (typeof (this.storage as any).getContentStats === 'function') {
+    if (this.storage && typeof (this.storage as any).getContentStats === 'function') {
       return (this.storage as any).getContentStats(limit);
     }
 
@@ -571,7 +571,7 @@ export class DbManager {
     _watchTime: number
   ): Promise<void> {
     incrementDbQuery();
-    if (typeof (this.storage as any).updatePlayStatistics === 'function') {
+    if (this.storage && typeof (this.storage as any).updatePlayStatistics === 'function') {
       await (this.storage as any).updatePlayStatistics(_userName, _source, _id, _watchTime);
     }
   }
@@ -582,7 +582,7 @@ export class DbManager {
     isFirstLogin?: boolean
   ): Promise<void> {
     incrementDbQuery();
-    if (typeof (this.storage as any).updateUserLoginStats === 'function') {
+    if (this.storage && typeof (this.storage as any).updateUserLoginStats === 'function') {
       await (this.storage as any).updateUserLoginStats(userName, loginTime, isFirstLogin);
     }
   }
@@ -590,7 +590,7 @@ export class DbManager {
   // 删除 V1 用户密码数据（用于 V1→V2 迁移）
   async deleteV1Password(userName: string): Promise<void> {
     incrementDbQuery();
-    if (typeof (this.storage as any).client !== 'undefined') {
+    if (this.storage && typeof (this.storage as any).client !== 'undefined') {
       await (this.storage as any).client.del(`u:${userName}:pwd`);
     }
   }
@@ -604,7 +604,7 @@ export class DbManager {
   // 用户 Emby 配置相关方法
   async getUserEmbyConfig(userName: string): Promise<any | null> {
     incrementDbQuery();
-    if (typeof (this.storage as any).getUserEmbyConfig === 'function') {
+    if (this.storage && typeof (this.storage as any).getUserEmbyConfig === 'function') {
       return (this.storage as any).getUserEmbyConfig(userName);
     }
     return null;
@@ -612,14 +612,14 @@ export class DbManager {
 
   async saveUserEmbyConfig(userName: string, config: any): Promise<void> {
     incrementDbQuery();
-    if (typeof (this.storage as any).saveUserEmbyConfig === 'function') {
+    if (this.storage && typeof (this.storage as any).saveUserEmbyConfig === 'function') {
       await (this.storage as any).saveUserEmbyConfig(userName, config);
     }
   }
 
   async deleteUserEmbyConfig(userName: string): Promise<void> {
     incrementDbQuery();
-    if (typeof (this.storage as any).deleteUserEmbyConfig === 'function') {
+    if (this.storage && typeof (this.storage as any).deleteUserEmbyConfig === 'function') {
       await (this.storage as any).deleteUserEmbyConfig(userName);
     }
   }
