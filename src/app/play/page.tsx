@@ -6168,21 +6168,23 @@ function PlayPageClient() {
                   </div>
                 )}
 
-                {/* SkipController 组件 */}
-                {currentSource && currentId && detail?.title && (
-                  <SkipController
-                    source={currentSource}
-                    id={currentId}
-                    title={detail.title}
-                    episodeIndex={currentEpisodeIndex}
-                    artPlayerRef={artPlayerRef}
-                    currentTime={currentPlayTime}
-                    duration={videoDuration}
-                    isSettingMode={isSkipSettingOpen}
-                    onSettingModeChange={setIsSkipSettingOpen}
-                    onNextEpisode={handleNextEpisode}
-                  />
-                )}
+                  {/* SkipController 组件 */}
+                  {currentSource && currentId && detail?.title && (
+                    <SkipController
+                      source={currentSource}
+                      id={currentId}
+                      title={detail.title}
+                      doubanId={videoDoubanId}
+                      year={videoYear}
+                      episodeIndex={currentEpisodeIndex}
+                      artPlayerRef={artPlayerRef}
+                      currentTime={currentPlayTime}
+                      duration={videoDuration}
+                      isSettingMode={isSkipSettingOpen}
+                      onSettingModeChange={setIsSkipSettingOpen}
+                      onNextEpisode={handleNextEpisode}
+                    />
+                  )}
 
                 {/* 换源加载蒙层 */}
                 <VideoLoadingOverlay

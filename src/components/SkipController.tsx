@@ -7,6 +7,7 @@ import {
   deleteSkipConfig,
   EpisodeSkipConfig,
   getSkipConfig,
+  getVideoSkipConfigKey,
   saveSkipConfig,
   SkipSegment,
 } from '@/lib/db.client';
@@ -66,19 +67,23 @@ interface SkipControllerProps {
   source: string;
   id: string;
   title: string;
-  episodeIndex?: number; // 新增：当前集数索引，用于区分不同集数
+  doubanId?: number;
+  year?: string;
+  episodeIndex?: number;
   artPlayerRef: React.MutableRefObject<any>;
   currentTime?: number;
   duration?: number;
   isSettingMode?: boolean;
   onSettingModeChange?: (isOpen: boolean) => void;
-  onNextEpisode?: () => void; // 新增：跳转下一集的回调
+  onNextEpisode?: () => void;
 }
 
 export default function SkipController({
   source,
   id,
   title,
+  doubanId,
+  year,
   episodeIndex = 0,
   artPlayerRef,
   currentTime = 0,
@@ -87,6 +92,12 @@ export default function SkipController({
   onSettingModeChange,
   onNextEpisode,
 }: SkipControllerProps) {
+  // 计算源无关的视频身份标识 key，使同一视频的不同源共享跳过配置
+  const identityKey = useMemo(
+    () => getVideoSkipConfigKey(doubanId, title, year),
+    [doubanId, title, year],
+  );
+
   const [skipConfig, setSkipConfig] = useState<EpisodeSkipConfig | null>(null);
   const [showSkipButton, setShowSkipButton] = useState(false);
   const [currentSkipSegment, setCurrentSkipSegment] = useState<SkipSegment | null>(null);
@@ -365,12 +376,12 @@ export default function SkipController({
   // 加载跳过配置
   const loadSkipConfig = useCallback(async () => {
     try {
-      const config = await getSkipConfig(source, id);
+      const config = await getSkipConfig(source, id, identityKey);
       setSkipConfig(config);
     } catch (err) {
       console.error('❌ 加载跳过配置失败:', err);
     }
-  }, [source, id]);
+  }, [source, id, identityKey]);
 
   // 自动跳过逻辑
   const handleAutoSkip = useCallback((segment: SkipSegment) => {
@@ -647,7 +658,7 @@ export default function SkipController({
         updated_time: Date.now(),
       };
 
-      await saveSkipConfig(source, id, updatedConfig);
+      await saveSkipConfig(source, id, updatedConfig, identityKey);
       setSkipConfig(updatedConfig);
       onSettingModeChange?.(false);
       setNewSegment({});
@@ -657,7 +668,15 @@ export default function SkipController({
       console.error('保存跳过片段失败:', err);
       alert('保存失败，请重试');
     }
-  }, [newSegment, skipConfig, source, id, title, onSettingModeChange]);
+  }, [
+    newSegment,
+    skipConfig,
+    source,
+    id,
+    title,
+    identityKey,
+    onSettingModeChange,
+  ]);
 
   // 保存批量设置的跳过配置
   const handleSaveBatchSettings = useCallback(async () => {
@@ -740,7 +759,7 @@ export default function SkipController({
         updated_time: Date.now(),
       };
 
-      await saveSkipConfig(source, id, updatedConfig);
+      await saveSkipConfig(source, id, updatedConfig, identityKey);
       setSkipConfig(updatedConfig);
       // batchSettings 会通过 useEffect 自动从 skipConfig 同步，不需要手动重置
       onSettingModeChange?.(false);
@@ -750,7 +769,17 @@ export default function SkipController({
       console.error('保存跳过配置失败:', err);
       alert('保存失败，请重试');
     }
-  }, [batchSettings, duration, source, id, title, onSettingModeChange, timeToSeconds, secondsToTime]);
+  }, [
+    batchSettings,
+    duration,
+    source,
+    id,
+    title,
+    identityKey,
+    onSettingModeChange,
+    timeToSeconds,
+    secondsToTime
+  ]);
 
   // 删除跳过片段
   const handleDeleteSegment = useCallback(
@@ -762,7 +791,7 @@ export default function SkipController({
 
         if (updatedSegments.length === 0) {
           // 如果没有片段了，删除整个配置
-          await deleteSkipConfig(source, id);
+          await deleteSkipConfig(source, id, identityKey);
           setSkipConfig(null);
         } else {
           // 更新配置
@@ -771,7 +800,7 @@ export default function SkipController({
             segments: updatedSegments,
             updated_time: Date.now(),
           };
-          await saveSkipConfig(source, id, updatedConfig);
+          await saveSkipConfig(source, id, updatedConfig, identityKey);
           setSkipConfig(updatedConfig);
         }
 
@@ -781,7 +810,7 @@ export default function SkipController({
         alert('删除失败，请重试');
       }
     },
-    [skipConfig, source, id]
+    [skipConfig, source, id, identityKey],
   );
 
   // 格式化时间显示

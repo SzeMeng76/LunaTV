@@ -787,6 +787,27 @@ export function generateStorageKey(source: string, id: string): string {
   return `${source}+${id}`;
 }
 
+/** 生成源无关的视频身份标识 key（douban_id → title+year fallback），适用于跳过配置跨源共享。无法生成时返回 null，调用方应回退到 source+id。 */
+export function getVideoSkipConfigKey(
+  doubanId?: number | null,
+  title?: string,
+  year?: string,
+): string | null {
+  if (doubanId && doubanId > 0) {
+    return `vid:douban:${doubanId}`;
+  }
+  if (title) {
+    const normalized = title
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9\u4e00-\u9fff\s]/g, '')
+      .replace(/\s+/g, '_')
+      .substring(0, 80);
+    return `vid:title:${normalized}${year ? `:${year}` : ''}`;
+  }
+  return null;
+}
+
 /**
  * 检查是否应该更新原始集数
  *
@@ -1898,7 +1919,8 @@ export async function preloadUserData(): Promise<void> {
  */
 export async function getSkipConfig(
   source: string,
-  id: string
+  id: string,
+  identityKey?: string | null,
 ): Promise<EpisodeSkipConfig | null> {
   try {
     // 服务器端渲染阶段直接返回空
@@ -1906,7 +1928,7 @@ export async function getSkipConfig(
       return null;
     }
 
-    const key = generateStorageKey(source, id);
+    const key = identityKey || generateStorageKey(source, id);
 
     if (STORAGE_TYPE === 'localstorage') {
       // localStorage 模式
@@ -1937,6 +1959,7 @@ export async function getSkipConfig(
           action: 'get',
           key,
           username: authInfo.username,
+          ...(identityKey ? { identityKey } : {}),
         }),
       });
 
@@ -1969,10 +1992,11 @@ export async function getSkipConfig(
 export async function saveSkipConfig(
   source: string,
   id: string,
-  config: EpisodeSkipConfig
+  config: EpisodeSkipConfig,
+  identityKey?: string | null,
 ): Promise<void> {
   try {
-    const key = generateStorageKey(source, id);
+    const key = identityKey || generateStorageKey(source, id);
 
     if (STORAGE_TYPE === 'localstorage') {
       // localStorage 模式
@@ -2017,6 +2041,7 @@ export async function saveSkipConfig(
           key,
           config,
           username: authInfo.username,
+          ...(identityKey ? { identityKey } : {}),
         }),
       });
 
@@ -2098,10 +2123,11 @@ export async function getAllSkipConfigs(): Promise<Record<string, EpisodeSkipCon
  */
 export async function deleteSkipConfig(
   source: string,
-  id: string
+  id: string,
+  identityKey?: string | null,
 ): Promise<void> {
   try {
-    const key = generateStorageKey(source, id);
+    const key = identityKey || generateStorageKey(source, id);
 
     if (STORAGE_TYPE === 'localstorage') {
       // localStorage 模式
@@ -2147,6 +2173,7 @@ export async function deleteSkipConfig(
           action: 'delete',
           key,
           username: authInfo.username,
+          ...(identityKey ? { identityKey } : {}),
         }),
       });
 
