@@ -26,22 +26,7 @@ export async function GET(request: NextRequest) {
     // 从 cookie 获取用户信息
     const authInfo = getAuthInfoFromCookie(request);
     if (!authInfo || !authInfo.username) {
-      const errorResponse = { error: 'Unauthorized' };
-      const errorSize = Buffer.byteLength(JSON.stringify(errorResponse), 'utf8');
-
-      recordRequest({
-        timestamp: startTime,
-        method: 'GET',
-        path: '/api/reminders',
-        statusCode: 401,
-        duration: Date.now() - startTime,
-        memoryUsed: (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
-        dbQueries: getDbQueryCount(),
-        requestSize: 0,
-        responseSize: errorSize,
-      });
-
-      return NextResponse.json(errorResponse, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const config = await getConfig();

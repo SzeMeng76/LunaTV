@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { M3U8DownloadTask, parseM3U8, downloadM3U8Video, PauseResumeController, StreamSaverMode } from '@/lib/download';
 import type { DownloadProgress } from '@/lib/download';
 import { getBestStreamMode, detectStreamModeSupport, type StreamModeSupport } from '@/lib/download/stream-mode-detector';
@@ -335,23 +335,23 @@ export function DownloadProvider({ children }: { children: React.ReactNode }) {
     return (task.finishNum / total) * 100;
   }, [tasks]);
 
+  const contextValue = useMemo(() => ({
+    tasks,
+    showDownloadPanel,
+    setShowDownloadPanel,
+    settings,
+    setSettings,
+    streamModeSupport,
+    createTask,
+    startTask,
+    pauseTask,
+    cancelTask,
+    retryFailedSegments,
+    getProgress,
+  }), [tasks, showDownloadPanel, settings, streamModeSupport, createTask, startTask, pauseTask, cancelTask, retryFailedSegments, getProgress]);
+
   return (
-    <DownloadContext.Provider
-      value={{
-        tasks,
-        showDownloadPanel,
-        setShowDownloadPanel,
-        settings,
-        setSettings,
-        streamModeSupport,
-        createTask,
-        startTask,
-        pauseTask,
-        cancelTask,
-        retryFailedSegments,
-        getProgress,
-      }}
-    >
+    <DownloadContext.Provider value={contextValue}>
       {children}
     </DownloadContext.Provider>
   );

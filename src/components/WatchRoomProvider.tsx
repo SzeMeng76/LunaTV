@@ -202,7 +202,30 @@ export function WatchRoomProvider({ children }: WatchRoomProviderProps) {
     };
   }, [isEnabled, config, authKey]);
 
-  const contextValue: WatchRoomContextType = {
+  const createRoom = useCallback(async (data: any) => {
+    const result = await watchRoom.createRoom(data);
+    if (!result.success || !result.room) {
+      throw new Error(result.error || '创建房间失败');
+    }
+    return result.room;
+  }, [watchRoom]);
+
+  const joinRoom = useCallback(async (data: any) => {
+    const result = await watchRoom.joinRoom(data.roomId, data.password);
+    if (!result.success || !result.room || !result.members) {
+      throw new Error(result.error || '加入房间失败');
+    }
+    return { room: result.room, members: result.members };
+  }, [watchRoom]);
+
+  const clearRoomState = useCallback(async () => {
+    const result = await watchRoom.clearState();
+    if (!result.success) {
+      throw new Error(result.error || '清除状态失败');
+    }
+  }, [watchRoom]);
+
+  const contextValue: WatchRoomContextType = useMemo(() => ({
     socket: watchRoom.socket,
     isConnected: watchRoom.connected,
     currentRoom: watchRoom.currentRoom,
@@ -211,20 +234,8 @@ export function WatchRoomProvider({ children }: WatchRoomProviderProps) {
     isOwner: watchRoom.isOwner,
     isEnabled,
     configLoading,
-    createRoom: async (data) => {
-      const result = await watchRoom.createRoom(data);
-      if (!result.success || !result.room) {
-        throw new Error(result.error || '创建房间失败');
-      }
-      return result.room;
-    },
-    joinRoom: async (data) => {
-      const result = await watchRoom.joinRoom(data.roomId, data.password);
-      if (!result.success || !result.room || !result.members) {
-        throw new Error(result.error || '加入房间失败');
-      }
-      return { room: result.room, members: result.members };
-    },
+    createRoom,
+    joinRoom,
     leaveRoom: watchRoom.leaveRoom,
     getRoomList: watchRoom.getRoomList,
     hasOwnerToken: watchRoom.hasOwnerToken,
@@ -238,13 +249,18 @@ export function WatchRoomProvider({ children }: WatchRoomProviderProps) {
     changeLiveChannel: watchRoom.changeLiveChannel,
     startScreenShare: watchRoom.startScreenShare,
     stopScreenShare: watchRoom.stopScreenShare,
-    clearRoomState: async () => {
-      const result = await watchRoom.clearState();
-      if (!result.success) {
-        throw new Error(result.error || '清除状态失败');
-      }
-    },
-  };
+    clearRoomState,
+  }), [
+    watchRoom.socket, watchRoom.connected, watchRoom.currentRoom,
+    watchRoom.members, watchRoom.messages, watchRoom.isOwner,
+    isEnabled, configLoading,
+    createRoom, joinRoom, clearRoomState,
+    watchRoom.leaveRoom, watchRoom.getRoomList, watchRoom.hasOwnerToken,
+    watchRoom.dismissRoomFromList, watchRoom.sendMessage, watchRoom.updatePlayState,
+    watchRoom.seekTo, watchRoom.play, watchRoom.pause,
+    watchRoom.changeVideo, watchRoom.changeLiveChannel,
+    watchRoom.startScreenShare, watchRoom.stopScreenShare,
+  ]);
 
   return (
     <WatchRoomContext.Provider value={contextValue}>

@@ -10,6 +10,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useLongPress } from '@/hooks/useLongPress';
 import { useToggleFavoriteMutation } from '@/hooks/useFavoritesMutations';
 import { useIsFavoritedQuery } from '@/hooks/useFavoritesQuery';
+import { useIsAuthenticated } from '@/hooks/useIsAuthenticated';
 import { isAIRecommendFeatureDisabled } from '@/lib/ai-recommend.client';
 import {
   saveFavorite,
@@ -69,7 +70,8 @@ function ShortDramaCard({
   const id = drama.id.toString(); // 转换为字符串
 
   // 🚀 TanStack Query - 获取收藏状态
-  const { data: favoritedStatus } = useIsFavoritedQuery(source, id);
+  const isAuth = useIsAuthenticated();
+  const { data: favoritedStatus } = useIsFavoritedQuery(source, id, { enabled: isAuth });
 
   // 同步 Query 结果到本地 state
   useEffect(() => {

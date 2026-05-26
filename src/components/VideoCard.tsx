@@ -21,6 +21,7 @@ import { useToggleReminderMutation } from '@/hooks/useRemindersMutations';
 import { useDeletePlayRecordMutation } from '@/hooks/usePlayRecordsMutations';
 import { useIsFavoritedQuery } from '@/hooks/useFavoritesQuery';
 import { useIsRemindedQuery } from '@/hooks/useRemindersQuery';
+import { useIsAuthenticated } from '@/hooks/useIsAuthenticated';
 import { isAIRecommendFeatureDisabled } from '@/lib/ai-recommend.client';
 import {
   deleteFavorite,
@@ -210,15 +211,16 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
   const shouldShowBell = isUpcoming || isNewRelease;
 
   // 🚀 TanStack Query - 获取收藏/提醒状态
+  const isAuth = useIsAuthenticated();
   const { data: favoritedStatus } = useIsFavoritedQuery(
     actualSource || '',
     actualId || '',
-    { enabled: !!actualSource && !!actualId && !shouldShowBell }
+    { enabled: !!actualSource && !!actualId && !shouldShowBell && isAuth }
   );
   const { data: remindedStatus } = useIsRemindedQuery(
     actualSource || '',
     actualId || '',
-    { enabled: !!actualSource && !!actualId && shouldShowBell }
+    { enabled: !!actualSource && !!actualId && shouldShowBell && isAuth }
   );
 
   // 同步 Query 结果到本地 state

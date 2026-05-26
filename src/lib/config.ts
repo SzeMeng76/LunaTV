@@ -57,6 +57,8 @@ export const API_CONFIG = {
 
 // 在模块加载时根据环境决定配置来源
 let cachedConfig: AdminConfig;
+let cachedConfigAt = 0;
+const CONFIG_CACHE_TTL = 30_000; // 30 秒进程级内存缓存
 
 
 // 从配置文件补充管理员配置
@@ -325,9 +327,10 @@ export async function getConfig(): Promise<AdminConfig> {
   // 🔥 防止 Next.js 在 Docker 环境下缓存配置（解决站点名称更新问题）
   unstable_noStore();
 
-  // 🔥 完全移除内存缓存检查 - Docker 环境下模块级变量不会被清除
-  // 参考：https://nextjs.org/docs/app/guides/memory-usage
-  // 每次都从数据库读取最新配置，确保动态配置立即生效
+  // 进程级内存缓存：30 秒内复用配置，避免每个请求都查数据库
+  if (cachedConfig && Date.now() - cachedConfigAt < CONFIG_CACHE_TTL) {
+    return cachedConfig;
+  }
 
   // 读 db
   let adminConfig: AdminConfig | null = null;
@@ -343,8 +346,8 @@ export async function getConfig(): Promise<AdminConfig> {
   }
   adminConfig = await configSelfCheck(adminConfig);
 
-  // 🔥 仍然更新 cachedConfig 以保持向后兼容，但不再依赖它
   cachedConfig = adminConfig;
+  cachedConfigAt = Date.now();
 
   return adminConfig;
 }
@@ -352,6 +355,7 @@ export async function getConfig(): Promise<AdminConfig> {
 // 清除配置缓存，强制重新从数据库读取
 export function clearConfigCache(): void {
   cachedConfig = null as any;
+  cachedConfigAt = 0;
 }
 
 export async function configSelfCheck(adminConfig: AdminConfig): Promise<AdminConfig> {

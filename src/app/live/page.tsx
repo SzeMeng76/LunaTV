@@ -2,6 +2,13 @@
 
 'use client';
 
+import '@/styles/artplayer-hints.css';
+import '@/styles/artplayer-controls.css';
+import '@/styles/artplayer-mobile.css';
+import '@/styles/artplayer-liquid-glass.css';
+import '@/styles/artplayer-range-slider.css';
+import '@/styles/artplayer-fullscreen-title.css';
+
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 
 import Hls from 'hls.js';
