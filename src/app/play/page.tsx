@@ -687,6 +687,24 @@ function PlayPageClient() {
     `;
   }, [currentEpisodeIndex, detail, portalContainer]);
 
+  // 🕐 全屏实时时钟 — 每秒更新一次
+  useEffect(() => {
+    const updateClock = () => {
+      if (!artPlayerRef.current) return;
+      const clockLayer = artPlayerRef.current.layers['fullscreen-clock'];
+      if (!clockLayer) return;
+      const now = new Date();
+      const hh = String(now.getHours()).padStart(2, '0');
+      const mm = String(now.getMinutes()).padStart(2, '0');
+      const ss = String(now.getSeconds()).padStart(2, '0');
+      clockLayer.innerHTML = `<span class="fullscreen-clock">${hh}:${mm}:${ss}</span>`;
+    };
+
+    updateClock();
+    const interval = setInterval(updateClock, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   // 获取自定义去广告代码
   useEffect(() => {
     const fetchAdFilterCode = async () => {
@@ -5043,17 +5061,33 @@ function PlayPageClient() {
               </div>
             </div>
           `,
-          style: {
-            position: 'absolute',
-            top: '0',
-            left: '0',
-            right: '0',
-            height: '80px',
-            display: 'none',
-            pointerEvents: 'none',
-            zIndex: '20',
-          },
-        });
+            style: {
+              position: 'absolute',
+              top: '0',
+              left: '0',
+              right: '0',
+              height: '80px',
+              display: 'none',
+              pointerEvents: 'none',
+              zIndex: '20',
+            },
+          });
+
+          // 🕐 全屏实时时钟层（右上角）
+          artPlayerRef.current.layers.add({
+            name: 'fullscreen-clock',
+            html: '<span class="fullscreen-clock">--:--:--</span>',
+            style: {
+              position: 'absolute',
+              top: '0',
+              right: '24px',
+              height: '80px',
+              display: 'none',
+              pointerEvents: 'none',
+              zIndex: '21',
+              alignItems: 'center',
+            },
+          });
 
         // 自动隐藏徽章的定时器
         let badgeHideTimer: NodeJS.Timeout | null = null;
@@ -5628,12 +5662,16 @@ function PlayPageClient() {
         }
       });
 
-      // 监听全屏事件，进入全屏后自动隐藏控制栏 + 显示标题层 + 应用透明度
-      artPlayerRef.current.on('fullscreen', (isFullscreen: boolean) => {
-        const titleLayer = artPlayerRef.current?.layers['fullscreen-title'];
-        if (titleLayer) {
-          titleLayer.style.display = isFullscreen ? 'block' : 'none';
-        }
+        // 监听全屏事件，进入全屏后自动隐藏控制栏 + 显示标题层 + 应用透明度
+        artPlayerRef.current.on('fullscreen', (isFullscreen: boolean) => {
+          const titleLayer = artPlayerRef.current?.layers['fullscreen-title'];
+          if (titleLayer) {
+            titleLayer.style.display = isFullscreen ? 'block' : 'none';
+          }
+          const clockLayer = artPlayerRef.current?.layers['fullscreen-clock'];
+          if (clockLayer) {
+            clockLayer.style.display = isFullscreen ? 'flex' : 'none';
+          }
 
         // 应用保存的透明度设置
         const liquidGlass = artPlayerRef.current?.template?.$player?.querySelector('.art-liquid-glass') as HTMLElement | null;
@@ -5667,13 +5705,17 @@ function PlayPageClient() {
         }
       });
 
-      // 监听网页全屏事件，显示/隐藏标题层
-      artPlayerRef.current.on('fullscreenWeb', (isFullscreenWeb: boolean) => {
-        const titleLayer = artPlayerRef.current?.layers['fullscreen-title'];
-        if (titleLayer) {
-          titleLayer.style.display = isFullscreenWeb ? 'block' : 'none';
-        }
-      });
+        // 监听网页全屏事件，显示/隐藏标题层
+        artPlayerRef.current.on('fullscreenWeb', (isFullscreenWeb: boolean) => {
+          const titleLayer = artPlayerRef.current?.layers['fullscreen-title'];
+          if (titleLayer) {
+            titleLayer.style.display = isFullscreenWeb ? 'block' : 'none';
+          }
+          const clockLayer = artPlayerRef.current?.layers['fullscreen-clock'];
+          if (clockLayer) {
+            clockLayer.style.display = isFullscreenWeb ? 'flex' : 'none';
+          }
+        });
 
       // 监听视频可播放事件，这时恢复播放进度更可靠
       artPlayerRef.current.on('video:canplay', () => {

@@ -10,10 +10,17 @@
   height: 100%;
   display: flex;
   align-items: center;
-  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.3) 60%, transparent 100%);
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.7) 0%,
+    rgba(0, 0, 0, 0.3) 60%,
+    transparent 100%
+  );
   opacity: 0;
   transform: translateY(-10px);
-  transition: opacity 0.3s ease, transform 0.3s ease;
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease;
 }
 
 /* 跟控制栏联动 - 控制栏显示时标题淡入+滑入 */
@@ -39,7 +46,9 @@
   font-size: 22px;
   font-weight: 600;
   color: white;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6), 0 0 12px rgba(0, 0, 0, 0.3);
+  text-shadow:
+    0 1px 4px rgba(0, 0, 0, 0.6),
+    0 0 12px rgba(0, 0, 0, 0.3);
   margin: 0;
   max-width: 600px;
   overflow: hidden;
@@ -91,5 +100,37 @@
   .fullscreen-title-content {
     gap: 8px;
     padding: 0 12px;
+  }
+}
+
+/* ============================================
+   全屏实时时钟样式
+   - 右上角固定位置
+   - 跟随全屏层显示/隐藏
+   - 等宽数字防抖动
+   ============================================ */
+
+.fullscreen-clock {
+  font-size: 20px;
+  font-weight: 600;
+  color: white;
+  text-shadow:
+    0 1px 4px rgba(0, 0, 0, 0.6),
+    0 0 12px rgba(0, 0, 0, 0.3);
+  letter-spacing: 0.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 响应式 - 平板 */
+@media (max-width: 768px) {
+  .fullscreen-clock {
+    font-size: 16px;
+  }
+}
+
+/* 响应式 - 手机 */
+@media (max-width: 480px) {
+  .fullscreen-clock {
+    font-size: 14px;
   }
 }
