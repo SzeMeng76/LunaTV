@@ -899,24 +899,9 @@ export default function SkipController({
     };
   }, []);
 
-  // 🔑 关闭弹窗的统一处理函数
+  // 🔑 关闭弹窗：仅关闭弹窗，不修改任何配置（只有保存按钮才应更新配置）
   const handleCloseDialog = useCallback(() => {
     onSettingModeChange?.(false);
-    // 取消时从 localStorage 读取用户设置，不能硬编码默认值
-    const savedEnableAutoSkip = localStorage.getItem('enableAutoSkip');
-    const savedEnableAutoNextEpisode = localStorage.getItem('enableAutoNextEpisode');
-    const userAutoSkip = savedEnableAutoSkip !== null ? JSON.parse(savedEnableAutoSkip) : true;
-    const userAutoNextEpisode = savedEnableAutoNextEpisode !== null ? JSON.parse(savedEnableAutoNextEpisode) : true;
-
-    setBatchSettings({
-      openingStart: '0:00',
-      openingEnd: '1:30',
-      endingMode: 'remaining',
-      endingStart: '2:00',
-      endingEnd: '',
-      autoSkip: userAutoSkip,
-      autoNextEpisode: userAutoNextEpisode,
-    });
   }, [onSettingModeChange]);
 
   // 🔑 监听 ESC 键关闭弹窗

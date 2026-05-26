@@ -901,6 +901,8 @@ function PlayPageClient() {
   const lastVolumeRef = useRef<number>(0.7);
   // 上次使用的播放速率，从 localStorage 恢复
   const lastPlaybackRateRef = useRef<number>(loadPlaybackRate());
+  // 🔥 修复：标记是否正在切换源/集数，用于阻止 ratechange 保存瞬态的播放速率重置
+  const isSourceSwitchingRef = useRef(false);
 
   const [sourceSearchLoading, setSourceSearchLoading] = useState(false);
   const [sourceSearchError, setSourceSearchError] = useState<string | null>(
@@ -4196,6 +4198,9 @@ function PlayPageClient() {
         const savedPlaybackRate = loadPlaybackRate();
         lastPlaybackRateRef.current = savedPlaybackRate;
 
+          // 🔥 修复：标记切换中，阻止 video:ratechange 将浏览器重置的 1.0 保存到 localStorage
+          isSourceSwitchingRef.current = true;
+
         let switchPromise: Promise<any>;
         if (isEpisodeChange) {
           console.log(`🎯 开始切换集数: ${videoUrl} (重置播放时间到0)`);
@@ -4242,6 +4247,8 @@ function PlayPageClient() {
           artPlayerRef.current.playbackRate = savedPlaybackRate;
           console.log(`✅ 恢复播放速率: ${savedPlaybackRate}x`);
         }
+          // 🔥 修复：切换完成，恢复 ratechange 的正常保存行为
+          isSourceSwitchingRef.current = false;
 
         if (artPlayerRef.current?.video) {
           ensureVideoSource(
@@ -5600,6 +5607,14 @@ function PlayPageClient() {
         lastVolumeRef.current = artPlayerRef.current.volume;
       });
       artPlayerRef.current.on('video:ratechange', () => {
+          // 🔥 修复：切换源/集数时，浏览器会重置 playbackRate 到 1.0 并触发 ratechange，
+          // 此时保存会覆盖用户设置的倍速。跳过这个瞬态事件。
+          if (isSourceSwitchingRef.current) {
+            console.log(
+              `⏭️ 忽略切换中的 ratechange: ${artPlayerRef.current.playbackRate}`,
+            );
+            return;
+          }
         lastPlaybackRateRef.current = sanitizePlaybackRate(
           artPlayerRef.current.playbackRate,
         );
@@ -5774,21 +5789,22 @@ function PlayPageClient() {
           setTimeout(tryAutoPlay, 200);
         }
 
-        setTimeout(() => {
-          if (
-            Math.abs(artPlayerRef.current.volume - lastVolumeRef.current) > 0.01
-          ) {
-            artPlayerRef.current.volume = lastVolumeRef.current;
-          }
-          if (
-            Math.abs(
-              artPlayerRef.current.playbackRate - lastPlaybackRateRef.current
-            ) > 0.01
-          ) {
-            artPlayerRef.current.playbackRate = lastPlaybackRateRef.current;
-          }
-          artPlayerRef.current.notice.show = '';
-        }, 0);
+          setTimeout(() => {
+            if (
+              Math.abs(artPlayerRef.current.volume - lastVolumeRef.current) >
+              0.01
+            ) {
+              artPlayerRef.current.volume = lastVolumeRef.current;
+            }
+            // 🔥 修复：优先从 localStorage 恢复播放速率（防止 ref 被切换中的 ratechange 污染）
+            const targetRate = loadPlaybackRate();
+            if (
+              Math.abs(artPlayerRef.current.playbackRate - targetRate) > 0.01
+            ) {
+              artPlayerRef.current.playbackRate = targetRate;
+            }
+            artPlayerRef.current.notice.show = '';
+          }, 0);
 
         // 隐藏换源加载状态
         setIsVideoLoading(false);
