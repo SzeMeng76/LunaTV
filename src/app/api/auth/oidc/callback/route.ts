@@ -361,6 +361,23 @@ export async function GET(request: NextRequest) {
         console.error('OIDC登录记录登入时间失败:', err);
       });
 
+      // 异步记录登录日志
+      const xff = request.headers.get('x-forwarded-for');
+      const realIp = request.headers.get('x-real-ip');
+      const clientIp = xff ? xff.split(',')[0].trim() : (realIp ? realIp.trim() : 'unknown');
+      const oidcLoginLog = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        username,
+        loginTime: Date.now(),
+        ip: clientIp,
+        location: '',
+        userAgent: request.headers.get('user-agent') || '',
+        loginMethod: `oidc-${providerId}`,
+      };
+      db.addLoginLog(oidcLoginLog).catch(err => {
+        console.error('OIDC登录记录日志失败:', err);
+      });
+
       return response;
     }
 

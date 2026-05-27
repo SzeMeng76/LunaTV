@@ -188,13 +188,44 @@ html:not(.dark) body {
   }
 }
 
-/* 隐藏所有滚动条（兼容 WebKit、Firefox、IE/Edge）- 排除ArtPlayer */
-*:not(.artplayer):not(.artplayer *) {
+/* 桌面端显示滚动条 */
+@media (min-width: 768px) {
+  html,
+  body {
+    -ms-overflow-style: auto;
+    scrollbar-width: auto;
+  }
+
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar {
+    display: block;
+    width: 8px;
+  }
+
+  html::-webkit-scrollbar-track,
+  body::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  html::-webkit-scrollbar-thumb,
+  body::-webkit-scrollbar-thumb {
+    background: rgba(156, 163, 175, 0.4);
+    border-radius: 4px;
+  }
+
+  html::-webkit-scrollbar-thumb:hover,
+  body::-webkit-scrollbar-thumb:hover {
+    background: rgba(156, 163, 175, 0.7);
+  }
+}
+
+/* 隐藏内部元素滚动条（兼容 WebKit、Firefox、IE/Edge）- 排除ArtPlayer和html/body */
+*:not(.artplayer):not(.artplayer *):not(html):not(body) {
   -ms-overflow-style: none; /* IE & Edge */
   scrollbar-width: none; /* Firefox */
 }
 
-*:not(.artplayer):not(.artplayer *)::-webkit-scrollbar {
+*:not(.artplayer):not(.artplayer *):not(html):not(body)::-webkit-scrollbar {
   display: none; /* Chrome, Safari, Opera */
 }
 

@@ -94,7 +94,7 @@ export default async function RootLayout({
     doubanImageProxy = config.SiteConfig.DoubanImageProxy;
     disableYellowFilter = config.SiteConfig.DisableYellowFilter;
     customCategories = config.CustomCategories.filter(
-      (category) => !category.disabled
+      (category) => !category.disabled,
     ).map((category) => ({
       name: category.name || '',
       type: category.type,
@@ -108,7 +108,7 @@ export default async function RootLayout({
     embyEnabled = !!(
       config.EmbyConfig?.Sources &&
       config.EmbyConfig.Sources.length > 0 &&
-      config.EmbyConfig.Sources.some(s => s.enabled && s.ServerURL)
+      config.EmbyConfig.Sources.some((s) => s.enabled && s.ServerURL)
     );
   }
 
@@ -128,17 +128,19 @@ export default async function RootLayout({
     EMBY_ENABLED: embyEnabled,
     PRIVATE_LIBRARY_ENABLED: embyEnabled,
     // 禁用预告片：Vercel 自动检测，或用户手动设置 DISABLE_HERO_TRAILER=true
-    DISABLE_HERO_TRAILER: process.env.VERCEL === '1' || process.env.DISABLE_HERO_TRAILER === 'true',
+    DISABLE_HERO_TRAILER:
+      process.env.VERCEL === '1' || process.env.DISABLE_HERO_TRAILER === 'true',
   };
 
   return (
-    <html lang='zh-CN' suppressHydrationWarning>
+    <html lang='zh-CN' translate='no' suppressHydrationWarning>
       <head>
         <meta
           name='viewport'
           content='width=device-width, initial-scale=1.0, viewport-fit=cover'
         />
         <meta name='color-scheme' content='light dark' />
+        <meta name='google' content='notranslate' />
         <link rel='apple-touch-icon' href='/icons/icon-192x192.png' />
         {/* 将配置序列化后直接写入脚本，浏览器端可通过 window.RUNTIME_CONFIG 获取 */}
         {/* eslint-disable-next-line @next/next/no-sync-scripts */}
@@ -170,11 +172,13 @@ export default async function RootLayout({
                     {/* 主内容区域 - 只有这部分会在路由切换时重新渲染 */}
                     <main className='w-full min-h-screen pt-[44px] md:pt-16 pb-16 md:pb-8'>
                       <div className='w-full max-w-[2560px] mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 2xl:px-20'>
-                        <Suspense fallback={
-                          <div className="fixed inset-0 z-50">
-                            <CinematicLoadingFallback />
-                          </div>
-                        }>
+                        <Suspense
+                          fallback={
+                            <div className='fixed inset-0 z-50'>
+                              <CinematicLoadingFallback />
+                            </div>
+                          }
+                        >
                           {children}
                         </Suspense>
                       </div>
@@ -189,7 +193,7 @@ export default async function RootLayout({
               </DownloadProvider>
             </GlobalCacheProvider>
           </QueryProvider>
-          <Toaster position="top-center" richColors closeButton />
+          <Toaster position='top-center' richColors closeButton />
         </ThemeProvider>
       </body>
     </html>

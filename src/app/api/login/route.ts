@@ -6,7 +6,6 @@ import { db } from '@/lib/db';
 
 export const runtime = 'nodejs';
 
-// 读取存储类型环境变量，默认 localstorage
 const STORAGE_TYPE =
   (process.env.NEXT_PUBLIC_STORAGE_TYPE as
     | 'localstorage'
@@ -15,10 +14,90 @@ const STORAGE_TYPE =
     | 'kvrocks'
     | undefined) || 'localstorage';
 
+function getClientIp(request: NextRequest): string {
+  const xff = request.headers.get('x-forwarded-for');
+  if (xff) {
+    return xff.split(',')[0].trim();
+  }
+  const realIp = request.headers.get('x-real-ip');
+  if (realIp) {
+    return realIp.trim();
+  }
+  return 'unknown';
+}
+
+async function getIpLocation(ip: string): Promise<string> {
+  if (
+    ip === 'unknown' ||
+    ip === '127.0.0.1' ||
+    ip === '::1' ||
+    ip.startsWith('192.168.') ||
+    ip.startsWith('10.') ||
+    ip.startsWith('172.')
+  ) {
+    return '本地网络';
+  }
+  try {
+    const res = await fetch(
+      `http://ip-api.com/json/${ip}?lang=zh-CN&fields=status,country,regionName,city`,
+      {
+        signal: AbortSignal.timeout(3000),
+      },
+    );
+    if (res.ok) {
+      const data = await res.json();
+      if (data.status === 'success') {
+        return [data.country, data.regionName, data.city]
+          .filter(Boolean)
+          .join(' ');
+      }
+    }
+  } catch {}
+  try {
+    const res = await fetch(`https://ip.useragentinfo.com/json?ip=${ip}`, {
+      signal: AbortSignal.timeout(3000),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.country || data.province || data.city) {
+        return [data.country, data.province, data.city]
+          .filter(Boolean)
+          .join(' ');
+      }
+    }
+  } catch {}
+  return '未知';
+}
+
+async function recordLoginLog(
+  request: NextRequest,
+  username: string,
+  method: string = 'password',
+) {
+  if (STORAGE_TYPE === 'localstorage') return;
+  try {
+    const ip = getClientIp(request);
+    const location = await getIpLocation(ip);
+    const userAgent = request.headers.get('user-agent') || '';
+    const loginLog = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      username,
+      loginTime: Date.now(),
+      ip,
+      location,
+      userAgent,
+      loginMethod: method,
+    };
+    await db.addLoginLog(loginLog);
+  } catch (error) {
+    console.error('记录登录日志失败:', error);
+  }
+}
+
 // 生成签名
 async function generateSignature(
   data: string,
-  secret: string
+  secret: string,
 ): Promise<string> {
   const encoder = new TextEncoder();
   const keyData = encoder.encode(secret);
@@ -30,7 +109,7 @@ async function generateSignature(
     keyData,
     { name: 'HMAC', hash: 'SHA-256' },
     false,
-    ['sign']
+    ['sign'],
   );
 
   // 生成签名
@@ -47,7 +126,7 @@ async function generateAuthCookie(
   username?: string,
   password?: string,
   role?: 'owner' | 'admin' | 'user',
-  includePassword = false
+  includePassword = false,
 ): Promise<string> {
   const authData: any = { role: role || 'user' };
 
@@ -98,17 +177,18 @@ export async function POST(req: NextRequest) {
       if (password !== envPassword) {
         return NextResponse.json(
           { ok: false, error: '密码错误' },
-          { status: 401 }
+          { status: 401 },
         );
       }
 
       // 验证成功，设置认证cookie
+      await recordLoginLog(req, '', 'password');
       const response = NextResponse.json({ ok: true });
       const cookieValue = await generateAuthCookie(
         undefined,
         password,
         'user',
-        true
+        true,
       ); // localstorage 模式包含 password
       const expires = new Date();
       expires.setDate(expires.getDate() + 7); // 7天过期
@@ -140,12 +220,13 @@ export async function POST(req: NextRequest) {
       password === process.env.PASSWORD
     ) {
       // 验证成功，设置认证cookie
+      await recordLoginLog(req, username, 'password');
       const response = NextResponse.json({ ok: true });
       const cookieValue = await generateAuthCookie(
         username,
         password,
         'owner',
-        false
+        false,
       ); // 数据库模式不包含 password
       const expires = new Date();
       expires.setDate(expires.getDate() + 7); // 7天过期
@@ -176,17 +257,18 @@ export async function POST(req: NextRequest) {
       if (!pass) {
         return NextResponse.json(
           { error: '用户名或密码错误' },
-          { status: 401 }
+          { status: 401 },
         );
       }
 
       // 验证成功，设置认证cookie
+      await recordLoginLog(req, username, 'password');
       const response = NextResponse.json({ ok: true });
       const cookieValue = await generateAuthCookie(
         username,
         password,
         user?.role || 'user',
-        false
+        false,
       );
       const expires = new Date();
       expires.setDate(expires.getDate() + 7); // 7天过期

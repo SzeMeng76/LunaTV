@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
       {
         error: '不支持本地存储进行播放统计查看',
       },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
       _operatorRole = 'owner';
     } else {
       const userEntry = config.UserConfig.Users.find(
-        (u) => u.username === username
+        (u) => u.username === username,
       );
       if (!userEntry || userEntry.role !== 'admin' || userEntry.banned) {
         return NextResponse.json({ error: '权限不足' }, { status: 401 });
@@ -61,6 +61,9 @@ export async function GET(request: NextRequest) {
       lastLoginTime: number;
       loginCount: number;
       createdAt: number;
+      lastLoginIp: string;
+      lastLoginLocation: string;
+      lastLoginDevice: string;
     }> = [];
     let totalWatchTime = 0;
     let totalPlays = 0;
@@ -69,7 +72,11 @@ export async function GET(request: NextRequest) {
 
     // 用户注册统计
     const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const todayStart = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+    ).getTime();
     let todayNewUsers = 0;
     let totalRegisteredUsers = 0;
     const registrationData: Record<string, number> = {};
@@ -88,9 +95,20 @@ export async function GET(request: NextRequest) {
         // 使用自然日计算，与个人统计保持一致
         const firstDate = new Date(userCreatedAt);
         const currentDate = new Date();
-        const firstDay = new Date(firstDate.getFullYear(), firstDate.getMonth(), firstDate.getDate());
-        const currentDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
-        const registrationDays = Math.floor((currentDay.getTime() - firstDay.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+        const firstDay = new Date(
+          firstDate.getFullYear(),
+          firstDate.getMonth(),
+          firstDate.getDate(),
+        );
+        const currentDay = new Date(
+          currentDate.getFullYear(),
+          currentDate.getMonth(),
+          currentDate.getDate(),
+        );
+        const registrationDays =
+          Math.floor(
+            (currentDay.getTime() - firstDay.getTime()) / (1000 * 60 * 60 * 24),
+          ) + 1;
 
         // 统计今日新增用户
         if (userCreatedAt >= todayStart) {
@@ -107,15 +125,30 @@ export async function GET(request: NextRequest) {
         // 获取用户最后登录时间和登入次数（从用户统计中获取真实登入时间）
         let lastLoginTime = 0;
         let loginCount = 0;
+        let lastLoginIp = '';
+        let lastLoginLocation = '';
+        let lastLoginDevice = '';
         try {
           const userPlayStat = await storage.getUserPlayStat(user.username);
-          // 优先使用用户统计中的登入时间，这是真实的登录时间
-          lastLoginTime = userPlayStat.lastLoginTime || userPlayStat.lastLoginDate || userPlayStat.firstLoginTime || 0;
+          lastLoginTime =
+            userPlayStat.lastLoginTime ||
+            userPlayStat.lastLoginDate ||
+            userPlayStat.firstLoginTime ||
+            0;
           loginCount = userPlayStat.loginCount || 0;
         } catch (err) {
-          // 获取失败时默认为0
           lastLoginTime = 0;
           loginCount = 0;
+        }
+        try {
+          const lastLoginLog = await storage.getLastLoginLog(user.username);
+          if (lastLoginLog) {
+            lastLoginIp = lastLoginLog.ip || '';
+            lastLoginLocation = lastLoginLog.location || '';
+            lastLoginDevice = lastLoginLog.userAgent || '';
+          }
+        } catch (err) {
+          // 忽略
         }
 
         // 获取用户的所有播放记录
@@ -136,6 +169,9 @@ export async function GET(request: NextRequest) {
             lastLoginTime,
             loginCount,
             createdAt: userCreatedAt,
+            lastLoginIp,
+            lastLoginLocation,
+            lastLoginDevice,
           });
           continue;
         }
@@ -198,9 +234,12 @@ export async function GET(request: NextRequest) {
           avgWatchTime: records.length > 0 ? userWatchTime / records.length : 0,
           mostWatchedSource,
           registrationDays,
-          lastLoginTime: lastLoginTime || userCreatedAt, // 如果没有登入记录，使用注册时间
+          lastLoginTime: lastLoginTime || userCreatedAt,
           loginCount,
           createdAt: userCreatedAt,
+          lastLoginIp,
+          lastLoginLocation,
+          lastLoginDevice,
         };
 
         userStats.push(userStat);
@@ -218,9 +257,20 @@ export async function GET(request: NextRequest) {
         // 使用自然日计算，与个人统计保持一致
         const firstDate = new Date(userCreatedAt);
         const currentDate = new Date();
-        const firstDay = new Date(firstDate.getFullYear(), firstDate.getMonth(), firstDate.getDate());
-        const currentDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
-        const registrationDays = Math.floor((currentDay.getTime() - firstDay.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+        const firstDay = new Date(
+          firstDate.getFullYear(),
+          firstDate.getMonth(),
+          firstDate.getDate(),
+        );
+        const currentDay = new Date(
+          currentDate.getFullYear(),
+          currentDate.getMonth(),
+          currentDate.getDate(),
+        );
+        const registrationDays =
+          Math.floor(
+            (currentDay.getTime() - firstDay.getTime()) / (1000 * 60 * 60 * 24),
+          ) + 1;
 
         userStats.push({
           username: user.username,
@@ -231,9 +281,12 @@ export async function GET(request: NextRequest) {
           avgWatchTime: 0,
           mostWatchedSource: '',
           registrationDays,
-          lastLoginTime: userCreatedAt, // 没有登入记录时使用注册时间
+          lastLoginTime: userCreatedAt,
           loginCount: 0,
           createdAt: userCreatedAt,
+          lastLoginIp: '',
+          lastLoginLocation: '',
+          lastLoginDevice: '',
         });
       }
     }
@@ -248,7 +301,11 @@ export async function GET(request: NextRequest) {
       .map(([source, count]) => ({ source, count }));
 
     // 整理近7天数据
-    const dailyStats: Array<{ date: string; watchTime: number; plays: number }> = [];
+    const dailyStats: Array<{
+      date: string;
+      watchTime: number;
+      plays: number;
+    }> = [];
     for (let i = 6; i >= 0; i--) {
       const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
       const dateKey = date.toISOString().split('T')[0];
@@ -278,16 +335,19 @@ export async function GET(request: NextRequest) {
     const thirtyDaysAgo = now.getTime() - 30 * 24 * 60 * 60 * 1000;
 
     const activeUsers = {
-      daily: userStats.filter(user => user.lastLoginTime >= oneDayAgo).length,
-      weekly: userStats.filter(user => user.lastLoginTime >= sevenDaysAgoTime).length,
-      monthly: userStats.filter(user => user.lastLoginTime >= thirtyDaysAgo).length,
+      daily: userStats.filter((user) => user.lastLoginTime >= oneDayAgo).length,
+      weekly: userStats.filter((user) => user.lastLoginTime >= sevenDaysAgoTime)
+        .length,
+      monthly: userStats.filter((user) => user.lastLoginTime >= thirtyDaysAgo)
+        .length,
     };
 
     const result = {
       totalUsers: allUsers.length,
       totalWatchTime,
       totalPlays,
-      avgWatchTimePerUser: allUsers.length > 0 ? totalWatchTime / allUsers.length : 0,
+      avgWatchTimePerUser:
+        allUsers.length > 0 ? totalWatchTime / allUsers.length : 0,
       avgPlaysPerUser: allUsers.length > 0 ? totalPlays / allUsers.length : 0,
       userStats,
       topSources,
@@ -313,7 +373,7 @@ export async function GET(request: NextRequest) {
         error: '获取播放统计失败',
         details: (error as Error).message,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

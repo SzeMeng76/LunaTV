@@ -839,19 +839,6 @@ function HomeClient({ initialConfig }: {
           </div>
         </div>
 
-        {/* 顶部 Tab 切换 - AI 按钮已移至右上角导航栏 */}
-        <div className='mb-8 flex items-center justify-center'>
-          <CapsuleSwitch
-            options={[
-              { label: '首页', value: 'home' },
-              { label: '收藏夹', value: 'favorites' },
-              { label: '想看', value: 'reminders' },
-            ]}
-            active={activeTab}
-            onChange={(value) => startTransition(() => dispatch({ type: 'SET_ACTIVE_TAB', payload: value as 'home' | 'favorites' | 'reminders' }))}
-          />
-        </div>
-
         <div className={`w-full mx-auto ${isPending ? 'opacity-70 transition-opacity duration-150' : ''}`}>
           {activeTab === 'reminders' ? (
             // 想看视图

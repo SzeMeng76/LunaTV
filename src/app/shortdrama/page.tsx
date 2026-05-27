@@ -278,6 +278,7 @@ export default function ShortDramaPage() {
                 }
               }}
               endReachedThreshold={3}
+              restoreKey={`shortdrama:${isSearchMode ? `search:${searchQuery.trim()}` : `cat:${selectedCategory ?? ''}`}`}
               renderItem={(drama, index) => (
                 <ShortDramaCard drama={drama} priority={index < 30} />
               )}

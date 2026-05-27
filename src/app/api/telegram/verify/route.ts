@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 
-import { getTelegramToken, verifyAndConsumeTelegramToken } from '@/lib/telegram-tokens';
+import {
+  getTelegramToken,
+  verifyAndConsumeTelegramToken,
+} from '@/lib/telegram-tokens';
 import { db } from '@/lib/db';
 import { clearConfigCache, getConfig } from '@/lib/config';
 
@@ -10,7 +13,8 @@ export const dynamic = 'force-dynamic';
 
 // 生成随机密码
 function generatePassword(length = 8): string {
-  const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  const charset =
+    'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let password = '';
   const randomBytes = crypto.randomBytes(length);
 
@@ -24,7 +28,7 @@ function generatePassword(length = 8): string {
 // 生成签名
 async function generateSignature(
   data: string,
-  secret: string
+  secret: string,
 ): Promise<string> {
   const encoder = new TextEncoder();
   const keyData = encoder.encode(secret);
@@ -35,7 +39,7 @@ async function generateSignature(
     keyData,
     { name: 'HMAC', hash: 'SHA-256' },
     false,
-    ['sign']
+    ['sign'],
   );
 
   const signature = await crypto.subtle.sign('HMAC', key, messageData);
@@ -48,7 +52,7 @@ async function generateSignature(
 // 生成认证Cookie（带签名）
 async function generateAuthCookie(
   username: string,
-  role: 'owner' | 'admin' | 'user' = 'user'
+  role: 'owner' | 'admin' | 'user' = 'user',
 ): Promise<string> {
   const authData: Record<string, any> = { role };
 
@@ -65,9 +69,14 @@ async function generateAuthCookie(
 
 export async function GET(request: Request) {
   const requestId = Math.random().toString(36).substring(7);
-  console.log(`[Verify ${requestId}] ==================== NEW REQUEST ====================`);
+  console.log(
+    `[Verify ${requestId}] ==================== NEW REQUEST ====================`,
+  );
   console.log(`[Verify ${requestId}] URL:`, request.url);
-  console.log(`[Verify ${requestId}] User-Agent:`, request.headers.get('user-agent'));
+  console.log(
+    `[Verify ${requestId}] User-Agent:`,
+    request.headers.get('user-agent'),
+  );
   console.log(`[Verify ${requestId}] Referer:`, request.headers.get('referer'));
 
   try {
@@ -84,13 +93,15 @@ export async function GET(request: Request) {
         {
           status: 400,
           headers: { 'Content-Type': 'text/html; charset=utf-8' },
-        }
+        },
       );
     }
 
     // 如果没有 confirm 参数，先验证 token 是否有效（但不删除），然后显示确认页面
     if (!confirm) {
-      console.log(`[Verify ${requestId}] No confirm param, checking token validity first`);
+      console.log(
+        `[Verify ${requestId}] No confirm param, checking token validity first`,
+      );
       const tokenData = await getTelegramToken(token);
 
       if (!tokenData) {
@@ -100,11 +111,13 @@ export async function GET(request: Request) {
           {
             status: 401,
             headers: { 'Content-Type': 'text/html; charset=utf-8' },
-          }
+          },
         );
       }
 
-      console.log(`[Verify ${requestId}] Token valid, showing confirmation page`);
+      console.log(
+        `[Verify ${requestId}] Token valid, showing confirmation page`,
+      );
       // 返回确认页面（防止 Telegram 链接预览消费 token）
       return new NextResponse(
         `<!DOCTYPE html>
@@ -181,7 +194,7 @@ export async function GET(request: Request) {
         {
           status: 200,
           headers: { 'Content-Type': 'text/html; charset=utf-8' },
-        }
+        },
       );
     }
 
@@ -191,19 +204,24 @@ export async function GET(request: Request) {
     console.log(`[Verify ${requestId}] Token data retrieved:`, tokenData);
 
     if (!tokenData) {
-      console.log(`[Verify ${requestId}] Token not found or expired - RETURNING ERROR PAGE`);
+      console.log(
+        `[Verify ${requestId}] Token not found or expired - RETURNING ERROR PAGE`,
+      );
       return new NextResponse(
         `<html><body><h1>登录链接无效</h1><p>链接可能已过期或已被使用</p></body></html>`,
         {
           status: 401,
           headers: { 'Content-Type': 'text/html; charset=utf-8' },
-        }
+        },
       );
     }
 
     const { telegramUsername } = tokenData;
 
-    console.log(`[Verify ${requestId}] Token valid, proceeding with login for:`, telegramUsername);
+    console.log(
+      `[Verify ${requestId}] Token valid, proceeding with login for:`,
+      telegramUsername,
+    );
 
     // 获取管理员配置
     const config = await db.getAdminConfig();
@@ -215,7 +233,7 @@ export async function GET(request: Request) {
         {
           status: 403,
           headers: { 'Content-Type': 'text/html; charset=utf-8' },
-        }
+        },
       );
     }
 
@@ -233,9 +251,14 @@ export async function GET(request: Request) {
     if (!userExists) {
       // 自动注册新用户
       if (telegramConfig.autoRegister) {
-        console.log(`[Verify ${requestId}] Auto-register enabled, creating new user`);
+        console.log(
+          `[Verify ${requestId}] Auto-register enabled, creating new user`,
+        );
         initialPassword = generatePassword();
-        console.log(`[Verify ${requestId}] Generated password:`, initialPassword);
+        console.log(
+          `[Verify ${requestId}] Generated password:`,
+          initialPassword,
+        );
 
         console.log(`[Verify ${requestId}] Calling db.registerUser...`);
         await db.registerUser(username, initialPassword);
@@ -243,10 +266,15 @@ export async function GET(request: Request) {
 
         // 验证用户是否真的被创建
         const verifyExists = await db.checkUserExist(username);
-        console.log(`[Verify ${requestId}] Verification - user exists after registration:`, verifyExists);
+        console.log(
+          `[Verify ${requestId}] Verification - user exists after registration:`,
+          verifyExists,
+        );
 
         // 清除配置缓存，强制下次getConfig()时重新从数据库读取最新用户列表
-        console.log(`[Verify ${requestId}] Clearing config cache to force reload with new user`);
+        console.log(
+          `[Verify ${requestId}] Clearing config cache to force reload with new user`,
+        );
         clearConfigCache();
 
         isNewUser = true;
@@ -256,14 +284,20 @@ export async function GET(request: Request) {
           {
             status: 404,
             headers: { 'Content-Type': 'text/html; charset=utf-8' },
-          }
+          },
         );
       }
     }
 
     // 准备认证数据
-    console.log(`[Verify ${requestId}] Preparing auth data for user:`, username);
-    console.log(`[Verify ${requestId}] PASSWORD env:`, process.env.PASSWORD ? 'SET' : 'NOT SET');
+    console.log(
+      `[Verify ${requestId}] Preparing auth data for user:`,
+      username,
+    );
+    console.log(
+      `[Verify ${requestId}] PASSWORD env:`,
+      process.env.PASSWORD ? 'SET' : 'NOT SET',
+    );
 
     // 生成认证数据对象（不手动编码，让 Next.js 自动处理）
     const authData: Record<string, any> = { role: 'user' };
@@ -275,7 +309,10 @@ export async function GET(request: Request) {
       authData.loginTime = Date.now();
     }
     const authDataString = JSON.stringify(authData);
-    console.log(`[Verify ${requestId}] Auth data string length:`, authDataString.length);
+    console.log(
+      `[Verify ${requestId}] Auth data string length:`,
+      authDataString.length,
+    );
 
     const expires = new Date();
     expires.setDate(expires.getDate() + 7); // 7天过期
@@ -289,7 +326,10 @@ export async function GET(request: Request) {
 
     // 记录登入时间 - 直接调用 db 而不是通过 API
     try {
-      console.log(`[Verify ${requestId}] Recording login time for user:`, username);
+      console.log(
+        `[Verify ${requestId}] Recording login time for user:`,
+        username,
+      );
       await db.updateUserLoginStats(username, Date.now(), isNewUser);
       console.log(`[Verify ${requestId}] Login time recorded successfully`);
     } catch (error) {
@@ -300,14 +340,20 @@ export async function GET(request: Request) {
     console.log(`[Verify ${requestId}] ========== FINAL STATUS ==========`);
     console.log(`[Verify ${requestId}] Username:`, username);
     console.log(`[Verify ${requestId}] Is new user:`, isNewUser);
-    console.log(`[Verify ${requestId}] Initial password:`, isNewUser ? initialPassword : 'N/A');
+    console.log(
+      `[Verify ${requestId}] Initial password:`,
+      isNewUser ? initialPassword : 'N/A',
+    );
     console.log(`[Verify ${requestId}] Cookie expires:`, expires.toISOString());
     console.log(`[Verify ${requestId}] Auth data:`, authDataString);
     console.log(`[Verify ${requestId}] ===================================`);
 
     // Create HTML response that sets cookies and redirects
     // This ensures cookies are set before navigation happens
-    const newUserData = isNewUser && initialPassword ? JSON.stringify({ username, password: initialPassword }) : '';
+    const newUserData =
+      isNewUser && initialPassword
+        ? JSON.stringify({ username, password: initialPassword })
+        : '';
     const html = `<!DOCTYPE html>
 <html>
 <head>
@@ -328,7 +374,9 @@ export async function GET(request: Request) {
     });
 
     // Set auth cookie - 直接使用 JSON 字符串，Next.js 会自动 URL 编码
-    console.log(`[Verify ${requestId}] Setting auth cookie via response.cookies.set()...`);
+    console.log(
+      `[Verify ${requestId}] Setting auth cookie via response.cookies.set()...`,
+    );
     console.log(`[Verify ${requestId}] Auth data string:`, authDataString);
     console.log(`[Verify ${requestId}] Cookie settings:`, {
       path: '/',
@@ -347,13 +395,18 @@ export async function GET(request: Request) {
     });
 
     console.log(`[Verify ${requestId}] Auth cookie set, verifying...`);
-    console.log(`[Verify ${requestId}] Response cookies:`, response.cookies.getAll());
+    console.log(
+      `[Verify ${requestId}] Response cookies:`,
+      response.cookies.getAll(),
+    );
 
     // Set new user cookie if needed
     if (isNewUser && initialPassword) {
       const newUserExpires = new Date();
       newUserExpires.setSeconds(newUserExpires.getSeconds() + 60);
-      console.log(`[Verify ${requestId}] Setting new user cookie via response.cookies.set()...`);
+      console.log(
+        `[Verify ${requestId}] Setting new user cookie via response.cookies.set()...`,
+      );
       response.cookies.set('telegram_new_user', newUserData, {
         path: '/',
         expires: newUserExpires,
@@ -364,6 +417,28 @@ export async function GET(request: Request) {
     }
 
     console.log(`[Verify ${requestId}] SUCCESS - Returning HTML with cookies`);
+
+    // 异步记录登录日志
+    const tgXff = request.headers.get('x-forwarded-for');
+    const tgRealIp = request.headers.get('x-real-ip');
+    const tgClientIp = tgXff
+      ? tgXff.split(',')[0].trim()
+      : tgRealIp
+        ? tgRealIp.trim()
+        : 'unknown';
+    const tgLoginLog = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      username: username,
+      loginTime: Date.now(),
+      ip: tgClientIp,
+      location: '',
+      userAgent: request.headers.get('user-agent') || '',
+      loginMethod: 'telegram',
+    };
+    db.addLoginLog(tgLoginLog).catch((err) => {
+      console.error('Telegram登录记录日志失败:', err);
+    });
+
     return response;
   } catch (error) {
     console.error(`[Verify ${requestId}] ERROR:`, error);
@@ -372,7 +447,7 @@ export async function GET(request: Request) {
       {
         status: 500,
         headers: { 'Content-Type': 'text/html; charset=utf-8' },
-      }
+      },
     );
   }
 }

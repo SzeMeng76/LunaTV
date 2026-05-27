@@ -1,31 +1,69 @@
 'use client';
 
-import { useVirtualizer } from '@tanstack/react-virtual';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useVirtualizer, type VirtualItem } from '@tanstack/react-virtual';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
 interface VirtualGridProps<T> {
   items: T[];
   renderItem: (item: T, index: number) => React.ReactNode;
-  /** Estimated row height in px (including gap). Will be refined by measurement. */
   estimateRowHeight?: number;
-  /** CSS class for row gap, applied as padding-bottom on each row so measureElement captures it */
   rowGapClass?: string;
-  /** Overscan rows */
   overscan?: number;
   className?: string;
-  /** Callback when user scrolls near the end - triggers before reaching last item */
   endReached?: () => void;
-  /** How many rows before the end to trigger endReached (default: 2) */
   endReachedThreshold?: number;
+  restoreKey?: string;
 }
 
-/**
- * A virtualised grid that piggy-backs on CSS grid for column layout
- * and virtualises *rows* via @tanstack/react-virtual.
- *
- * Uses document.body as scroll element for window-level scrolling.
- * Based on official @tanstack/react-virtual implementation pattern.
- */
+interface StoredSnapshot {
+  v: 1;
+  itemCount: number;
+  scrollOffset: number;
+  measurements: VirtualItem[];
+  savedAt: number;
+}
+
+const STORAGE_PREFIX = 'lt:vgrid:';
+const MAX_AGE_MS = 30 * 60 * 1000;
+const MIN_ITEM_COUNT_RATIO = 0.5;
+
+function loadSnapshot(
+  key: string,
+  currentItemCount: number,
+): StoredSnapshot | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = sessionStorage.getItem(STORAGE_PREFIX + key);
+    if (!raw) return null;
+    const snap: StoredSnapshot = JSON.parse(raw);
+    if (snap.v !== 1) return null;
+    if (Date.now() - snap.savedAt > MAX_AGE_MS) {
+      sessionStorage.removeItem(STORAGE_PREFIX + key);
+      return null;
+    }
+    if (snap.itemCount < currentItemCount * MIN_ITEM_COUNT_RATIO) return null;
+    if (snap.itemCount > currentItemCount * 2) return null;
+    return snap;
+  } catch {
+    return null;
+  }
+}
+
+function saveSnapshot(key: string, snap: StoredSnapshot) {
+  if (typeof window === 'undefined') return;
+  try {
+    sessionStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(snap));
+  } catch {
+    // quota exceeded – silently ignore
+  }
+}
+
 export default function VirtualGrid<T>({
   items,
   renderItem,
@@ -35,11 +73,11 @@ export default function VirtualGrid<T>({
   className = '',
   endReached,
   endReachedThreshold = 2,
+  restoreKey,
 }: VirtualGridProps<T>) {
   const parentRef = useRef<HTMLDivElement>(null);
   const [columns, setColumns] = useState(3);
 
-  // Detect column count from a hidden probe row that shares the same grid CSS
   const probeRef = useRef<HTMLDivElement>(null);
 
   const detectColumns = useCallback(() => {
@@ -58,16 +96,60 @@ export default function VirtualGrid<T>({
 
   const rowCount = Math.ceil(items.length / columns);
 
+  const initialSnapshot = useMemo(() => {
+    if (!restoreKey) return null;
+    return loadSnapshot(restoreKey, items.length);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [restoreKey]);
+
   const virtualizer = useVirtualizer({
     count: rowCount,
     getScrollElement: () => document.body,
     estimateSize: () => estimateRowHeight,
     overscan,
+    ...(initialSnapshot
+      ? {
+          initialOffset: initialSnapshot.scrollOffset,
+        }
+      : {}),
   });
+
+  // Restore measurement cache from snapshot
+  useEffect(() => {
+    if (!initialSnapshot || !restoreKey) return;
+    const vc = virtualizer as any;
+    if (vc.measurementsCache && initialSnapshot.measurements) {
+      vc.measurementsCache = initialSnapshot.measurements;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Save snapshot on unmount / before navigation
+  useEffect(() => {
+    if (!restoreKey) return;
+    return () => {
+      try {
+        const vc = virtualizer as any;
+        const measurements =
+          typeof vc.takeSnapshot === 'function'
+            ? vc.takeSnapshot().measurements
+            : vc.measurementsCache || [];
+        saveSnapshot(restoreKey, {
+          v: 1,
+          itemCount: items.length,
+          scrollOffset: vc.scrollOffset ?? 0,
+          measurements,
+          savedAt: Date.now(),
+        });
+      } catch {
+        // silently ignore
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [restoreKey, items.length]);
 
   const virtualRows = virtualizer.getVirtualItems();
 
-  // Detect when user scrolls near the end and trigger endReached callback
   const lastVirtualRowRef = useRef<number>(-1);
   useEffect(() => {
     if (!endReached || virtualRows.length === 0) return;
@@ -75,16 +157,14 @@ export default function VirtualGrid<T>({
     const lastVirtualRow = virtualRows[virtualRows.length - 1];
     const lastRowIndex = lastVirtualRow.index;
 
-    // Calculate dynamic threshold based on viewport height and row height
-    // Mobile devices need earlier triggering due to smaller screens
-    const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 800;
+    const viewportHeight =
+      typeof window !== 'undefined' ? window.innerHeight : 800;
     const visibleRows = Math.ceil(viewportHeight / estimateRowHeight);
-    // Trigger when remaining rows <= visible rows + threshold
-    // This ensures data loads before user sees the end
-    const dynamicThreshold = Math.max(visibleRows + endReachedThreshold, endReachedThreshold);
+    const dynamicThreshold = Math.max(
+      visibleRows + endReachedThreshold,
+      endReachedThreshold,
+    );
 
-    // Trigger endReached when we're within dynamic threshold rows of the end
-    // and we haven't triggered for this position yet
     if (
       lastRowIndex >= rowCount - dynamicThreshold &&
       lastRowIndex !== lastVirtualRowRef.current
@@ -92,11 +172,16 @@ export default function VirtualGrid<T>({
       lastVirtualRowRef.current = lastRowIndex;
       endReached();
     }
-  }, [virtualRows, rowCount, endReached, endReachedThreshold, estimateRowHeight]);
+  }, [
+    virtualRows,
+    rowCount,
+    endReached,
+    endReachedThreshold,
+    estimateRowHeight,
+  ]);
 
   return (
     <>
-      {/* Hidden probe element to measure column count from computed CSS grid */}
       <div
         ref={probeRef}
         aria-hidden
@@ -113,7 +198,6 @@ export default function VirtualGrid<T>({
           position: 'relative',
         }}
       >
-        {/* Container with unified offset - official pattern */}
         <div
           style={{
             position: 'absolute',

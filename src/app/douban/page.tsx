@@ -506,6 +506,7 @@ function DoubanPageClient() {
                   estimateRowHeight={320}
                   endReached={handleEndReached}
                   endReachedThreshold={3}
+                  restoreKey={`douban:${type}:${primarySelection}:${secondarySelection}:${selectedWeekday}:${JSON.stringify(multiLevelValues)}`}
                   renderItem={(item, index) => {
                     const mappedType = type === 'movie' ? 'movie' : type === 'show' ? 'variety' : type === 'tv' ? 'tv' : type === 'anime' ? 'anime' : '';
                     return (
