@@ -108,6 +108,9 @@ export class DatabaseCacheManager {
           console.warn('❌ KVRocks/Redis存储没有withRetry或client.keys方法');
           return null;
         }
+      } else if (storageType === 'sqlite') {
+        console.log('ℹ️ SQLite不支持缓存统计功能');
+        return null;
       } else {
         console.warn('❌ 不支持的存储类型或无法找到合适的keys方法');
         console.log('🔍 存储类型:', storageType);
@@ -176,6 +179,9 @@ export class DatabaseCacheManager {
             }
           }
         }
+      } else if (storageType === 'sqlite') {
+        console.log('ℹ️ SQLite不支持缓存统计功能');
+        return null;
       } else {
         // 通用回退：逐个获取
         console.warn('使用通用回退方法逐个获取缓存数据');
