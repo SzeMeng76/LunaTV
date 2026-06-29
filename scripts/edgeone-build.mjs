@@ -182,15 +182,27 @@ function patchEdgeFunctionEnvInjection() {
     );
   }
 
-  const middlewareSignature = 'async function executeMiddleware({request}) {';
+  // 兼容 Next.js 16 proxy.ts（executeProxy）和旧 middleware.ts（executeMiddleware）规范
+  const signatures = [
+    { name: 'executeProxy', signature: 'async function executeProxy({request}) {' },
+    { name: 'executeMiddleware', signature: 'async function executeMiddleware({request}) {' },
+  ];
   const middlewareMarker = '/* edgeone-middleware-env-injected */';
-  if (!code.includes(middlewareMarker) && !code.includes(middlewareSignature)) {
-    console.warn('[edgeone-build] Unable to patch middleware env injection: target not found');
-  } else if (!code.includes(middlewareMarker)) {
-    code = code.replace(
-      middlewareSignature,
-      `async function executeMiddleware({request, env}) {\n  ${middlewareMarker}\n  if (typeof globalThis !== 'undefined' && globalThis.process?.env && env) {\n    Object.assign(globalThis.process.env, env);\n  }`
-    );
+  if (!code.includes(middlewareMarker)) {
+    let patched = false;
+    for (const { name, signature } of signatures) {
+      if (code.includes(signature)) {
+        code = code.replace(
+          signature,
+          `async function ${name}({request, env}) {\n  ${middlewareMarker}\n  if (typeof globalThis !== 'undefined' && globalThis.process?.env && env) {\n    Object.assign(globalThis.process.env, env);\n  }`
+        );
+        patched = true;
+        break;
+      }
+    }
+    if (!patched) {
+      console.warn('[edgeone-build] Unable to patch middleware/proxy env injection: target not found');
+    }
   }
 
   const matcherFallbackMarker = '/* edgeone-middleware-matcher-fallback */';
@@ -210,6 +222,41 @@ function patchEdgeFunctionEnvInjection() {
   console.log('[edgeone-build] Patched edge function process.env injection');
 }
 
+// EdgeOne 平台暂未完整支持 Next.js 16 proxy.ts 规范，
+// 构建前临时转换为 middleware.ts 以确保兼容性
+function convertProxyToMiddlewareForBuild() {
+  const proxyPath = join(process.cwd(), 'src', 'proxy.ts');
+  const middlewarePath = join(process.cwd(), 'src', 'middleware.ts');
+
+  if (!existsSync(proxyPath) || existsSync(middlewarePath)) return false;
+
+  let content = readFileSync(proxyPath, 'utf8');
+  content = content.replace(/export async function proxy\b/, 'export async function middleware');
+
+  writeFileSync(middlewarePath, content);
+  rmSync(proxyPath);
+  console.log('[edgeone-build] Temporarily converted proxy.ts → middleware.ts for EdgeOne compatibility');
+  return true;
+}
+
+function restoreProxyAfterBuild(wasConverted) {
+  if (!wasConverted) return;
+
+  const proxyPath = join(process.cwd(), 'src', 'proxy.ts');
+  const middlewarePath = join(process.cwd(), 'src', 'middleware.ts');
+
+  if (!existsSync(middlewarePath)) return;
+
+  let content = readFileSync(middlewarePath, 'utf8');
+  content = content.replace(/export async function middleware\b/, 'export async function proxy');
+
+  writeFileSync(proxyPath, content);
+  rmSync(middlewarePath);
+  console.log('[edgeone-build] Restored middleware.ts → proxy.ts');
+}
+
+const wasConverted = convertProxyToMiddlewareForBuild();
+
 const isInsideEdgeOneBuilder = process.env.NEXT_PRIVATE_STANDALONE === 'true';
 
 const command = isInsideEdgeOneBuilder
@@ -227,6 +274,8 @@ const child = spawn(command, {
 });
 
 child.on('exit', (code, signal) => {
+  restoreProxyAfterBuild(wasConverted);
+
   if (!signal && code === 0) {
     for (const file of ['edgeone.json', 'package.json']) {
       copyFileSync(join(process.cwd(), file), join(process.cwd(), '.edgeone', file));
