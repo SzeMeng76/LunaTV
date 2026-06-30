@@ -11,6 +11,11 @@ import './globals.css';
 import { getConfig } from '@/lib/config';
 
 import { GlobalErrorIndicator } from '../components/GlobalErrorIndicator';
+import { GlobalDOMErrorHandler } from '../components/GlobalDOMErrorHandler';
+import { DOMErrorBoundary } from '../components/DOMErrorBoundary';
+import { ChunkErrorGuard } from '../components/ChunkErrorGuard';
+import { TranslationWarningToast } from '../components/TranslationWarningToast';
+import NavigationShell from '../components/NavigationShell';
 import { SessionTracker } from '../components/SessionTracker';
 import { SiteProvider } from '../components/SiteProvider';
 import { ThemeProvider } from '../components/ThemeProvider';
@@ -20,6 +25,8 @@ import { GlobalCacheProvider } from '../contexts/GlobalCacheContext';
 import { DownloadPanel } from '../components/download/DownloadPanel';
 import ChatFloatingWindow from '../components/watch-room/ChatFloatingWindow';
 import QueryProvider from '../components/QueryProvider';
+import { CinematicLoadingFallback } from '../components/CinematicLoadingFallback';
+import RouteWarmup from '../components/RouteWarmup';
 
 const inter = Inter({ subsets: ['latin'] });
 export const dynamic = 'force-dynamic';
@@ -115,6 +122,8 @@ export default async function RootLayout({
     DOUBAN_PROXY: doubanProxy,
     DOUBAN_IMAGE_PROXY_TYPE: doubanImageProxyType,
     DOUBAN_IMAGE_PROXY: doubanImageProxy,
+    BANGUMI_IMAGE_PROXY_TYPE: process.env.NEXT_PUBLIC_BANGUMI_IMAGE_PROXY_TYPE || 'server',
+    BANGUMI_IMAGE_PROXY: process.env.NEXT_PUBLIC_BANGUMI_IMAGE_PROXY || '',
     DISABLE_YELLOW_FILTER: disableYellowFilter,
     CUSTOM_CATEGORIES: customCategories,
     FLUID_SEARCH: fluidSearch,
@@ -128,13 +137,14 @@ export default async function RootLayout({
   };
 
   return (
-    <html lang='zh-CN' suppressHydrationWarning>
+    <html lang='zh-CN' translate='no' suppressHydrationWarning>
       <head>
         <meta
           name='viewport'
           content='width=device-width, initial-scale=1.0, viewport-fit=cover'
         />
         <meta name='color-scheme' content='light dark' />
+        <meta name='google' content='notranslate' />
         <link rel='apple-touch-icon' href='/icons/icon-192x192.png' />
         {/* 将配置序列化后直接写入脚本，浏览器端可通过 window.RUNTIME_CONFIG 获取 */}
         {/* eslint-disable-next-line @next/next/no-sync-scripts */}
@@ -145,6 +155,7 @@ export default async function RootLayout({
         />
       </head>
       <body
+        translate='no'
         className={`${inter.className} min-h-screen bg-white text-gray-900 dark:bg-black dark:text-gray-200`}
       >
         <ThemeProvider
@@ -158,11 +169,28 @@ export default async function RootLayout({
               <DownloadProvider>
                 <WatchRoomProvider>
                   <SiteProvider siteName={siteName} announcement={announcement}>
-                    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
-                      <SessionTracker />
-                      {children}
-                      <GlobalErrorIndicator />
-                    </Suspense>
+                    <GlobalDOMErrorHandler />
+                    <ChunkErrorGuard />
+                    <TranslationWarningToast />
+                    <SessionTracker />
+                    <RouteWarmup />
+                    {/* 导航栏在 layout 层，自动持久化 */}
+                    <NavigationShell />
+                    {/* 主内容区域 - 只有这部分会在路由切换时重新渲染 */}
+                    <main className='w-full min-h-screen pt-[44px] md:pt-16 pb-16 md:pb-8'>
+                      <div className='w-full max-w-[2560px] mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 2xl:px-20'>
+                        <DOMErrorBoundary componentName="PageContent">
+                          <Suspense fallback={
+                            <div className="fixed inset-0 z-50">
+                              <CinematicLoadingFallback />
+                            </div>
+                          }>
+                            {children}
+                          </Suspense>
+                        </DOMErrorBoundary>
+                      </div>
+                    </main>
+                    <GlobalErrorIndicator />
                   </SiteProvider>
                   <Suspense fallback={null}>
                     <DownloadPanel />

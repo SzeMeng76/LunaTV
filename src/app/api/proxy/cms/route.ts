@@ -13,6 +13,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConfig } from '@/lib/config';
 import { DEFAULT_USER_AGENT } from '@/lib/user-agent';
+import { validateProxyTargetUrl } from '@/lib/proxy-security';
 
 // 使用 Node.js Runtime 以获得更好的网络兼容性
 export const runtime = 'nodejs';
@@ -104,16 +105,20 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // URL 格式验证
-    let parsedUrl: URL;
+    // SSRF 防护：验证目标 URL（同时也验证了 URL 格式）
+    let validatedUrl: string;
     try {
-      parsedUrl = new URL(targetUrl);
-    } catch {
+      validatedUrl = await validateProxyTargetUrl(targetUrl);
+    } catch (error) {
+      console.error('[CMS Proxy] SSRF validation failed:', error);
       return NextResponse.json(
-        { error: 'Invalid URL format' },
-        { status: 400, headers: getCorsHeaders() }
+        { error: 'Invalid or blocked URL' },
+        { status: 403, headers: getCorsHeaders() }
       );
     }
+
+    // 解析 URL 用于后续检查
+    const parsedUrl = new URL(validatedUrl);
 
     // 白名单检查
     if (!isUrlAllowed(targetUrl)) {

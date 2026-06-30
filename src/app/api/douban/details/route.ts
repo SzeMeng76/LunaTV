@@ -3,7 +3,8 @@ import { NextResponse } from 'next/server';
 
 import { getCacheTime, getConfig } from '@/lib/config';
 import { fetchDoubanWithVerification } from '@/lib/douban-anti-crawler';
-import { bypassDoubanChallenge } from '@/lib/puppeteer';
+// Puppeteer 已禁用以减少包体积（78MB），如需恢复请取消注释并安装依赖
+// import { bypassDoubanChallenge } from '@/lib/puppeteer';
 import { getRandomUserAgent, getRandomUserAgentWithInfo, getSecChUaHeaders } from '@/lib/user-agent';
 import { recordRequest } from '@/lib/performance-monitor';
 
@@ -481,6 +482,9 @@ async function _scrapeDoubanDetails(id: string, retryCount = 0): Promise<any> {
       const config = await getConfig();
       const enablePuppeteer = config.DoubanConfig?.enablePuppeteer ?? false;
 
+      // Puppeteer 已禁用以减少包体积（78MB）
+      // 如需恢复，请取消下方注释并安装 @sparticuz/chromium 和 puppeteer-core
+      /*
       if (enablePuppeteer) {
         console.log(`[Douban] Puppeteer 已启用，尝试绕过 Challenge...`);
         try {
@@ -506,10 +510,11 @@ async function _scrapeDoubanDetails(id: string, retryCount = 0): Promise<any> {
           }
         }
       } else {
+      */
         // Puppeteer 未启用，直接使用 Mobile API
         console.log(`[Douban] Puppeteer 未启用，直接使用 Mobile API fallback...`);
         return await fetchFromMobileAPI(id);
-      }
+      // }
     }
 
     // 🍪 如果使用了 Cookies 且成功获取页面，记录成功日志

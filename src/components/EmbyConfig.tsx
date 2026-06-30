@@ -34,6 +34,7 @@ const EmbyConfig = ({ config, refreshConfig }: EmbyConfigProps) => {
     appendMediaSourceId: false,
     transcodeMp4: false,
     proxyPlay: false,
+    embyAuthorizationHeader: '',
   });
   const [authMode, setAuthMode] = useState<'apikey' | 'password'>('apikey');
 
@@ -66,6 +67,7 @@ const EmbyConfig = ({ config, refreshConfig }: EmbyConfigProps) => {
       appendMediaSourceId: false,
       transcodeMp4: false,
       proxyPlay: false,
+      embyAuthorizationHeader: '',
     });
     setEditingSource(null);
     setShowAddForm(false);
@@ -633,6 +635,23 @@ const EmbyConfig = ({ config, refreshConfig }: EmbyConfigProps) => {
                   />
                 </button>
               </div>
+            </div>
+
+            {/* 自定义 X-Emby-Authorization */}
+            <div>
+              <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1'>
+                自定义 X-Emby-Authorization
+              </label>
+              <input
+                type='text'
+                value={formData.embyAuthorizationHeader}
+                onChange={(e) => setFormData({ ...formData, embyAuthorizationHeader: e.target.value })}
+                placeholder='留空使用默认值，例：MediaBrowser Client="MyApp", Device="Web", DeviceId="xxx", Version="1.0.0"'
+                className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500'
+              />
+              <p className='text-xs text-gray-500 dark:text-gray-400 mt-1'>
+                用于对 Emby 认证请求设置自定义标识，留空则使用默认值
+              </p>
             </div>
 
             {/* 启用开关 */}

@@ -31,6 +31,20 @@ const doubanDataSourceOptions = [
   { value: 'cors-proxy-zwei', label: 'Cors Proxy By Zwei' },
   { value: 'cmliussss-cdn-tencent', label: '豆瓣 CDN By CMLiussss（腾讯云）' },
   { value: 'cmliussss-cdn-ali', label: '豆瓣 CDN By CMLiussss（阿里云）' },
+  { value: 'cmliussss-unified', label: '豆瓣 CDN By CMLiussss（统一域名）' },
+  { value: 'custom', label: '自定义代理' },
+];
+
+const bangumiApiTypeOptions = [
+  { value: 'server', label: '服务端转发（默认，访问官方 api.bgm.tv）' },
+  { value: 'cmliussss', label: 'Bangumi 反代 By CMLiussss（解决服务器被墙）' },
+  { value: 'custom', label: '自定义反代地址' },
+];
+
+const bangumiImageProxyTypeOptions = [
+  { value: 'server', label: '服务器代理（默认，由服务器代理请求）' },
+  { value: 'cmliussss', label: 'Bangumi 图片 CDN By CMLiussss' },
+  { value: 'direct', label: '直连（浏览器直接请求 lain.bgm.tv）' },
   { value: 'custom', label: '自定义代理' },
 ];
 
@@ -56,6 +70,7 @@ function getThanksInfo(dataSource: string) {
       return { text: 'Thanks to @Zwei', url: 'https://github.com/bestzwei' };
     case 'cmliussss-cdn-tencent':
     case 'cmliussss-cdn-ali':
+    case 'cmliussss-unified':
       return { text: 'Thanks to @CMLiussss', url: 'https://github.com/cmliu' };
     default:
       return null;
@@ -94,6 +109,12 @@ export const SettingsPanel = memo(({ isOpen, onClose }: SettingsPanelProps) => {
   const [exactSearch, setExactSearch] = useState(true);
   const [isDoubanDropdownOpen, setIsDoubanDropdownOpen] = useState(false);
   const [isDoubanImageProxyDropdownOpen, setIsDoubanImageProxyDropdownOpen] = useState(false);
+  const [isBangumiApiDropdownOpen, setIsBangumiApiDropdownOpen] = useState(false);
+  const [isBangumiImageProxyDropdownOpen, setIsBangumiImageProxyDropdownOpen] = useState(false);
+  const [bangumiApiType, setBangumiApiType] = useState('cmliussss');
+  const [bangumiApiProxy, setBangumiApiProxy] = useState('');
+  const [bangumiImageProxyType, setBangumiImageProxyType] = useState('cmliussss');
+  const [bangumiImageProxyUrl, setBangumiImageProxyUrl] = useState('');
 
   // ── Emby config via TanStack Query ────────────────────────────────────────
   const { data: embyConfig = { sources: [] } } = useEmbyConfigQuery(isOpen);
@@ -111,6 +132,10 @@ export const SettingsPanel = memo(({ isOpen, onClose }: SettingsPanelProps) => {
     setDoubanDataSource(localStorage.getItem('doubanDataSource') ?? RC.DOUBAN_PROXY_TYPE ?? 'direct');
     setDoubanImageProxyType(localStorage.getItem('doubanImageProxyType') ?? RC.DOUBAN_IMAGE_PROXY_TYPE ?? 'server');
     setDoubanImageProxyUrl(readLS('doubanImageProxyUrl', RC.DOUBAN_IMAGE_PROXY || ''));
+    setBangumiApiType(localStorage.getItem('bangumiApiType') ?? 'cmliussss');
+    setBangumiApiProxy(readLS('bangumiApiProxy', ''));
+    setBangumiImageProxyType(localStorage.getItem('bangumiImageProxyType') ?? RC.BANGUMI_IMAGE_PROXY_TYPE ?? 'cmliussss');
+    setBangumiImageProxyUrl(readLS('bangumiImageProxyUrl', RC.BANGUMI_IMAGE_PROXY || ''));
     setContinueWatchingMinProgress(readLS('continueWatchingMinProgress', 5));
     setContinueWatchingMaxProgress(readLS('continueWatchingMaxProgress', 100));
     setEnableContinueWatchingFilter(readLS('enableContinueWatchingFilter', false));
@@ -142,6 +167,10 @@ export const SettingsPanel = memo(({ isOpen, onClose }: SettingsPanelProps) => {
   const handleDoubanDataSourceChange = (v: string) => { setDoubanDataSource(v); localStorage.setItem('doubanDataSource', v); };
   const handleDoubanImageProxyTypeChange = (v: string) => { setDoubanImageProxyType(v); localStorage.setItem('doubanImageProxyType', v); };
   const handleDoubanImageProxyUrlChange = (v: string) => { setDoubanImageProxyUrl(v); localStorage.setItem('doubanImageProxyUrl', v); };
+  const handleBangumiApiTypeChange = (v: string) => { setBangumiApiType(v); localStorage.setItem('bangumiApiType', v); };
+  const handleBangumiApiProxyChange = (v: string) => { setBangumiApiProxy(v); localStorage.setItem('bangumiApiProxy', v); };
+  const handleBangumiImageProxyTypeChange = (v: string) => { setBangumiImageProxyType(v); localStorage.setItem('bangumiImageProxyType', v); };
+  const handleBangumiImageProxyUrlChange = (v: string) => { setBangumiImageProxyUrl(v); localStorage.setItem('bangumiImageProxyUrl', v); };
   const handleBufferModeChange = (v: 'standard' | 'enhanced' | 'max') => { setPlayerBufferMode(v); localStorage.setItem('playerBufferMode', v); };
   const handleContinueWatchingMinProgressChange = (v: number) => { setContinueWatchingMinProgress(v); localStorage.setItem('continueWatchingMinProgress', v.toString()); };
   const handleContinueWatchingMaxProgressChange = (v: number) => { setContinueWatchingMaxProgress(v); localStorage.setItem('continueWatchingMaxProgress', v.toString()); };
@@ -175,6 +204,10 @@ export const SettingsPanel = memo(({ isOpen, onClose }: SettingsPanelProps) => {
     setDoubanDataSource(defaultDoubanProxyType);
     setDoubanImageProxyType(defaultDoubanImageProxyType);
     setDoubanImageProxyUrl(defaultDoubanImageProxyUrl);
+    setBangumiApiType(RC.BANGUMI_API_TYPE || 'cmliussss');
+    setBangumiApiProxy(RC.BANGUMI_API_PROXY || '');
+    setBangumiImageProxyType(RC.BANGUMI_IMAGE_PROXY_TYPE || 'cmliussss');
+    setBangumiImageProxyUrl(RC.BANGUMI_IMAGE_PROXY || '');
     setContinueWatchingMinProgress(5);
     setContinueWatchingMaxProgress(100);
     setEnableContinueWatchingFilter(false);
@@ -191,6 +224,10 @@ export const SettingsPanel = memo(({ isOpen, onClose }: SettingsPanelProps) => {
     localStorage.setItem('doubanDataSource', defaultDoubanProxyType);
     localStorage.setItem('doubanImageProxyType', defaultDoubanImageProxyType);
     localStorage.setItem('doubanImageProxyUrl', defaultDoubanImageProxyUrl);
+    localStorage.setItem('bangumiApiType', RC.BANGUMI_API_TYPE || 'cmliussss');
+    localStorage.setItem('bangumiApiProxy', RC.BANGUMI_API_PROXY || '');
+    localStorage.setItem('bangumiImageProxyType', RC.BANGUMI_IMAGE_PROXY_TYPE || 'cmliussss');
+    localStorage.setItem('bangumiImageProxyUrl', RC.BANGUMI_IMAGE_PROXY || '');
     localStorage.setItem('continueWatchingMinProgress', '5');
     localStorage.setItem('continueWatchingMaxProgress', '100');
     localStorage.setItem('enableContinueWatchingFilter', JSON.stringify(false));
@@ -380,6 +417,136 @@ export const SettingsPanel = memo(({ isOpen, onClose }: SettingsPanelProps) => {
                   placeholder='例如: https://proxy.example.com/fetch?url='
                   value={doubanImageProxyUrl}
                   onChange={e => handleDoubanImageProxyUrlChange(e.target.value)}
+                />
+              </div>
+            )}
+
+            <div className='border-t border-gray-200 dark:border-gray-700'></div>
+
+            {/* Bangumi API 代理 */}
+            <div className='space-y-3'>
+              <div>
+                <h4 className='text-sm font-medium text-gray-700 dark:text-gray-300'>Bangumi 数据代理</h4>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mt-1'>服务器无法访问 api.bgm.tv 时可切换反代</p>
+              </div>
+              <div className='relative' data-dropdown='bangumi-api'>
+                <button
+                  type='button'
+                  onClick={() => setIsBangumiApiDropdownOpen(!isBangumiApiDropdownOpen)}
+                  className='w-full px-3 py-2.5 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-sm hover:border-gray-400 dark:hover:border-gray-500 text-left'
+                >
+                  {bangumiApiTypeOptions.find(o => o.value === bangumiApiType)?.label}
+                </button>
+                <div className='absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none'>
+                  <ChevronDown className={`w-4 h-4 text-gray-400 dark:text-gray-500 transition-transform duration-200 ${isBangumiApiDropdownOpen ? 'rotate-180' : ''}`} />
+                </div>
+                {isBangumiApiDropdownOpen && (
+                  <div className='absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-auto'>
+                    {bangumiApiTypeOptions.map(option => (
+                      <button
+                        key={option.value}
+                        type='button'
+                        onClick={() => { handleBangumiApiTypeChange(option.value); setIsBangumiApiDropdownOpen(false); }}
+                        className={`w-full px-3 py-2.5 text-left text-sm transition-colors duration-150 flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-700 ${bangumiApiType === option.value ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400' : 'text-gray-900 dark:text-gray-100'}`}
+                      >
+                        <span className='truncate'>{option.label}</span>
+                        {bangumiApiType === option.value && <Check className='w-4 h-4 text-green-600 dark:text-green-400 shrink-0 ml-2' />}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {bangumiApiType === 'cmliussss' && (
+                <div className='mt-3'>
+                  <button
+                    type='button'
+                    onClick={() => window.open('https://github.com/cmliu', '_blank')}
+                    className='flex items-center justify-center gap-1.5 w-full px-3 text-xs text-gray-500 dark:text-gray-400 cursor-pointer'
+                  >
+                    <span className='font-medium'>Thanks to @CMLiussss</span>
+                    <ExternalLink className='w-3.5 opacity-70' />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {bangumiApiType === 'custom' && (
+              <div className='space-y-3'>
+                <div>
+                  <h4 className='text-sm font-medium text-gray-700 dark:text-gray-300'>Bangumi 反代地址</h4>
+                  <p className='text-xs text-gray-500 dark:text-gray-400 mt-1'>与官方 api.bgm.tv 路径兼容的反代地址，不含末尾斜杠</p>
+                </div>
+                <input
+                  type='text'
+                  className='w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 shadow-sm hover:border-gray-400 dark:hover:border-gray-500'
+                  placeholder='例如: https://bgm-proxy.example.com'
+                  value={bangumiApiProxy}
+                  onChange={e => handleBangumiApiProxyChange(e.target.value)}
+                />
+              </div>
+            )}
+
+            <div className='border-t border-gray-200 dark:border-gray-700'></div>
+
+            {/* Bangumi 图片代理 */}
+            <div className='space-y-3'>
+              <div>
+                <h4 className='text-sm font-medium text-gray-700 dark:text-gray-300'>Bangumi 图片代理</h4>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mt-1'>选择获取 Bangumi 封面图片的方式</p>
+              </div>
+              <div className='relative' data-dropdown='bangumi-image-proxy'>
+                <button
+                  type='button'
+                  onClick={() => setIsBangumiImageProxyDropdownOpen(!isBangumiImageProxyDropdownOpen)}
+                  className='w-full px-3 py-2.5 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-sm hover:border-gray-400 dark:hover:border-gray-500 text-left'
+                >
+                  {bangumiImageProxyTypeOptions.find(o => o.value === bangumiImageProxyType)?.label}
+                </button>
+                <div className='absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none'>
+                  <ChevronDown className={`w-4 h-4 text-gray-400 dark:text-gray-500 transition-transform duration-200 ${isBangumiImageProxyDropdownOpen ? 'rotate-180' : ''}`} />
+                </div>
+                {isBangumiImageProxyDropdownOpen && (
+                  <div className='absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-auto'>
+                    {bangumiImageProxyTypeOptions.map(option => (
+                      <button
+                        key={option.value}
+                        type='button'
+                        onClick={() => { handleBangumiImageProxyTypeChange(option.value); setIsBangumiImageProxyDropdownOpen(false); }}
+                        className={`w-full px-3 py-2.5 text-left text-sm transition-colors duration-150 flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-700 ${bangumiImageProxyType === option.value ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400' : 'text-gray-900 dark:text-gray-100'}`}
+                      >
+                        <span className='truncate'>{option.label}</span>
+                        {bangumiImageProxyType === option.value && <Check className='w-4 h-4 text-green-600 dark:text-green-400 shrink-0 ml-2' />}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {bangumiImageProxyType === 'cmliussss' && (
+                <div className='mt-3'>
+                  <button
+                    type='button'
+                    onClick={() => window.open('https://github.com/cmliu', '_blank')}
+                    className='flex items-center justify-center gap-1.5 w-full px-3 text-xs text-gray-500 dark:text-gray-400 cursor-pointer'
+                  >
+                    <span className='font-medium'>Thanks to @CMLiussss</span>
+                    <ExternalLink className='w-3.5 opacity-70' />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {bangumiImageProxyType === 'custom' && (
+              <div className='space-y-3'>
+                <div>
+                  <h4 className='text-sm font-medium text-gray-700 dark:text-gray-300'>Bangumi 图片代理地址</h4>
+                  <p className='text-xs text-gray-500 dark:text-gray-400 mt-1'>自定义图片代理地址，图片 URL 将以编码形式拼接在后面</p>
+                </div>
+                <input
+                  type='text'
+                  className='w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 shadow-sm hover:border-gray-400 dark:hover:border-gray-500'
+                  placeholder='例如: https://proxy.example.com/fetch?url='
+                  value={bangumiImageProxyUrl}
+                  onChange={e => handleBangumiImageProxyUrlChange(e.target.value)}
                 />
               </div>
             )}

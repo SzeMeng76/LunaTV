@@ -28,6 +28,10 @@ export {
   getStreamModeDescription,
 } from './stream-mode-detector';
 
+// 从 URL 规范化工具导出
+export type { NormalizedDownloadSource } from './download-url';
+export { normalizeDownloadSource } from './download-url';
+
 // 从新的下载器导入基础类型
 import type { M3U8Task as M3U8TaskBase } from './m3u8-downloader';
 

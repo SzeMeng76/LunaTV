@@ -69,6 +69,14 @@ export class CalendarCacheManager {
         } else {
           throw new Error('KVRocks/Redis存储没有可用的set方法');
         }
+      } else if (storageType === 'sqlite') {
+        // SQLite - 使用通用缓存API
+        if (typeof storage.setCache === 'function') {
+          await storage.setCache(CALENDAR_DATA_KEY, dataStr);
+          await storage.setCache(CALENDAR_TIME_KEY, timestamp);
+        } else {
+          throw new Error('SQLite存储没有可用的setCache方法');
+        }
       } else {
         throw new Error(`不支持的存储类型: ${storageType}`);
       }
@@ -121,6 +129,14 @@ export class CalendarCacheManager {
           timeStr = await storage.client.get(CALENDAR_TIME_KEY);
         } else {
           throw new Error('KVRocks/Redis存储没有可用的get方法');
+        }
+      } else if (storageType === 'sqlite') {
+        // SQLite - 使用通用缓存API
+        if (typeof storage.getCache === 'function') {
+          dataStr = await storage.getCache(CALENDAR_DATA_KEY);
+          timeStr = await storage.getCache(CALENDAR_TIME_KEY);
+        } else {
+          throw new Error('SQLite存储没有可用的getCache方法');
         }
       } else {
         throw new Error(`不支持的存储类型: ${storageType}`);
@@ -197,6 +213,11 @@ export class CalendarCacheManager {
           await storage.client.del(CALENDAR_DATA_KEY);
           await storage.client.del(CALENDAR_TIME_KEY);
         }
+      } else if (storageType === 'sqlite') {
+        if (typeof storage.deleteCache === 'function') {
+          await storage.deleteCache(CALENDAR_DATA_KEY);
+          await storage.deleteCache(CALENDAR_TIME_KEY);
+        }
       }
 
       console.log('✅ 已清除数据库中的日历缓存');
@@ -232,6 +253,10 @@ export class CalendarCacheManager {
           timeStr = await storage.withRetry(() => storage.client.get(CALENDAR_TIME_KEY));
         } else if (storage.client?.get) {
           timeStr = await storage.client.get(CALENDAR_TIME_KEY);
+        }
+      } else if (storageType === 'sqlite') {
+        if (typeof storage.getCache === 'function') {
+          timeStr = await storage.getCache(CALENDAR_TIME_KEY);
         }
       }
 

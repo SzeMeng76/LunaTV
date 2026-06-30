@@ -304,11 +304,13 @@ your-space/
 
 [EdgeOne Pages](https://edgeone.ai/products/pages) 是腾讯云提供的边缘计算平台，类似于 Vercel，支持 Next.js SSR/SSG/ISR 部署，适合国内用户访问。
 
+> 💡 本项目已内置 `edgeone.json` 配置文件，连接仓库后 EdgeOne 会自动识别构建设置，**无需手动配置构建命令和输出目录**。
+
 #### 部署步骤
 
 1. **准备工作**
    - 注册 [EdgeOne](https://edgeone.ai/) 账号
-   - 在 [Upstash](https://upstash.com/) 创建 Redis 实例（EdgeOne Pages 无持久化存储）
+   - 在 [Upstash](https://upstash.com/) 创建 Redis 实例（EdgeOne Pages 无持久化存储，**不支持 SQLite**）
    - Fork 本项目到你的 GitHub/GitLab 账号
 
 2. **创建 Pages 项目**
@@ -317,11 +319,19 @@ your-space/
    - 选择 "连接 Git 仓库"
    - 授权并选择你 Fork 的 LunaTV 仓库
 
-3. **配置构建设置**
-   - **框架预设**：选择 `Next.js`
-   - **构建命令**：`pnpm build`（或保持默认）
-   - **输出目录**：`.next`（默认）
-   - **Node.js 版本**：`20`（推荐）
+3. **确认构建设置**
+
+   项目根目录的 `edgeone.json` 已预配置好所有构建参数，EdgeOne 会自动读取：
+
+   | 设置项 | 值 | 说明 |
+   |--------|-----|------|
+   | 安装命令 | `pnpm install --frozen-lockfile` | 自动读取 |
+   | 构建命令 | `pnpm edgeone:build` | 自动读取 |
+   | 输出目录 | `.edgeone` | 自动读取 |
+   | Node.js 版本 | `24` | 自动读取 |
+   | 函数最大执行时长 | `120s` | 自动读取 |
+
+   > ⚠️ 如果控制台显示构建命令为 `pnpm build`，请手动改为 `pnpm edgeone:build`，输出目录改为 `.edgeone`，Node 版本改为 `24`。
 
 4. **配置环境变量**
 
@@ -332,7 +342,7 @@ your-space/
    USERNAME=admin
    PASSWORD=your_secure_password
 
-   # 必填：存储配置（必须使用 Upstash）
+   # 必填：存储配置（必须使用 Upstash、Redis 或 KVRocks，不支持 SQLite）
    NEXT_PUBLIC_STORAGE_TYPE=upstash
    UPSTASH_URL=https://your-redis-instance.upstash.io
    UPSTASH_TOKEN=AxxxxxxxxxxxxxxxxxxxxxxxxxxxQ==
@@ -365,15 +375,14 @@ your-space/
 - ✅ **自动 HTTPS**：免费 SSL 证书
 - ✅ **Git 自动部署**：推送代码自动触发构建
 - ✅ **支持 Next.js SSR**：完整支持服务端渲染
+- ✅ **零配置构建**：内置 `edgeone.json`，连接仓库即可部署
 
 #### ⚠️ EdgeOne Pages 注意事项
 
-- **`.nvmrc` 文件冲突**：项目根目录的 `.nvmrc` 文件可能导致 EdgeOne 构建失败，需要删除该文件或将其中的版本号修改为 EdgeOne 支持的版本后才能成功部署
 - **无 Docker 支持**：EdgeOne Pages 是无服务器平台，仅支持源码构建部署
-- **必须使用 Upstash**：无持久化文件系统，需要外部数据库
-- **函数执行限制**：单次请求有执行时间限制（通常 30 秒）
+- **不支持 SQLite**：平台无持久化文件系统，SQLite 数据库在每次冷启动后会丢失，必须使用 `upstash`、`redis` 或 `kvrocks`
+- **函数执行限制**：单次请求最长执行 120 秒（已在 `edgeone.json` 中配置）
 - **不支持视频缓存**：无本地文件系统，视频缓存功能不可用
-- **构建资源限制**：免费版构建时间和内存有限制
 
 #### 🔗 相关链接
 

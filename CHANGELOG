@@ -1,3 +1,276 @@
+## [6.6.3] - 2026-06-26
+
+### Added
+
+- 🔍 Nyaa 搜索与下载导出：支持 Nyaa 种子站搜索及下载链接导出
+- 🔐 PanSou 认证支持：新增盘搜身份认证，支持需要登录的私有搜索接口
+- 🖼️ Bangumi 图片代理：新增 Bangumi 封面图片代理，支持用户自选代理方式
+- 🏠 HomeBanner TMDB Logo：首页 HeroBanner 新增 TMDB logo 展示及撤销删除功能
+- 📺 Bangumi 集成增强：管理员缓存管理器新增 Bangumi 独立缓存分类，移动端操作面板展示番剧详情
+- 🌐 EdgeOne 部署支持：新增腾讯云 EdgeOne 部署方案及构建脚本
+- 📡 TVBox 代理增强：新增 TVBox/Video 代理端点配置、detail 接口及剧集标题格式化
+- 🎬 视频分辨率推断与筛选：自动推断视频流分辨率并支持按分辨率筛选
+- 🌍 翻译插件检测警告：检测到浏览器翻译插件时弹出友好提示 Toast
+- 🔑 自定义 X-Emby-Authorization 请求头：支持用户自定义 Emby 鉴权请求头
+- 🏗️ Next.js 构建阶段环境标志：standalone 模式新增构建阶段环境变量标记
+
+### Changed
+
+- 📦 @mui/material 升级至 9.1.2
+- 📦 @tanstack/react-virtual 升级至 3.14.4
+- 📦 TanStack Query 升级至 5.101.0
+
+### Fixed
+
+- 🛡️ 翻译插件 DOM 崩溃防护：为页面根容器加 `translate='no'` 并用 DOMErrorBoundary 包裹内容，多层防止浏览器翻译插件修改 DOM 导致 React 崩溃；ErrorBoundary 新增 removeChild 错误自动恢复
+- 🌐 Bangumi CN 区修复：修复中国区 API 被拦截导致首页崩溃问题，新增多层智能降级策略；修复 useState 初始值、localStorage 重置及管理面板缺少默认 cmliussss 的问题；修复服务端日历 API 返回非数组时的错误
+- 📺 短剧数据源修复：迁移短剧 API 数据源并支持子分类，首页热门短剧返回空时自动切换至第一个非空子分类，当前分类无结果时自动跳转下一分类
+- 🐛 豆瓣数据清理：过滤推荐 API 返回的广告及播放列表条目，过滤列表中 null/undefined 条目防止 renderItem 崩溃
+- ⏩ 快进/快退图标方向修复：修复播放器快进快退按钮图标方向错误
+- 🖼️ 分辨率与 TMDB Logo 修复：修复下游解析层分辨率标注问题；优化 TMDB logo 在深色背景的显示效果，防止溢出
+- 🎨 播放器锁定模式：锁定模式下彻底隐藏控制栏背景
+- ⚡ 卡片点击性能优化：优化卡片点击响应速度并加强 DOM 错误追踪
+- 🔧 代理端口转发修复：修复代理层端口转发问题
+
+## [6.6.2] - 2026-05-30
+
+### Added
+
+- 🎬 PlayInfoPanel Hero Banner：新增 TMDB backdrop 背景图、logo 图片、海报、评分、简介展示，支持多季徽章（共X季）
+- 🔍 豆瓣快速信息面板：新增豆瓣 quick-info 和 suggest API，MobileActionSheet 接入豆瓣详情
+- 🌐 豆瓣代理新增 cmliussss 统一 CDN 选项
+- 🗄️ TMDB 服务端缓存：TMDB backdrop API 新增 db.getCache/setCache 服务端缓存（tmdb- 前缀，24小时 TTL），与管理员缓存管理集成
+
+### Changed
+
+- 🎬 PlayInfoPanel 重构：以 TMDB backdrop 为主视觉，TMDB logo/poster/评分/简介优先展示，收藏按钮移至简介下方
+- 🔍 TMDB 搜索优化：自动清理标题中的「第X季」「Season X」「S1」「年份」等后缀；移除年份参数避免年份不一致导致搜索失败；根据 stype（movie/tv）只搜对应端点，避免电视剧搜到同名电影
+- 🐛 TMDB 与豆瓣数据获取完全独立：移除 loadingMovieDetails 守卫，两者并行加载互不阻塞
+- 📺 直播频道展开触发区域：缩小为仅 chevron 按钮触发展开，避免误触
+
+### Fixed
+
+- 📺 直播错误覆盖：在 artplayer ready 事件清除 unsupportedType，频道慢速连接成功后不再显示错误覆盖层
+- 🔧 直播频道健康检查：修复 directPlaybackEnabled 未加入 useCallback 依赖导致的问题
+- ⚡ 管理员播放统计 API：并行化每用户数据库查询，提升性能
+- 📱 登入详情卡片：修复移动端地区徽章溢出问题，优化登入 IP/设备信息响应式布局
+
+## [6.6.1] - 2026-05-29
+
+### Added
+
+- 📍 登入追踪增强：记录用户每次登入的客户端IP、ip-api.com 归属地（城市/省份/国家）、设备类型（手机/平板/桌面）、浏览器及操作系统，无需外部依赖或API Key，覆盖 Redis/Upstash/SQLite 三种存储后端
+- 🗄️ SQLite 存储后端：新增 SQLite 存储实现（SqliteStorage），支持无需外部数据库的本地部署
+- 🔑 跨源跳过配置共享：新增 identityKey 支持，允许不同视频源共享同一套跳过配置
+- 🕐 全屏时钟：全屏播放模式下显示实时时钟覆盖层
+- 🖼️ 进度条缩略图预览：集成 artplayer-plugin-auto-thumbnail，进度条悬停时显示视频帧预览
+- 🔍 用户管理搜索过滤：管理员用户管理表格新增用户名搜索过滤功能
+- 🌐 VirtualGrid 滚动位置持久化：路由切换后恢复滚动位置，支持豆瓣/搜索/短剧/Emby 四个列表页，30分钟TTL
+- ⚡ ChunkLoadError 自动恢复：部署后旧 chunk 失效时自动触发单次硬刷新，10秒TTL防止无限循环
+- 🛡️ 可信网络访客管理员访问拦截：可信网络自动登入的访客可选择性屏蔽 /admin 访问，密码登入的站长不受影响
+- 🔗 Bangumi API 代理配置：管理员面板和用户设置均可配置 Bangumi API 代理（server/cmliussss/自定义），用户设置优先
+- 📡 DNS 缓存与重试机制：新增 DNS 缓存和请求重试机制，提升视频源连接稳定性
+- 🧪 视频源测速与状态持久化：优化视频源测速排序逻辑，source-browser 页面新增筛选条件和分类状态持久化
+
+### Changed
+
+- 🐳 Docker 基础镜像升级：从 node:20-alpine 升级至 node:22-alpine（Node 22 LTS，SQLite DatabaseSync 无需实验性标志）
+- 📦 @tanstack/react-query 升级至 5.100.14，TrustedNetworkConfig 迁移至 TanStack Query
+
+### Fixed
+
+- 🎬 直连模式修复：修复 HLS loader 读取错误的 localStorage key，添加 isLunaProxyUrl() 守卫防止 moontv-source 参数注入外部 CDN URL，直连模式下跳过健康检查
+- ⚡ 播放速率修复：修复切换视频源或剧集时播放速率被重置的问题
+- 🎬 播放器锁定模式修复：移除锁定模式下的背景渐变，修复浮动快进按钮在锁定时仍显示的问题
+- 🔄 source-browser URL 状态修复：修复 URL 参数与状态的同步循环，正确从 URL 恢复来源和分类，修复分类高亮类型比较和加载时分类参数丢失问题
+- 🛡️ 浏览器翻译插件崩溃防护加固：在所有页面根容器加 translate='no'，防止 Safari/Chrome 翻译插件修改 DOM 导致 React removeChild 崩溃（补充 layout.tsx 的 html 级防护）
+- 🔧 DOM 节点守卫：修复 undefined 列表和过期 DOM 节点引用导致的崩溃
+
+## [6.6.0] - 2026-05-09
+
+### Added
+
+- 🔍 外部流量监控优化：过滤无效域名（0.0.0.0、localhost、内网IP）显示
+- 📊 动态Cron阈值：基于实际用户数动态计算查询阈值
+- 🔐 SSRF保护绕过：为私有部署添加DISABLE_SSRF_PROTECTION环境变量
+- 🎯 剧集选择器：速度测试后自动按速度排序
+- ⏱️ API缓存统一：统一所有API缓存时长为2小时
+
+### Changed
+
+- ⚡ Cron性能优化：通过进程级缓存减少数据库查询94%（466→28-30查询）
+- 🔧 Cron配置集中化：创建DEFAULT_CRON_CONFIG作为单一配置源
+- 📉 Cron默认值优化：批处理大小降至50条，活跃窗口缩短至21天
+- 🚀 TanStack Query迁移：YouTube和Bilibili搜索迁移到TanStack Query
+- 📊 豆瓣/短剧页面优化：迁移到useInfiniteQuery + 虚拟滚动
+
+### Fixed
+
+- 🐛 SSR错误完全修复：修复所有服务端渲染时访问浏览器API导致的崩溃（utils.ts、download-idb.ts、stream-saver.ts、AnimatedCardGrid.tsx、HomeClient.tsx、HeroBanner.tsx）
+- 🔄 数据迁移增强：API读取时自动升级旧版用户数据字段
+- 🎨 UI优化：播放按钮悬停改为轮廓样式，扩大控制栏悬停区域
+- 📝 数据导入导出：修复提醒和视频源导入导出时缺失字段
+- 🔍 追番更新修复：修复依赖查询加载逻辑和自动刷新功能
+- 🔄 豆瓣无限加载修复：通过记忆化endReached回调防止无限加载
+
+## [6.5.3] - 2026-05-07
+
+### Added
+
+- 🛡️ SSRF保护集成：将SSRF保护集成到代理端点，增强安全性
+- 🚀 持久化导航Shell：实现遵循Next.js最佳实践的持久化导航Shell
+- ⚡ 路由优化：添加预取和加载状态的路由优化
+- 🎯 请求去重和超时保护：添加请求去重和超时保护机制
+- 🗂️ TanStack Query缓存优化：使用TanStack Query优化数据源浏览器缓存
+- 🎨 剧集选择器增强：添加手动速度测试和状态徽章到剧集选择器
+
+### Changed
+
+- 📦 依赖更新：更新依赖到最新版本
+- 🔄 TanStack Query迁移：将数据获取和缓存迁移到TanStack Query
+- ⚡ 导航优化：减少导航请求风暴并优化缓存
+
+### Fixed
+
+- 🔄 追番更新功能完整还原：100%还原旧watching-updates.ts逻辑到TanStack Query实现，包括getOriginalEpisodes数据库重读、protectedTotalEpisodes保护机制、新上映检查、排序逻辑、localStorage持久化、CDN缓存绕过等所有功能
+- 🔧 代理Tavily API使用查询：通过后端代理Tavily API使用查询以避免WAF阻止
+- 🛡️ 改进Tavily使用API错误处理：改进WAF阻止的错误处理
+- 🗄️ 启动时重建缺失的视频元数据：防止误删除，优先使用本地文件缓存
+- 🎨 移动画质徽章位置：将画质徽章移到右下角，避免与当前源标签重叠
+- 🖥️ 修复登录/注册页面全屏显示：使用fixed定位实现全屏显示，修复z-index问题
+- 🔐 跳过认证页面的RouteWarmup：防止登录干扰
+- ✅ 添加RouteWarmup认证检查：添加认证检查到RouteWarmup
+- 🎬 修复路由过渡的加载回退：将CinematicLoadingFallback包装在fixed容器中
+- 📱 添加play-stats页面底部内边距：为移动导航添加底部内边距，匹配admin页面模式
+
+## [6.5.2] - 2026-05-06
+
+### Added
+
+- 🕐 预告片URL生命周期时间戳日志：添加详细的时间戳日志追踪预告片URL的获取、缓存和刷新过程
+- 📊 客户端错误日志系统：实现客户端到服务端的错误日志记录功能，支持无需认证访问
+- 💥 崩溃监控系统：添加完整的崩溃监控系统，支持移动端响应式UI
+- 🛡️ 全局错误边界：实现全面的崩溃监控与全局错误边界
+- 🗄️ 崩溃日志数据库存储：将崩溃日志迁移到数据库存储，支持自动过期清理
+- 🚪 观影房解散按钮：为房主添加房间列表中的解散房间按钮
+- 📥 下载源标准化：添加下载源标准化功能并增强代理错误处理
+- 🎬 M3U8代理Referer/Origin转发：添加Referer和Origin头转发到M3U8代理以改善兼容性
+- ⏱️ 服务端强制刷新冷却：添加服务端强制刷新冷却机制防止频繁请求
+
+### Changed
+
+- 🎬 使用影片ID替代视频ID作为视频缓存Key：确保同一部影片的预告片永远使用同一个缓存文件（movie_{doubanId}格式），即使豆瓣返回不同的视频ID
+- 🗑️ 替换TTL视频缓存为LRU管理：移除12小时TTL机制，改用LRU（最近最少使用）策略管理视频缓存，最多保留10个视频文件，总大小限制2GB
+- 🔄 移除localStorage预告片URL依赖：完全移除localStorage缓存，统一使用React Query内存缓存 + Redis全局缓存
+- ⚡ 优化延迟加载策略：仅预加载当前和下一张幻灯片（从3张减少到2张），减少不必要的API请求
+- 📦 移除Puppeteer依赖：移除Puppeteer依赖以减少打包体积
+- 📦 升级@mui/material至v9.0.0：从旧版本升级到v9.0.0
+- 🔧 升级GitHub Actions至Node.js 24：升级GitHub Actions到Node.js 24兼容版本，强制使用Node.js 24
+
+### Fixed
+
+- 🔧 使用共享db实例删除video-proxy中的Redis缓存：修复缓存删除使用错误的Redis实例导致删除失败的问题
+- 🗑️ 视频文件缺失且URL过期时清除Redis URL缓存：当视频URL返回403且视频文件不存在时，自动清除Redis中的过期URL缓存，下次请求会获取新URL
+- 📁 优先检查文件存在性，缺失元数据时自动重建：修复Redis重启后元数据丢失但文件存在导致的缓存未命中问题，现在会自动重建元数据
+- 🎥 URL过期时返回缓存视频文件而非删除：当视频URL返回403时，优先检查视频文件是否存在，如果存在则返回缓存文件，避免不必要的重新下载
+- 🔄 防止无限refresh-trailer请求：实现请求去重机制，防止同一个ID的重复请求导致API限流
+- 🗂️ 移除生成错误douban_格式的旧缓存迁移：删除倒转迁移函数，防止将正确的movie_格式转换回错误的douban_格式
+- ⏱️ 防止视频缓存TTL在访问时重置：移除访问时重置TTL的逻辑，避免热门视频永久占用缓存空间
+- 🔍 强制刷新前检查视频文件缓存：在强制刷新前先检查视频文件是否存在，如果存在则跳过强制刷新，避免不必要的API请求
+- 🎨 记忆化enableVideo防止HeroBanner重新挂载：使用useMemo优化enableVideo，防止不必要的组件重新渲染
+- 🎬 记忆化HeroBanner items防止不必要的重新渲染：使用useMemo优化HeroBanner items，减少组件重新渲染
+- 🔄 持久化强制刷新冷却跨组件重新挂载：修复强制刷新冷却在组件重新挂载后丢失的问题
+- 🚫 添加全面的速率限制防止豆瓣API节流：实现多层速率限制机制防止豆瓣API限流
+- 🔄 添加请求去重防止豆瓣API速率限制：实现请求去重机制防止重复请求
+- 🪝 确保HomeClient中Hook调用顺序一致：修复Hook调用顺序不一致导致的React错误
+- 🎬 添加CinematicLoadingFallback到首页Suspense边界：修复首页加载时的Suspense边界问题
+- 🔧 稳定useHomePageQueries中的config对象引用：防止Hook计数不匹配问题
+- 🎥 添加详细的视频错误日志并过滤非网络错误：改进视频错误日志记录和过滤
+- 🔄 添加视频onError防抖和key优化：优化视频错误处理和组件key管理
+
+## [6.5.1] - 2026-05-04
+
+### Added
+
+- 🗄️ Redis全局缓存预告片URL：实现基于Redis的全局缓存机制，减少对豆瓣API的请求次数，所有用户共享缓存，支持Kvrocks和Upstash，24小时TTL
+
+### Fixed
+
+- 🐛 修复加载屏幕导致组件重复挂载问题：将CinematicLoadingFallback从替换整个页面改为overlay覆盖方式，防止HeroBanner等组件在loading时被卸载和重新挂载
+- 🔄 修复无限trailer URL请求问题：解决因组件频繁mount/unmount导致的疯狂请求豆瓣API问题，避免IP被封
+- 🚫 防止失败预告片无限重试：为没有预告片的视频添加NO_TRAILER标记（24小时后重试），为服务端错误添加FAILED标记（5分钟后重试），避免重复请求导致API限流
+- ⏱️ 限制预告片请求频率：每次最多请求3个预告片，请求之间延迟2秒，防止短时间内连续请求触发豆瓣API限流
+- 🔧 修复所有模块的mount/unmount问题：移除HeroBanner和即将上映模块的!loading条件，使用useRef保留数据避免refetch时组件卸载，彻底解决重复请求问题
+- 🎬 优化登录注册页面体验：转换注册页面为服务端组件，消除白屏闪烁，添加渐变背景到加载状态，优化页面导航过渡效果
+- 🎨 修复Bilibili统计显示：当数值为零时隐藏Bilibili统计信息以改善用户体验
+
+## [6.5.0] - 2026-05-02
+
+### Added
+
+- 🎬 电影主题加载屏幕：实现电影主题加载体验，包含Bing每日壁纸背景、胶片卷轴动画、旋转趣味消息、移动端响应式设计
+- 📺 Bilibili搜索和播放集成：添加Bilibili搜索和播放功能，支持UP主视频、视频统计、QR码登录、Cookie过期追踪
+- 🎥 Bilibili热门视频：添加Bilibili热门视频作为默认视图，支持搜索/热门模式切换、分页加载、缓存管理
+- 🌍 YouTube热门视频：添加YouTube热门视频功能，支持可搜索的地区选择器、按字母排序
+- 🏠 首页模块切换：实现首页模块切换功能，管理员可控制首页显示的模块
+- 🎛️ 控制栏透明度控制：添加控制栏遮挡度设置（10-80%），支持实时调整透明度和模糊效果以改善字幕可见性
+
+### Changed
+
+- 📦 升级@tanstack/react-query至5.100.6：从5.100.5升级到5.100.6
+- 🎨 优化电影主题加载动画：减少视觉强度，优化动画效果
+- 🔄 重构加载逻辑：使用isFetching替代isLoading显示加载屏幕，正确检测空数据状态
+- 🎯 控制栏设置重命名：将设置重命名为'控制栏遮挡度'以提高清晰度
+
+### Fixed
+
+- 📱 修复移动端内容截断：为多个页面添加底部padding防止内容被底部导航栏截断（play、douban、shortdrama、tvbox、source-browser、emby、search）
+- 🎬 修复骨架屏问题：使用isFetching和数据检查防止骨架屏显示，显示加载直到所有数据准备就绪
+- 🖼️ 修复Bing壁纸显示：移除导致壁纸无法显示的wallpaperLoaded状态，添加平滑淡入过渡防止闪烁
+- 🎞️ 修复加载动画闪烁：使用固定Film图标消除周期性闪烁
+- ⚡ 优化导航速度：移除服务端预取优化已登录用户的导航速度，减少预取超时从3秒到1秒
+- 🔄 修复客户端异常：移除导致客户端异常的重复加载检查，恢复正确位置的加载检查
+- 📺 修复Bilibili功能：修复搜索触发、标签行为、UP主视频播放、分页重复问题、模式切换状态重置
+- 🖼️ 修复Bilibili封面图片：使用图片代理处理Bilibili封面图片
+- 🎨 修复全屏显示问题：使用渐变叠加避免backdrop-filter堆叠上下文问题
+- 🔍 修复搜索历史显示：在YouTube/Bilibili搜索模式无结果时显示搜索历史
+- 🎛️ 修复控制栏透明度：调整模糊效果和透明度以改善字幕可见性
+- 🐛 修复服务端数据获取：修复首页、短剧、豆瓣的服务端数据预取问题
+- 🔄 修复无限循环：从useEffect依赖中移除加载状态防止无限循环
+- 💬 优化弹幕密度：减少全屏模式下的弹幕密度以改善控制响应性
+
+## [6.4.0] - 2026-04-27
+
+### Added
+
+- 🎥 观影房屏幕共享功能：实现完整的屏幕共享观影室功能，支持WebRTC实时传输、画质预设选择（流畅/高清/超清）、自动成员连接处理
+- 🎨 屏幕共享页面沉浸式设计：全屏渐变背景布局、玻璃态效果、实时状态指示器（共享时长、观看人数、连接状态）、支持明暗主题切换
+- ⏩ 视频播放快进快退按钮：添加可自定义的快进快退按钮，支持自定义时间间隔、响应式布局、Netflix风格设计
+- 📺 直播源导入导出功能：支持M3U/M3U8格式导入、自定义源导出、源验证和管理
+- ☁️ 光鸭云存储支持：集成光鸭云存储服务
+- 🎛️ 快进快退设置面板：添加快进快退按钮设置面板，支持自定义时间和布局选项
+
+### Changed
+
+- 📦 升级@tanstack/react-query至5.100.5：从5.96.1升级到5.100.5
+- 📦 升级@tanstack/react-virtual至3.13.24：从3.13.23升级到3.13.24
+- 📦 升级hls.js至1.6.16：改进HLS播放兼容性
+
+### Fixed
+
+- 🔧 修复邀请码禁用检查和剪贴板错误误报：解决邀请码系统的检查逻辑和剪贴板错误提示问题
+- 🔌 添加Redis兼容适配器：支持Upstash和ioredis API兼容
+- 🎬 保持切换视频时的播放速率：视频切换后保持用户设置的播放速率
+- 📅 修复发布日历worker时区问题：应用时区修复到发布日历worker，修正日期格式传递
+- 🔊 修复音量面板悬停问题：解决音量面板鼠标移动时消失的问题，添加过渡延迟和扩展点击区域，防止双重剧集跳过
+- 🎯 修复播放页年份匹配：改进年份匹配逻辑
+- 🎨 修复OIDC提供商编辑模态框溢出问题：解决编辑模态框内容溢出显示问题
+- 📺 修复M3U导入模态框z-index问题：使用createPortal防止z-index层级问题
+- 📱 改进移动端快进快退按钮：采用Netflix风格布局、垂直单侧设计、改进可见性和定位
+- ⚡ 优化移动端快进快退按钮性能：仅在布局变化时重建，实现实时设置更新
+- 💬 修复弹幕发射器按钮隐藏：强制隐藏弹幕发射器按钮防止初始化时闪烁
+- 📤 修复直播源导出前验证：导出前验证自定义源有效性
+
 ## [6.3.0] - 2026-04-03
 
 ### Added

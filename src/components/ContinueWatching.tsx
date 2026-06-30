@@ -31,9 +31,9 @@ function ContinueWatching({ className }: ContinueWatchingProps) {
   const { data: playRecords = [], isLoading: loading } = useContinueWatchingQuery();
 
   // 🚀 TanStack Query - 观看更新（仅当有播放记录时才查询）
-  const { data: watchingUpdates = null } = useWatchingUpdatesQuery(
-    !loading && playRecords.length > 0
-  );
+  const { data: watchingUpdates = null } = useWatchingUpdatesQuery({
+    enabled: !loading && playRecords.length > 0
+  });
 
   // 🚀 TanStack Query - 使用 useMutation 管理清空播放记录操作
   const clearPlayRecordsMutation = useClearPlayRecordsMutation();
@@ -93,9 +93,9 @@ function ContinueWatching({ className }: ContinueWatchingProps) {
       series.videoId === id
     );
 
-    // 如果找到匹配的剧集且有最新集数信息，返回最新集数；否则返回原始集数
-    return matchedSeries && matchedSeries.totalEpisodes
-      ? matchedSeries.totalEpisodes
+    // 如果找到匹配的剧集且有最新集数信息，返回最新集数（使用 latestEpisodes，包含了 protectedTotalEpisodes）
+    return matchedSeries && matchedSeries.latestEpisodes
+      ? matchedSeries.latestEpisodes
       : record.total_episodes;
   };
 

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { DEFAULT_USER_AGENT } from '@/lib/user-agent';
+import { validateProxyTargetUrl } from '@/lib/proxy-security';
 import * as https from 'https';
 
 export const runtime = 'nodejs';
@@ -42,11 +43,15 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Missing image URL' }, { status: 400 });
   }
 
-  // URL 格式验证
+  // SSRF 防护：验证目标 URL
   try {
-    new URL(imageUrl);
-  } catch {
-    return NextResponse.json({ error: 'Invalid URL format' }, { status: 400 });
+    await validateProxyTargetUrl(imageUrl);
+  } catch (error) {
+    console.error('[Image Proxy] SSRF validation failed:', error);
+    return NextResponse.json(
+      { error: 'Invalid or blocked URL' },
+      { status: 403 }
+    );
   }
 
   // 创建 AbortController 用于超时控制

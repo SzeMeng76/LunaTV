@@ -13,9 +13,29 @@ function getBaseUrl(request: NextRequest): string {
   const envBase = (process.env.SITE_BASE || '').trim().replace(/\/$/, '');
   if (envBase) return envBase;
 
-  // Fallback：使用原有逻辑（完全保留）
-  const host = request.headers.get('host') || 'localhost:3000';
-  const protocol = request.headers.get('x-forwarded-proto') || 'http';
+  const requestUrl = new URL(request.url);
+  const forwardedProto = (request.headers.get('x-forwarded-proto') || '')
+    .split(',')[0]
+    .trim();
+  const forwardedHost = (request.headers.get('x-forwarded-host') || '')
+    .split(',')[0]
+    .trim();
+  const forwardedPort = (request.headers.get('x-forwarded-port') || '')
+    .split(',')[0]
+    .trim();
+  const protocol = forwardedProto || requestUrl.protocol.replace(':', '') || 'http';
+  let host = forwardedHost || request.headers.get('host') || requestUrl.host || 'localhost:3000';
+
+  // 如果 x-forwarded-host 没有包含端口，但 x-forwarded-port 指定了非标准端口，补上
+  if (forwardedHost && forwardedPort && !/:\d+$/.test(forwardedHost)) {
+    const isStandardPort =
+      (protocol === 'https' && forwardedPort === '443') ||
+      (protocol === 'http' && forwardedPort === '80');
+    if (!isStandardPort) {
+      host = `${forwardedHost}:${forwardedPort}`;
+    }
+  }
+
   return `${protocol}://${host}`;
 }
 

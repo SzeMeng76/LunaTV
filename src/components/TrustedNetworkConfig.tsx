@@ -1,56 +1,31 @@
 'use client';
 
 import { AlertCircle, CheckCircle, Shield } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
-import { AdminConfig } from '@/lib/admin.types';
+import { useTrustedNetworkQuery, useSaveTrustedNetworkMutation } from '@/hooks/useTrustedNetworkQueries';
 
-interface TrustedNetworkConfigProps {
-  config: AdminConfig | null;
-  refreshConfig: () => Promise<void>;
-}
-
-const TrustedNetworkConfig = ({ config, refreshConfig }: TrustedNetworkConfigProps) => {
-  const [isLoading, setIsLoading] = useState(false);
+/**
+ * 信任网络配置组件
+ *
+ * 使用 TanStack Query 优化：
+ * - 自动缓存和重试
+ * - 乐观更新（立即响应用户操作）
+ * - 自动错误处理和回滚
+ */
+const TrustedNetworkConfig = () => {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-
-  const [settings, setSettings] = useState({
-    enabled: false,
-    trustedIPs: [] as string[],
-  });
-
-  const [envConfig, setEnvConfig] = useState<{
-    hasEnvConfig: boolean;
-    trustedIPs: string[];
-  } | null>(null);
-
   const [newIP, setNewIP] = useState('');
 
-  // 从 config 加载设置
-  useEffect(() => {
-    if (config?.TrustedNetworkConfig) {
-      setSettings({
-        enabled: config.TrustedNetworkConfig.enabled ?? false,
-        trustedIPs: config.TrustedNetworkConfig.trustedIPs || [],
-      });
-    }
-  }, [config]);
+  // 使用 TanStack Query 获取配置
+  const { data, isLoading: isQueryLoading, error: queryError } = useTrustedNetworkQuery();
 
-  // 获取环境变量配置状态
-  useEffect(() => {
-    const fetchEnvConfig = async () => {
-      try {
-        const response = await fetch('/api/admin/trusted-network');
-        if (response.ok) {
-          const result = await response.json();
-          setEnvConfig(result.data?.envConfig || null);
-        }
-      } catch {
-        // 忽略错误
-      }
-    };
-    fetchEnvConfig();
-  }, []);
+  // 使用 TanStack Query Mutation 保存配置
+  const saveMutation = useSaveTrustedNetworkMutation();
+
+  // 从 Query 数据中提取配置
+  const settings = data?.data?.config || { enabled: false, trustedIPs: [] };
+  const envConfig = data?.data?.envConfig || null;
 
   // 显示消息
   const showMessage = (type: 'success' | 'error', text: string) => {
@@ -106,19 +81,34 @@ const TrustedNetworkConfig = ({ config, refreshConfig }: TrustedNetworkConfigPro
       return;
     }
 
-    setSettings((prev) => ({
-      ...prev,
-      trustedIPs: [...prev.trustedIPs, newIP.trim()],
-    }));
-    setNewIP('');
+    // 乐观更新：立即保存
+    saveMutation.mutate({
+      ...settings,
+      trustedIPs: [...settings.trustedIPs, newIP.trim()],
+    }, {
+      onSuccess: () => {
+        setNewIP('');
+        showMessage('success', 'IP地址添加成功！');
+      },
+      onError: (error) => {
+        showMessage('error', error.message);
+      },
+    });
   };
 
   // 删除 IP
   const removeIP = (index: number) => {
-    setSettings((prev) => ({
-      ...prev,
-      trustedIPs: prev.trustedIPs.filter((_, i) => i !== index),
-    }));
+    saveMutation.mutate({
+      ...settings,
+      trustedIPs: settings.trustedIPs.filter((_, i) => i !== index),
+    }, {
+      onSuccess: () => {
+        showMessage('success', 'IP地址删除成功！');
+      },
+      onError: (error) => {
+        showMessage('error', error.message);
+      },
+    });
   };
 
   // 快捷添加常见内网段
@@ -127,43 +117,89 @@ const TrustedNetworkConfig = ({ config, refreshConfig }: TrustedNetworkConfigPro
       showMessage('error', '该网段已存在');
       return;
     }
-    setSettings((prev) => ({
-      ...prev,
-      trustedIPs: [...prev.trustedIPs, cidr],
-    }));
+
+    saveMutation.mutate({
+      ...settings,
+      trustedIPs: [...settings.trustedIPs, cidr],
+    }, {
+      onSuccess: () => {
+        showMessage('success', `网段 ${cidr} 添加成功！`);
+      },
+      onError: (error) => {
+        showMessage('error', error.message);
+      },
+    });
   };
 
-  // 保存配置
-  const handleSave = async () => {
-    setIsLoading(true);
-
-    try {
-      for (const ip of settings.trustedIPs) {
-        if (ip && !isValidIPOrCIDR(ip)) {
-          showMessage('error', `无效的IP地址或CIDR格式: ${ip}`);
-          return;
-        }
-      }
-
-      const response = await fetch('/api/admin/trusted-network', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(settings),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || '保存失败');
-      }
-
-      showMessage('success', '信任网络配置保存成功！立即生效');
-      await refreshConfig();
-    } catch (error) {
-      showMessage('error', error instanceof Error ? error.message : '保存失败');
-    } finally {
-      setIsLoading(false);
-    }
+  // 切换启用状态
+  const toggleEnabled = (enabled: boolean) => {
+    saveMutation.mutate({
+      ...settings,
+      enabled,
+    }, {
+      onSuccess: () => {
+        showMessage('success', `信任网络已${enabled ? '启用' : '禁用'}！`);
+      },
+      onError: (error) => {
+        showMessage('error', error.message);
+      },
+    });
   };
+
+  // 切换"禁止访客访问后台"开关
+  const toggleBlockAdmin = (blockAdminAccess: boolean) => {
+    saveMutation.mutate({
+      ...settings,
+      blockAdminAccess,
+    }, {
+      onSuccess: () => {
+        showMessage(
+          'success',
+          `信任网络访客访问后台已${blockAdminAccess ? '禁止' : '允许'}！`,
+        );
+      },
+      onError: (error) => {
+        showMessage('error', error.message);
+      },
+    });
+  };
+
+  // 加载状态
+  if (isQueryLoading) {
+    return (
+      <div className='bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 sm:p-6'>
+        <div className='flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6'>
+          <Shield className='h-5 w-5 sm:h-6 sm:w-6 text-green-600' />
+          <h2 className='text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100'>
+            信任网络配置
+          </h2>
+        </div>
+        <div className='text-center py-8 text-gray-500 dark:text-gray-400'>
+          加载中...
+        </div>
+      </div>
+    );
+  }
+
+  // 错误状态
+  if (queryError) {
+    return (
+      <div className='bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 sm:p-6'>
+        <div className='flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6'>
+          <Shield className='h-5 w-5 sm:h-6 sm:w-6 text-green-600' />
+          <h2 className='text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100'>
+            信任网络配置
+          </h2>
+        </div>
+        <div className='bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4'>
+          <div className='flex items-center gap-2 text-red-700 dark:text-red-400'>
+            <AlertCircle className='h-5 w-5' />
+            <span>加载失败：{queryError.message}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className='bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 sm:p-6'>
@@ -229,12 +265,8 @@ const TrustedNetworkConfig = ({ config, refreshConfig }: TrustedNetworkConfigPro
               <input
                 type='checkbox'
                 checked={settings.enabled}
-                onChange={(e) =>
-                  setSettings((prev) => ({
-                    ...prev,
-                    enabled: e.target.checked,
-                  }))
-                }
+                onChange={(e) => toggleEnabled(e.target.checked)}
+                disabled={saveMutation.isPending}
                 className='sr-only peer'
               />
               <div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-600"></div>
@@ -357,18 +389,51 @@ const TrustedNetworkConfig = ({ config, refreshConfig }: TrustedNetworkConfigPro
             </div>
           )}
         </div>
+
+        {/* 禁止访客访问后台开关 */}
+        <div
+          className={`border border-gray-200 dark:border-gray-700 rounded-lg p-4 ${
+            !settings.enabled ? 'opacity-50' : ''
+          }`}
+        >
+          <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-3'>
+            <div className='flex-1 min-w-0'>
+              <h3 className='text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100'>
+                禁止访客访问管理后台
+              </h3>
+              <p className='text-xs sm:text-sm text-gray-600 dark:text-gray-400'>
+                {settings.enabled
+                  ? '开启后，信任网络自动登录的访客无法进入后台 /admin。真站长用密码登录后不受影响。'
+                  : '请先启用信任网络模式'}
+              </p>
+            </div>
+            <label
+              className={`relative inline-flex items-center flex-shrink-0 ${
+                settings.enabled ? 'cursor-pointer' : 'cursor-not-allowed'
+              }`}
+            >
+              <input
+                type='checkbox'
+                checked={settings.blockAdminAccess === true}
+                onChange={(e) => toggleBlockAdmin(e.target.checked)}
+                disabled={!settings.enabled || saveMutation.isPending}
+                className='sr-only peer'
+              />
+              <div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-600"></div>
+            </label>
+          </div>
+        </div>
       </div>
 
-      {/* 保存按钮 */}
-      <div className='flex justify-end pt-4 sm:pt-6'>
-        <button
-          onClick={handleSave}
-          disabled={isLoading}
-          className='w-full sm:w-auto px-6 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors'
-        >
-          {isLoading ? '保存中...' : '保存配置'}
-        </button>
-      </div>
+      {/* 乐观更新提示 */}
+      {saveMutation.isPending && (
+        <div className='flex justify-end pt-4 sm:pt-6'>
+          <div className='text-sm text-blue-600 dark:text-blue-400 flex items-center gap-2'>
+            <div className='animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full'></div>
+            <span>保存中...</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

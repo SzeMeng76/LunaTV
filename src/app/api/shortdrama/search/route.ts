@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { getConfig } from '@/lib/config';
+import { getCacheTime, getConfig } from '@/lib/config';
 import { recordRequest, getDbQueryCount, resetDbQueryCount } from '@/lib/performance-monitor';
 import { DEFAULT_USER_AGENT } from '@/lib/user-agent';
 
@@ -9,6 +9,9 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const fetchCache = 'force-no-store';
 
+// 短剧相关分类关键词（父分类 + 子分类标签）
+const SHORT_DRAMA_KEYWORDS = ['短剧', '女频恋爱', '反转爽剧', '古装仙侠', '年代穿越', '脑洞悬疑', '现代都市'];
+
 // 从单个短剧源搜索数据（通过分类名称过滤）
 async function searchFromSource(
   api: string,
@@ -16,7 +19,7 @@ async function searchFromSource(
   page: number,
   size: number
 ) {
-  // Step 1: 获取分类列表，找到"短剧"分类的ID
+  // Step 1: 获取分类列表，找到短剧相关分类的所有ID
   const listUrl = `${api}?ac=list`;
 
   const listResponse = await fetch(listUrl, {
@@ -34,19 +37,19 @@ async function searchFromSource(
   const listData = await listResponse.json();
   const categories = listData.class || [];
 
-  // 查找"短剧"分类（只要包含"短剧"两个字即可）
-  const shortDramaCategory = categories.find((cat: any) =>
-    cat.type_name && cat.type_name.includes('短剧')
+  // 查找所有短剧相关分类（父分类 + 子分类标签）
+  const shortDramaCategories = categories.filter((cat: any) =>
+    cat.type_name && SHORT_DRAMA_KEYWORDS.some((kw: string) => cat.type_name.includes(kw))
   );
 
-  if (!shortDramaCategory) {
+  if (shortDramaCategories.length === 0) {
     console.log(`该源没有短剧分类`);
     return { list: [], hasMore: false };
   }
 
-  const categoryId = shortDramaCategory.type_id;
+  const categoryIds = new Set(shortDramaCategories.map((cat: any) => cat.type_id));
 
-  // Step 2: 搜索该分类下的短剧
+  // Step 2: 搜索短剧
   const apiUrl = `${api}?ac=detail&wd=${encodeURIComponent(query)}&pg=${page}`;
 
   const response = await fetch(apiUrl, {
@@ -64,8 +67,8 @@ async function searchFromSource(
   const data = await response.json();
   const items = data.list || [];
 
-  // 过滤出短剧分类的结果
-  const shortDramaItems = items.filter((item: any) => item.type_id === categoryId);
+  // 过滤出短剧相关分类的结果
+  const shortDramaItems = items.filter((item: any) => categoryIds.has(item.type_id));
   const limitedItems = shortDramaItems.slice(0, size);
 
   const list = limitedItems.map((item: any) => ({
@@ -104,7 +107,7 @@ async function searchShortDramasInternal(
     // 如果没有配置短剧源，使用默认源
     if (shortDramaSources.length === 0) {
       return await searchFromSource(
-        'https://wwzy.tv/api.php/provide/vod',
+        'https://tyyszyapi.com/api.php/provide/vod',
         query,
         page,
         size
@@ -148,7 +151,7 @@ async function searchShortDramasInternal(
     // fallback到默认源
     try {
       return await searchFromSource(
-        'https://wwzy.tv/api.php/provide/vod',
+        'https://tyyszyapi.com/api.php/provide/vod',
         query,
         page,
         size
@@ -213,19 +216,18 @@ export async function GET(request: NextRequest) {
 
     const result = await searchShortDramasInternal(query, pageNum, pageSize);
 
-    // 设置与网页端一致的缓存策略（搜索结果: 1小时）
+    // 设置与网页端一致的缓存策略（搜索结果: 2小时）
+    const cacheTime = await getCacheTime();
     const response = NextResponse.json(result);
 
-    console.log('🕐 [SEARCH] 设置1小时HTTP缓存 - 与网页端搜索缓存一致');
+    console.log(`🕐 [SEARCH] 设置 ${cacheTime / 3600} 小时 HTTP 缓存`);
 
-    // 1小时 = 3600秒（搜索结果更新频繁，短期缓存）
-    const cacheTime = 3600;
     response.headers.set('Cache-Control', `public, max-age=${cacheTime}, s-maxage=${cacheTime}`);
     response.headers.set('CDN-Cache-Control', `public, s-maxage=${cacheTime}`);
     response.headers.set('Vercel-CDN-Cache-Control', `public, s-maxage=${cacheTime}`);
 
     // 调试信息
-    response.headers.set('X-Cache-Duration', '1hour');
+    response.headers.set('X-Cache-Duration', `${cacheTime / 3600}hours`);
     response.headers.set('X-Cache-Expires-At', new Date(Date.now() + cacheTime * 1000).toISOString());
     response.headers.set('X-Debug-Timestamp', new Date().toISOString());
 

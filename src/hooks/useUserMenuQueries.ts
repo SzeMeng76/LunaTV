@@ -1,9 +1,8 @@
 /* eslint-disable no-console */
 
 import { useQuery, useMutation, useQueryClient, queryOptions } from '@tanstack/react-query';
-import { getAllPlayRecords, forceRefreshPlayRecordsCache } from '@/lib/db.client';
 import { checkForUpdates, type UpdateStatus } from '@/lib/version_check';
-import type { Favorite, PlayRecord } from '@/lib/types';
+import type { PlayRecord } from '@/lib/types';
 
 // ─── Emby Config Types ──────────────────────────────────────────────────────
 
@@ -149,6 +148,7 @@ interface UsePlayRecordsQueryOptions {
 
 /**
  * Query options for play records with filtering
+ * 使用新的 usePlayRecordsQuery 作为数据源
  */
 const playRecordsOptions = (
   enableFilter: boolean,
@@ -157,7 +157,13 @@ const playRecordsOptions = (
 ) => queryOptions({
   queryKey: ['playRecords', 'userMenu', enableFilter, minProgress, maxProgress],
   queryFn: async () => {
-    const records = await getAllPlayRecords();
+    // 使用 fetch 直接获取，因为这里需要在 queryFn 内部调用
+    const response = await fetch('/api/playrecords');
+    if (!response.ok) {
+      throw new Error(`Failed to fetch play records: ${response.status}`);
+    }
+    const records = await response.json() as Record<string, PlayRecord>;
+
     const recordsArray = Object.entries(records).map(([key, record]) => ({
       ...record,
       key,
@@ -208,15 +214,16 @@ interface UseFavoritesQueryOptions {
 
 /**
  * Query options for favorites list
+ * 使用新的 useFavoritesQuery 作为数据源
  */
 const favoritesOptions = () => queryOptions({
   queryKey: ['favorites', 'userMenu'],
   queryFn: async () => {
     const response = await fetch('/api/favorites');
     if (response.ok) {
-      const favoritesData = await response.json() as Record<string, Favorite>;
+      const favoritesData = await response.json() as Record<string, any>;
       const favoritesArray = Object.entries(favoritesData).map(([key, favorite]) => ({
-        ...(favorite as Favorite),
+        ...favorite,
         key,
       }));
       // Sort by save time descending
@@ -271,16 +278,14 @@ export function useInvalidateUserMenuData() {
 
   return {
     invalidatePlayRecords: () => {
-      forceRefreshPlayRecordsCache();
-      queryClient.invalidateQueries({ queryKey: ['playRecords', 'userMenu'] });
+      queryClient.invalidateQueries({ queryKey: ['playRecords'] });
     },
     invalidateFavorites: () => {
-      queryClient.invalidateQueries({ queryKey: ['favorites', 'userMenu'] });
+      queryClient.invalidateQueries({ queryKey: ['favorites'] });
     },
     invalidateAll: () => {
-      forceRefreshPlayRecordsCache();
-      queryClient.invalidateQueries({ queryKey: ['playRecords', 'userMenu'] });
-      queryClient.invalidateQueries({ queryKey: ['favorites', 'userMenu'] });
+      queryClient.invalidateQueries({ queryKey: ['playRecords'] });
+      queryClient.invalidateQueries({ queryKey: ['favorites'] });
     },
   };
 }

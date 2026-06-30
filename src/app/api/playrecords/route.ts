@@ -82,7 +82,24 @@ export async function GET(request: NextRequest) {
     }
 
     const records = await db.getAllPlayRecords(authInfo.username);
-    const responseSize = Buffer.byteLength(JSON.stringify(records), 'utf8');
+
+    // 数据升级：确保旧播放记录包含新字段，防止前端崩溃
+    const upgradedRecords: Record<string, PlayRecord> = {};
+    for (const [key, record] of Object.entries(records)) {
+      upgradedRecords[key] = {
+        ...(record as PlayRecord),
+        // 确保 type 字段存在
+        type: (record as any).type || undefined,
+        // 确保 douban_id 字段存在
+        douban_id: (record as any).douban_id || undefined,
+        // 确保 remarks 字段存在
+        remarks: (record as any).remarks || undefined,
+        // 确保 original_episodes 字段存在
+        original_episodes: (record as any).original_episodes || undefined,
+      };
+    }
+
+    const responseSize = Buffer.byteLength(JSON.stringify(upgradedRecords), 'utf8');
 
     recordRequest({
       timestamp: startTime,
@@ -96,7 +113,7 @@ export async function GET(request: NextRequest) {
       responseSize,
     });
 
-    return NextResponse.json(records, { status: 200 });
+    return NextResponse.json(upgradedRecords, { status: 200 });
   } catch (err) {
     console.error('获取播放记录失败', err);
     const errorResponse = { error: 'Internal Server Error' };

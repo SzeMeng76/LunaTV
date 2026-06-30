@@ -1,5 +1,19 @@
 import { AdminConfig } from './admin.types';
 
+// 崩溃日志数据结构
+export interface CrashLog {
+  timestamp: string;
+  message: string;
+  stack?: string;
+  digest?: string;
+  url: string;
+  userAgent: string;
+  memory: any;
+  localStorage: string;
+  type?: 'PAGE_ERROR' | 'GLOBAL_ERROR';
+  serverReceivedAt?: string;
+}
+
 // 播放记录数据结构
 export interface PlayRecord {
   title: string;
@@ -202,6 +216,12 @@ export interface IStorage {
     loginTime: number,
     isFirstLogin?: boolean
   ): Promise<void>;
+
+  // 崩溃日志相关
+  saveCrashLog(crashLog: CrashLog): Promise<void>;
+  getCrashLogs(limit?: number): Promise<CrashLog[]>;
+  deleteCrashLog(timestamp: string): Promise<void>;
+  clearCrashLogs(): Promise<void>;
 }
 
 // 搜索结果数据结构
@@ -219,6 +239,9 @@ export interface SearchResult {
   type_name?: string;
   douban_id?: number;
   remarks?: string; // 备注信息（如"已完结"、"更新至20集"等）
+  resolution?: string; // 视频分辨率（如"1080P"、"4K"）
+  resolution_level?: number; // 分辨率等级（用于排序）
+  quality_tag?: string; // 画质标签（如"蓝光"、"高清"等）
   drama_name?: string; // 短剧名称（用于备用API fallback）
   metadata?: {
     // 备用API提供的额外元数据
@@ -335,6 +358,11 @@ export interface UserPlayStat {
   loginCount?: number; // 登入次数（新增）
   activeStreak?: number; // 连续活跃天数
   continuousLoginDays?: number; // 连续登录天数
+  lastLoginIp?: string; // 最后登入IP
+  lastLoginLocation?: string; // 最后登入归属地（如"广东广州"）
+  lastLoginDevice?: string; // 最后登入设备类型（mobile/desktop/tablet）
+  lastLoginBrowser?: string; // 最后登入浏览器
+  lastLoginOs?: string; // 最后登入操作系统
 }
 
 // 全站播放统计数据结构
@@ -356,6 +384,11 @@ export interface PlayStatsResult {
     lastLoginTime: number; // 最后登录时间
     loginCount: number; // 登入次数
     createdAt: number; // 用户创建时间
+    lastLoginIp?: string; // 最后登入IP
+    lastLoginLocation?: string; // 最后登入归属地
+    lastLoginDevice?: string; // 最后登入设备
+    lastLoginBrowser?: string; // 最后登入浏览器
+    lastLoginOs?: string; // 最后登入操作系统
   }>; // 每个用户的统计
   topSources: Array<{
     // 热门来源统计（前5名）

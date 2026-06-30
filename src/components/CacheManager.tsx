@@ -20,20 +20,24 @@ interface CacheStats {
   douban: { count: number; size: number; types: Record<string, number> };
   shortdrama: { count: number; size: number; types: Record<string, number> };
   tmdb: { count: number; size: number; types: Record<string, number> };
+  bangumi: { count: number; size: number; types: Record<string, number> };
   danmu: { count: number; size: number };
   netdisk: { count: number; size: number };
   youtube: { count: number; size: number };
+  bilibili: { count: number; size: number };
   search: { count: number; size: number };
   other: { count: number; size: number };
   total: { count: number; size: number };
   timestamp: string;
   formattedSizes: {
     douban: string;
+    bangumi: string;
     shortdrama: string;
     tmdb: string;
     danmu: string;
     netdisk: string;
     youtube: string;
+    bilibili: string;
     search: string;
     other: string;
     total: string;
@@ -55,6 +59,13 @@ const CACHE_TYPES: CacheType[] = [
     description: '电影/电视剧详情、分类、推荐等数据缓存',
     icon: FilmIcon,
     color: 'text-green-600 bg-green-100'
+  },
+  {
+    key: 'bangumi',
+    name: 'Bangumi数据',
+    description: '新番放送、动漫详情等 Bangumi 数据缓存',
+    icon: FilmIcon,
+    color: 'text-purple-600 bg-purple-100'
   },
   {
     key: 'shortdrama',
@@ -90,6 +101,13 @@ const CACHE_TYPES: CacheType[] = [
     description: 'YouTube视频搜索结果缓存（API和演示模式）',
     icon: VideoCameraIcon,
     color: 'text-red-600 bg-red-100'
+  },
+  {
+    key: 'bilibili',
+    name: 'Bilibili搜索',
+    description: 'Bilibili视频和番剧搜索结果缓存',
+    icon: VideoCameraIcon,
+    color: 'text-pink-600 bg-pink-100'
   }
 ];
 
@@ -282,6 +300,19 @@ export default function CacheManager() {
 
                 {/* 豆瓣缓存子类型统计 */}
                 {cacheType.key === 'douban' && typeStats?.types && (
+                  <div className="mb-4 space-y-1">
+                    <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">类型分布：</div>
+                    {Object.entries(typeStats.types).map(([type, count]) => (
+                      <div key={type} className="flex justify-between text-xs">
+                        <span className="text-gray-600 dark:text-gray-400">{type}:</span>
+                        <span className="font-mono text-gray-900 dark:text-gray-100">{count as number}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Bangumi缓存子类型统计 */}
+                {cacheType.key === 'bangumi' && typeStats?.types && (
                   <div className="mb-4 space-y-1">
                     <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">类型分布：</div>
                     {Object.entries(typeStats.types).map(([type, count]) => (

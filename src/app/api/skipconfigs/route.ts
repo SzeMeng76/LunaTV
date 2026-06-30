@@ -8,6 +8,23 @@ import { EpisodeSkipConfig } from '@/lib/types';
 // 配置 Node.js Runtime
 export const runtime = 'nodejs';
 
+/** 从 key 和 identityKey 解析出 DB 层需要的 source 和 id */
+function resolveSkipKey(
+  key: string,
+  identityKey?: string,
+): { source: string; id: string } | null {
+  if (identityKey) {
+    // 新格式：视频身份 key，source=identityKey, id='__identity__' 用于兼容 SQLite 主键
+    return { source: identityKey, id: '__identity__' };
+  }
+  // 旧格式：source+id
+  const parts = key.split('+');
+  if (parts.length >= 2 && parts[0] && parts[1]) {
+    return { source: parts[0], id: parts.slice(1).join('+') };
+  }
+  return null;
+}
+
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
   const startMemory = process.memoryUsage().heapUsed;
@@ -16,7 +33,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const requestSize = Buffer.byteLength(JSON.stringify(body), 'utf8');
-    const { action, key, config, username } = body;
+    const { action, key, config, username, identityKey } = body;
 
     // 验证请求参数
     if (!action) {
@@ -85,8 +102,8 @@ export async function POST(request: NextRequest) {
         }
 
         // 解析 key 为 source 和 id (格式: source+id)
-        const [source, id] = key.split('+');
-        if (!source || !id) {
+        const resolved = resolveSkipKey(key, identityKey);
+        if (!resolved) {
           const errorResponse = { error: '无效的key格式' };
           const errorSize = Buffer.byteLength(JSON.stringify(errorResponse), 'utf8');
 
@@ -105,7 +122,7 @@ export async function POST(request: NextRequest) {
           return NextResponse.json(errorResponse, { status: 400 });
         }
 
-        const skipConfig = await db.getSkipConfig(finalUsername, source, id);
+        const skipConfig = await db.getSkipConfig(finalUsername, resolved.source, resolved.id);
         const successResponse = { config: skipConfig };
         const responseSize = Buffer.byteLength(JSON.stringify(successResponse), 'utf8');
 
@@ -145,8 +162,8 @@ export async function POST(request: NextRequest) {
         }
 
         // 解析 key 为 source 和 id (格式: source+id)
-        const [source, id] = key.split('+');
-        if (!source || !id) {
+        const resolved = resolveSkipKey(key, identityKey);
+        if (!resolved) {
           const errorResponse = { error: '无效的key格式' };
           const errorSize = Buffer.byteLength(JSON.stringify(errorResponse), 'utf8');
 
@@ -212,7 +229,7 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        await db.setSkipConfig(finalUsername, source, id, config as EpisodeSkipConfig);
+        await db.setSkipConfig(finalUsername, resolved.source, resolved.id, config as EpisodeSkipConfig);
         const successResponse = { success: true };
         const responseSize = Buffer.byteLength(JSON.stringify(successResponse), 'utf8');
 
@@ -272,8 +289,8 @@ export async function POST(request: NextRequest) {
         }
 
         // 解析 key 为 source 和 id (格式: source+id)
-        const [source, id] = key.split('+');
-        if (!source || !id) {
+        const resolved = resolveSkipKey(key, identityKey);
+        if (!resolved) {
           const errorResponse = { error: '无效的key格式' };
           const errorSize = Buffer.byteLength(JSON.stringify(errorResponse), 'utf8');
 
@@ -292,7 +309,7 @@ export async function POST(request: NextRequest) {
           return NextResponse.json(errorResponse, { status: 400 });
         }
 
-        await db.deleteSkipConfig(finalUsername, source, id);
+        await db.deleteSkipConfig(finalUsername, resolved.source, resolved.id);
         const successResponse = { success: true };
         const responseSize = Buffer.byteLength(JSON.stringify(successResponse), 'utf8');
 

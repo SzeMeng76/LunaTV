@@ -80,8 +80,10 @@ export const VersionPanel: React.FC<VersionPanelProps> = ({
   // 获取远程变更日志
   const fetchRemoteChangelog = async () => {
     try {
+      // 添加时间戳参数避免浏览器缓存
+      const timestamp = Date.now();
       const response = await fetch(
-        'https://raw.githubusercontent.com/SzeMeng76/LunaTV/refs/heads/main/CHANGELOG'
+        `https://raw.githubusercontent.com/SzeMeng76/LunaTV/refs/heads/main/CHANGELOG?_t=${timestamp}`
       );
       if (response.ok) {
         const content = await response.text();

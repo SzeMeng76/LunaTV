@@ -35,19 +35,31 @@
 
 ## 📺 AndroidTV / 平板使用
 
-### OrionTV - 大屏客户端
+### Selene-TV - 官方 Android TV 客户端
 
-本项目可配合 [OrionTV](https://github.com/zimplexing/OrionTV) 在 Android TV 和平板上使用。
+[Selene-TV](https://github.com/MoonTechLab/Selene-TV) 是由 MoonTV 原作者开发的官方 Android TV 客户端，针对遥控器设备深度优化。最新版本 **v1.3.0**。
 
-#### 适用场景
+#### 支持平台
 - Android TV / 智能电视
-- Android 平板
-- 大屏设备
+- Android 平板（遥控器模式）
+
+#### 主要特性
+- 🎮 遥控器全键盘导航，TV 体验优先
+- ⏭️ 片头 / 片尾识别与一键跳过
+- ⚡ 0.5× ~ 2.0× 六档倍速播放
+- 📐 画面比例切换（适应 / 缩放 / 填充）
+- 🔄 应用内自动检查更新，无需手动找包
+
+#### 下载安装
+
+从 [Selene-TV Releases](https://github.com/MoonTechLab/Selene-TV/releases) 下载最新 APK：
+- `SeleneTV-vX.X.X-arm64-v8a.apk` — 64 位设备（推荐）
+- `SeleneTV-vX.X.X-armeabi-v7a.apk` — 32 位设备
 
 #### 配置步骤
 
-1. 在设备上安装 OrionTV
-2. 在 OrionTV 中配置后端地址：`http://your-domain:3000`
+1. 在设备上安装 APK
+2. 打开应用，在设置中填入服务器地址：`https://your-domain.com`
 3. 使用站长账号或普通用户账号登录
 4. 播放记录将与网页端、Selene 自动同步
 

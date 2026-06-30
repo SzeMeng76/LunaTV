@@ -114,17 +114,63 @@ export async function POST(req: NextRequest) {
     for (const username in userData) {
       const user = userData[username];
 
-      // 导入播放记录
+      // 导入播放记录（带数据升级）
       if (user.playRecords) {
         for (const [key, record] of Object.entries(user.playRecords)) {
-          await (db as any).storage.setPlayRecord(username, key, record);
+          // 数据升级：确保所有必需字段存在
+          const recordData = record as any;
+          const upgradedRecord = {
+            ...recordData,
+            // 确保 type 字段存在（旧版本可能没有）
+            type: recordData.type || undefined,
+            // 确保 douban_id 字段存在
+            douban_id: recordData.douban_id || undefined,
+            // 确保 remarks 字段存在
+            remarks: recordData.remarks || undefined,
+            // 确保 original_episodes 字段存在
+            original_episodes: recordData.original_episodes || undefined,
+          };
+          await (db as any).storage.setPlayRecord(username, key, upgradedRecord);
         }
       }
 
-      // 导入收藏夹
+      // 导入收藏夹（带数据升级）
       if (user.favorites) {
         for (const [key, favorite] of Object.entries(user.favorites)) {
-          await (db as any).storage.setFavorite(username, key, favorite);
+          // 数据升级：确保所有必需字段存在
+          const favoriteData = favorite as any;
+          const upgradedFavorite = {
+            ...favoriteData,
+            // 确保 origin 字段存在
+            origin: favoriteData.origin || 'vod',
+            // 确保 type 字段存在
+            type: favoriteData.type || undefined,
+            // 确保 releaseDate 字段存在
+            releaseDate: favoriteData.releaseDate || undefined,
+            // 确保 remarks 字段存在
+            remarks: favoriteData.remarks || undefined,
+          };
+          await (db as any).storage.setFavorite(username, key, upgradedFavorite);
+        }
+      }
+
+      // 导入想看（即将上映提醒）（带数据升级）
+      if (user.reminders) {
+        for (const [key, reminder] of Object.entries(user.reminders)) {
+          // 数据升级：确保所有必需字段存在
+          const reminderData = reminder as any;
+          const upgradedReminder = {
+            ...reminderData,
+            // 确保 origin 字段存在
+            origin: reminderData.origin || 'vod',
+            // 确保 type 字段存在
+            type: reminderData.type || undefined,
+            // 确保 releaseDate 字段存在（提醒必须有上映日期）
+            releaseDate: reminderData.releaseDate || '',
+            // 确保 remarks 字段存在
+            remarks: reminderData.remarks || undefined,
+          };
+          await (db as any).storage.setReminder(username, key, upgradedReminder);
         }
       }
 

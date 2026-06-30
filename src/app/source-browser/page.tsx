@@ -3,8 +3,9 @@
 'use client';
 
 import { ExternalLink, Layers, Server, Tv } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 
 import { ClientCache } from '@/lib/client-cache';
 import PageLayout from '@/components/PageLayout';
@@ -21,22 +22,133 @@ type Item = {
   remarks?: string;
 };
 
+// sessionStorage key for secondary UI state
+const SECONDARY_STATE_KEY = 'source-browser:secondary-state';
+
+interface SecondaryState {
+  sortBy?: 'default' | 'title-asc' | 'title-desc' | 'year-asc' | 'year-desc';
+  filterYear?: string;
+  filterKeyword?: string;
+}
+
+function loadSecondaryState(): SecondaryState {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = window.sessionStorage.getItem(SECONDARY_STATE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveSecondaryState(state: SecondaryState) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.sessionStorage.setItem(SECONDARY_STATE_KEY, JSON.stringify(state));
+  } catch {
+    // ignore
+  }
+}
+
 export default function SourceBrowserPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
 
-  const [sources, setSources] = useState<Source[]>([]);
-  const [loadingSources, setLoadingSources] = useState(true);
-  const [sourceError, setSourceError] = useState<string | null>(null);
-  const [activeSourceKey, setActiveSourceKey] = useState('');
+  // Read primary state from URL
+  const sourceFromUrl = searchParams.get('source') || '';
+  const categoryFromUrl = searchParams.get('category') || '';
+  const modeFromUrl = (searchParams.get('mode') as 'category' | 'search') || 'category';
+  const queryFromUrl = searchParams.get('q') || '';
+
+  // Load secondary state from sessionStorage on mount
+  const secondaryStateRef = useRef<SecondaryState | null>(null);
+  if (secondaryStateRef.current === null) {
+    secondaryStateRef.current = loadSecondaryState();
+  }
+
+  const [activeSourceKey, setActiveSourceKey] = useState(sourceFromUrl);
+  const [activeCategory, setActiveCategory] = useState<string | number>(categoryFromUrl);
+
+  // 🔄 使用 TanStack Query 获取源列表
+  const {
+    data: sourcesData,
+    isLoading: loadingSources,
+    error: sourceError,
+  } = useQuery({
+    queryKey: ['sourceBrowser', 'sites'],
+    queryFn: async () => {
+      const res = await fetch('/api/source-browser/sites');
+      if (res.status === 401) {
+        throw new Error('登录状态已失效，请重新登录');
+      }
+      if (res.status === 403) {
+        throw new Error('当前账号暂无可用资源站点');
+      }
+      if (!res.ok) throw new Error('获取源失败');
+      const data = await res.json();
+      return data.sources || [];
+    },
+    staleTime: 30 * 60 * 1000, // 30 分钟 - 源列表很少变化
+    gcTime: 60 * 60 * 1000,     // 1 小时
+  });
+
+  const sources: Source[] = sourcesData || [];
   const activeSource = useMemo(
     () => sources.find((s) => s.key === activeSourceKey),
     [sources, activeSourceKey]
   );
 
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loadingCategories, setLoadingCategories] = useState(false);
-  const [categoryError, setCategoryError] = useState<string | null>(null);
-  const [activeCategory, setActiveCategory] = useState<string | number>('');
+  // Helper function to update URL params
+  const updateUrlParams = useCallback((updates: Record<string, string | null>) => {
+    const params = new URLSearchParams(searchParams.toString());
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value) {
+        params.set(key, value);
+      } else {
+        params.delete(key);
+      }
+    });
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }, [searchParams, pathname, router]);
+
+  // 🔄 使用 TanStack Query 获取分类列表
+  const {
+    data: categoriesData,
+    isLoading: loadingCategories,
+    error: categoryError,
+  } = useQuery({
+    queryKey: ['sourceBrowser', 'categories', activeSourceKey],
+    queryFn: async () => {
+      const res = await fetch(
+        `/api/source-browser/categories?source=${encodeURIComponent(activeSourceKey)}`
+      );
+      if (!res.ok) throw new Error('获取分类失败');
+      const data = await res.json();
+      return data.categories || [];
+    },
+    staleTime: 30 * 60 * 1000, // 30 分钟 - 分类列表很少变化
+    gcTime: 60 * 60 * 1000,     // 1 小时
+    enabled: !!activeSourceKey, // 只在有选中的源时才请求
+  });
+
+  const categories: Category[] = categoriesData || [];
+
+  // 当源列表加载完成时，自动选择第一个源（仅当没有选中任何源时）
+  useEffect(() => {
+    if (sources.length > 0 && !activeSourceKey) {
+      const firstSource = sources[0].key;
+      setActiveSourceKey(firstSource);
+    }
+  }, [sources, activeSourceKey]);
+
+  // 当分类列表加载完成时，自动选择第一个分类（仅当没有选中任何分类时）
+  useEffect(() => {
+    if (categories.length > 0 && !activeCategory) {
+      setActiveCategory(categories[0].type_id);
+    }
+    // intentionally not resetting when categories is empty — that's the loading state
+  }, [categories, activeCategory]);
 
   const [items, setItems] = useState<Item[]>([]);
   const [loadingItems, setLoadingItems] = useState(false);
@@ -50,16 +162,16 @@ export default function SourceBrowserPage() {
   const autoFillInProgressRef = useRef(false);
 
   // 搜索与排序
-  const [query, setQuery] = useState('');
-  const [mode, setMode] = useState<'category' | 'search'>('category');
+  const [query, setQuery] = useState(queryFromUrl);
+  const [mode, setMode] = useState<'category' | 'search'>(modeFromUrl);
   const [sortBy, setSortBy] = useState<
     'default' | 'title-asc' | 'title-desc' | 'year-asc' | 'year-desc'
-  >('default');
+  >(secondaryStateRef.current?.sortBy || 'default');
   const [debounceId, setDebounceId] = useState<NodeJS.Timeout | null>(null);
 
   // 二级筛选（地区 / 年份 / 关键词）
-  const [filterKeyword, setFilterKeyword] = useState('');
-  const [filterYear, setFilterYear] = useState<string>('');
+  const [filterKeyword, setFilterKeyword] = useState(secondaryStateRef.current?.filterKeyword || '');
+  const [filterYear, setFilterYear] = useState<string>(secondaryStateRef.current?.filterYear || '');
   const [availableYears, setAvailableYears] = useState<string[]>([]);
 
   // 详情预览
@@ -86,59 +198,6 @@ export default function SourceBrowserPage() {
   const [previewBangumi, setPreviewBangumi] = useState<BangumiSubject | null>(null);
   const [previewBangumiLoading, setPreviewBangumiLoading] = useState(false);
   const [previewSearchPick, setPreviewSearchPick] = useState<GlobalSearchResult | null>(null);
-
-  const fetchSources = useCallback(async () => {
-    setLoadingSources(true);
-    setSourceError(null);
-    try {
-      const res = await fetch('/api/source-browser/sites', {
-        cache: 'no-store',
-      });
-      if (res.status === 401) {
-        throw new Error('登录状态已失效，请重新登录');
-      }
-      if (res.status === 403) {
-        throw new Error('当前账号暂无可用资源站点');
-      }
-      if (!res.ok) throw new Error('获取源失败');
-      const data = await res.json();
-      const list: Source[] = data.sources || [];
-      setSources(list);
-      if (list.length > 0) {
-        setActiveSourceKey(list[0].key);
-      }
-    } catch (e: unknown) {
-      setSourceError(e instanceof Error ? e.message : '获取源失败');
-    } finally {
-      setLoadingSources(false);
-    }
-  }, []);
-
-  const fetchCategories = useCallback(async (sourceKey: string) => {
-    if (!sourceKey) return;
-    setLoadingCategories(true);
-    setCategoryError(null);
-    try {
-      const res = await fetch(
-        `/api/source-browser/categories?source=${encodeURIComponent(sourceKey)}`
-      );
-      if (!res.ok) throw new Error('获取分类失败');
-      const data = await res.json();
-      const list: Category[] = data.categories || [];
-      setCategories(list);
-      if (list.length > 0) {
-        setActiveCategory(list[0].type_id);
-      } else {
-        setActiveCategory('');
-      }
-    } catch (e: unknown) {
-      setCategoryError(e instanceof Error ? e.message : '获取分类失败');
-      setCategories([]);
-      setActiveCategory('');
-    } finally {
-      setLoadingCategories(false);
-    }
-  }, []);
 
   const fetchItems = useCallback(
     async (
@@ -186,12 +245,7 @@ export default function SourceBrowserPage() {
     []
   );
 
-  useEffect(() => {
-    fetchSources();
-  }, [fetchSources]);
-  useEffect(() => {
-    if (activeSourceKey) fetchCategories(activeSourceKey);
-  }, [activeSourceKey, fetchCategories]);
+  // 当分类变化时加载内容
   useEffect(() => {
     if (activeSourceKey && activeCategory && mode === 'category') {
       // 重置列表并加载第一页
@@ -251,6 +305,15 @@ export default function SourceBrowserPage() {
       fetchSearch(activeSourceKey, query.trim(), 1, false);
     }
   }, [activeSourceKey, mode, query, fetchSearch]);
+
+  // Sync secondary state to sessionStorage when changed
+  useEffect(() => {
+    saveSecondaryState({
+      sortBy,
+      filterYear,
+      filterKeyword,
+    });
+  }, [sortBy, filterYear, filterKeyword]);
 
   // IntersectionObserver 处理自动翻页（含简单节流）
   useEffect(() => {
@@ -547,7 +610,7 @@ export default function SourceBrowserPage() {
 
   return (
     <PageLayout activePath='/source-browser'>
-      <div className='max-w-7xl mx-auto space-y-6 -mt-6 md:mt-0'>
+      <div className='max-w-7xl mx-auto space-y-6 -mt-6 md:mt-0 pb-40 md:pb-safe-bottom'>
         {/* Header - 美化版 */}
         <div className='relative'>
           <div className='absolute inset-0 bg-linear-to-r from-emerald-400/10 via-green-400/10 to-teal-400/10 rounded-2xl blur-3xl'></div>
@@ -598,7 +661,9 @@ export default function SourceBrowserPage() {
               </div>
             ) : sourceError ? (
               <div className='flex items-center gap-2 px-4 py-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'>
-                <span className='text-sm text-red-600 dark:text-red-400'>{sourceError}</span>
+                <span className='text-sm text-red-600 dark:text-red-400'>
+                  {sourceError instanceof Error ? sourceError.message : '获取源失败'}
+                </span>
               </div>
             ) : sources.length === 0 ? (
               <div className='text-center py-8'>
@@ -612,7 +677,11 @@ export default function SourceBrowserPage() {
                 {sources.map((s, index) => (
                   <button
                     key={s.key}
-                    onClick={() => setActiveSourceKey(s.key)}
+                    onClick={() => {
+                      setActiveSourceKey(s.key);
+                      setActiveCategory('');
+                      updateUrlParams({ source: s.key, category: null });
+                    }}
                     className={`group relative px-4 py-2.5 rounded-xl text-sm font-medium border-2 transition-all duration-300 transform hover:scale-105 ${
                       activeSourceKey === s.key
                         ? 'bg-linear-to-r from-emerald-500 to-green-500 text-white border-transparent shadow-lg shadow-emerald-500/30'
@@ -646,7 +715,12 @@ export default function SourceBrowserPage() {
                     setQuery(val);
                     if (debounceId) clearTimeout(debounceId);
                     const id = setTimeout(() => {
-                      setMode(val.trim() ? 'search' : 'category');
+                      const newMode = val.trim() ? 'search' : 'category';
+                      setMode(newMode);
+                      updateUrlParams({
+                        mode: newMode === 'search' ? 'search' : null,
+                        q: val.trim() || null
+                      });
                       if (val.trim()) {
                         fetchSearch(activeSourceKey, val.trim(), 1);
                       } else if (activeCategory) {
@@ -657,7 +731,12 @@ export default function SourceBrowserPage() {
                   }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
-                      setMode(query.trim() ? 'search' : 'category');
+                      const newMode = query.trim() ? 'search' : 'category';
+                      setMode(newMode);
+                      updateUrlParams({
+                        mode: newMode === 'search' ? 'search' : null,
+                        q: query.trim() || null
+                      });
                     }
                   }}
                   placeholder='输入关键词并回车进行搜索；清空回车恢复分类'
@@ -668,6 +747,7 @@ export default function SourceBrowserPage() {
                     onClick={() => {
                       setQuery('');
                       setMode('category');
+                      updateUrlParams({ mode: null, q: null });
                       if (activeCategory)
                         fetchItems(activeSourceKey, activeCategory, 1);
                     }}
@@ -755,7 +835,7 @@ export default function SourceBrowserPage() {
                     </div>
                   ) : categoryError ? (
                     <div className='flex items-center gap-2 px-4 py-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-sm text-red-600 dark:text-red-400'>
-                      {categoryError}
+                      {categoryError instanceof Error ? categoryError.message : '获取分类失败'}
                     </div>
                   ) : categories.length === 0 ? (
                     <div className='text-center w-full py-6'>
@@ -768,9 +848,12 @@ export default function SourceBrowserPage() {
                     categories.map((c, index) => (
                       <button
                         key={String(c.type_id)}
-                        onClick={() => setActiveCategory(c.type_id)}
+                        onClick={() => {
+                          setActiveCategory(c.type_id);
+                          updateUrlParams({ category: String(c.type_id) });
+                        }}
                         className={`group relative px-4 py-2 rounded-xl text-sm font-medium border-2 transition-all duration-300 transform hover:scale-105 ${
-                          activeCategory === c.type_id
+                          String(activeCategory) === String(c.type_id)
                             ? 'bg-linear-to-r from-blue-500 to-indigo-500 text-white border-transparent shadow-lg shadow-blue-500/30'
                             : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-linear-to-r hover:from-blue-50 hover:to-indigo-50 dark:hover:from-blue-900/20 dark:hover:to-indigo-900/20 hover:border-blue-300 dark:hover:border-blue-700'
                         }`}
@@ -778,7 +861,7 @@ export default function SourceBrowserPage() {
                           animation: `fadeInUp 0.3s ease-out ${index * 0.03}s both`,
                         }}
                       >
-                        {activeCategory === c.type_id && (
+                        {String(activeCategory) === String(c.type_id) && (
                           <div className='absolute inset-0 rounded-xl bg-linear-to-r from-blue-400 to-indigo-400 blur-lg opacity-50 -z-10'></div>
                         )}
                         {c.type_name}

@@ -9,6 +9,7 @@ import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getRecentMetrics, getRecentRequests, getCurrentStatus, clearCache, startAutoCollection } from '@/lib/performance-monitor';
 import { initFetchInterceptor } from '@/lib/fetch-interceptor';
 import { getExternalTrafficStats } from '@/lib/external-traffic-monitor';
+import { getConfig } from '@/lib/config';
 
 export const runtime = 'nodejs';
 
@@ -45,6 +46,10 @@ export async function GET(request: NextRequest) {
     const recentRequests = await getRecentRequests(limit, hours);
     const externalTraffic = await getExternalTrafficStats(hours);
 
+    // 获取用户数量（用于动态计算 Cron 查询阈值）
+    const config = await getConfig();
+    const userCount = config?.UserConfig?.Users?.length || 0;
+
     return NextResponse.json({
       ok: true,
       data: {
@@ -52,6 +57,7 @@ export async function GET(request: NextRequest) {
         currentStatus,
         recentRequests,
         externalTraffic,
+        userCount, // 添加用户数量
       },
     });
   } catch (error) {

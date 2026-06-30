@@ -160,8 +160,16 @@ export async function GET(request: Request) {
 
     if (!response.ok) {
       keyStats.errors++;
-      return NextResponse.json({ 
-        error: `Failed to fetch key: ${response.status} ${response.statusText}` 
+      // 改进错误消息，对 401/403 提供更友好的提示
+      const upstreamStatus = response.status;
+      let errorMessage = `Failed to fetch key: ${response.status} ${response.statusText}`;
+
+      if (upstreamStatus === 401 || upstreamStatus === 403) {
+        errorMessage = `上游资源拒绝访问（${upstreamStatus}），已尝试自动补齐鉴权和防盗链请求头`;
+      }
+
+      return NextResponse.json({
+        error: errorMessage
       }, { status: response.status >= 500 ? 500 : response.status });
     }
     
@@ -191,10 +199,12 @@ export async function GET(request: Request) {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, POST, OPTIONS, HEAD',
         'Access-Control-Allow-Headers': 'Content-Type, Range, Origin, Accept, User-Agent',
+        'Access-Control-Expose-Headers': 'Content-Length, X-Cache, X-Upstream-Url',
         'Cache-Control': 'public, max-age=300, s-maxage=300',
         'X-Cache': 'MISS',
         'Content-Length': keyData.byteLength.toString(),
-        ...(etag && { 'ETag': etag })
+        ...(etag && { 'ETag': etag }),
+        ...(response.url && { 'X-Upstream-Url': response.url })
       },
     });
     

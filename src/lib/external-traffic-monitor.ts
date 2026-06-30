@@ -106,18 +106,48 @@ export async function getExternalTrafficStats(hours: number = 1) {
 
   // 按域名分组统计
   const byDomain: Record<string, { requests: number; traffic: number }> = {};
+  let invalidUrlCount = 0; // 统计无效URL数量
+
   filteredData.forEach((item) => {
     try {
       const domain = new URL(item.url).hostname;
+
+      // 过滤掉无意义的域名（0.0.0.0, localhost等）
+      if (
+        !domain ||
+        domain === '0.0.0.0' ||
+        domain === 'localhost' ||
+        domain === '127.0.0.1' ||
+        domain.startsWith('192.168.') ||
+        domain.startsWith('10.') ||
+        domain.startsWith('172.')
+      ) {
+        invalidUrlCount++;
+        if (invalidUrlCount <= 5) {
+          console.warn(`⚠️ 无效的外部请求URL: ${item.url}`);
+        }
+        return;
+      }
+
       if (!byDomain[domain]) {
         byDomain[domain] = { requests: 0, traffic: 0 };
       }
       byDomain[domain].requests++;
       byDomain[domain].traffic += item.requestSize + item.responseSize;
     } catch (e) {
-      // 忽略无效 URL
+      // URL 解析失败，记录但不显示
+      invalidUrlCount++;
+      // 记录前5个无效URL用于调试
+      if (invalidUrlCount <= 5) {
+        console.warn(`⚠️ 无效的外部请求URL: ${item.url}`);
+      }
     }
   });
+
+  // 如果有无效URL，在日志中汇总
+  if (invalidUrlCount > 0) {
+    console.log(`📊 外部流量统计: 忽略了 ${invalidUrlCount} 个无效URL请求`);
+  }
 
   return {
     totalRequests: filteredData.length,

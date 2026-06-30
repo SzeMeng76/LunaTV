@@ -49,3 +49,10 @@ AGENT.md
 TVBOX_DEV.md
 docker-compose.yml
 package-lock.json
+
+# crash logs
+/logs
+crash-reports.jsonl
+
+# sqlite data
+data/

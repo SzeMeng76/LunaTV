@@ -1,7 +1,9 @@
-import { Radio, X } from 'lucide-react';
+import { ChevronDown, Radio, X } from 'lucide-react';
 import Image from 'next/image';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { fetchDoubanQuickInfo, fetchDoubanSuggest } from '@/lib/douban.client';
+import { fetchBangumiSubject } from '@/lib/bangumi.client';
 
 interface ActionItem {
   id: string;
@@ -18,12 +20,16 @@ interface MobileActionSheetProps {
   title: string;
   actions: ActionItem[];
   poster?: string;
-  sources?: string[]; // 播放源信息
-  isAggregate?: boolean; // 是否为聚合内容
-  sourceName?: string; // 播放源名称
-  currentEpisode?: number; // 当前集数
-  totalEpisodes?: number; // 总集数
+  sources?: string[];
+  isAggregate?: boolean;
+  sourceName?: string;
+  currentEpisode?: number;
+  totalEpisodes?: number;
   origin?: 'vod' | 'live';
+  doubanId?: number;
+  videoTitle?: string;
+  videoYear?: string;
+  isBangumi?: boolean;
 }
 
 const MobileActionSheet: React.FC<MobileActionSheetProps> = ({
@@ -38,10 +44,16 @@ const MobileActionSheet: React.FC<MobileActionSheetProps> = ({
   currentEpisode,
   totalEpisodes,
   origin = 'vod',
+  doubanId,
+  videoTitle,
+  videoYear,
+  isBangumi = false,
 }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
-  // Portal 容器（独立容器，避免多实例冲突和 z-index 问题）
+  const [doubanDetails, setDoubanDetails] = useState<any>(null);
+  const [showScrollHint, setShowScrollHint] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const [portalEl, setPortalEl] = useState<HTMLElement | null>(null);
 
   // 创建独立的 Portal 容器
@@ -163,6 +175,50 @@ const MobileActionSheet: React.FC<MobileActionSheetProps> = ({
       return () => document.removeEventListener('keydown', handleEsc);
     }
   }, [isVisible, onClose]);
+
+  // 打开时加载豆瓣详情
+  useEffect(() => {
+    if (!isOpen) {
+      setDoubanDetails(null);
+      setShowScrollHint(false);
+      return;
+    }
+    setDoubanDetails(null);
+    setShowScrollHint(false);
+
+    const load = async () => {
+      // bangumi 直接打 bangumi API
+      if (isBangumi && doubanId && doubanId > 0) {
+        const result = await fetchBangumiSubject(doubanId);
+        if (result) {
+          setDoubanDetails(result);
+          setShowScrollHint(true);
+        }
+        return;
+      }
+
+      let id = doubanId && doubanId > 0 ? String(doubanId) : null;
+
+      if (!id && videoTitle) {
+        try {
+          const results = await fetchDoubanSuggest(videoTitle.trim());
+          if (results?.[0]?.id) id = results[0].id;
+        } catch {}
+      }
+
+      if (!id) return;
+
+      try {
+        const data = await fetchDoubanQuickInfo(id);
+        if (data?.code === 200 && data?.data) {
+          setDoubanDetails(data.data);
+          setShowScrollHint(true);
+        }
+      } catch {}
+    };
+
+    load();
+  }, [isOpen, doubanId, videoTitle]);
 
   if (!isVisible || !portalEl) return null;
 
@@ -319,32 +375,70 @@ const MobileActionSheet: React.FC<MobileActionSheetProps> = ({
         {/* 播放源信息展示区域 */}
         {isAggregate && sources && sources.length > 0 && (
           <div className="px-4 py-3 border-t border-gray-100 dark:border-gray-800">
-            {/* 标题区域 */}
             <div className="mb-3">
-              <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
-                可用播放源
-              </h4>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                共 {sources.length} 个播放源
-              </p>
+              <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">可用播放源</h4>
+              <p className="text-xs text-gray-500 dark:text-gray-400">共 {sources.length} 个播放源</p>
             </div>
-
-            {/* 播放源列表 */}
             <div className="max-h-32 overflow-y-auto">
               <div className="grid grid-cols-2 gap-2">
                 {sources.map((source, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center gap-2 py-2 px-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/30 dark:bg-gray-800/30"
-                  >
+                  <div key={index} className="flex items-center gap-2 py-2 px-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/30 dark:bg-gray-800/30">
                     <div className="w-1 h-1 bg-gray-400 dark:bg-gray-500 rounded-full shrink-0" />
-                    <span className="text-xs text-gray-600 dark:text-gray-400 truncate">
-                      {source}
-                    </span>
+                    <span className="text-xs text-gray-600 dark:text-gray-400 truncate">{source}</span>
                   </div>
                 ))}
               </div>
             </div>
+          </div>
+        )}
+
+        {/* 豆瓣详情区域 */}
+        {doubanDetails && (
+          <div
+            ref={scrollRef}
+            className="border-t border-gray-100 dark:border-gray-800 overflow-y-auto"
+            style={{ maxHeight: '280px', touchAction: 'pan-y' }}
+            onTouchMove={(e) => e.stopPropagation()}
+            onScroll={() => setShowScrollHint(false)}
+          >
+            <div className="px-4 pt-4 pb-5 space-y-3">
+              <p className="text-base font-semibold text-gray-900 dark:text-white">{isBangumi ? 'Bangumi 简介' : '豆瓣简介'}</p>
+              <div className="flex flex-wrap items-center gap-2">
+                {doubanDetails.rate && parseFloat(doubanDetails.rate) > 0 && (
+                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-yellow-400/10 text-yellow-500 text-sm font-semibold">
+                    ★ {doubanDetails.rate}
+                  </span>
+                )}
+                {doubanDetails.year && (
+                  <span className="px-2 py-1 rounded border border-gray-300 dark:border-gray-600 text-xs text-gray-500 dark:text-gray-400">
+                    {doubanDetails.year}
+                  </span>
+                )}
+                {doubanDetails.genres?.slice(0, 4).map((g: string, i: number) => (
+                  <span key={i} className="px-2 py-1 rounded bg-gray-100 dark:bg-gray-800 text-xs text-gray-600 dark:text-gray-300">{g}</span>
+                ))}
+              </div>
+              {doubanDetails.directors?.length > 0 && (
+                <div className="text-sm text-gray-600 dark:text-gray-400">
+                  <span className="font-medium text-gray-800 dark:text-gray-200">导演　</span>
+                  {doubanDetails.directors.slice(0, 3).join(' / ')}
+                </div>
+              )}
+              {doubanDetails.cast?.length > 0 && (
+                <div className="text-sm text-gray-600 dark:text-gray-400">
+                  <span className="font-medium text-gray-800 dark:text-gray-200">主演　</span>
+                  {doubanDetails.cast.slice(0, 4).join(' / ')}
+                </div>
+              )}
+              {doubanDetails.plot_summary && (
+                <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">{doubanDetails.plot_summary}</p>
+              )}
+            </div>
+          </div>
+        )}
+        {showScrollHint && doubanDetails && (
+          <div className="flex justify-center py-1 pointer-events-none">
+            <ChevronDown size={18} className="text-gray-300 dark:text-gray-600 animate-bounce" />
           </div>
         )}
       </div>

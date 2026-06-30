@@ -13,6 +13,7 @@ interface EmbyConfig {
   transcodeMp4?: boolean;
   proxyPlay?: boolean; // 视频播放代理开关
   key?: string; // Emby源的唯一标识
+  embyAuthorizationHeader?: string; // 自定义 X-Emby-Authorization 头
 }
 
 interface EmbyItem {
@@ -105,6 +106,10 @@ export class EmbyClient {
   private transcodeMp4: boolean;
   private proxyPlay: boolean;
   private embyKey?: string;
+  private embyAuthorizationHeader: string;
+
+  private static readonly DEFAULT_AUTHORIZATION_HEADER =
+    'MediaBrowser Client="LunaTV", Device="Web", DeviceId="lunatv-web", Version="1.0.0"';
 
   constructor(config: EmbyConfig) {
     let serverUrl = config.ServerURL.replace(/\/$/, '');
@@ -122,6 +127,8 @@ export class EmbyClient {
     this.transcodeMp4 = config.transcodeMp4 || false;
     this.proxyPlay = config.proxyPlay || false;
     this.embyKey = config.key;
+    this.embyAuthorizationHeader =
+      config.embyAuthorizationHeader?.trim() || EmbyClient.DEFAULT_AUTHORIZATION_HEADER;
 
     // 如果 URL 不包含 /emby 路径，自动添加（除非启用了 removeEmbyPrefix）
     if (!serverUrl.endsWith('/emby') && !this.removeEmbyPrefix) {
@@ -184,7 +191,7 @@ export class EmbyClient {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Emby-Authorization': 'MediaBrowser Client="LunaTV", Device="Web", DeviceId="lunatv-web", Version="1.0.0"',
+        'X-Emby-Authorization': this.embyAuthorizationHeader,
       },
       body: JSON.stringify({ Username: username, Pw: password }),
     });

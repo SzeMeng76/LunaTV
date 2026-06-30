@@ -235,6 +235,7 @@ export function useToggleReminderMutation(): UseMutationResult<
 
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['reminders'] });
+      queryClient.invalidateQueries({ queryKey: ['watchingUpdates'] });
     },
   });
 }

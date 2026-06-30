@@ -9,12 +9,15 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const fetchCache = 'force-no-store';
 
+// 短剧相关分类关键词（父分类 + 子分类标签）
+const SHORT_DRAMA_KEYWORDS = ['短剧', '女频恋爱', '反转爽剧', '古装仙侠', '年代穿越', '脑洞悬疑', '现代都市'];
+
 // 从单个短剧源获取数据（通过分类名称查找）
 async function fetchFromShortDramaSource(
   api: string,
   size: number
 ) {
-  // Step 1: 获取分类列表，找到"短剧"分类的ID
+  // Step 1: 获取分类列表，找到短剧相关分类的ID
   const listUrl = `${api}?ac=list`;
 
   const listResponse = await fetch(listUrl, {
@@ -32,18 +35,22 @@ async function fetchFromShortDramaSource(
   const listData = await listResponse.json();
   const categories = listData.class || [];
 
-  // 查找"短剧"分类（只要包含"短剧"两个字即可）
-  const shortDramaCategory = categories.find((cat: any) =>
-    cat.type_name && cat.type_name.includes('短剧')
+  // 查找所有短剧相关分类（父分类 + 子分类标签）
+  const shortDramaCategories = categories.filter((cat: any) =>
+    cat.type_name && SHORT_DRAMA_KEYWORDS.some((kw: string) => cat.type_name.includes(kw))
   );
 
-  if (!shortDramaCategory) {
+  if (shortDramaCategories.length === 0) {
     console.log(`该源没有短剧分类`);
     return [];
   }
 
-  const categoryId = shortDramaCategory.type_id;
-  console.log(`找到短剧分类ID: ${categoryId}`);
+  // 优先用子分类（跳过纯"短剧"父分类），没有子分类则用父分类
+  const PARENT_ONLY = ['短剧', '擦边短剧'];
+  const subCategory = shortDramaCategories.find((cat: any) => !PARENT_ONLY.includes(cat.type_name))
+    ?? shortDramaCategories[0];
+  const categoryId = subCategory.type_id;
+  console.log(`找到短剧分类ID: ${categoryId} (${subCategory.type_name})`);
 
   // Step 2: 获取该分类的短剧列表
   const apiUrl = `${api}?ac=detail&t=${categoryId}&pg=1`;
@@ -97,7 +104,7 @@ async function getRecommendedShortDramasInternal(
     if (shortDramaSources.length === 0) {
       console.log('📺 使用默认短剧源');
       return await fetchFromShortDramaSource(
-        'https://wwzy.tv/api.php/provide/vod',
+        'https://tyyszyapi.com/api.php/provide/vod',
         size
       );
     }
@@ -143,7 +150,7 @@ async function getRecommendedShortDramasInternal(
     try {
       console.log('⚠️ 出错，fallback到默认源');
       return await fetchFromShortDramaSource(
-        'https://wwzy.tv/api.php/provide/vod',
+        'https://tyyszyapi.com/api.php/provide/vod',
         size
       );
     } catch (fallbackError) {
@@ -187,19 +194,18 @@ export async function GET(request: NextRequest) {
 
     const result = await getRecommendedShortDramasInternal(categoryNum, pageSize);
 
-    // 测试1小时HTTP缓存策略
+    // 使用统一的缓存时间（默认2小时）
+    const cacheTime = await getCacheTime();
     const response = NextResponse.json(result);
 
-    console.log('🕐 [RECOMMEND] 设置1小时HTTP缓存 - 测试自动过期刷新');
+    console.log(`🕐 [RECOMMEND] 设置 ${cacheTime / 3600} 小时 HTTP 缓存`);
 
-    // 1小时 = 3600秒
-    const cacheTime = 3600;
     response.headers.set('Cache-Control', `public, max-age=${cacheTime}, s-maxage=${cacheTime}`);
     response.headers.set('CDN-Cache-Control', `public, s-maxage=${cacheTime}`);
     response.headers.set('Vercel-CDN-Cache-Control', `public, s-maxage=${cacheTime}`);
 
     // 调试信息
-    response.headers.set('X-Cache-Duration', '1hour');
+    response.headers.set('X-Cache-Duration', `${cacheTime / 3600}hours`);
     response.headers.set('X-Cache-Expires-At', new Date(Date.now() + cacheTime * 1000).toISOString());
     response.headers.set('X-Debug-Timestamp', new Date().toISOString());
 

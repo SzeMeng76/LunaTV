@@ -12,6 +12,18 @@ export type RTCIceCandidateInit = {
   sdpMid?: string | null;
 };
 
+// 房间类型
+export type RoomType = 'sync' | 'screen';
+
+// 屏幕共享状态
+export interface ScreenState {
+  type: 'screen';
+  status: 'idle' | 'sharing';
+  ownerName: string;
+  hasAudio?: boolean;
+  startedAt?: number;
+}
+
 // 房间信息
 export interface Room {
   id: string;
@@ -19,11 +31,12 @@ export interface Room {
   description: string;
   password?: string;
   isPublic: boolean;
+  roomType: RoomType;
   ownerId: string;
   ownerName: string;
   ownerToken: string;
   memberCount: number;
-  currentState: PlayState | LiveState | null;
+  currentState: PlayState | LiveState | ScreenState | null;
   createdAt: number;
   lastOwnerHeartbeat: number;
 }
@@ -94,6 +107,12 @@ export interface ServerToClientEvents {
   'play:pause': () => void;
   'play:change': (state: PlayState) => void;
   'live:change': (state: LiveState) => void;
+  'screen:start': (state: ScreenState) => void;
+  'screen:stop': () => void;
+  'screen:viewer-ready': (data: { userId: string }) => void;
+  'screen:offer': (data: { userId: string; offer: RTCSessionDescriptionInit }) => void;
+  'screen:answer': (data: { userId: string; answer: RTCSessionDescriptionInit }) => void;
+  'screen:ice': (data: { userId: string; candidate: RTCIceCandidateInit }) => void;
   'chat:message': (message: ChatMessage) => void;
   'voice:offer': (data: { userId: string; offer: RTCSessionDescriptionInit }) => void;
   'voice:answer': (data: { userId: string; answer: RTCSessionDescriptionInit }) => void;
@@ -114,6 +133,7 @@ export interface ClientToServerEvents {
       password?: string;
       isPublic: boolean;
       userName: string;
+      roomType?: RoomType;
     },
     callback: (response: { success: boolean; room?: Room; error?: string }) => void
   ) => void;
@@ -139,6 +159,17 @@ export interface ClientToServerEvents {
   'play:change': (state: PlayState) => void;
 
   'live:change': (state: LiveState) => void;
+
+  'screen:helper-register': (
+    data: { roomId: string; ownerToken: string },
+    callback: (response: { success: boolean; error?: string }) => void
+  ) => void;
+  'screen:start': (state: ScreenState) => void;
+  'screen:stop': () => void;
+  'screen:viewer-ready': () => void;
+  'screen:offer': (data: { targetUserId: string; offer: RTCSessionDescriptionInit }) => void;
+  'screen:answer': (data: { targetUserId: string; answer: RTCSessionDescriptionInit }) => void;
+  'screen:ice': (data: { targetUserId: string; candidate: RTCIceCandidateInit }) => void;
 
   'chat:message': (data: { content: string; type: 'text' | 'emoji' }) => void;
 

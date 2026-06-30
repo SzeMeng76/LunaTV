@@ -25,6 +25,7 @@ interface EmbySourceConfig {
   appendMediaSourceId?: boolean;
   transcodeMp4?: boolean;
   proxyPlay?: boolean; // 视频播放代理开关
+  embyAuthorizationHeader?: string; // 自定义 X-Emby-Authorization 头
 }
 
 class EmbyManager {

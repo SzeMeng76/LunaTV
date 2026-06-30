@@ -27,19 +27,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { getAuthInfoFromBrowserCookie } from '@/lib/auth';
 import { CURRENT_VERSION } from '@/lib/version';
 import { checkForUpdates, UpdateStatus } from '@/lib/version_check';
-import {
-  getCachedWatchingUpdates,
-  getDetailedWatchingUpdates,
-  subscribeToWatchingUpdatesEvent,
-  checkWatchingUpdates,
-  type WatchingUpdate,
-} from '@/lib/watching-updates';
-import {
-  getAllPlayRecords,
-  forceRefreshPlayRecordsCache,
-  type PlayRecord,
-} from '@/lib/db.client';
-import type { Favorite } from '@/lib/types';
+import type { PlayRecord, Favorite } from '@/lib/types';
 
 import { useDownload } from '@/contexts/DownloadContext';
 
@@ -55,6 +43,7 @@ import {
   useChangePasswordMutation,
   useInvalidateUserMenuData,
 } from '@/hooks/useUserMenuQueries';
+import { useWatchingUpdatesQuery, useRefreshWatchingUpdates } from '@/hooks/useWatchingUpdates';
 
 interface AuthInfo {
   username?: string;
@@ -80,8 +69,6 @@ export const UserMenu: React.FC = () => {
     return 'localstorage';
   });
   const [mounted, setMounted] = useState(false);
-  const [watchingUpdates, setWatchingUpdates] = useState<WatchingUpdate | null>(null);
-  const [hasUnreadUpdates, setHasUnreadUpdates] = useState(false);
   const [dismissedReleases, setDismissedReleases] = useState<Set<string>>(() => {
     // 从localStorage加载已忽略的新上映列表
     if (typeof window !== 'undefined') {
@@ -94,6 +81,29 @@ export const UserMenu: React.FC = () => {
     }
     return new Set();
   });
+
+  // 🚀 TanStack Query - 追番更新
+  const showWatchingUpdates = authInfo?.username && storageType !== 'localstorage';
+  const { data: watchingUpdates } = useWatchingUpdatesQuery({
+    enabled: showWatchingUpdates, // 页面加载时就检查（会使用缓存）
+  });
+  const refreshWatchingUpdates = useRefreshWatchingUpdates();
+
+  // 检查是否有实际更新（用于显示红点）- 包括新剧集更新和新上映
+  // 过滤掉已忽略的新上映
+  const hasActualUpdates = watchingUpdates && (
+    (watchingUpdates.updatedCount || 0) > 0 ||
+    watchingUpdates.updatedSeries.filter(
+      series => series.hasNewRelease && !dismissedReleases.has(`${series.sourceKey}+${series.videoId}`)
+    ).length > 0
+  );
+
+  // 计算更新数量（新剧集更新 + 未忽略的新上映）
+  const totalUpdates = (watchingUpdates?.updatedCount || 0) +
+    (watchingUpdates?.updatedSeries.filter(
+      series => series.hasNewRelease && !dismissedReleases.has(`${series.sourceKey}+${series.videoId}`)
+    ).length || 0);
+
   // 🚀 TanStack Query - 观影室配置
   const { data: showWatchRoom = false } = useWatchRoomConfigQuery();
   // 🚀 TanStack Query - 下载功能配置
@@ -171,28 +181,6 @@ export const UserMenu: React.FC = () => {
     setMounted(true);
   }, []);
 
-  // 🚀 预加载导航页面 - 当菜单打开时预加载所有可能访问的页面
-  useEffect(() => {
-    if (isOpen) {
-      // 预加载管理面板（仅 owner/admin 有权限）
-      if (authInfo?.role === 'owner' || authInfo?.role === 'admin') {
-        router.prefetch('/admin');
-      }
-      // 预加载播放统计（所有登录用户，且非 localstorage 存储）
-      if (authInfo?.username && storageType !== 'localstorage') {
-        router.prefetch('/play-stats');
-      }
-      // 预加载 TVBox 配置（所有人都能访问）
-      router.prefetch('/tvbox');
-      // 预加载观影室（如果功能启用，所有人都能访问）
-      if (showWatchRoom) {
-        router.prefetch('/watch-room');
-      }
-      // 预加载发布日历（所有人都能访问）
-      router.prefetch('/release-calendar');
-    }
-  }, [isOpen, authInfo, storageType, showWatchRoom, router]);
-
   // 获取认证信息
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -205,138 +193,15 @@ export const UserMenu: React.FC = () => {
 
   // 🚀 版本检查由 TanStack Query 自动管理
 
-  // 获取观看更新信息
-  useEffect(() => {
-    console.log('UserMenu watching-updates 检查条件:', {
-      'window': typeof window !== 'undefined',
-      'authInfo.username': authInfo?.username,
-      'storageType': storageType,
-      'storageType !== localstorage': storageType !== 'localstorage'
-    });
-
-    if (typeof window !== 'undefined' && authInfo?.username && storageType !== 'localstorage') {
-      console.log('开始加载 watching-updates 数据...');
-
-      const updateWatchingUpdates = () => {
-        const updates = getDetailedWatchingUpdates();
-        console.log('getDetailedWatchingUpdates 返回:', updates);
-        setWatchingUpdates(updates);
-
-        // 检测是否有新更新（包括新剧集更新和今日上映）
-        // 过滤掉已忽略的新上映
-        const activeReleases = updates.updatedSeries.filter(
-          series => series.hasNewRelease && !dismissedReleases.has(`${series.sourceKey}+${series.videoId}`)
-        ).length;
-
-        // 只要有更新或未忽略的今日上映，就显示红点
-        if (updates && ((updates.updatedCount || 0) > 0 || activeReleases > 0)) {
-          setHasUnreadUpdates(true);
-        } else {
-          setHasUnreadUpdates(false);
-        }
-      };
-
-      // 页面初始化时检查更新（使用缓存机制）
-      const forceInitialCheck = async () => {
-        console.log('页面初始化，检查更新...');
-        try {
-          // 🔧 修复：不使用强制刷新，让缓存机制生效（30分钟）
-          // 如果缓存有效，直接使用缓存；如果过期，自动重新检查
-          await checkWatchingUpdates();
-
-          // 更新UI
-          updateWatchingUpdates();
-          console.log('页面初始化更新检查完成');
-        } catch (error) {
-          console.error('页面初始化检查更新失败:', error);
-          // 失败时仍然尝试从缓存加载
-          updateWatchingUpdates();
-        }
-      };
-
-      // 先尝试从缓存加载，然后强制检查
-      const cachedUpdates = getCachedWatchingUpdates();
-      if (cachedUpdates) {
-        console.log('发现缓存数据，先加载缓存');
-        updateWatchingUpdates();
-      }
-
-      // 🔧 修复：延迟1秒后在后台执行更新检查，避免阻塞页面初始加载
-      setTimeout(() => {
-        forceInitialCheck();
-      }, 1000);
-
-      // 订阅更新事件
-      const unsubscribe = subscribeToWatchingUpdatesEvent(() => {
-        console.log('收到 watching-updates 事件，更新数据...');
-        updateWatchingUpdates();
-      });
-
-      return unsubscribe;
-    } else {
-      console.log('watching-updates 条件不满足，跳过加载');
-    }
-  }, [authInfo, storageType]);
-
-  // 监听watching-updates事件，刷新播放记录
-  useEffect(() => {
-    if (!dataQueryEnabled) return;
-
-    const unsubscribeWatchingUpdates = subscribeToWatchingUpdatesEvent(() => {
-      const updates = getDetailedWatchingUpdates();
-      if (updates && updates.hasUpdates && updates.updatedCount > 0) {
-        console.log('UserMenu: 检测到新集数更新，invalidate play records');
-        invalidatePlayRecords();
-      }
-    });
-
-    return () => {
-      unsubscribeWatchingUpdates();
-    };
-  }, [dataQueryEnabled, invalidatePlayRecords]);
-
 
   const handleMenuClick = async () => {
     const willOpen = !isOpen;
     setIsOpen(willOpen);
 
-    // 如果是打开菜单，立即检查更新（不受缓存限制）
-    if (willOpen && authInfo?.username && storageType !== 'localstorage') {
-      console.log('打开菜单时强制检查更新...');
-      try {
-        // 暂时清除缓存时间，强制检查一次
-        const lastCheckTime = localStorage.getItem('moontv_last_update_check');
-        localStorage.removeItem('moontv_last_update_check');
-
-        // 执行检查
-        await checkWatchingUpdates();
-
-        // 恢复缓存时间（如果之前有的话）
-        if (lastCheckTime) {
-          localStorage.setItem('moontv_last_update_check', lastCheckTime);
-        }
-
-        // 更新UI状态
-        const updates = getDetailedWatchingUpdates();
-        setWatchingUpdates(updates);
-
-        // 重新计算未读状态
-        // 过滤掉已忽略的新上映
-        const activeReleases = updates.updatedSeries.filter(
-          series => series.hasNewRelease && !dismissedReleases.has(`${series.sourceKey}+${series.videoId}`)
-        ).length;
-
-        // 只要有更新或未忽略的今日上映，就显示红点
-        if (updates && ((updates.updatedCount || 0) > 0 || activeReleases > 0)) {
-          setHasUnreadUpdates(true);
-        } else {
-          setHasUnreadUpdates(false);
-        }
-
-        console.log('菜单打开时的更新检查完成');
-      } catch (error) {
-        console.error('菜单打开时检查更新失败:', error);
-      }
+    // 如果是打开菜单，强制刷新追番更新
+    if (willOpen && showWatchingUpdates) {
+      console.log('打开菜单时强制刷新追番更新...');
+      refreshWatchingUpdates();
     }
   };
 
@@ -358,31 +223,26 @@ export const UserMenu: React.FC = () => {
 
   const handleAdminPanel = () => {
     setIsOpen(false);
-    router.refresh();
     router.push('/admin');
   };
 
   const handlePlayStats = () => {
     setIsOpen(false);
-    router.refresh();
     router.push('/play-stats');
   };
 
   const handleTVBoxConfig = () => {
     setIsOpen(false);
-    router.refresh();
     router.push('/tvbox');
   };
 
   const handleWatchRoom = () => {
     setIsOpen(false);
-    router.refresh();
     router.push('/watch-room');
   };
 
   const handleReleaseCalendar = () => {
     setIsOpen(false);
-    router.refresh();
     router.push('/release-calendar');
   };
 
@@ -428,15 +288,7 @@ export const UserMenu: React.FC = () => {
       console.error('保存已忽略列表失败:', error);
     }
 
-    // 重新计算红点状态
-    if (watchingUpdates) {
-      const remainingReleases = watchingUpdates.updatedSeries.filter(
-        series => series.hasNewRelease && !newDismissed.has(`${series.sourceKey}+${series.videoId}`)
-      ).length;
-
-      const hasUpdates = (watchingUpdates.updatedCount || 0) > 0 || remainingReleases > 0;
-      setHasUnreadUpdates(hasUpdates);
-    }
+    // 重新计算红点状态已由 TanStack Query 自动处理
   };
 
   // 从 key 中解析 source 和 id
@@ -533,15 +385,6 @@ export const UserMenu: React.FC = () => {
   // 检查是否显示播放统计按钮（所有登录用户，且非localstorage存储）
   const showPlayStats = authInfo?.username && storageType !== 'localstorage';
 
-  // 检查是否显示更新提醒按钮（登录用户且非localstorage存储就显示）
-  const showWatchingUpdates = authInfo?.username && storageType !== 'localstorage';
-
-  // 检查是否有实际更新（用于显示红点）- 包括新剧集更新和新上映
-  const hasActualUpdates = watchingUpdates && ((watchingUpdates.updatedCount || 0) > 0 || (watchingUpdates.newReleasesCount || 0) > 0);
-
-  // 计算更新数量（新剧集更新 + 新上映）
-  const totalUpdates = (watchingUpdates?.updatedCount || 0) + (watchingUpdates?.newReleasesCount || 0);
-
   // 调试信息
   console.log('UserMenu 更新提醒调试:', {
     username: authInfo?.username,
@@ -626,7 +469,7 @@ export const UserMenu: React.FC = () => {
             >
               <Bell className='w-4 h-4 text-gray-500 dark:text-gray-400' />
               <span className='font-medium'>更新提醒</span>
-              {hasUnreadUpdates && totalUpdates > 0 && (
+              {hasActualUpdates && totalUpdates > 0 && (
                 <div className='ml-auto flex items-center gap-1'>
                   <span className='inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-red-500 rounded-full'>
                     {totalUpdates > 99 ? '99+' : totalUpdates}
@@ -1347,7 +1190,7 @@ export const UserMenu: React.FC = () => {
           <User className='w-full h-full relative z-10 group-hover:scale-110 transition-transform duration-300' />
         </button>
         {/* 统一更新提醒点：版本更新或剧集更新都显示橙色点 */}
-        {((updateStatus === UpdateStatus.HAS_UPDATE) || (hasUnreadUpdates && totalUpdates > 0)) && (
+        {((updateStatus === UpdateStatus.HAS_UPDATE) || (hasActualUpdates && totalUpdates > 0)) && (
           <div className='absolute top-[2px] right-[2px] w-2 h-2 bg-yellow-500 rounded-full animate-pulse shadow-lg shadow-yellow-500/50'></div>
         )}
       </div>

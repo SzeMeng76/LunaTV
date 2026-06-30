@@ -80,6 +80,27 @@ export async function GET(request: Request) {
       'Connection': 'keep-alive'
     };
 
+    // 转发 Referer/Origin 到上游（解决某些源站的403白名单校验）
+    // 优先级：URL参数 ?referer= > 请求头 Referer > 上游URL自身的origin
+    const explicitReferer = searchParams.get('referer');
+    const inboundReferer = request.headers.get('referer');
+    let fallbackReferer: string | undefined;
+    try {
+      fallbackReferer = new URL(decodedUrl).origin + '/';
+    } catch {
+      // ignore
+    }
+    const refererToSend = explicitReferer || inboundReferer || fallbackReferer;
+
+    if (refererToSend) {
+      headers['Referer'] = refererToSend;
+      try {
+        headers['Origin'] = new URL(refererToSend).origin;
+      } catch {
+        // ignore
+      }
+    }
+
     response = await fetch(decodedUrl, {
       cache: 'no-cache',
       redirect: 'follow',
@@ -232,21 +253,37 @@ export async function GET(request: Request) {
 }
 
 function rewriteM3U8Content(content: string, baseUrl: string, req: Request, allowCORS: boolean, sourceKey: string | null) {
-  // 从 referer 头提取协议信息
-  const referer = req.headers.get('referer');
-  let protocol = 'http';
-  if (referer) {
-    try {
-      const refererUrl = new URL(referer);
-      protocol = refererUrl.protocol.replace(':', '');
-    } catch (error) {
-      // ignore
+  // 优先使用 X-Forwarded-Proto + X-Forwarded-Host，处理非标准端口反代场景
+  const forwardedProto = req.headers.get('x-forwarded-proto')?.split(',')[0]?.trim();
+  const forwardedHost = req.headers.get('x-forwarded-host')?.split(',')[0]?.trim();
+
+  let protocol: string;
+  let host: string;
+
+  if (forwardedProto && forwardedHost) {
+    protocol = forwardedProto;
+    host = forwardedHost;
+  } else {
+    // 回退：从 referer 头提取协议，从 host 头提取主机
+    const referer = req.headers.get('referer');
+    protocol = 'http';
+    if (referer) {
+      try {
+        protocol = new URL(referer).protocol.replace(':', '');
+      } catch {
+        // ignore
+      }
     }
+    host = req.headers.get('host') || '';
   }
 
-  const host = req.headers.get('host');
   const proxyBase = `${protocol}://${host}/api/proxy`;
   const sourceParam = sourceKey ? `&moontv-source=${sourceKey}` : '';
+
+  // 提取当前请求的referer参数，用于透传到variant URL
+  const { searchParams } = new URL(req.url);
+  const explicitReferer = searchParams.get('referer');
+  const refererParam = explicitReferer ? `&referer=${encodeURIComponent(explicitReferer)}` : '';
 
   const lines = content.split('\n');
   const rewrittenLines: string[] = [];
@@ -313,7 +350,8 @@ function rewriteM3U8Content(content: string, baseUrl: string, req: Request, allo
         if (nextLine && !nextLine.startsWith('#')) {
           let resolvedUrl = resolveUrl(baseUrl, nextLine);
           resolvedUrl = substituteVariables(resolvedUrl, variables);
-          const proxyUrl = `${proxyBase}/m3u8?url=${encodeURIComponent(resolvedUrl)}${sourceParam}`;
+          // 把当前请求的referer参数透传到variant URL，否则下一跳会因为没有Referer被上游拒绝
+          const proxyUrl = `${proxyBase}/m3u8?url=${encodeURIComponent(resolvedUrl)}${sourceParam}${refererParam}`;
           rewrittenLines.push(proxyUrl);
         } else {
           rewrittenLines.push(nextLine);

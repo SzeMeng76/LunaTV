@@ -1,48 +1,43 @@
 import { NextResponse } from 'next/server';
 import { DEFAULT_USER_AGENT } from '@/lib/user-agent';
-import { isVideoCached, getCachedVideoPath, cacheVideoContent, cacheTrailerUrl, deleteVideoCache } from '@/lib/video-cache';
+import { isVideoCached, getCachedVideoPath, cacheVideoContent, deleteVideoCache } from '@/lib/video-cache';
+import { validateProxyTargetUrl } from '@/lib/proxy-security';
 import { promises as fs } from 'fs';
 import { createReadStream } from 'fs';
+import { db } from '@/lib/db';
 
 export const runtime = 'nodejs';
-
-/**
- * 从豆瓣视频 URL 中提取 douban_id
- * 例如：从 localStorage 或 HeroBanner 的 refreshedTrailerUrls 中获取映射关系
- */
-function extractDoubanIdFromReferer(request: Request): string | null {
-  const referer = request.headers.get('referer');
-  if (!referer) return null;
-
-  // 从 referer 中提取 douban_id（如果有的话）
-  const match = referer.match(/douban_id=(\d+)/);
-  return match ? match[1] : null;
-}
 
 // 视频代理接口 - 支持流式传输和Range请求
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const videoUrl = searchParams.get('url');
+  const doubanId = searchParams.get('douban_id'); // 🔥 从 URL 参数获取 douban_id
 
   if (!videoUrl) {
     return NextResponse.json({ error: 'Missing video URL' }, { status: 400 });
   }
 
-  // URL 格式验证
+  // SSRF 防护：验证目标 URL
   try {
-    new URL(videoUrl);
-  } catch {
-    return NextResponse.json({ error: 'Invalid URL format' }, { status: 400 });
+    await validateProxyTargetUrl(videoUrl);
+  } catch (error) {
+    console.error('[VideoProxy] SSRF validation failed:', error);
+    return NextResponse.json(
+      { error: 'Invalid or blocked URL' },
+      { status: 403 }
+    );
   }
 
   // 🎯 优先检查缓存（Kvrocks + 文件系统）
   const storageType = process.env.NEXT_PUBLIC_STORAGE_TYPE;
   if (storageType === 'kvrocks') {
     try {
-      const cached = await isVideoCached(videoUrl);
-      console.log(`[VideoProxy] 缓存检查结果: cached=${cached}, url=${videoUrl.substring(0, 50)}...`);
+      // 🔥 使用 douban_id 检查缓存（如果有的话）
+      const cached = await isVideoCached(videoUrl, doubanId || undefined);
+      console.log(`[VideoProxy] 缓存检查结果: cached=${cached}, doubanId=${doubanId}, url=${videoUrl.substring(0, 50)}...`);
       if (cached) {
-        const cachedPath = await getCachedVideoPath(videoUrl);
+        const cachedPath = await getCachedVideoPath(videoUrl, doubanId || undefined);
         console.log(`[VideoProxy] 缓存路径: ${cachedPath}`);
         if (cachedPath) {
           console.log('[VideoProxy] 🎯 命中缓存，从本地文件返回');
@@ -129,12 +124,34 @@ export async function GET(request: Request) {
     }
 
     if (!videoResponse.ok) {
-      // 🎯 如果是 403/404 等错误，删除可能过期的缓存
+      // 🎯 如果是 403/404 等错误，检查视频文件缓存
       if (storageType === 'kvrocks' && (videoResponse.status === 403 || videoResponse.status === 404)) {
-        console.log(`[VideoProxy] 视频URL返回 ${videoResponse.status}，删除缓存: ${videoUrl}`);
-        deleteVideoCache(videoUrl).catch(err => {
-          console.error('[VideoProxy] 删除缓存失败:', err);
-        });
+        console.log(`[VideoProxy] 视频URL返回 ${videoResponse.status}: ${videoUrl}`);
+
+        // 🔥 如果有 doubanId，检查视频文件是否存在
+        if (doubanId) {
+          try {
+            const videoFileExists = await isVideoCached('', doubanId);
+            if (videoFileExists) {
+              console.log(`[VideoProxy] URL过期但视频文件存在，返回缓存: movie_${doubanId}`);
+              const cachedPath = await getCachedVideoPath('', doubanId);
+              if (cachedPath) {
+                return serveVideoFromFile(cachedPath, request);
+              }
+            } else {
+              console.log(`[VideoProxy] 视频文件不存在，清除 Redis URL 缓存: trailer:${doubanId}`);
+              // 🔥 清除 refresh-trailer 的 Redis URL 缓存，下次请求会获取新 URL
+              try {
+                await db.deleteCache(`trailer:${doubanId}`);
+                console.log(`[VideoProxy] ✅ 已清除 Redis URL 缓存: trailer:${doubanId}`);
+              } catch (err) {
+                console.error('[VideoProxy] 清除 Redis URL 缓存失败:', err);
+              }
+            }
+          } catch (error) {
+            console.error('[VideoProxy] 检查视频文件缓存失败:', error);
+          }
+        }
       }
 
       const errorResponse = NextResponse.json(
@@ -205,17 +222,10 @@ export async function GET(request: Request) {
         console.log(`[VideoProxy] 视频下载完成，大小: ${(videoBuffer.length / 1024 / 1024).toFixed(2)}MB`);
 
         // 异步缓存视频内容（不阻塞响应）
-        cacheVideoContent(videoUrl, videoBuffer, contentType || 'video/mp4').catch(err => {
+        // 🔥 传入 doubanId，确保同一部影片只有一个视频文件
+        cacheVideoContent(videoUrl, videoBuffer, contentType || 'video/mp4', doubanId || undefined).catch(err => {
           console.error('[VideoProxy] 缓存视频失败:', err);
         });
-
-        // 🎯 尝试缓存 URL 映射（如果能从 referer 提取 douban_id）
-        const doubanId = extractDoubanIdFromReferer(request);
-        if (doubanId) {
-          cacheTrailerUrl(doubanId, videoUrl).catch(err => {
-            console.error('[VideoProxy] 缓存 trailer URL 失败:', err);
-          });
-        }
 
         console.log(`[VideoProxy] ✅ 视频已缓存: ${videoUrl.substring(0, 50)}...`);
 

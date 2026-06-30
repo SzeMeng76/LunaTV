@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 
 import { getCacheTime, getConfig } from '@/lib/config';
 import { fetchDoubanWithVerification } from '@/lib/douban-anti-crawler';
-import { bypassDoubanChallenge } from '@/lib/puppeteer';
+// Puppeteer 已禁用以减少包体积（78MB），如需恢复请取消注释并安装依赖
+// import { bypassDoubanChallenge } from '@/lib/puppeteer';
 import { getRandomUserAgent } from '@/lib/user-agent';
 import { recordRequest } from '@/lib/performance-monitor';
 
@@ -222,6 +223,9 @@ export async function GET(request: Request) {
       const config = await getConfig();
       const enablePuppeteer = config.DoubanConfig?.enablePuppeteer ?? false;
 
+      // Puppeteer 已禁用以减少包体积（78MB）
+      // 如需恢复，请取消下方注释并安装 @sparticuz/chromium 和 puppeteer-core
+      /*
       if (enablePuppeteer) {
         console.log(`[Douban Comments] Puppeteer 已启用，尝试绕过 Challenge...`);
         try {
@@ -241,10 +245,11 @@ export async function GET(request: Request) {
           throw new Error('豆瓣反爬虫激活，无法获取短评');
         }
       } else {
-        // Puppeteer 未启用，直接返回错误
+      */
+        // Puppeteer 未启用或已禁用，直接返回错误
         console.log(`[Douban Comments] Puppeteer 未启用，无法绕过 Challenge`);
-        throw new Error('豆瓣反爬虫激活，请在管理后台启用 Puppeteer');
-      }
+        throw new Error('豆瓣反爬虫激活，短评功能暂时不可用');
+      // }
     }
 
     // 🍪 如果使用了 Cookies 且成功获取页面，记录成功日志

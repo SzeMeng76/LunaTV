@@ -1151,17 +1151,18 @@ function LivePageClient() {
                   target.style.display = 'none';
                   const parent = target.parentElement;
                   if (parent && !parent.querySelector('.fallback-icon')) {
-                    parent.innerHTML = `
-                      <div class="fallback-icon relative w-full h-full flex items-center justify-center">
-                        <svg class="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
-                          <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
-                        </svg>
-                        <span class="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
-                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                          <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
-                        </span>
-                      </div>
+                    const fallback = document.createElement('div');
+                    fallback.className = 'fallback-icon relative w-full h-full flex items-center justify-center';
+                    fallback.innerHTML = `
+                      <svg class="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
+                      </svg>
+                      <span class="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+                      </span>
                     `;
+                    parent.appendChild(fallback);
                   }
                 }}
               />
@@ -1170,28 +1171,31 @@ function LivePageClient() {
             )}
           </div>
           <div className='flex-1 min-w-0'>
-            <div
-              className='flex items-center gap-1 cursor-pointer select-none group'
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleChannelNameExpanded(channel.id);
-              }}
-            >
+            <div className='flex items-center gap-1'>
               <div className='flex-1 min-w-0'>
                 <div className={`text-sm font-medium text-gray-900 dark:text-gray-100 ${expandedChannels.has(channel.id) ? '' : 'line-clamp-1 md:line-clamp-2'}`}>
                   {channel.name}
                 </div>
               </div>
-              <div className='shrink-0 flex items-center gap-1'>
+              <button
+                type='button'
+                className='shrink-0 flex items-center gap-1 p-1 -mr-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors'
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleChannelNameExpanded(channel.id);
+                }}
+                aria-expanded={expandedChannels.has(channel.id)}
+                aria-label={expandedChannels.has(channel.id) ? '收起' : '展开'}
+              >
                 {expandedChannels.has(channel.id) ? (
                   <ChevronUp className='w-4 h-4 text-blue-500 dark:text-blue-400 transition-transform duration-300' />
                 ) : (
-                  <ChevronDown className='w-4 h-4 text-gray-400 dark:text-gray-500 group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-all duration-300' />
+                  <ChevronDown className='w-4 h-4 text-gray-400 dark:text-gray-500 hover:text-blue-500 dark:hover:text-blue-400 transition-all duration-300' />
                 )}
                 <span className='hidden md:inline text-xs text-blue-500 dark:text-blue-400'>
                   {expandedChannels.has(channel.id) ? '收起' : '展开'}
                 </span>
-              </div>
+              </button>
             </div>
             <div className='mt-1 flex items-center gap-1.5 flex-wrap'>
               <span className='text-xs text-gray-500 dark:text-gray-400 truncate' title={channel.group}>
@@ -2168,6 +2172,7 @@ function LivePageClient() {
         artPlayerRef.current.on('ready', () => {
           setError(null);
           setIsVideoLoading(false);
+          setUnsupportedType(null);
 
           // 延迟检测是否支持 DVR/时移回放（仅在未启用DVR模式时检测）
           if (!enableDvrMode) {

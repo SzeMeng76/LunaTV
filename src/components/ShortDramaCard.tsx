@@ -9,9 +9,9 @@ import { useQueryClient } from '@tanstack/react-query';
 
 import { useLongPress } from '@/hooks/useLongPress';
 import { useToggleFavoriteMutation } from '@/hooks/useFavoritesMutations';
+import { useIsFavoritedQuery } from '@/hooks/useFavoritesQuery';
 import { isAIRecommendFeatureDisabled } from '@/lib/ai-recommend.client';
 import {
-  isFavorited,
   saveFavorite,
   deleteFavorite,
   generateStorageKey,
@@ -68,20 +68,18 @@ function ShortDramaCard({
   const source = 'shortdrama';
   const id = drama.id.toString(); // 转换为字符串
 
-  // 检查收藏状态
+  // 🚀 TanStack Query - 获取收藏状态
+  const { data: favoritedStatus } = useIsFavoritedQuery(source, id);
+
+  // 同步 Query 结果到本地 state
   useEffect(() => {
-    const fetchFavoriteStatus = async () => {
-      try {
-        const fav = await isFavorited(source, id);
-        setFavorited(fav);
-      } catch (err) {
-        console.error('检查收藏状态失败:', err);
-      }
-    };
+    if (favoritedStatus !== undefined) {
+      setFavorited(favoritedStatus);
+    }
+  }, [favoritedStatus]);
 
-    fetchFavoriteStatus();
-
-    // 监听收藏状态更新事件
+  // 监听收藏状态更新事件
+  useEffect(() => {
     const storageKey = generateStorageKey(source, id);
     const unsubscribe = subscribeToDataUpdates(
       'favoritesUpdated',

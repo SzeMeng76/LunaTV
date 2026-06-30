@@ -94,11 +94,17 @@
 | `NEXT_PUBLIC_DISABLE_YELLOW_FILTER` | 关闭色情内容过滤     | `false`     | `true` / `false`          |
 | `NEXT_PUBLIC_FLUID_SEARCH`          | 流式搜索输出         | `true`      | `true` / `false`          |
 | `DISABLE_HERO_TRAILER`              | 禁用首页预告片       | `false`     | `true` / `false`          |
+| `DISABLE_SSRF_PROTECTION`           | 禁用 SSRF 防护       | `false`     | `true` / `false`          |
 
 > 💡 **DISABLE_HERO_TRAILER**：首页 HeroBanner 预告片会消耗较多流量，且预告片 URL 带时间戳会定时过期。
 > - **Vercel**：自动禁用（无需设置）
 > - **Docker/VPS（可挂载持久化卷）**：无需禁用，视频会缓存到本地（`VIDEO_CACHE_DIR`），URL 过期后自动刷新并重新缓存
 > - **ClawCloud、HF Space、EdgeOne Pages 等无持久化平台**：建议设置 `DISABLE_HERO_TRAILER=true`，因为无法缓存视频，URL 过期后每次刷新都要重新下载
+
+> ⚠️ **DISABLE_SSRF_PROTECTION**：SSRF（服务器端请求伪造）防护默认启用，阻止代理访问内网资源。
+> - **公网部署（VPS/云服务器/Vercel）**：保持默认（不设置或 `false`），防止被利用访问内网服务
+> - **私有部署（NAS/家庭服务器/内网环境）**：如果视频源、图片或 CMS 接口使用内网地址（如 `192.168.x.x`、`10.x.x.x`），需设置 `DISABLE_SSRF_PROTECTION=true`
+> - **安全警告**：禁用 SSRF 防护会允许访问内网资源，仅适用于私有部署环境。详见 [安全文档](../security/SECURITY.md#-ssrf-防护说明)
 
 ### 豆瓣代理说明
 

@@ -39,6 +39,7 @@ export async function GET(request: NextRequest) {
         config: adminConfig.TrustedNetworkConfig || {
           enabled: false,
           trustedIPs: [],
+          blockAdminAccess: false,
         },
         // 返回环境变量配置状态（只读）
         envConfig: {
@@ -101,6 +102,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // 验证 blockAdminAccess（可选字段，提供时必须是 bool）
+    if (
+      trustedNetworkConfig.blockAdminAccess !== undefined &&
+      typeof trustedNetworkConfig.blockAdminAccess !== 'boolean'
+    ) {
+      return NextResponse.json({ error: 'Invalid blockAdminAccess value' }, { status: 400 });
+    }
+
     // 获取当前配置
     const adminConfig = await getConfig();
 
@@ -108,6 +117,7 @@ export async function POST(request: NextRequest) {
     adminConfig.TrustedNetworkConfig = {
       enabled: trustedNetworkConfig.enabled,
       trustedIPs: trustedNetworkConfig.trustedIPs.map((ip: string) => ip.trim()),
+      blockAdminAccess: trustedNetworkConfig.blockAdminAccess === true,
     };
 
     // 保存配置到数据库

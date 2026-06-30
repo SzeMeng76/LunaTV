@@ -19,14 +19,14 @@ import { useLongPress } from '@/hooks/useLongPress';
 import { useToggleFavoriteMutation } from '@/hooks/useFavoritesMutations';
 import { useToggleReminderMutation } from '@/hooks/useRemindersMutations';
 import { useDeletePlayRecordMutation } from '@/hooks/usePlayRecordsMutations';
+import { useIsFavoritedQuery } from '@/hooks/useFavoritesQuery';
+import { useIsRemindedQuery } from '@/hooks/useRemindersQuery';
 import { isAIRecommendFeatureDisabled } from '@/lib/ai-recommend.client';
 import {
   deleteFavorite,
   deletePlayRecord,
   deleteReminder,
   generateStorageKey,
-  isFavorited,
-  isReminded,
   saveFavorite,
   saveReminder,
   subscribeToDataUpdates,
@@ -121,6 +121,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
   const [showMobileActions, setShowMobileActions] = useState(false);
   const [searchFavorited, setSearchFavorited] = useState<boolean | null>(null); // 搜索结果的收藏状态
   const [showAIChat, setShowAIChat] = useState(false); // AI问片弹窗
+  const [isNavigating, setIsNavigating] = useState(false); // 导航加载状态
 
   // AI功能状态：优先使用父组件传递的值，否则自己检测
   const [aiEnabledLocal, setAiEnabledLocal] = useState(false);
@@ -205,37 +206,43 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
            (isAggregate && dynamicSourceNames && dynamicSourceNames.length > 0);
   }, [remarks, hasReleaseTag, isAggregate, dynamicSourceNames]);
 
-  // 获取收藏/提醒状态
+  // 🔥 判断是否应该显示提醒按钮（即将上映或新上映）
+  const isNewRelease = remarks && (remarks.includes('已上映') || remarks.includes('今日上映'));
+  const shouldShowBell = isUpcoming || isNewRelease;
+
+  // 🚀 TanStack Query - 获取收藏/提醒状态
+  const { data: favoritedStatus } = useIsFavoritedQuery(
+    actualSource || '',
+    actualId || '',
+    { enabled: !!actualSource && !!actualId && !shouldShowBell }
+  );
+  const { data: remindedStatus } = useIsRemindedQuery(
+    actualSource || '',
+    actualId || '',
+    { enabled: !!actualSource && !!actualId && shouldShowBell }
+  );
+
+  // 同步 Query 结果到本地 state
+  useEffect(() => {
+    if (!shouldShowBell && favoritedStatus !== undefined) {
+      if (from === 'search') {
+        setSearchFavorited(favoritedStatus);
+      } else {
+        setFavorited(favoritedStatus);
+      }
+    }
+  }, [favoritedStatus, shouldShowBell, from]);
+
+  useEffect(() => {
+    if (shouldShowBell && remindedStatus !== undefined) {
+      setReminded(remindedStatus);
+    }
+  }, [remindedStatus, shouldShowBell]);
+
+  // 监听状态更新事件
   useEffect(() => {
     if (!actualSource || !actualId) return;
 
-    const fetchStatus = async () => {
-      try {
-        // 🔥 修复：检查是否是"新上映"的内容
-        const isNewRelease = remarks && (remarks.includes('已上映') || remarks.includes('今日上映'));
-        const shouldShowBell = isUpcoming || isNewRelease;
-
-        if (shouldShowBell) {
-          // 即将上映或新上映 → 检查提醒状态
-          const rem = await isReminded(actualSource, actualId);
-          setReminded(rem);
-        } else {
-          // 已上映 → 检查收藏状态
-          const fav = await isFavorited(actualSource, actualId);
-          if (from === 'search') {
-            setSearchFavorited(fav);
-          } else {
-            setFavorited(fav);
-          }
-        }
-      } catch (err) {
-        console.error('检查状态失败:', err);
-      }
-    };
-
-    fetchStatus();
-
-    // 监听状态更新事件
     const storageKey = generateStorageKey(actualSource, actualId);
 
     const unsubscribeFavorites = subscribeToDataUpdates(
@@ -423,7 +430,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
     [from, actualSource, actualId, onDelete, deletePlayRecordMutation]
   );
 
-  // 🚀 数据预取 - 在 hover 时预取收藏数据
+  // 🚀 数据预取 - 在 hover 时预取收藏数据和预加载路由
   const handlePrefetch = useCallback(() => {
     if (!actualSource || !actualId) return;
 
@@ -437,13 +444,33 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
       },
       staleTime: 10 * 1000, // 10秒内不重复预取
     });
-  }, [actualSource, actualId, queryClient]);
+
+    // 🔥 预加载播放页面路由 - 关键优化！
+    const doubanIdParam = actualDoubanId && actualDoubanId > 0 ? `&douban_id=${actualDoubanId}` : '';
+
+    if (origin === 'live' && actualSource && actualId) {
+      const url = `/live?source=${actualSource.replace('live_', '')}&id=${actualId.replace('live_', '')}`;
+      router.prefetch(url);
+    } else if (actualSource === 'shortdrama' && actualId) {
+      const url = `/play?title=${encodeURIComponent(actualTitle.trim())}&shortdrama_id=${actualId}`;
+      router.prefetch(url);
+    } else if (from === 'douban' || (isAggregate && !actualSource && !actualId) || actualSource === 'upcoming_release' || actualSource === 'douban' || actualSource === 'bangumi') {
+      const url = `/play?title=${encodeURIComponent(actualTitle.trim())}${actualYear ? `&year=${actualYear}` : ''}${doubanIdParam}${actualSearchType ? `&stype=${actualSearchType}` : ''}${isAggregate ? '&prefer=true' : ''}${actualQuery ? `&stitle=${encodeURIComponent(actualQuery.trim())}` : ''}`;
+      router.prefetch(url);
+    } else if (actualSource && actualId) {
+      const url = `/play?source=${actualSource}&id=${actualId}&title=${encodeURIComponent(actualTitle)}${actualYear ? `&year=${actualYear}` : ''}${doubanIdParam}${isAggregate ? '&prefer=true' : ''}${actualQuery ? `&stitle=${encodeURIComponent(actualQuery.trim())}` : ''}${actualSearchType ? `&stype=${actualSearchType}` : ''}`;
+      router.prefetch(url);
+    }
+  }, [actualSource, actualId, queryClient, router, origin, actualTitle, actualYear, actualDoubanId, actualSearchType, isAggregate, actualQuery, from]);
 
   const handleClick = useCallback(() => {
     // 如果是即将上映的内容，不执行跳转，显示提示
     if (isUpcoming) {
       return;
     }
+
+    // 🔥 立即显示加载状态，提供即时反馈
+    setIsNavigating(true);
 
     // 构建豆瓣ID参数
     const doubanIdParam = actualDoubanId && actualDoubanId > 0 ? `&douban_id=${actualDoubanId}` : '';
@@ -522,30 +549,15 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
     actualDoubanId,
   ]);
 
-  // 检查搜索结果的收藏状态
-  const checkSearchFavoriteStatus = useCallback(async () => {
-    if (from === 'search' && !isAggregate && actualSource && actualId && searchFavorited === null) {
-      try {
-        const fav = await isFavorited(actualSource, actualId);
-        setSearchFavorited(fav);
-      } catch (err) {
-        setSearchFavorited(false);
-      }
-    }
-  }, [from, isAggregate, actualSource, actualId, searchFavorited]);
-
   // 长按操作
   const handleLongPress = useCallback(() => {
     if (!showMobileActions) { // 防止重复触发
       // 立即显示菜单，避免等待数据加载导致动画卡顿
       setShowMobileActions(true);
 
-      // 异步检查收藏状态，不阻塞菜单显示
-      if (from === 'search' && !isAggregate && actualSource && actualId && searchFavorited === null) {
-        checkSearchFavoriteStatus();
-      }
+      // 收藏状态已由 useIsFavoritedQuery 自动处理
     }
-  }, [showMobileActions, from, isAggregate, actualSource, actualId, searchFavorited, checkSearchFavoriteStatus]);
+  }, [showMobileActions, from, isAggregate, actualSource, actualId, searchFavorited]);
 
   // 长按手势hook
   const longPressProps = useLongPress({
@@ -884,10 +896,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
           // 右键弹出操作菜单
           setShowMobileActions(true);
 
-          // 异步检查收藏状态，不阻塞菜单显示
-          if (from === 'search' && !isAggregate && actualSource && actualId && searchFavorited === null) {
-            checkSearchFavoriteStatus();
-          }
+          // 收藏状态已由 useIsFavoritedQuery 自动处理
 
           return false;
         }}
@@ -993,11 +1002,13 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
             }}
           />
 
-          {/* 播放按钮 / 即将上映提示 */}
+          {/* 播放按钮 / 即将上映提示 / 加载状态 */}
           {config.showPlayButton && (
             <div
               data-button="true"
-              className='absolute inset-0 flex items-center justify-center opacity-0 transition-all duration-300 ease-in-out delay-75 group-hover:opacity-100 group-hover:scale-100'
+              className={`absolute inset-0 flex items-center justify-center transition-all duration-300 ease-in-out ${
+                isNavigating ? 'opacity-100 scale-100' : 'opacity-0 delay-75 group-hover:opacity-100 group-hover:scale-100'
+              }`}
               style={{
                 WebkitUserSelect: 'none',
                 userSelect: 'none',
@@ -1008,7 +1019,13 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
                 return false;
               }}
             >
-              {isUpcoming ? (
+              {isNavigating ? (
+                // 🔥 加载状态 - 提供即时反馈
+                <div className='flex flex-col items-center gap-2 bg-black/60 backdrop-blur-md px-6 py-4 rounded-xl'>
+                  <div className='w-10 h-10 border-4 border-green-500/30 border-t-green-500 rounded-full animate-spin' />
+                  <span className='text-white font-bold text-sm whitespace-nowrap'>加载中...</span>
+                </div>
+              ) : isUpcoming ? (
                 // 即将上映 - 显示敬请期待
                 <div className='flex flex-col items-center gap-2 bg-black/60 backdrop-blur-md px-6 py-4 rounded-xl'>
                   <span className='text-3xl'>📅</span>
@@ -1018,8 +1035,8 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
                 // 正常内容 - 显示播放按钮
                 <PlayCircleIcon
                   size={50}
-                  strokeWidth={0.8}
-                  className='text-white fill-transparent transition-all duration-300 ease-out hover:fill-green-500 hover:scale-[1.1]'
+                  strokeWidth={1.5}
+                  className='text-white fill-transparent transition-all duration-300 ease-out hover:text-green-500 hover:scale-[1.15] drop-shadow-[0_0_8px_rgba(34,197,94,0.6)]'
                   style={{
                     WebkitUserSelect: 'none',
                     userSelect: 'none',
@@ -1721,6 +1738,10 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
         currentEpisode={currentEpisode}
         totalEpisodes={actualEpisodes}
         origin={origin}
+        doubanId={actualDoubanId}
+        videoTitle={actualTitle}
+        videoYear={actualYear}
+        isBangumi={isBangumi}
       />
 
       {/* AI问片弹窗 */}

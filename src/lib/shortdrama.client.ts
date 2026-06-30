@@ -13,12 +13,15 @@ import {
 } from './shortdrama-cache';
 import { DEFAULT_USER_AGENT } from './user-agent';
 
+// 🔄 请求去重：存储正在进行的请求
+const pendingRequests = new Map<string, Promise<any>>();
+
 // 新的视频源 API（资源站采集接口）- 用于分类和搜索
-const SHORTDRAMA_API_BASE = 'https://wwzy.tv/api.php/provide/vod';
+const SHORTDRAMA_API_BASE = 'https://tyyszyapi.com/api.php/provide/vod';
 
 // 检测是否为移动端环境
 const isMobile = () => {
-  if (typeof window === 'undefined') return false;
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') return false;
   return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 };
 
@@ -39,25 +42,49 @@ export async function getShortDramaCategories(): Promise<ShortDramaCategory[]> {
       return cached;
     }
 
-    // 使用内部 API 代理
-    const apiUrl = `${getApiBase()}/categories`;
-
-    const response = await fetch(apiUrl);
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    // 🔄 请求去重
+    const pendingKey = `categories-${cacheKey}`;
+    if (pendingRequests.has(pendingKey)) {
+      console.log('短剧分类请求去重');
+      return pendingRequests.get(pendingKey)!;
     }
 
-    const data = await response.json();
+    const requestPromise = (async () => {
+      // 🕐 超时保护：30秒后自动清理
+      const timeoutId = setTimeout(() => {
+        pendingRequests.delete(pendingKey);
+        console.warn('短剧分类请求超时');
+      }, 30000);
 
-    // 内部 API 已经处理好格式
-    const result: ShortDramaCategory[] = data;
+      try {
+        // 使用内部 API 代理
+        const apiUrl = `${getApiBase()}/categories`;
 
-    // 只缓存非空结果，避免缓存错误/空数据
-    if (Array.isArray(result) && result.length > 0) {
-      await setCache(cacheKey, result, SHORTDRAMA_CACHE_EXPIRE.categories);
-    }
-    return result;
+        const response = await fetch(apiUrl);
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        // 内部 API 已经处理好格式
+        const result: ShortDramaCategory[] = data;
+
+        // 只缓存非空结果，避免缓存错误/空数据
+        if (Array.isArray(result) && result.length > 0) {
+          await setCache(cacheKey, result, SHORTDRAMA_CACHE_EXPIRE.categories);
+        }
+        clearTimeout(timeoutId);
+        return result;
+      } finally {
+        clearTimeout(timeoutId);
+        pendingRequests.delete(pendingKey);
+      }
+    })();
+
+    pendingRequests.set(pendingKey, requestPromise);
+    return requestPromise;
   } catch (error) {
     console.error('获取短剧分类失败:', error);
     return [];
@@ -118,23 +145,47 @@ export async function getShortDramaList(
       return cached;
     }
 
-    // 使用内部 API 代理
-    const apiUrl = `${getApiBase()}/list?categoryId=${category}&page=${page}&size=${size}`;
-
-    const response = await fetch(apiUrl);
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    // 🔄 请求去重
+    const pendingKey = `list-${cacheKey}`;
+    if (pendingRequests.has(pendingKey)) {
+      console.log(`短剧列表请求去重: ${category}/${page}`);
+      return pendingRequests.get(pendingKey)!;
     }
 
-    const result = await response.json();
+    const requestPromise = (async () => {
+      // 🕐 超时保护：30秒后自动清理
+      const timeoutId = setTimeout(() => {
+        pendingRequests.delete(pendingKey);
+        console.warn(`短剧列表请求超时: ${category}/${page}`);
+      }, 30000);
 
-    // 只缓存非空结果，避免缓存错误/空数据
-    if (result.list && Array.isArray(result.list) && result.list.length > 0) {
-      const cacheTime = page === 1 ? SHORTDRAMA_CACHE_EXPIRE.lists * 2 : SHORTDRAMA_CACHE_EXPIRE.lists;
-      await setCache(cacheKey, result, cacheTime);
-    }
-    return result;
+      try {
+        // 使用内部 API 代理
+        const apiUrl = `${getApiBase()}/list?categoryId=${category}&page=${page}&size=${size}`;
+
+        const response = await fetch(apiUrl);
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        // 只缓存非空结果，避免缓存错误/空数据
+        if (result.list && Array.isArray(result.list) && result.list.length > 0) {
+          const cacheTime = page === 1 ? SHORTDRAMA_CACHE_EXPIRE.lists * 2 : SHORTDRAMA_CACHE_EXPIRE.lists;
+          await setCache(cacheKey, result, cacheTime);
+        }
+        clearTimeout(timeoutId);
+        return result;
+      } finally {
+        clearTimeout(timeoutId);
+        pendingRequests.delete(pendingKey);
+      }
+    })();
+
+    pendingRequests.set(pendingKey, requestPromise);
+    return requestPromise;
   } catch (error) {
     console.error('获取短剧列表失败:', error);
     return { list: [], hasMore: false };

@@ -1,7 +1,6 @@
 'use client';
 
-import { motion } from 'framer-motion';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface AnimatedCardGridProps {
   children: React.ReactNode;
@@ -40,22 +39,44 @@ export default function AnimatedCardGrid({
   children,
   className = '',
 }: AnimatedCardGridProps) {
+  const [Motion, setMotion] = useState<any>(null);
+
+  useEffect(() => {
+    // 动态导入 framer-motion，仅在客户端加载
+    import('framer-motion').then((mod) => {
+      setMotion(() => mod.motion);
+    });
+  }, []);
+
+  // 在 framer-motion 加载前显示静态内容
+  if (!Motion) {
+    return (
+      <div className={className}>
+        {React.Children.map(children, (child, index) => (
+          <div key={index} className="inline-block">
+            {child}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   return (
-    <motion.div
+    <Motion.div
       className={className}
       variants={containerVariants}
       initial="hidden"
       animate="visible"
     >
       {React.Children.map(children, (child, index) => (
-        <motion.div
+        <Motion.div
           key={index}
           variants={itemVariants}
           className="inline-block"
         >
           {child}
-        </motion.div>
+        </Motion.div>
       ))}
-    </motion.div>
+    </Motion.div>
   );
 }

@@ -1,46 +1,46 @@
 /**
  * 统一的User-Agent管理工具
- * 2026年1月最新版本
+ * 2026年5月最新版本
  */
 
-// 2026年1月最新浏览器版本 (Updated: 2026-01-23)
+// 2026年5月最新浏览器版本 (Updated: 2026-05-09)
 export const LATEST_USER_AGENTS = {
-  // Chrome 144 (2026-01-21发布)
+  // Chrome 147 (2026-04-29发布)
   chrome: {
-    windows: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36',
-    macos: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36',
-    linux: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36',
+    windows: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.7727.139 Safari/537.36',
+    macos: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.7727.139 Safari/537.36',
+    linux: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.7778.96 Safari/537.36',
   },
-  // Firefox 147 (2026-01-16发布)
+  // Firefox 150 (2026-05-07发布)
   firefox: {
-    windows: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0',
-    macos: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:147.0) Gecko/20100101 Firefox/147.0',
-    linux: 'Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0',
+    windows: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:150.0) Gecko/20100101 Firefox/150.0',
+    macos: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:150.0) Gecko/20100101 Firefox/150.0',
+    linux: 'Mozilla/5.0 (X11; Linux x86_64; rv:150.0) Gecko/20100101 Firefox/150.0',
   },
   // Safari 26 (2025-09-15发布 - macOS版本冻结在10_15_7)
   safari: {
     macos: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15',
   },
-  // Edge 144 (2026-01-16发布)
+  // Edge 148 (2026-05-07发布)
   edge: {
-    windows: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36 Edg/144.0.0.0',
-    macos: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36 Edg/144.0.0.0',
+    windows: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.3967.54 Safari/537.36 Edg/148.0.3967.54',
+    macos: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.3967.54 Safari/537.36 Edg/148.0.3967.54',
   },
 };
 
 // User-Agent池（用于轮换）
 export const USER_AGENT_POOL = [
-  // Chrome 144
+  // Chrome 147
   LATEST_USER_AGENTS.chrome.windows,
   LATEST_USER_AGENTS.chrome.macos,
   LATEST_USER_AGENTS.chrome.linux,
-  // Firefox 147
+  // Firefox 150
   LATEST_USER_AGENTS.firefox.windows,
   LATEST_USER_AGENTS.firefox.macos,
   LATEST_USER_AGENTS.firefox.linux,
   // Safari 26
   LATEST_USER_AGENTS.safari.macos,
-  // Edge 144
+  // Edge 148
   LATEST_USER_AGENTS.edge.windows,
   LATEST_USER_AGENTS.edge.macos,
 ];
@@ -92,13 +92,13 @@ export function getRandomUserAgentWithInfo(): {
 export function getSecChUaHeaders(browser: 'chrome' | 'firefox' | 'safari' | 'edge', platform: string): Record<string, string> {
   if (browser === 'chrome') {
     return {
-      'Sec-CH-UA': '"Google Chrome";v="144", "Chromium";v="144", "Not(A:Brand";v="99"',
+      'Sec-CH-UA': '"Google Chrome";v="147", "Chromium";v="147", "Not(A:Brand";v="99"',
       'Sec-CH-UA-Mobile': '?0',
       'Sec-CH-UA-Platform': `"${platform}"`,
     };
   } else if (browser === 'edge') {
     return {
-      'Sec-CH-UA': '"Microsoft Edge";v="144", "Chromium";v="144", "Not(A:Brand";v="99"',
+      'Sec-CH-UA': '"Microsoft Edge";v="148", "Chromium";v="148", "Not(A:Brand";v="99"',
       'Sec-CH-UA-Mobile': '?0',
       'Sec-CH-UA-Platform': `"${platform}"`,
     };

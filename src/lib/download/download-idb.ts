@@ -52,7 +52,7 @@ let supportsStorageBuckets = false;
  * 初始化 Storage Buckets（如果支持）
  */
 async function initStorageBuckets(): Promise<void> {
-  if ('storageBuckets' in navigator) {
+  if (typeof navigator !== 'undefined' && 'storageBuckets' in navigator) {
     try {
       segmentsBucket = await navigator.storageBuckets!.open(SEGMENTS_BUCKET);
       supportsStorageBuckets = true;
@@ -63,8 +63,10 @@ async function initStorageBuckets(): Promise<void> {
   }
 }
 
-// 初始化
-initStorageBuckets();
+// 初始化（仅在浏览器环境）
+if (typeof window !== 'undefined') {
+  initStorageBuckets();
+}
 
 /**
  * 打开任务数据库（主数据库）

@@ -18,8 +18,25 @@
 .artplayer-plugin-liquid-glass.art-control-show .art-bottom .art-liquid-glass {
   border-radius: 8px;
   backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   background-color: rgba(0, 0, 0, 0.25);
   padding: var(--art-padding) calc(var(--art-padding) * 1.5) 5px;
+}
+
+/* 全屏模式：使用渐变 + 阴影模拟毛玻璃效果，避免 backdrop-filter 的 stacking context 问题 */
+/* 注意：不使用 !important，允许 JavaScript 动态调整透明度 */
+.artplayer-plugin-liquid-glass:fullscreen .art-liquid-glass,
+.artplayer-plugin-liquid-glass.art-fullscreen .art-liquid-glass {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  background-image: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.85),
+    rgba(0, 0, 0, 0.5),
+    transparent
+  );
+  background-color: transparent;
+  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.6);
 }
 
 .artplayer-plugin-liquid-glass.art-control-show .art-settings {

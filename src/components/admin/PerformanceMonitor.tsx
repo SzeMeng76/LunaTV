@@ -17,6 +17,7 @@ interface PerformanceData {
     requestSize: number;
     responseSize: number;
   }[];
+  userCount?: number; // 添加用户数量
   currentStatus: {
     system: {
       cpuUsage: number;
@@ -217,16 +218,31 @@ export default function PerformanceMonitor() {
 
     const queriesPerRequest = dbQueriesPerMinute / requestsPerMinute;
 
-    // Cron 任务使用宽松阈值（允许更多 DB 查询）
+    // Cron 任务使用动态阈值（基于实际用户数量）
+    // 基础查询公式: 1 + 用户数×4 + 25
     if (path && isCronTask(path)) {
-      if (queriesPerRequest < 50) {
-        return { level: 'excellent', label: '优秀', color: 'text-green-600 dark:text-green-400', tip: '< 50次/请求' };
-      } else if (queriesPerRequest < 100) {
-        return { level: 'good', label: '良好', color: 'text-blue-600 dark:text-blue-400', tip: '50-100次/请求' };
-      } else if (queriesPerRequest < 200) {
-        return { level: 'fair', label: '正常', color: 'text-yellow-600 dark:text-yellow-400', tip: '100-200次/请求' };
+      // 从 data 获取实际用户数量
+      const userCount = data?.userCount;
+
+      // 如果没有用户数据，无法计算准确阈值
+      if (!userCount) {
+        return { level: 'unknown', label: '计算中', color: 'text-gray-500', tip: '等待用户数据...' };
+      }
+
+      const baseQueries = 1 + userCount * 4 + 25; // 基础查询次数
+      const threshold1 = baseQueries * 0.8; // 优秀：低于基础的80%
+      const threshold2 = baseQueries * 1.2; // 良好：基础的80%-120%
+      const threshold3 = baseQueries * 1.5; // 正常：基础的120%-150%
+      // 需优化：超过基础的150%
+
+      if (queriesPerRequest < threshold1) {
+        return { level: 'excellent', label: '优秀', color: 'text-green-600 dark:text-green-400', tip: `< ${Math.round(threshold1)}次/请求 (${userCount}用户)` };
+      } else if (queriesPerRequest < threshold2) {
+        return { level: 'good', label: '良好', color: 'text-blue-600 dark:text-blue-400', tip: `${Math.round(threshold1)}-${Math.round(threshold2)}次/请求 (${userCount}用户)` };
+      } else if (queriesPerRequest < threshold3) {
+        return { level: 'fair', label: '正常', color: 'text-yellow-600 dark:text-yellow-400', tip: `${Math.round(threshold2)}-${Math.round(threshold3)}次/请求 (${userCount}用户)` };
       } else {
-        return { level: 'poor', label: '需优化', color: 'text-red-600 dark:text-red-400', tip: '> 200次/请求' };
+        return { level: 'poor', label: '需优化', color: 'text-red-600 dark:text-red-400', tip: `> ${Math.round(threshold3)}次/请求 (${userCount}用户)` };
       }
     }
 

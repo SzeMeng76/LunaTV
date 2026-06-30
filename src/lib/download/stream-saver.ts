@@ -12,19 +12,21 @@ declare global {
 }
 
 // 检查是否为安全上下文（HTTPS）
-const isSecureContext = window.isSecureContext || location.protocol === 'https:'
-const isFirefox = 'MozAppearance' in document.documentElement.style
+const isSecureContext = typeof window !== 'undefined' && typeof location !== 'undefined' && (window.isSecureContext || location.protocol === 'https:')
+const isFirefox = typeof document !== 'undefined' && 'MozAppearance' in document.documentElement.style
 
 // 下载策略：iframe 或 navigate
 const downloadStrategy = isSecureContext || isFirefox ? 'iframe' : 'navigate'
 
 // 是否使用 Blob 降级方案
-let useBlobFallback = /constructor/i.test(window.HTMLElement.toString()) || !!window.safari
+let useBlobFallback = typeof window !== 'undefined' && (/constructor/i.test(window.HTMLElement.toString()) || !!window.safari)
 
 try {
-  new Response(new ReadableStream())
-  if (isSecureContext && !('serviceWorker' in navigator)) {
-    useBlobFallback = true
+  if (typeof Response !== 'undefined' && typeof ReadableStream !== 'undefined') {
+    new Response(new ReadableStream())
+    if (isSecureContext && typeof navigator !== 'undefined' && !('serviceWorker' in navigator)) {
+      useBlobFallback = true
+    }
   }
 } catch (err) {
   useBlobFallback = true

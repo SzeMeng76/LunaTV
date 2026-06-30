@@ -7,6 +7,10 @@ import { getAvailableApiSites, getCacheTime, getConfig } from '@/lib/config';
 import { searchFromApi } from '@/lib/downstream';
 import { generateSearchVariants } from '@/lib/downstream';
 import { recordRequest, getDbQueryCount, resetDbQueryCount } from '@/lib/performance-monitor';
+import {
+  buildResolutionFilterFromSearchParams,
+  filterSearchResultsByResolution,
+} from '@/lib/video-quality';
 import { yellowWords } from '@/lib/yellow';
 
 export const runtime = 'nodejs';
@@ -38,6 +42,7 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const query = searchParams.get('q');
+  const resolutionFilter = buildResolutionFilterFromSearchParams(searchParams);
 
   if (!query) {
     const cacheTime = await getCacheTime();
@@ -101,6 +106,9 @@ export async function GET(request: NextRequest) {
         return !yellowWords.some((word: string) => typeName.includes(word));
       });
     }
+
+    // 分辨率过滤（resolution 已在 downstream 解析阶段装饰）
+    flattenedResults = filterSearchResultsByResolution(flattenedResults, resolutionFilter);
     const cacheTime = await getCacheTime();
 
     if (flattenedResults.length === 0) {

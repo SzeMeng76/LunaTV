@@ -32,23 +32,23 @@ function getKvrocksClient() {
 
 // 缓存配置
 const CACHE_CONFIG = {
-  // URL 映射缓存时间：15分钟（豆瓣 URL 通常 15-20 分钟过期）
-  URL_TTL: 15 * 60, // 900 秒
-
-  // 视频内容缓存时间：12小时（本地文件不依赖URL过期，可以缓存更久）
-  VIDEO_TTL: 12 * 60 * 60, // 43200 秒
+  // 🔥 视频元数据不设置 TTL，由 LRU 管理删除
+  // 只在删除视频文件时同时删除元数据
+  VIDEO_TTL: 0, // 不过期
 
   // 视频文件存储目录（Docker volume 持久化）
   VIDEO_CACHE_DIR: process.env.VIDEO_CACHE_DIR || '/tmp/video-cache',
 
-  // 最大缓存大小：2GB（优化后，可缓存更多视频）
+  // 最大缓存大小：2GB
   MAX_CACHE_SIZE: 2 * 1024 * 1024 * 1024, // 2 GB
+
+  // 🔥 最大文件数量：10 个（因为同一部电影的预告片永远是同一个）
+  MAX_FILE_COUNT: 10,
 };
 
 // Kvrocks Key 前缀
 const KEYS = {
-  TRAILER_URL: 'trailer:url:', // trailer:url:{douban_id} → URL
-  VIDEO_META: 'video:meta:', // video:meta:{url_hash} → 元数据
+  VIDEO_META: 'video:meta:', // video:meta:{cacheKey} → 元数据
   VIDEO_SIZE: 'video:total_size', // 总缓存大小
   VIDEO_LRU: 'video:lru', // Sorted Set: 记录文件访问时间 (score = timestamp)
 };
@@ -65,16 +65,8 @@ function hashUrl(url: string): string {
  * 这样即使 URL 刷新（时间戳变化），只要是同一个视频就能命中缓存
  */
 function getCacheKey(videoUrl: string): string {
-  // 尝试从 URL 提取 douban_id
-  // 格式: https://vt1.doubanio.com/.../view/movie/M/703230269.mp4
-  const match = videoUrl.match(/\/M\/(\d+)\.mp4/);
-  if (match) {
-    const doubanId = match[1];
-    console.log(`[VideoCache] 使用 douban_id 作为缓存 Key: ${doubanId}`);
-    return `douban_${doubanId}`;
-  }
-
-  // 降级到 URL hash（非豆瓣视频）
+  // 🚫 不再从 URL 提取视频 ID，必须使用 doubanMovieId 参数
+  // 如果没有 doubanMovieId，使用 URL hash 作为降级方案
   const urlHash = hashUrl(videoUrl);
   console.log(`[VideoCache] 使用 URL hash 作为缓存 Key: ${urlHash.substring(0, 8)}...`);
   return urlHash;
@@ -102,69 +94,66 @@ async function ensureCacheDir(): Promise<void> {
 }
 
 /**
- * 获取缓存的 trailer URL
+ * 检查视频文件是否已缓存
+ * @param videoUrl 视频 URL
+ * @param doubanMovieId 豆瓣影片 ID（可选，优先使用）
  */
-export async function getCachedTrailerUrl(doubanId: string | number): Promise<string | null> {
+export async function isVideoCached(videoUrl: string, doubanMovieId?: string | number): Promise<boolean> {
   try {
-    const redis = await getKvrocksClient();
-    const key = `${KEYS.TRAILER_URL}${doubanId}`;
-    const url = await redis.get(key);
-
-    if (url) {
-      console.log(`[VideoCache] 命中 trailer URL 缓存: ${doubanId}`);
+    // 🔥 优先使用豆瓣影片 ID 作为缓存 Key
+    let cacheKey: string;
+    if (doubanMovieId) {
+      cacheKey = `movie_${doubanMovieId}`;
+      console.log(`[VideoCache] 使用豆瓣影片 ID 检查缓存: ${cacheKey}`);
+    } else {
+      cacheKey = getCacheKey(videoUrl);
+      console.log(`[VideoCache] 使用视频 URL 检查缓存: ${cacheKey}`);
     }
 
-    return url;
-  } catch (error) {
-    console.error('[VideoCache] 获取 trailer URL 缓存失败:', error);
-    return null;
-  }
-}
-
-/**
- * 缓存 trailer URL
- */
-export async function cacheTrailerUrl(doubanId: string | number, url: string): Promise<void> {
-  try {
-    const redis = await getKvrocksClient();
-    const key = `${KEYS.TRAILER_URL}${doubanId}`;
-    await redis.setEx(key, CACHE_CONFIG.URL_TTL, url);
-    console.log(`[VideoCache] 缓存 trailer URL: ${doubanId} (TTL: ${CACHE_CONFIG.URL_TTL}s)`);
-  } catch (error) {
-    console.error('[VideoCache] 缓存 trailer URL 失败:', error);
-  }
-}
-
-/**
- * 检查视频文件是否已缓存
- */
-export async function isVideoCached(videoUrl: string): Promise<boolean> {
-  try {
-    const cacheKey = getCacheKey(videoUrl);
     const redis = await getKvrocksClient();
     const metaKey = `${KEYS.VIDEO_META}${cacheKey}`;
 
     console.log(`[VideoCache] 检查缓存: cacheKey=${cacheKey}, metaKey=${metaKey}`);
 
-    // 检查元数据是否存在
-    const meta = await redis.get(metaKey);
-    if (!meta) {
-      console.log(`[VideoCache] 元数据不存在: ${cacheKey}`);
-      return false;
-    }
-
-    console.log(`[VideoCache] 元数据存在，检查文件: ${cacheKey}`);
-
-    // 检查文件是否存在
+    // 🔥 先检查文件是否存在（文件是主体）
     const filePath = getVideoCachePath(cacheKey);
     try {
       await fs.access(filePath);
-      console.log(`[VideoCache] ✅ 命中视频缓存: ${cacheKey}`);
+      console.log(`[VideoCache] ✅ 文件存在: ${cacheKey}`);
+
+      // 文件存在，检查元数据
+      const meta = await redis.get(metaKey);
+      if (!meta) {
+        console.log(`[VideoCache] 元数据不存在但文件存在，重建元数据: ${cacheKey}`);
+        // 🔥 重建元数据（文件存在但元数据丢失，可能是 Redis 重启）
+        const stats = await fs.stat(filePath);
+        const newMeta = JSON.stringify({
+          url: videoUrl,
+          cacheKey,
+          contentType: 'video/mp4',
+          size: stats.size,
+          cachedAt: Date.now(),
+        });
+        await redis.set(metaKey, newMeta);
+
+        // 添加到 LRU
+        const now = Date.now();
+        await redis.zAdd(KEYS.VIDEO_LRU, [{ score: now, value: cacheKey }]);
+      }
+
       return true;
     } catch {
-      // 文件不存在，清理元数据
-      console.log(`[VideoCache] 文件不存在，清理元数据: ${cacheKey}`);
-      await redis.del(metaKey);
+      // 文件不存在
+      console.log(`[VideoCache] 文件不存在: ${cacheKey}`);
+
+      // 如果元数据存在，清理它
+      const meta = await redis.get(metaKey);
+      if (meta) {
+        console.log(`[VideoCache] 清理孤儿元数据: ${cacheKey}`);
+        await redis.del(metaKey);
+        await redis.zRem(KEYS.VIDEO_LRU, [cacheKey]);
+      }
+
       return false;
     }
   } catch (error) {
@@ -175,20 +164,26 @@ export async function isVideoCached(videoUrl: string): Promise<boolean> {
 
 /**
  * 获取缓存的视频文件路径
+ * @param videoUrl 视频 URL
+ * @param doubanMovieId 豆瓣影片 ID（可选，优先使用）
  */
-export async function getCachedVideoPath(videoUrl: string): Promise<string | null> {
-  const cacheKey = getCacheKey(videoUrl);
+export async function getCachedVideoPath(videoUrl: string, doubanMovieId?: string | number): Promise<string | null> {
+  // 🔥 优先使用豆瓣影片 ID 作为缓存 Key
+  let cacheKey: string;
+  if (doubanMovieId) {
+    cacheKey = `movie_${doubanMovieId}`;
+  } else {
+    cacheKey = getCacheKey(videoUrl);
+  }
+
   const filePath = getVideoCachePath(cacheKey);
 
   try {
     await fs.access(filePath);
 
-    // 更新元数据的 TTL（延长缓存时间）
-    const redis = await getKvrocksClient();
-    const metaKey = `${KEYS.VIDEO_META}${cacheKey}`;
-    await redis.expire(metaKey, CACHE_CONFIG.VIDEO_TTL);
-
     // 🚀 LRU: 更新访问时间（使用当前时间戳作为 score）
+    // 注意：不重置 TTL，让文件在 12 小时后自然过期，避免热门视频永久占用空间
+    const redis = await getKvrocksClient();
     const now = Date.now();
     await redis.zAdd(KEYS.VIDEO_LRU, [{ score: now, value: cacheKey }]);
     console.log(`[VideoCache] 更新 LRU 访问时间: ${cacheKey}`);
@@ -201,29 +196,62 @@ export async function getCachedVideoPath(videoUrl: string): Promise<string | nul
 
 /**
  * 缓存视频内容到文件系统
+ * @param videoUrl 视频 URL
+ * @param videoBuffer 视频内容
+ * @param contentType 内容类型
+ * @param doubanMovieId 豆瓣影片 ID（可选，用于生成稳定的文件名）
  */
 export async function cacheVideoContent(
   videoUrl: string,
   videoBuffer: Buffer,
-  contentType: string = 'video/mp4'
+  contentType: string = 'video/mp4',
+  doubanMovieId?: string | number
 ): Promise<string> {
   console.log(`[VideoCache] 开始缓存视频内容，大小: ${(videoBuffer.length / 1024 / 1024).toFixed(2)}MB`);
   await ensureCacheDir();
 
-  const cacheKey = getCacheKey(videoUrl);
+  // 🔥 优先使用豆瓣影片 ID 作为缓存 Key，确保同一部影片只有一个视频文件
+  let cacheKey: string;
+  if (doubanMovieId) {
+    cacheKey = `movie_${doubanMovieId}`;
+    console.log(`[VideoCache] 使用豆瓣影片 ID 作为缓存 Key: ${cacheKey}`);
+  } else {
+    cacheKey = getCacheKey(videoUrl);
+    console.log(`[VideoCache] 使用视频 URL 生成缓存 Key: ${cacheKey}`);
+  }
+
   const filePath = getVideoCachePath(cacheKey);
   const fileSize = videoBuffer.length;
 
   console.log(`[VideoCache] 文件路径: ${filePath}`);
 
   try {
-    // 检查缓存大小限制
+    // 检查缓存限制（大小 + 文件数量）
     const redis = await getKvrocksClient();
     const totalSizeStr = await redis.get(KEYS.VIDEO_SIZE);
     const totalSize = totalSizeStr ? parseInt(totalSizeStr) : 0;
 
-    console.log(`[VideoCache] 当前缓存大小: ${(totalSize / 1024 / 1024).toFixed(2)}MB / ${(CACHE_CONFIG.MAX_CACHE_SIZE / 1024 / 1024).toFixed(2)}MB`);
+    // 🔥 检查当前文件数量
+    const currentFileCount = await redis.zCard(KEYS.VIDEO_LRU);
 
+    console.log(`[VideoCache] 当前缓存: ${(totalSize / 1024 / 1024).toFixed(2)}MB / ${(CACHE_CONFIG.MAX_CACHE_SIZE / 1024 / 1024).toFixed(2)}MB, ${currentFileCount} / ${CACHE_CONFIG.MAX_FILE_COUNT} 个文件`);
+
+    // 🔥 检查文件数量限制
+    if (currentFileCount >= CACHE_CONFIG.MAX_FILE_COUNT) {
+      console.warn(`[VideoCache] 文件数量已达上限 (${currentFileCount}/${CACHE_CONFIG.MAX_FILE_COUNT})，清理最旧的文件...`);
+
+      // 清理 1 个最旧的文件
+      const cleaned = await cleanupLRU(0, 1);
+
+      if (!cleaned) {
+        console.warn(`[VideoCache] LRU 清理失败，跳过缓存`);
+        return filePath;
+      }
+
+      console.log(`[VideoCache] LRU 清理成功，继续缓存`);
+    }
+
+    // 🔥 检查大小限制
     if (totalSize + fileSize > CACHE_CONFIG.MAX_CACHE_SIZE) {
       console.warn(`[VideoCache] 缓存空间不足，尝试 LRU 清理...`);
 
@@ -254,7 +282,8 @@ export async function cacheVideoContent(
     });
 
     const metaKey = `${KEYS.VIDEO_META}${cacheKey}`;
-    await redis.setEx(metaKey, CACHE_CONFIG.VIDEO_TTL, meta);
+    // 🔥 不设置 TTL，元数据永久保存，只在删除视频文件时同时删除
+    await redis.set(metaKey, meta);
 
     // 🚀 LRU: 添加到访问时间记录
     const now = Date.now();
@@ -273,9 +302,11 @@ export async function cacheVideoContent(
 }
 
 /**
- * 清理过期的缓存文件
- * 由 Kvrocks TTL 自动触发，这里只是清理孤儿文件
- * 🚀 优化：添加错误处理和 LRU 列表清理
+ * 清理孤儿文件
+ * 🔥 元数据不再有 TTL，这个函数只清理：
+ * 1. 元数据不存在但文件存在的孤儿文件
+ * 2. 文件不存在但元数据存在的孤儿元数据
+ * 正常的缓存清理由 LRU 管理
  */
 export async function cleanupExpiredCache(): Promise<void> {
   try {
@@ -334,12 +365,22 @@ export async function cleanupExpiredCache(): Promise<void> {
 }
 
 /**
- * 删除指定 URL 的视频缓存
+ * 删除指定视频缓存
  * 用于处理视频 URL 过期的情况
- * 🚀 优化：添加 LRU 列表清理
+ * @param videoUrl 视频 URL（用于日志）
+ * @param doubanMovieId 豆瓣影片 ID（可选，优先使用）
  */
-export async function deleteVideoCache(videoUrl: string): Promise<void> {
-  const cacheKey = getCacheKey(videoUrl);
+export async function deleteVideoCache(videoUrl: string, doubanMovieId?: string | number): Promise<void> {
+  // 🔥 优先使用豆瓣影片 ID 作为缓存 Key
+  let cacheKey: string;
+  if (doubanMovieId) {
+    cacheKey = `movie_${doubanMovieId}`;
+    console.log(`[VideoCache] 使用豆瓣影片 ID 删除缓存: ${cacheKey}`);
+  } else {
+    cacheKey = getCacheKey(videoUrl);
+    console.log(`[VideoCache] 使用 URL hash 删除缓存: ${cacheKey.substring(0, 8)}...`);
+  }
+
   const filePath = getVideoCachePath(cacheKey);
 
   try {
@@ -411,85 +452,19 @@ export async function getCacheStats(): Promise<{
 }
 
 /**
- * 迁移旧的 URL hash 缓存到新的 douban_id 缓存
- * 自动检测并重命名文件，更新元数据
- */
-export async function migrateOldCache(): Promise<void> {
-  try {
-    await ensureCacheDir();
-    const files = await fs.readdir(CACHE_CONFIG.VIDEO_CACHE_DIR);
-    const redis = await getKvrocksClient();
-
-    let migratedCount = 0;
-
-    for (const file of files) {
-      if (!file.endsWith('.mp4')) continue;
-
-      const oldCacheKey = file.replace('.mp4', '');
-
-      // 跳过已经是 douban_id 格式的文件
-      if (oldCacheKey.startsWith('douban_')) continue;
-
-      // 检查是否有旧的元数据
-      const oldMetaKey = `${KEYS.VIDEO_META}${oldCacheKey}`;
-      const oldMeta = await redis.get(oldMetaKey);
-
-      if (!oldMeta) continue; // 没有元数据，跳过
-
-      const metaData = JSON.parse(oldMeta);
-      const videoUrl = metaData.url;
-
-      // 尝试从 URL 提取 douban_id
-      const match = videoUrl.match(/\/M\/(\d+)\.mp4/);
-      if (!match) continue; // 不是豆瓣视频，跳过
-
-      const doubanId = match[1];
-      const newCacheKey = `douban_${doubanId}`;
-
-      console.log(`[VideoCache] 迁移缓存: ${oldCacheKey.substring(0, 8)}... → ${newCacheKey}`);
-
-      // 重命名文件
-      const oldFilePath = path.join(CACHE_CONFIG.VIDEO_CACHE_DIR, file);
-      const newFilePath = path.join(CACHE_CONFIG.VIDEO_CACHE_DIR, `${newCacheKey}.mp4`);
-
-      try {
-        await fs.rename(oldFilePath, newFilePath);
-
-        // 更新元数据
-        const newMetaKey = `${KEYS.VIDEO_META}${newCacheKey}`;
-        metaData.cacheKey = newCacheKey;
-        await redis.setEx(newMetaKey, CACHE_CONFIG.VIDEO_TTL, JSON.stringify(metaData));
-
-        // 删除旧元数据
-        await redis.del(oldMetaKey);
-
-        // 🚀 更新 LRU 列表：移除旧 key，添加新 key
-        await redis.zRem(KEYS.VIDEO_LRU, [oldCacheKey]);
-        const now = Date.now();
-        await redis.zAdd(KEYS.VIDEO_LRU, [{ score: now, value: newCacheKey }]);
-
-        migratedCount++;
-      } catch (error) {
-        console.error(`[VideoCache] 迁移失败: ${oldCacheKey}`, error);
-      }
-    }
-
-    if (migratedCount > 0) {
-      console.log(`[VideoCache] ✅ 迁移完成: ${migratedCount} 个文件已迁移到新格式`);
-    }
-  } catch (error) {
-    console.error('[VideoCache] 迁移缓存失败:', error);
-  }
-}
-
-/**
  * 🚀 LRU 清理：当缓存满时删除最久未使用的文件
- * @param requiredSpace 需要释放的空间（字节）
- * @returns 是否成功释放足够空间
+ * @param requiredSpace 需要释放的空间（字节），0 表示不检查空间
+ * @param requiredCount 需要删除的文件数量，0 表示不检查数量
+ * @returns 是否成功释放足够空间/数量
  */
-export async function cleanupLRU(requiredSpace: number): Promise<boolean> {
+export async function cleanupLRU(requiredSpace: number = 0, requiredCount: number = 0): Promise<boolean> {
   try {
-    console.log(`[VideoCache] LRU 清理开始，需要释放: ${(requiredSpace / 1024 / 1024).toFixed(2)}MB`);
+    if (requiredSpace > 0) {
+      console.log(`[VideoCache] LRU 清理开始，需要释放: ${(requiredSpace / 1024 / 1024).toFixed(2)}MB`);
+    }
+    if (requiredCount > 0) {
+      console.log(`[VideoCache] LRU 清理开始，需要删除: ${requiredCount} 个文件`);
+    }
 
     const redis = await getKvrocksClient();
     let freedSpace = 0;
@@ -505,10 +480,14 @@ export async function cleanupLRU(requiredSpace: number): Promise<boolean> {
 
     console.log(`[VideoCache] 找到 ${oldestFiles.length} 个缓存文件`);
 
-    // 逐个删除最旧的文件，直到释放足够空间
+    // 逐个删除最旧的文件，直到满足条件
     for (const cacheKey of oldestFiles) {
-      if (freedSpace >= requiredSpace) {
-        break; // 已释放足够空间
+      // 🔥 检查是否已满足清理条件
+      const spaceConditionMet = requiredSpace === 0 || freedSpace >= requiredSpace;
+      const countConditionMet = requiredCount === 0 || deletedCount >= requiredCount;
+
+      if (spaceConditionMet && countConditionMet) {
+        break; // 已满足清理条件
       }
 
       try {
@@ -554,7 +533,12 @@ export async function cleanupLRU(requiredSpace: number): Promise<boolean> {
     }
 
     console.log(`[VideoCache] LRU 清理完成: 删除 ${deletedCount} 个文件，释放 ${(freedSpace / 1024 / 1024).toFixed(2)}MB`);
-    return freedSpace >= requiredSpace;
+
+    // 🔥 检查是否满足清理条件
+    const spaceConditionMet = requiredSpace === 0 || freedSpace >= requiredSpace;
+    const countConditionMet = requiredCount === 0 || deletedCount >= requiredCount;
+
+    return spaceConditionMet && countConditionMet;
 
   } catch (error) {
     console.error('[VideoCache] LRU 清理失败:', error);
@@ -576,6 +560,7 @@ export async function validateCacheSize(): Promise<void> {
 
     let actualTotalSize = 0;
     let validFileCount = 0;
+    let rebuiltMetaCount = 0;
 
     for (const file of files) {
       if (!file.endsWith('.mp4')) continue;
@@ -585,18 +570,40 @@ export async function validateCacheSize(): Promise<void> {
         const stats = await fs.stat(filePath);
         actualTotalSize += stats.size;
         validFileCount++;
+
+        const cacheKey = file.replace('.mp4', '');
+        const metaKey = `${KEYS.VIDEO_META}${cacheKey}`;
+
+        const meta = await redis.get(metaKey);
+        if (!meta) {
+          console.log(`[VideoCache] 重建缺失的元数据: ${cacheKey}`);
+          const newMeta = JSON.stringify({
+            url: '',
+            cacheKey,
+            contentType: 'video/mp4',
+            size: stats.size,
+            cachedAt: stats.mtimeMs,
+          });
+          await redis.set(metaKey, newMeta);
+
+          const accessTime = stats.mtimeMs;
+          await redis.zAdd(KEYS.VIDEO_LRU, [{ score: accessTime, value: cacheKey }]);
+          rebuiltMetaCount++;
+        }
       } catch (error) {
         console.error(`[VideoCache] 无法读取文件: ${file}`, error);
       }
     }
 
-    // 更新 Redis 中的总大小
     await redis.set(KEYS.VIDEO_SIZE, actualTotalSize.toString());
 
     console.log(`[VideoCache] ✅ 启动校验完成:`);
     console.log(`  - 文件数量: ${validFileCount}`);
     console.log(`  - 实际大小: ${(actualTotalSize / 1024 / 1024).toFixed(2)}MB`);
     console.log(`  - 最大限制: ${(CACHE_CONFIG.MAX_CACHE_SIZE / 1024 / 1024).toFixed(2)}MB`);
+    if (rebuiltMetaCount > 0) {
+      console.log(`  - 重建元数据: ${rebuiltMetaCount} 个`);
+    }
 
   } catch (error) {
     console.error('[VideoCache] 启动校验失败:', error);

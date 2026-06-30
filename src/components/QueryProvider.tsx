@@ -15,6 +15,11 @@ function GlobalCacheInvalidator() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
+    // 设置全局 queryClient 实例供 db.client.ts 使用
+    if (typeof window !== 'undefined') {
+      (window as any).__queryClient = queryClient;
+    }
+
     const unsubscribePlayRecords = subscribeToDataUpdates(
       'playRecordsUpdated',
       () => {
@@ -29,9 +34,17 @@ function GlobalCacheInvalidator() {
       }
     );
 
+    const unsubscribeReminders = subscribeToDataUpdates(
+      'remindersUpdated',
+      () => {
+        queryClient.invalidateQueries({ queryKey: ['reminders'] });
+      }
+    );
+
     return () => {
       unsubscribePlayRecords();
       unsubscribeFavorites();
+      unsubscribeReminders();
     };
   }, [queryClient]);
 

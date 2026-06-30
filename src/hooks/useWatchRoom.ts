@@ -8,6 +8,8 @@ import type {
   Member,
   PlayState,
   Room,
+  RoomType,
+  ScreenState,
   ServerToClientEvents,
 } from '@/types/watch-room.types';
 
@@ -35,6 +37,7 @@ export interface UseWatchRoomReturn {
     description: string;
     password?: string;
     isPublic: boolean;
+    roomType?: RoomType;
   }) => Promise<{ success: boolean; room?: Room; error?: string }>;
 
   joinRoom: (roomId: string, password?: string) => Promise<{ success: boolean; room?: Room; members?: Member[]; error?: string }>;
@@ -42,6 +45,10 @@ export interface UseWatchRoomReturn {
   leaveRoom: () => void;
 
   getRoomList: () => Promise<Room[]>;
+
+  hasOwnerToken: (roomId: string) => boolean;
+
+  dismissRoomFromList: (roomId: string) => Promise<{ success: boolean; error?: string }>;
 
   // 播放控制
   updatePlayState: (state: PlayState) => void;
@@ -53,6 +60,15 @@ export interface UseWatchRoomReturn {
 
   // 直播控制
   changeLiveChannel: (state: LiveState) => void;
+
+  // 屏幕共享控制
+  registerScreenHelper: (roomId: string, ownerToken: string) => Promise<{ success: boolean; error?: string }>;
+  startScreenShare: (state: ScreenState) => void;
+  stopScreenShare: () => void;
+  notifyViewerReady: () => void;
+  sendScreenOffer: (targetUserId: string, offer: RTCSessionDescriptionInit) => void;
+  sendScreenAnswer: (targetUserId: string, answer: RTCSessionDescriptionInit) => void;
+  sendScreenIceCandidate: (targetUserId: string, candidate: RTCIceCandidateInit) => void;
 
   // 聊天
   sendMessage: (content: string, type?: 'text' | 'emoji') => void;
@@ -198,6 +214,33 @@ export function useWatchRoom(options: UseWatchRoomOptions): UseWatchRoomReturn {
       setCurrentRoom((prev) => prev ? { ...prev, currentState: state } : null);
     });
 
+    // 屏幕共享事件
+    newSocket.on('screen:start', (state: ScreenState) => {
+      console.log('[WatchRoom] Screen share started:', state);
+      setCurrentRoom((prev) => prev ? { ...prev, currentState: state } : null);
+    });
+
+    newSocket.on('screen:stop', () => {
+      console.log('[WatchRoom] Screen share stopped');
+      setCurrentRoom((prev) => prev ? { ...prev, currentState: null } : null);
+    });
+
+    newSocket.on('screen:viewer-ready', (data) => {
+      console.log('[WatchRoom] Viewer ready:', data.userId);
+    });
+
+    newSocket.on('screen:offer', (data) => {
+      console.log('[WatchRoom] Screen offer received from:', data.userId);
+    });
+
+    newSocket.on('screen:answer', (data) => {
+      console.log('[WatchRoom] Screen answer received from:', data.userId);
+    });
+
+    newSocket.on('screen:ice', (data) => {
+      console.log('[WatchRoom] Screen ICE candidate received from:', data.userId);
+    });
+
     newSocket.on('state:cleared', () => {
       console.log('[WatchRoom] State cleared');
       // 清除房间的 currentState
@@ -242,6 +285,7 @@ export function useWatchRoom(options: UseWatchRoomOptions): UseWatchRoomReturn {
     description: string;
     password?: string;
     isPublic: boolean;
+    roomType?: RoomType;
   }) => {
     if (!socket || !connected) {
       return { success: false, error: '未连接到服务器' };
@@ -259,6 +303,15 @@ export function useWatchRoom(options: UseWatchRoomOptions): UseWatchRoomReturn {
             lastHeartbeat: Date.now(),
           }]);
           setMessages([]);
+
+          // 保存 ownerToken 到 localStorage，用于后续管理房间
+          try {
+            const ownerTokens = JSON.parse(localStorage.getItem('watch_room_owner_tokens') || '{}');
+            ownerTokens[response.room.id] = response.room.ownerToken;
+            localStorage.setItem('watch_room_owner_tokens', JSON.stringify(ownerTokens));
+          } catch (error) {
+            console.error('[WatchRoom] Failed to save ownerToken:', error);
+          }
         }
         resolve(response);
       });
@@ -298,6 +351,55 @@ export function useWatchRoom(options: UseWatchRoomOptions): UseWatchRoomReturn {
       setMessages([]);
     }
   }, [socket, connected]);
+
+  // 检查是否拥有某个房间的 ownerToken
+  const hasOwnerToken = useCallback((roomId: string): boolean => {
+    try {
+      const ownerTokens = JSON.parse(localStorage.getItem('watch_room_owner_tokens') || '{}');
+      return !!ownerTokens[roomId];
+    } catch {
+      return false;
+    }
+  }, []);
+
+  // 用 ownerToken 解散房间（从房间列表直接解散）
+  const dismissRoomFromList = useCallback(async (roomId: string) => {
+    if (!socket || !connected) {
+      return { success: false, error: '未连接到服务器' };
+    }
+
+    try {
+      const ownerTokens = JSON.parse(localStorage.getItem('watch_room_owner_tokens') || '{}');
+      const ownerToken = ownerTokens[roomId];
+
+      if (!ownerToken) {
+        return { success: false, error: '没有权限解散此房间' };
+      }
+
+      // 用 ownerToken 加入房间
+      const joinResult = await new Promise<{ success: boolean; room?: Room; members?: Member[]; error?: string }>((resolve) => {
+        socket.emit('room:join', { roomId, userName, ownerToken }, (response) => {
+          resolve(response);
+        });
+      });
+
+      if (!joinResult.success) {
+        return { success: false, error: joinResult.error || '加入房间失败' };
+      }
+
+      // 立即离开房间（房主离开 = 解散房间）
+      socket.emit('room:leave');
+
+      // 清除 localStorage 中的 ownerToken
+      delete ownerTokens[roomId];
+      localStorage.setItem('watch_room_owner_tokens', JSON.stringify(ownerTokens));
+
+      return { success: true };
+    } catch (error) {
+      console.error('[WatchRoom] Failed to dismiss room:', error);
+      return { success: false, error: '解散房间失败' };
+    }
+  }, [socket, connected, userName]);
 
   // 获取房间列表
   const getRoomList = useCallback(async () => {
@@ -355,6 +457,76 @@ export function useWatchRoom(options: UseWatchRoomOptions): UseWatchRoomReturn {
     }
   }, [socket, connected]);
 
+  // 屏幕共享控制
+  const registerScreenHelper = useCallback(async (roomId: string, ownerToken: string) => {
+    if (!socket || !connected) {
+      return { success: false, error: '未连接到服务器' };
+    }
+
+    return new Promise<{ success: boolean; error?: string }>((resolve) => {
+      socket.emit('screen:helper-register', { roomId, ownerToken }, (response) => {
+        resolve(response);
+      });
+    });
+  }, [socket, connected]);
+
+  const startScreenShare = useCallback((state: ScreenState) => {
+    if (socket && connected) {
+      socket.emit('screen:start', state);
+      setCurrentRoom((prev) => prev ? { ...prev, currentState: state } : null);
+    }
+  }, [socket, connected]);
+
+  const stopScreenShare = useCallback(() => {
+    if (socket && connected) {
+      socket.emit('screen:stop');
+      setCurrentRoom((prev) => prev ? { ...prev, currentState: null } : null);
+    }
+  }, [socket, connected]);
+
+  const notifyViewerReady = useCallback(() => {
+    if (socket && connected) {
+      socket.emit('screen:viewer-ready');
+    }
+  }, [socket, connected]);
+
+  const sendScreenOffer = useCallback((targetUserId: string, offer: RTCSessionDescriptionInit) => {
+    if (socket && connected) {
+      socket.emit('screen:offer', {
+        targetUserId,
+        offer: {
+          type: offer.type as 'offer' | 'answer',
+          sdp: offer.sdp || '',
+        }
+      });
+    }
+  }, [socket, connected]);
+
+  const sendScreenAnswer = useCallback((targetUserId: string, answer: RTCSessionDescriptionInit) => {
+    if (socket && connected) {
+      socket.emit('screen:answer', {
+        targetUserId,
+        answer: {
+          type: answer.type as 'offer' | 'answer',
+          sdp: answer.sdp || '',
+        }
+      });
+    }
+  }, [socket, connected]);
+
+  const sendScreenIceCandidate = useCallback((targetUserId: string, candidate: RTCIceCandidateInit) => {
+    if (socket && connected) {
+      socket.emit('screen:ice', {
+        targetUserId,
+        candidate: {
+          candidate: candidate.candidate || '',
+          sdpMLineIndex: candidate.sdpMLineIndex,
+          sdpMid: candidate.sdpMid,
+        }
+      });
+    }
+  }, [socket, connected]);
+
   const clearState = useCallback(async () => {
     if (!socket || !connected) {
       return { success: false, error: '未连接到服务器' };
@@ -406,12 +578,21 @@ export function useWatchRoom(options: UseWatchRoomOptions): UseWatchRoomReturn {
     joinRoom,
     leaveRoom,
     getRoomList,
+    hasOwnerToken,
+    dismissRoomFromList,
     updatePlayState,
     seekTo,
     play,
     pause,
     changeVideo,
     changeLiveChannel,
+    registerScreenHelper,
+    startScreenShare,
+    stopScreenShare,
+    notifyViewerReady,
+    sendScreenOffer,
+    sendScreenAnswer,
+    sendScreenIceCandidate,
     clearState,
     sendMessage,
     connect,

@@ -2,6 +2,7 @@
 
 import { AdminConfig } from './admin.types';
 import { KvrocksStorage } from './kvrocks.db';
+import { SqliteStorage } from './sqlite.db';
 import { RedisStorage } from './redis.db';
 import {
   ContentStat,
@@ -23,6 +24,7 @@ const STORAGE_TYPE =
     | 'redis'
     | 'upstash'
     | 'kvrocks'
+    | 'sqlite'
     | undefined) || 'localstorage';
 
 // 创建存储实例
@@ -34,6 +36,14 @@ function createStorage(): IStorage {
       return new UpstashRedisStorage();
     case 'kvrocks':
       return new KvrocksStorage();
+    case 'sqlite':
+      if (process.env.EDGEONE_PAGES === '1') {
+        throw new Error(
+          '[LunaTV] SQLite storage is not supported on EdgeOne Pages: the platform has no persistent filesystem. ' +
+          'Please set NEXT_PUBLIC_STORAGE_TYPE to "upstash", "redis", or "kvrocks".'
+        );
+      }
+      return new SqliteStorage();
     case 'localstorage':
     default:
       return null as unknown as IStorage;
@@ -579,11 +589,12 @@ export class DbManager {
   async updateUserLoginStats(
     userName: string,
     loginTime: number,
-    isFirstLogin?: boolean
+    isFirstLogin?: boolean,
+    loginMeta?: { ip?: string; location?: string; device?: string; browser?: string; os?: string }
   ): Promise<void> {
     incrementDbQuery();
     if (typeof (this.storage as any).updateUserLoginStats === 'function') {
-      await (this.storage as any).updateUserLoginStats(userName, loginTime, isFirstLogin);
+      await (this.storage as any).updateUserLoginStats(userName, loginTime, isFirstLogin, loginMeta);
     }
   }
 
@@ -622,6 +633,27 @@ export class DbManager {
     if (typeof (this.storage as any).deleteUserEmbyConfig === 'function') {
       await (this.storage as any).deleteUserEmbyConfig(userName);
     }
+  }
+
+  // 崩溃日志相关方法
+  async saveCrashLog(crashLog: any): Promise<void> {
+    incrementDbQuery();
+    await this.storage.saveCrashLog(crashLog);
+  }
+
+  async getCrashLogs(limit?: number): Promise<any[]> {
+    incrementDbQuery();
+    return this.storage.getCrashLogs(limit);
+  }
+
+  async deleteCrashLog(timestamp: string): Promise<void> {
+    incrementDbQuery();
+    await this.storage.deleteCrashLog(timestamp);
+  }
+
+  async clearCrashLogs(): Promise<void> {
+    incrementDbQuery();
+    await this.storage.clearCrashLogs();
   }
 }
 

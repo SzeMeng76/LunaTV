@@ -1,0 +1,204 @@
+name: Deploy to EdgeOne
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_name:
+        description: 'EdgeOne Pages 项目名'
+        required: false
+        default: 'lunatv'
+        type: string
+      area:
+        description: '部署区域：overseas = 全球可用区（不含中国大陆），global = 全球可用区'
+        required: false
+        default: 'overseas'
+        type: choice
+        options:
+          - overseas
+          - global
+      sync_environment:
+        description: '部署后同步 GitHub Secrets 到 EdgeOne 环境变量，并再次部署使其生效'
+        required: false
+        default: true
+        type: boolean
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  deployments: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy to EdgeOne Pages
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Export build environment variables
+        env:
+          USERNAME: ${{ secrets.USERNAME }}
+          PASSWORD: ${{ secrets.PASSWORD }}
+          NEXT_PUBLIC_STORAGE_TYPE: ${{ secrets.NEXT_PUBLIC_STORAGE_TYPE }}
+          UPSTASH_URL: ${{ secrets.UPSTASH_URL }}
+          UPSTASH_TOKEN: ${{ secrets.UPSTASH_TOKEN }}
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+          NEXT_PUBLIC_SITE_NAME: ${{ secrets.NEXT_PUBLIC_SITE_NAME }}
+          ANNOUNCEMENT: ${{ secrets.ANNOUNCEMENT }}
+          ENABLE_REGISTER: ${{ secrets.ENABLE_REGISTER }}
+          SITE_BASE: ${{ secrets.SITE_BASE }}
+          REDIS_URL: ${{ secrets.REDIS_URL }}
+          KVROCKS_URL: ${{ secrets.KVROCKS_URL }}
+          NEXT_PUBLIC_SEARCH_MAX_PAGE: ${{ secrets.NEXT_PUBLIC_SEARCH_MAX_PAGE }}
+          NEXT_PUBLIC_DOUBAN_PROXY_TYPE: ${{ secrets.NEXT_PUBLIC_DOUBAN_PROXY_TYPE }}
+          NEXT_PUBLIC_DOUBAN_PROXY: ${{ secrets.NEXT_PUBLIC_DOUBAN_PROXY }}
+          NEXT_PUBLIC_DOUBAN_IMAGE_PROXY_TYPE: ${{ secrets.NEXT_PUBLIC_DOUBAN_IMAGE_PROXY_TYPE }}
+          NEXT_PUBLIC_DOUBAN_IMAGE_PROXY: ${{ secrets.NEXT_PUBLIC_DOUBAN_IMAGE_PROXY }}
+          NEXT_PUBLIC_DISABLE_YELLOW_FILTER: ${{ secrets.NEXT_PUBLIC_DISABLE_YELLOW_FILTER }}
+          NEXT_PUBLIC_FLUID_SEARCH: ${{ secrets.NEXT_PUBLIC_FLUID_SEARCH }}
+          NEXT_PUBLIC_BANGUMI_API_TYPE: ${{ secrets.NEXT_PUBLIC_BANGUMI_API_TYPE }}
+          NEXT_PUBLIC_BANGUMI_API_PROXY: ${{ secrets.NEXT_PUBLIC_BANGUMI_API_PROXY }}
+          NEXT_PUBLIC_BANGUMI_IMAGE_PROXY_TYPE: ${{ secrets.NEXT_PUBLIC_BANGUMI_IMAGE_PROXY_TYPE }}
+          NEXT_PUBLIC_BANGUMI_IMAGE_PROXY: ${{ secrets.NEXT_PUBLIC_BANGUMI_IMAGE_PROXY }}
+          NEXT_PUBLIC_CORSAPI_URL: ${{ secrets.NEXT_PUBLIC_CORSAPI_URL }}
+          NEXT_PUBLIC_SUB_URL: ${{ secrets.NEXT_PUBLIC_SUB_URL }}
+          DISABLE_HERO_TRAILER: ${{ secrets.DISABLE_HERO_TRAILER }}
+          DISABLE_SSRF_PROTECTION: ${{ secrets.DISABLE_SSRF_PROTECTION }}
+          TVBOX_SUBSCRIBE_TOKEN: ${{ secrets.TVBOX_SUBSCRIBE_TOKEN }}
+          TRUSTED_NETWORK_IPS: ${{ secrets.TRUSTED_NETWORK_IPS }}
+        run: |
+          append_env() {
+            local key="$1"
+            local value="${!key-}"
+            if [ -n "$value" ]; then
+              {
+                echo "$key<<__EDGEONE_ENV_$key__"
+                echo "$value"
+                echo "__EDGEONE_ENV_$key__"
+              } >> "$GITHUB_ENV"
+            fi
+          }
+
+          keys=(
+            USERNAME PASSWORD NEXT_PUBLIC_STORAGE_TYPE
+            UPSTASH_URL UPSTASH_TOKEN TMDB_API_KEY
+            NEXT_PUBLIC_SITE_NAME ANNOUNCEMENT ENABLE_REGISTER
+            SITE_BASE REDIS_URL KVROCKS_URL
+            NEXT_PUBLIC_SEARCH_MAX_PAGE
+            NEXT_PUBLIC_DOUBAN_PROXY_TYPE NEXT_PUBLIC_DOUBAN_PROXY
+            NEXT_PUBLIC_DOUBAN_IMAGE_PROXY_TYPE NEXT_PUBLIC_DOUBAN_IMAGE_PROXY
+            NEXT_PUBLIC_DISABLE_YELLOW_FILTER NEXT_PUBLIC_FLUID_SEARCH
+            NEXT_PUBLIC_BANGUMI_API_TYPE NEXT_PUBLIC_BANGUMI_API_PROXY
+            NEXT_PUBLIC_BANGUMI_IMAGE_PROXY_TYPE NEXT_PUBLIC_BANGUMI_IMAGE_PROXY
+            NEXT_PUBLIC_CORSAPI_URL NEXT_PUBLIC_SUB_URL
+            DISABLE_HERO_TRAILER DISABLE_SSRF_PROTECTION
+            TVBOX_SUBSCRIBE_TOKEN TRUSTED_NETWORK_IPS
+          )
+
+          for key in "${keys[@]}"; do
+            append_env "$key"
+          done
+
+          echo "BUILD_TARGET=edgeone" >> "$GITHUB_ENV"
+          echo "EDGEONE_PAGES=1" >> "$GITHUB_ENV"
+          echo "NODE_ENV=production" >> "$GITHUB_ENV"
+
+      - name: Build for EdgeOne
+        run: pnpm run edgeone:build
+
+      - name: Deploy to EdgeOne
+        id: deploy
+        env:
+          EDGEONE_API_TOKEN: ${{ secrets.EDGEONE_API_TOKEN }}
+          EDGEONE_PROJECT_NAME: ${{ inputs.project_name }}
+          EDGEONE_AREA: ${{ inputs.area }}
+        run: |
+          if [ -z "$EDGEONE_API_TOKEN" ]; then
+            echo "EDGEONE_API_TOKEN secret is required" >&2
+            exit 1
+          fi
+
+          pnpm exec edgeone makers deploy .edgeone \
+            -n "$EDGEONE_PROJECT_NAME" \
+            -t "$EDGEONE_API_TOKEN" \
+            -a "$EDGEONE_AREA" | tee edgeone-deploy.log
+
+          deploy_url=$(grep '^EDGEONE_DEPLOY_URL=' edgeone-deploy.log | tail -n 1 | cut -d= -f2-)
+          project_id=$(grep '^EDGEONE_PROJECT_ID=' edgeone-deploy.log | tail -n 1 | cut -d= -f2-)
+          echo "deploy_url=$deploy_url" >> "$GITHUB_OUTPUT"
+          echo "project_id=$project_id" >> "$GITHUB_OUTPUT"
+
+      - name: Sync EdgeOne environment variables
+        if: ${{ inputs.sync_environment }}
+        env:
+          EDGEONE_API_TOKEN: ${{ secrets.EDGEONE_API_TOKEN }}
+        run: |
+          keys=(
+            USERNAME PASSWORD NEXT_PUBLIC_STORAGE_TYPE
+            UPSTASH_URL UPSTASH_TOKEN TMDB_API_KEY
+            NEXT_PUBLIC_SITE_NAME ANNOUNCEMENT ENABLE_REGISTER
+            SITE_BASE REDIS_URL KVROCKS_URL
+            NEXT_PUBLIC_SEARCH_MAX_PAGE
+            NEXT_PUBLIC_DOUBAN_PROXY_TYPE NEXT_PUBLIC_DOUBAN_PROXY
+            NEXT_PUBLIC_DOUBAN_IMAGE_PROXY_TYPE NEXT_PUBLIC_DOUBAN_IMAGE_PROXY
+            NEXT_PUBLIC_DISABLE_YELLOW_FILTER NEXT_PUBLIC_FLUID_SEARCH
+            NEXT_PUBLIC_BANGUMI_API_TYPE NEXT_PUBLIC_BANGUMI_API_PROXY
+            NEXT_PUBLIC_BANGUMI_IMAGE_PROXY_TYPE NEXT_PUBLIC_BANGUMI_IMAGE_PROXY
+            NEXT_PUBLIC_CORSAPI_URL NEXT_PUBLIC_SUB_URL
+            DISABLE_HERO_TRAILER DISABLE_SSRF_PROTECTION
+            TVBOX_SUBSCRIBE_TOKEN TRUSTED_NETWORK_IPS
+          )
+
+          for key in "${keys[@]}"; do
+            value="${!key-}"
+            if [ -n "$value" ]; then
+              echo "Syncing $key"
+              pnpm exec edgeone makers env set "$key" "$value" -t "$EDGEONE_API_TOKEN"
+            fi
+          done
+
+      - name: Redeploy after environment sync
+        if: ${{ inputs.sync_environment }}
+        id: redeploy
+        env:
+          EDGEONE_API_TOKEN: ${{ secrets.EDGEONE_API_TOKEN }}
+          EDGEONE_PROJECT_NAME: ${{ inputs.project_name }}
+          EDGEONE_AREA: ${{ inputs.area }}
+        run: |
+          pnpm exec edgeone makers deploy .edgeone \
+            -n "$EDGEONE_PROJECT_NAME" \
+            -t "$EDGEONE_API_TOKEN" \
+            -a "$EDGEONE_AREA" | tee edgeone-redeploy.log
+
+          deploy_url=$(grep '^EDGEONE_DEPLOY_URL=' edgeone-redeploy.log | tail -n 1 | cut -d= -f2-)
+          project_id=$(grep '^EDGEONE_PROJECT_ID=' edgeone-redeploy.log | tail -n 1 | cut -d= -f2-)
+          echo "deploy_url=$deploy_url" >> "$GITHUB_OUTPUT"
+          echo "project_id=$project_id" >> "$GITHUB_OUTPUT"
+
+      - name: Deployment summary
+        run: |
+          final_url="${{ steps.redeploy.outputs.deploy_url || steps.deploy.outputs.deploy_url }}"
+          project_id="${{ steps.redeploy.outputs.project_id || steps.deploy.outputs.project_id }}"
+          {
+            echo "## EdgeOne deployment"
+            echo
+            echo "- Project ID: $project_id"
+            echo "- Deploy URL: $final_url"
+            echo "- Area: ${{ inputs.area }}"
+          } >> "$GITHUB_STEP_SUMMARY"

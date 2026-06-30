@@ -14,13 +14,28 @@
  * 如后续需要在客户端读取收藏等其它数据，可按同样方式在此文件中补充实现。
  */
 
+import { QueryClient } from '@tanstack/react-query';
 import { getAuthInfoFromBrowserCookie } from './auth';
 import { UserPlayStat, SkipSegment, EpisodeSkipConfig } from './types';
 import type { PlayRecord } from './types';
-import { forceClearWatchingUpdatesCache } from './watching-updates';
 
 // 重新导出类型以保持API兼容性
 export type { PlayRecord, SkipSegment, EpisodeSkipConfig } from './types';
+
+// 获取全局 QueryClient 实例
+function getQueryClient(): QueryClient | null {
+  if (typeof window === 'undefined') return null;
+  // 从 window 对象获取 QueryClient 实例（由 QueryProvider 设置）
+  return (window as any).__queryClient || null;
+}
+
+// 辅助函数：invalidate TanStack Query 缓存
+function invalidateQueryCache(queryKey: string[]) {
+  const queryClient = getQueryClient();
+  if (queryClient) {
+    queryClient.invalidateQueries({ queryKey });
+  }
+}
 
 // 全局错误触发函数
 function triggerGlobalError(message: string) {
@@ -119,6 +134,21 @@ const SEARCH_HISTORY_LIMIT = 20;
 
 // ---- 内存缓存（用于 Kvrocks/Upstash 模式）----
 const memoryCache: Map<string, UserCacheStore> = new Map();
+
+// ---- 请求去重和后台同步节流 ----
+const inFlightRequests = new Map<string, Promise<unknown>>();
+const backgroundSyncState = new Map<string, number>();
+const BACKGROUND_SYNC_INTERVAL = 60 * 1000; // 60秒
+
+function shouldRunBackgroundSync(key: string): boolean {
+  const now = Date.now();
+  const lastSync = backgroundSyncState.get(key) || 0;
+  if (now - lastSync < BACKGROUND_SYNC_INTERVAL) {
+    return false;
+  }
+  backgroundSyncState.set(key, now);
+  return true;
+}
 
 // ---- 缓存管理器 ----
 class HybridCacheManager {
@@ -709,28 +739,45 @@ async function fetchWithAuth(
  * 带重试的 API 请求函数
  */
 async function fetchFromApi<T>(path: string, retries = 2): Promise<T> {
-  let lastError: Error | null = null;
-
-  for (let i = 0; i <= retries; i++) {
-    try {
-      const res = await fetchWithAuth(path);
-      return (await res.json()) as T;
-    } catch (error) {
-      lastError = error as Error;
-      console.warn(`请求失败 (尝试 ${i + 1}/${retries + 1}):`, error);
-
-      // 如果不是最后一次尝试，等待后重试
-      if (i < retries) {
-        // 使用指数退避：第一次重试等待500ms，第二次等待1000ms
-        const delay = 500 * Math.pow(2, i);
-        console.log(`等待 ${delay}ms 后重试...`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-      }
-    }
+  const requestKey = `${path}::${retries}`;
+  const existingRequest = inFlightRequests.get(requestKey) as
+    | Promise<T>
+    | undefined;
+  if (existingRequest) {
+    return existingRequest;
   }
 
-  // 所有重试都失败，抛出最后一个错误
-  throw lastError || new Error('请求失败');
+  const requestPromise = (async () => {
+    let lastError: Error | null = null;
+
+    for (let i = 0; i <= retries; i++) {
+      try {
+        const res = await fetchWithAuth(path);
+        return (await res.json()) as T;
+      } catch (error) {
+        lastError = error as Error;
+        console.warn(`请求失败 (尝试 ${i + 1}/${retries + 1}):`, error);
+
+        // 如果不是最后一次尝试，等待后重试
+        if (i < retries) {
+          // 使用指数退避：第一次重试等待500ms，第二次等待1000ms
+          const delay = 500 * Math.pow(2, i);
+          console.log(`等待 ${delay}ms 后重试...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
+    }
+
+    // 所有重试都失败，抛出最后一个错误
+    throw lastError || new Error('请求失败');
+  })();
+
+  inFlightRequests.set(requestKey, requestPromise);
+  try {
+    return await requestPromise;
+  } finally {
+    inFlightRequests.delete(requestKey);
+  }
 }
 
 /**
@@ -841,9 +888,7 @@ export async function getAllPlayRecords(forceRefresh = false): Promise<Record<st
     if (forceRefresh) {
       try {
         console.log('🔄 强制刷新播放记录，跳过缓存直接从API获取');
-        const freshData = await fetchFromApi<Record<string, PlayRecord>>(
-          `/api/playrecords`
-        );
+        const freshData = await fetchFromApi<Record<string, PlayRecord>>(`/api/playrecords`);
         cacheManager.cachePlayRecords(freshData);
         // 触发数据更新事件
         window.dispatchEvent(
@@ -864,6 +909,11 @@ export async function getAllPlayRecords(forceRefresh = false): Promise<Record<st
     const cachedData = cacheManager.getCachedPlayRecords();
 
     if (cachedData) {
+      // 检查是否需要后台同步（60秒内不重复同步）
+      if (!shouldRunBackgroundSync('playRecords')) {
+        return cachedData;
+      }
+
       // 返回缓存数据，同时后台异步更新
       fetchFromApi<Record<string, PlayRecord>>(`/api/playrecords`)
         .then((freshData) => {
@@ -997,32 +1047,21 @@ export async function savePlayRecord(
         body: JSON.stringify({ key, record }),
       });
 
-      // 🔑 关键修复：数据库更新成功后，如果更新了 original_episodes，清除相关缓存
+      // 🔑 关键修复：数据库更新成功后，invalidate TanStack Query 缓存
       if (shouldClearCache) {
         try {
-          // 🔧 优化：使用新函数清除 watching-updates 缓存
-          forceClearWatchingUpdatesCache();
+          // Invalidate 播放记录和追番更新缓存
+          invalidateQueryCache(['playRecords']);
+          invalidateQueryCache(['watchingUpdates']);
 
-          // 🔑 关键：立即清除播放记录缓存，确保下次检查使用最新数据
-          cacheManager.forceRefreshPlayRecordsCache(true);
-
-          // 🔧 优化：立即获取最新数据并更新缓存，触发更新事件
-          const freshData = await fetchFromApi<Record<string, PlayRecord>>(`/api/playrecords`);
-          cacheManager.cachePlayRecords(freshData);
-          window.dispatchEvent(
-            new CustomEvent('playRecordsUpdated', {
-              detail: freshData,
-            })
-          );
-
-          console.log('✅ 数据库更新成功，已清除 watching-updates 和播放记录缓存，并刷新最新数据');
+          console.log('✅ 数据库更新成功，已 invalidate TanStack Query 缓存');
         } catch (cacheError) {
-          console.warn('清除缓存失败:', cacheError);
+          console.warn('Invalidate 缓存失败:', cacheError);
         }
+      } else {
+        // 常规保存也需要 invalidate，确保数据同步
+        invalidateQueryCache(['playRecords']);
       }
-      // 🔧 优化：移除每次保存后的同步请求，因为我们已经使用乐观更新
-      // 缓存已在 line 848-850 更新，不需要每次都从服务器 GET 最新数据
-      // 只在更新集数时才需要同步（上面的 if 块已处理）
 
       // 异步更新用户统计数据（不阻塞主流程）
       updateUserStats(record).catch(err => {
@@ -1073,15 +1112,10 @@ export async function deletePlayRecord(
 
   // 数据库存储模式：乐观更新策略（包括 redis 和 upstash）
   if (STORAGE_TYPE !== 'localstorage') {
-    // 立即更新缓存
-    const cachedRecords = cacheManager.getCachedPlayRecords() || {};
-    delete cachedRecords[key];
-    cacheManager.cachePlayRecords(cachedRecords);
-
-    // 触发立即更新事件
+    // 触发立即更新事件（保持向后兼容）
     window.dispatchEvent(
       new CustomEvent('playRecordsUpdated', {
-        detail: cachedRecords,
+        detail: { [key]: null },
       })
     );
 
@@ -1090,6 +1124,10 @@ export async function deletePlayRecord(
       await fetchWithAuth(`/api/playrecords?key=${encodeURIComponent(key)}`, {
         method: 'DELETE',
       });
+
+      // Invalidate TanStack Query 缓存
+      invalidateQueryCache(['playRecords']);
+      invalidateQueryCache(['watchingUpdates']);
     } catch (err) {
       await handleDatabaseOperationFailure('playRecords', err);
       triggerGlobalError('删除播放记录失败');
@@ -1355,6 +1393,11 @@ export async function getAllFavorites(): Promise<Record<string, Favorite>> {
     const cachedData = cacheManager.getCachedFavorites();
 
     if (cachedData) {
+      // 检查是否需要后台同步（60秒内不重复同步）
+      if (!shouldRunBackgroundSync('favorites')) {
+        return cachedData;
+      }
+
       // 返回缓存数据，同时后台异步更新
       fetchFromApi<Record<string, Favorite>>(`/api/favorites`)
         .then((freshData) => {
@@ -1378,9 +1421,7 @@ export async function getAllFavorites(): Promise<Record<string, Favorite>> {
     } else {
       // 缓存为空，直接从 API 获取并缓存
       try {
-        const freshData = await fetchFromApi<Record<string, Favorite>>(
-          `/api/favorites`
-        );
+        const freshData = await fetchFromApi<Record<string, Favorite>>(`/api/favorites`);
         cacheManager.cacheFavorites(freshData);
         return freshData;
       } catch (err) {
@@ -1414,15 +1455,10 @@ export async function saveFavorite(
 
   // 数据库存储模式：乐观更新策略（包括 redis 和 upstash）
   if (STORAGE_TYPE !== 'localstorage') {
-    // 立即更新缓存
-    const cachedFavorites = cacheManager.getCachedFavorites() || {};
-    cachedFavorites[key] = favorite;
-    cacheManager.cacheFavorites(cachedFavorites);
-
-    // 触发立即更新事件
+    // 触发立即更新事件（保持向后兼容）
     window.dispatchEvent(
       new CustomEvent('favoritesUpdated', {
-        detail: cachedFavorites,
+        detail: { [key]: favorite },
       })
     );
 
@@ -1435,6 +1471,9 @@ export async function saveFavorite(
         },
         body: JSON.stringify({ key, favorite }),
       });
+
+      // Invalidate TanStack Query 缓存
+      invalidateQueryCache(['favorites']);
     } catch (err) {
       await handleDatabaseOperationFailure('favorites', err);
       triggerGlobalError('保存收藏失败');
@@ -1477,15 +1516,10 @@ export async function deleteFavorite(
 
   // 数据库存储模式：乐观更新策略（包括 redis 和 upstash）
   if (STORAGE_TYPE !== 'localstorage') {
-    // 立即更新缓存
-    const cachedFavorites = cacheManager.getCachedFavorites() || {};
-    delete cachedFavorites[key];
-    cacheManager.cacheFavorites(cachedFavorites);
-
-    // 触发立即更新事件
+    // 触发立即更新事件（保持向后兼容）
     window.dispatchEvent(
       new CustomEvent('favoritesUpdated', {
-        detail: cachedFavorites,
+        detail: { [key]: null },
       })
     );
 
@@ -1494,6 +1528,9 @@ export async function deleteFavorite(
       await fetchWithAuth(`/api/favorites?key=${encodeURIComponent(key)}`, {
         method: 'DELETE',
       });
+
+      // Invalidate TanStack Query 缓存
+      invalidateQueryCache(['favorites']);
     } catch (err) {
       await handleDatabaseOperationFailure('favorites', err);
       triggerGlobalError('删除收藏失败');
@@ -1539,6 +1576,11 @@ export async function isFavorited(
     const cachedFavorites = cacheManager.getCachedFavorites();
 
     if (cachedFavorites) {
+      // 检查是否需要后台同步（60秒内不重复同步）
+      if (!shouldRunBackgroundSync('favorites')) {
+        return !!cachedFavorites[key];
+      }
+
       // 返回缓存数据，同时后台异步更新
       fetchFromApi<Record<string, Favorite>>(`/api/favorites`)
         .then((freshData) => {
@@ -1851,12 +1893,32 @@ export async function preloadUserData(): Promise<void> {
 // ---------------- 跳过片头片尾配置相关 API ----------------
 
 /**
+ * 生成视频的跨源身份 key，用于 identityKey 模式。
+ * 优先用 doubanId，其次用 title+year 组合。
+ */
+export function getVideoSkipConfigKey(params: {
+  title: string;
+  doubanId?: number;
+  year?: string;
+}): string | undefined {
+  const { title, doubanId, year } = params;
+  if (doubanId && doubanId > 0) {
+    return `douban:${doubanId}`;
+  }
+  if (title && year) {
+    return `title:${title}:${year}`;
+  }
+  return undefined;
+}
+
+/**
  * 获取跳过片头片尾配置。
  * 数据库存储模式下使用混合缓存策略：优先返回缓存数据，后台异步同步最新数据。
  */
 export async function getSkipConfig(
   source: string,
-  id: string
+  id: string,
+  identityKey?: string
 ): Promise<EpisodeSkipConfig | null> {
   try {
     // 服务器端渲染阶段直接返回空
@@ -1895,6 +1957,7 @@ export async function getSkipConfig(
           action: 'get',
           key,
           username: authInfo.username,
+          identityKey,
         }),
       });
 
@@ -1927,7 +1990,8 @@ export async function getSkipConfig(
 export async function saveSkipConfig(
   source: string,
   id: string,
-  config: EpisodeSkipConfig
+  config: EpisodeSkipConfig,
+  identityKey?: string
 ): Promise<void> {
   try {
     const key = generateStorageKey(source, id);
@@ -1975,6 +2039,7 @@ export async function saveSkipConfig(
           key,
           config,
           username: authInfo.username,
+          identityKey,
         }),
       });
 
@@ -2056,7 +2121,8 @@ export async function getAllSkipConfigs(): Promise<Record<string, EpisodeSkipCon
  */
 export async function deleteSkipConfig(
   source: string,
-  id: string
+  id: string,
+  identityKey?: string
 ): Promise<void> {
   try {
     const key = generateStorageKey(source, id);
@@ -2105,6 +2171,7 @@ export async function deleteSkipConfig(
           action: 'delete',
           key,
           username: authInfo.username,
+          identityKey,
         }),
       });
 
@@ -2559,6 +2626,11 @@ export async function getAllReminders(): Promise<Record<string, Reminder>> {
     const cachedData = cacheManager.getCachedReminders();
 
     if (cachedData) {
+      // 检查是否需要后台同步（60秒内不重复同步）
+      if (!shouldRunBackgroundSync('reminders')) {
+        return cachedData;
+      }
+
       // 返回缓存数据，同时后台异步更新
       fetchFromApi<Record<string, Reminder>>(`/api/reminders`)
         .then((freshData) => {
@@ -2582,9 +2654,7 @@ export async function getAllReminders(): Promise<Record<string, Reminder>> {
     } else {
       // 缓存为空，直接从 API 获取并缓存
       try {
-        const freshData = await fetchFromApi<Record<string, Reminder>>(
-          `/api/reminders`
-        );
+        const freshData = await fetchFromApi<Record<string, Reminder>>(`/api/reminders`);
         cacheManager.cacheReminders(freshData);
         return freshData;
       } catch (err) {
@@ -2619,14 +2689,10 @@ export async function saveReminder(
   // 数据库存储模式：乐观更新策略（包括 redis 和 upstash）
   if (STORAGE_TYPE !== 'localstorage') {
     // 立即更新缓存
-    const cachedReminders = cacheManager.getCachedReminders() || {};
-    cachedReminders[key] = reminder;
-    cacheManager.cacheReminders(cachedReminders);
-
-    // 触发立即更新事件
+    // 触发立即更新事件（保持向后兼容）
     window.dispatchEvent(
       new CustomEvent('remindersUpdated', {
-        detail: cachedReminders,
+        detail: { [key]: reminder },
       })
     );
 
@@ -2639,6 +2705,9 @@ export async function saveReminder(
         },
         body: JSON.stringify({ key, reminder }),
       });
+
+      // Invalidate TanStack Query 缓存
+      invalidateQueryCache(['reminders']);
     } catch (err) {
       await handleDatabaseOperationFailure('reminders', err);
       triggerGlobalError('保存提醒失败');
@@ -2684,12 +2753,10 @@ export async function deleteReminder(
     // 立即更新缓存
     const cachedReminders = cacheManager.getCachedReminders() || {};
     delete cachedReminders[key];
-    cacheManager.cacheReminders(cachedReminders);
-
-    // 触发立即更新事件
+    // 触发立即更新事件（保持向后兼容）
     window.dispatchEvent(
       new CustomEvent('remindersUpdated', {
-        detail: cachedReminders,
+        detail: { [key]: null },
       })
     );
 
@@ -2698,6 +2765,9 @@ export async function deleteReminder(
       await fetchWithAuth(`/api/reminders?key=${encodeURIComponent(key)}`, {
         method: 'DELETE',
       });
+
+      // Invalidate TanStack Query 缓存
+      invalidateQueryCache(['reminders']);
     } catch (err) {
       await handleDatabaseOperationFailure('reminders', err);
       triggerGlobalError('删除提醒失败');
@@ -2743,6 +2813,11 @@ export async function isReminded(
     const cachedReminders = cacheManager.getCachedReminders();
 
     if (cachedReminders) {
+      // 检查是否需要后台同步（60秒内不重复同步）
+      if (!shouldRunBackgroundSync('reminders')) {
+        return !!cachedReminders[key];
+      }
+
       // 返回缓存数据，同时后台异步更新
       fetchFromApi<Record<string, Reminder>>(`/api/reminders`)
         .then((freshData) => {

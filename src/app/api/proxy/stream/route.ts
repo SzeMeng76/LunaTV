@@ -3,6 +3,7 @@
 import { NextResponse } from 'next/server';
 
 import { getConfig } from '@/lib/config';
+import { validateProxyTargetUrl } from '@/lib/proxy-security';
 
 export const runtime = 'nodejs';
 
@@ -54,6 +55,17 @@ export async function GET(request: Request) {
 
   const ua = liveSource.ua || 'AptvPlayer/1.4.10';
   const decodedUrl = decodeURIComponent(url);
+
+  // SSRF 防护：验证目标 URL
+  try {
+    await validateProxyTargetUrl(decodedUrl);
+  } catch (error) {
+    console.error('[Stream Proxy] SSRF validation failed:', error);
+    return NextResponse.json(
+      { error: 'Invalid or blocked URL' },
+      { status: 403 }
+    );
+  }
 
   try {
     const targetUrl = new URL(decodedUrl);

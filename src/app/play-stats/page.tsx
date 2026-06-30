@@ -7,14 +7,7 @@ import { ChevronUp } from 'lucide-react';
 
 import { getAuthInfoFromBrowserCookie } from '@/lib/auth';
 import { PlayRecord, ReleaseCalendarItem } from '@/lib/types';
-import {
-  getCachedWatchingUpdates,
-  getDetailedWatchingUpdates,
-  checkWatchingUpdates,
-  markUpdatesAsViewed,
-  forceClearWatchingUpdatesCache,
-  type WatchingUpdate,
-} from '@/lib/watching-updates';
+import type { WatchingUpdate } from '@/hooks/useWatchingUpdates';
 
 import PageLayout from '@/components/PageLayout';
 import VideoCard from '@/components/VideoCard';
@@ -313,7 +306,6 @@ const PlayStatsPage: React.FC = () => {
         updateTimeout = null;
       }, 1000);
 
-      forceClearWatchingUpdatesCache();
       invalidatePlayStats();
     };
 
@@ -359,7 +351,6 @@ const PlayStatsPage: React.FC = () => {
   // 关闭追番更新详情
   const handleCloseWatchingUpdates = () => {
     setShowWatchingUpdates(false);
-    markUpdatesAsViewed();
   };
 
   // 格式化更新时间
@@ -467,7 +458,7 @@ const PlayStatsPage: React.FC = () => {
   if (storageType === 'localstorage') {
     return (
       <PageLayout activePath="/play-stats">
-        <div className='max-w-6xl mx-auto px-4 py-8'>
+        <div className='max-w-6xl mx-auto px-4 py-8 pb-40 md:pb-safe-bottom'>
           <div className='mb-8'>
             <h1 className='text-3xl font-bold text-gray-900 dark:text-white'>
               {isAdmin ? '播放统计' : '个人统计'}
@@ -515,7 +506,7 @@ const PlayStatsPage: React.FC = () => {
   if (isAdmin && statsData && userStats) {
     return (
       <PageLayout activePath="/play-stats">
-        <div className='max-w-7xl mx-auto px-4 py-8'>
+        <div className='max-w-7xl mx-auto px-4 py-8 pb-40 md:pb-safe-bottom'>
           {/* 页面标题和描述 */}
           <div className='mb-6'>
             <h1 className='text-3xl font-bold text-gray-900 dark:text-white'>
@@ -797,8 +788,9 @@ const PlayStatsPage: React.FC = () => {
                         className='p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors'
                         onClick={() => toggleUserExpanded(userStat.username)}
                       >
-                        <div className='flex items-center justify-between'>
-                          <div className='flex items-center space-x-4'>
+                        {/* 移动端：垂直布局；桌面端：水平布局 */}
+                        <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3'>
+                          <div className='flex items-start space-x-4 min-w-0'>
                             <div className='shrink-0'>
                               <div className='w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center'>
                                 <span className='text-sm font-medium text-blue-600 dark:text-blue-400'>
@@ -806,7 +798,7 @@ const PlayStatsPage: React.FC = () => {
                                 </span>
                               </div>
                             </div>
-                            <div>
+                            <div className='min-w-0 flex-1'>
                               <h5 className='text-sm font-medium text-gray-900 dark:text-gray-100'>
                                 {userStat.username}
                               </h5>
@@ -825,6 +817,30 @@ const PlayStatsPage: React.FC = () => {
                                   ? formatDateTime(userStat.lastLoginTime)
                                   : '注册时'}
                               </p>
+                              {(userStat as any).lastLoginIp && (
+                                <p className='text-xs text-gray-500 dark:text-gray-400 flex items-center flex-wrap gap-1'>
+                                  <span>🌐</span>
+                                  <span className='font-mono break-words'>{(userStat as any).lastLoginIp}</span>
+                                  {(userStat as any).lastLoginLocation && (
+                                    <span className='text-blue-500 dark:text-blue-400 shrink-0'>
+                                      ({(userStat as any).lastLoginLocation})
+                                    </span>
+                                  )}
+                                </p>
+                              )}
+                              {(userStat as any).lastLoginDevice && (
+                                <p className='text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1'>
+                                  <span>
+                                    {(userStat as any).lastLoginDevice === 'mobile' ? '📱'
+                                      : (userStat as any).lastLoginDevice === 'tablet' ? '📟'
+                                      : '💻'}
+                                  </span>
+                                  <span className='truncate min-w-0'>
+                                    {(userStat as any).lastLoginOs || ''}
+                                    {(userStat as any).lastLoginBrowser ? ` · ${(userStat as any).lastLoginBrowser}` : ''}
+                                  </span>
+                                </p>
+                              )}
                               <div className='text-xs text-gray-500 dark:text-gray-400'>
                                 {(() => {
                                   const loginCount = userStat.loginCount || 0;
@@ -846,14 +862,15 @@ const PlayStatsPage: React.FC = () => {
                                 })()}
                               </div>
                               {userStat.mostWatchedSource && (
-                                <p className='text-xs text-gray-500 dark:text-gray-400'>
+                                <p className='text-xs text-gray-500 dark:text-gray-400 truncate'>
                                   常用来源: {userStat.mostWatchedSource}
                                 </p>
                               )}
                             </div>
                           </div>
-                          <div className='flex items-center space-x-6'>
-                            <div className='text-right'>
+                          {/* 统计数字：移动端横排紧凑，桌面端右对齐 */}
+                          <div className='flex items-center justify-between sm:justify-end sm:space-x-6 pl-14 sm:pl-0'>
+                            <div className='text-left sm:text-right'>
                               <div className='text-sm font-medium text-gray-900 dark:text-gray-100'>
                                 {formatTime(userStat.totalWatchTime)}
                               </div>
@@ -861,7 +878,7 @@ const PlayStatsPage: React.FC = () => {
                                 总观看时长
                               </div>
                             </div>
-                            <div className='text-right'>
+                            <div className='text-left sm:text-right'>
                               <div className='text-sm font-medium text-gray-900 dark:text-gray-100'>
                                 {userStat.totalPlays}
                               </div>
@@ -869,7 +886,7 @@ const PlayStatsPage: React.FC = () => {
                                 播放次数
                               </div>
                             </div>
-                            <div className='text-right'>
+                            <div className='text-left sm:text-right'>
                               <div className='text-sm font-medium text-gray-900 dark:text-gray-100'>
                                 {formatTime(userStat.avgWatchTime)}
                               </div>
@@ -903,6 +920,37 @@ const PlayStatsPage: React.FC = () => {
                       {/* 展开的播放记录详情 */}
                       {expandedUsers.has(userStat.username) && (
                         <div className='p-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700'>
+                          {/* 登入信息卡片 */}
+                          {((userStat as any).lastLoginIp || (userStat as any).lastLoginDevice) && (
+                            <div className='mb-4 p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700'>
+                              <h6 className='text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2'>最近登入信息</h6>
+                              <div className='flex flex-col gap-2'>
+                                {(userStat as any).lastLoginIp && (
+                                  <div className='flex items-start gap-1.5 text-xs text-gray-700 dark:text-gray-300 min-w-0'>
+                                    <span className='shrink-0'>🌐</span>
+                                    <span className='font-mono break-words flex-1 min-w-0'>{(userStat as any).lastLoginIp}</span>
+                                    {(userStat as any).lastLoginLocation && (
+                                      <span className='shrink-0 px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded text-xs'>
+                                        {(userStat as any).lastLoginLocation}
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                                {(userStat as any).lastLoginDevice && (
+                                  <div className='flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300'>
+                                    <span className='shrink-0'>
+                                      {(userStat as any).lastLoginDevice === 'mobile' ? '📱'
+                                        : (userStat as any).lastLoginDevice === 'tablet' ? '📟'
+                                        : '💻'}
+                                    </span>
+                                    <span className='truncate'>
+                                      {[(userStat as any).lastLoginOs, (userStat as any).lastLoginBrowser].filter(Boolean).join(' · ')}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
                           {userStat.recentRecords.length > 0 ? (
                             <>
                               <h6 className='text-sm font-medium text-gray-700 dark:text-gray-300 mb-4'>
@@ -1556,7 +1604,7 @@ const PlayStatsPage: React.FC = () => {
   if (!isAdmin && userStats) {
     return (
       <PageLayout activePath="/play-stats">
-        <div className='max-w-6xl mx-auto px-4 py-8'>
+        <div className='max-w-6xl mx-auto px-4 py-8 pb-40 md:pb-safe-bottom'>
           {/* 页面标题和刷新按钮 */}
           <div className='flex justify-between items-start mb-8'>
             <div>
@@ -2154,7 +2202,7 @@ const PlayStatsPage: React.FC = () => {
   // 加载中或错误状态
   return (
     <PageLayout activePath="/play-stats">
-      <div className='max-w-6xl mx-auto px-4 py-8'>
+      <div className='max-w-6xl mx-auto px-4 py-8 pb-40 md:pb-safe-bottom'>
         <div className='text-center py-12'>
           {error ? (
             <div className='text-red-600 dark:text-red-400'>{error}</div>

@@ -61,6 +61,11 @@ export async function GET(request: NextRequest) {
       lastLoginTime: number;
       loginCount: number;
       createdAt: number;
+      lastLoginIp?: string;
+      lastLoginLocation?: string;
+      lastLoginDevice?: string;
+      lastLoginBrowser?: string;
+      lastLoginOs?: string;
     }> = [];
     let totalWatchTime = 0;
     let totalPlays = 0;
@@ -77,54 +82,117 @@ export async function GET(request: NextRequest) {
     // 计算近7天的日期范围
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-    // 为每个用户获取播放记录统计
-    for (const user of allUsers) {
-      try {
-        // 计算用户注册相关统计
-        // 设置项目开始时间，2025年9月14日
-        const PROJECT_START_DATE = new Date('2025-09-14').getTime();
-        const userCreatedAt = user.createdAt || PROJECT_START_DATE;
+    // 为每个用户并行获取播放记录统计
+    const PROJECT_START_DATE = new Date('2025-09-14').getTime();
 
-        // 使用自然日计算，与个人统计保持一致
+    const perUserResults = await Promise.all(allUsers.map(async (user) => {
+      try {
+        const userCreatedAt = user.createdAt || PROJECT_START_DATE;
         const firstDate = new Date(userCreatedAt);
         const currentDate = new Date();
         const firstDay = new Date(firstDate.getFullYear(), firstDate.getMonth(), firstDate.getDate());
         const currentDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
         const registrationDays = Math.floor((currentDay.getTime() - firstDay.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
-        // 统计今日新增用户
-        if (userCreatedAt >= todayStart) {
-          todayNewUsers++;
-        }
-        totalRegisteredUsers++;
+        // 两个查询并行
+        const [userPlayStat, userPlayRecords] = await Promise.all([
+          storage.getUserPlayStat(user.username).catch(() => null),
+          storage.getAllPlayRecords(user.username).catch(() => ({})),
+        ]);
 
-        // 统计注册时间分布（近7天）
-        if (userCreatedAt >= sevenDaysAgo.getTime()) {
-          const regDate = new Date(userCreatedAt).toISOString().split('T')[0];
-          registrationData[regDate] = (registrationData[regDate] || 0) + 1;
-        }
+        const lastLoginTime = userPlayStat?.lastLoginTime || userPlayStat?.lastLoginDate || userPlayStat?.firstLoginTime || 0;
+        const loginCount = userPlayStat?.loginCount || 0;
+        const lastLoginIp = userPlayStat?.lastLoginIp;
+        const lastLoginLocation = userPlayStat?.lastLoginLocation;
+        const lastLoginDevice = userPlayStat?.lastLoginDevice;
+        const lastLoginBrowser = userPlayStat?.lastLoginBrowser;
+        const lastLoginOs = userPlayStat?.lastLoginOs;
 
-        // 获取用户最后登录时间和登入次数（从用户统计中获取真实登入时间）
-        let lastLoginTime = 0;
-        let loginCount = 0;
-        try {
-          const userPlayStat = await storage.getUserPlayStat(user.username);
-          // 优先使用用户统计中的登入时间，这是真实的登录时间
-          lastLoginTime = userPlayStat.lastLoginTime || userPlayStat.lastLoginDate || userPlayStat.firstLoginTime || 0;
-          loginCount = userPlayStat.loginCount || 0;
-        } catch (err) {
-          // 获取失败时默认为0
-          lastLoginTime = 0;
-          loginCount = 0;
-        }
-
-        // 获取用户的所有播放记录
-        const userPlayRecords = await storage.getAllPlayRecords(user.username);
         const records = Object.values(userPlayRecords);
 
         if (records.length === 0) {
-          // 没有播放记录的用户也要显示
-          userStats.push({
+          return {
+            stat: {
+              username: user.username,
+              totalWatchTime: 0,
+              totalPlays: 0,
+              lastPlayTime: 0,
+              recentRecords: [],
+              avgWatchTime: 0,
+              mostWatchedSource: '',
+              registrationDays,
+              lastLoginTime,
+              loginCount,
+              createdAt: userCreatedAt,
+              lastLoginIp,
+              lastLoginLocation,
+              lastLoginDevice,
+              lastLoginBrowser,
+              lastLoginOs,
+            },
+            userCreatedAt,
+            userWatchTime: 0,
+            userPlays: 0,
+            userSourceCount: {} as Record<string, number>,
+            dailyRecords: [] as Array<{ save_time: number; play_time: number }>,
+          };
+        }
+
+        let userWatchTime = 0;
+        let userLastPlayTime = 0;
+        const userSourceCount: Record<string, number> = {};
+
+        records.forEach((record) => {
+          userWatchTime += record.play_time || 0;
+          if (record.save_time > userLastPlayTime) userLastPlayTime = record.save_time;
+          const sourceName = record.source_name || '未知来源';
+          userSourceCount[sourceName] = (userSourceCount[sourceName] || 0) + 1;
+        });
+
+        const recentRecords = records
+          .sort((a, b) => (b.save_time || 0) - (a.save_time || 0))
+          .slice(0, 10);
+
+        let mostWatchedSource = '';
+        let maxCount = 0;
+        for (const [source, count] of Object.entries(userSourceCount)) {
+          if (count > maxCount) { maxCount = count; mostWatchedSource = source; }
+        }
+
+        return {
+          stat: {
+            username: user.username,
+            totalWatchTime: userWatchTime,
+            totalPlays: records.length,
+            lastPlayTime: userLastPlayTime,
+            recentRecords,
+            avgWatchTime: records.length > 0 ? userWatchTime / records.length : 0,
+            mostWatchedSource,
+            registrationDays,
+            lastLoginTime: lastLoginTime || userCreatedAt,
+            loginCount,
+            createdAt: userCreatedAt,
+            lastLoginIp,
+            lastLoginLocation,
+            lastLoginDevice,
+            lastLoginBrowser,
+            lastLoginOs,
+          },
+          userCreatedAt,
+          userWatchTime,
+          userPlays: records.length,
+          userSourceCount,
+          dailyRecords: records.map(r => ({ save_time: r.save_time, play_time: r.play_time || 0 })),
+        };
+      } catch {
+        const userCreatedAt = user.createdAt || PROJECT_START_DATE;
+        const firstDate = new Date(userCreatedAt);
+        const currentDate = new Date();
+        const firstDay = new Date(firstDate.getFullYear(), firstDate.getMonth(), firstDate.getDate());
+        const currentDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
+        const registrationDays = Math.floor((currentDay.getTime() - firstDay.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+        return {
+          stat: {
             username: user.username,
             totalWatchTime: 0,
             totalPlays: 0,
@@ -133,108 +201,45 @@ export async function GET(request: NextRequest) {
             avgWatchTime: 0,
             mostWatchedSource: '',
             registrationDays,
-            lastLoginTime,
-            loginCount,
+            lastLoginTime: userCreatedAt,
+            loginCount: 0,
             createdAt: userCreatedAt,
-          });
-          continue;
-        }
-
-        // 计算用户统计
-        let userWatchTime = 0;
-        let userLastPlayTime = 0;
-        const userSourceCount: Record<string, number> = {};
-
-        records.forEach((record) => {
-          // 累计观看时间（使用播放进度）
-          userWatchTime += record.play_time || 0;
-
-          // 更新最后播放时间
-          if (record.save_time > userLastPlayTime) {
-            userLastPlayTime = record.save_time;
-          }
-
-          // 不再从播放记录推断登录时间，而是使用真实的登入时间
-          // 这里只更新播放相关的统计
-
-          // 统计来源
-          const sourceName = record.source_name || '未知来源';
-          userSourceCount[sourceName] = (userSourceCount[sourceName] || 0) + 1;
-          sourceCount[sourceName] = (sourceCount[sourceName] || 0) + 1;
-
-          // 统计近7天数据
-          const recordDate = new Date(record.save_time);
-          if (recordDate >= sevenDaysAgo) {
-            const dateKey = recordDate.toISOString().split('T')[0];
-            if (!dailyData[dateKey]) {
-              dailyData[dateKey] = { watchTime: 0, plays: 0 };
-            }
-            dailyData[dateKey].watchTime += record.play_time || 0;
-            dailyData[dateKey].plays += 1;
-          }
-        });
-
-        // 获取最近播放记录（按时间倒序，最多10条）
-        const recentRecords = records
-          .sort((a, b) => (b.save_time || 0) - (a.save_time || 0))
-          .slice(0, 10);
-
-        // 找出最常观看的来源
-        let mostWatchedSource = '';
-        let maxCount = 0;
-        for (const [source, count] of Object.entries(userSourceCount)) {
-          if (count > maxCount) {
-            maxCount = count;
-            mostWatchedSource = source;
-          }
-        }
-
-        const userStat = {
-          username: user.username,
-          totalWatchTime: userWatchTime,
-          totalPlays: records.length,
-          lastPlayTime: userLastPlayTime,
-          recentRecords,
-          avgWatchTime: records.length > 0 ? userWatchTime / records.length : 0,
-          mostWatchedSource,
-          registrationDays,
-          lastLoginTime: lastLoginTime || userCreatedAt, // 如果没有登入记录，使用注册时间
-          loginCount,
-          createdAt: userCreatedAt,
+          },
+          userCreatedAt,
+          userWatchTime: 0,
+          userPlays: 0,
+          userSourceCount: {} as Record<string, number>,
+          dailyRecords: [] as Array<{ save_time: number; play_time: number }>,
         };
+      }
+    }));
 
-        userStats.push(userStat);
+    // 串行聚合（无竞态，Promise.all 已全部完成）
+    for (const result of perUserResults) {
+      userStats.push(result.stat as any);
+      totalWatchTime += result.userWatchTime;
+      totalPlays += result.userPlays;
 
-        // 累计全站统计
-        totalWatchTime += userWatchTime;
-        totalPlays += records.length;
-      } catch (error) {
-        // console.error(`获取用户 ${user.username} 播放记录失败:`, error);
-        // 出错的用户显示为空统计
-        // 设置项目开始时间，2025年9月14日
-        const PROJECT_START_DATE = new Date('2025-09-14').getTime();
-        const userCreatedAt = user.createdAt || PROJECT_START_DATE;
+      for (const [source, count] of Object.entries(result.userSourceCount)) {
+        sourceCount[source] = (sourceCount[source] || 0) + count;
+      }
 
-        // 使用自然日计算，与个人统计保持一致
-        const firstDate = new Date(userCreatedAt);
-        const currentDate = new Date();
-        const firstDay = new Date(firstDate.getFullYear(), firstDate.getMonth(), firstDate.getDate());
-        const currentDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
-        const registrationDays = Math.floor((currentDay.getTime() - firstDay.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+      for (const r of result.dailyRecords) {
+        const recordDate = new Date(r.save_time);
+        if (recordDate >= sevenDaysAgo) {
+          const dateKey = recordDate.toISOString().split('T')[0];
+          if (!dailyData[dateKey]) dailyData[dateKey] = { watchTime: 0, plays: 0 };
+          dailyData[dateKey].watchTime += r.play_time;
+          dailyData[dateKey].plays += 1;
+        }
+      }
 
-        userStats.push({
-          username: user.username,
-          totalWatchTime: 0,
-          totalPlays: 0,
-          lastPlayTime: 0,
-          recentRecords: [],
-          avgWatchTime: 0,
-          mostWatchedSource: '',
-          registrationDays,
-          lastLoginTime: userCreatedAt, // 没有登入记录时使用注册时间
-          loginCount: 0,
-          createdAt: userCreatedAt,
-        });
+      const userCreatedAt = result.userCreatedAt;
+      if (userCreatedAt >= todayStart) todayNewUsers++;
+      totalRegisteredUsers++;
+      if (userCreatedAt >= sevenDaysAgo.getTime()) {
+        const regDate = new Date(userCreatedAt).toISOString().split('T')[0];
+        registrationData[regDate] = (registrationData[regDate] || 0) + 1;
       }
     }
 

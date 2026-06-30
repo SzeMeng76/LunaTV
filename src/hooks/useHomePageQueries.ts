@@ -29,6 +29,14 @@ import { DoubanItem, ShortDramaItem } from '@/lib/types';
 // 类型定义
 // ============================================================================
 
+export interface HomePageConfig {
+  showHotMovies?: boolean;
+  showHotTvShows?: boolean;
+  showHotVariety?: boolean;
+  showNewAnime?: boolean;
+  showHotShortDramas?: boolean;
+}
+
 export interface HomePageData {
   hotMovies: DoubanItem[];
   hotTvShows: DoubanItem[];
@@ -56,6 +64,7 @@ export interface HomePageQueriesResult {
  *
  * 特性：
  * - 并行获取 6 个数据源（热门电影、电视剧、综艺、动漫、短剧、番剧日历）
+ * - 根据配置动态启用/禁用查询（enabled 参数）
  * - 不同数据类型设置不同的 staleTime
  * - 使用 combine 函数聚合结果，减少重渲染
  * - 任一查询失败不影响其他查询
@@ -66,24 +75,35 @@ export interface HomePageQueriesResult {
  * - 短剧推荐: 5分钟 - 更新较慢
  * - 番剧日历: 10分钟 - 每日更新，可以缓存更久
  *
+ * @param config - 首页模块配置，控制哪些模块需要加载数据
+ *
  * @example
  * ```tsx
  * function HomePage() {
- *   const { data, isLoading, errors } = useHomePageQueries();
+ *   const config = { showHotMovies: true, showHotTvShows: false };
+ *   const { data, isLoading, errors } = useHomePageQueries(config);
  *
  *   if (isLoading) return <LoadingSpinner />;
  *
  *   return (
  *     <div>
  *       <HotMovies movies={data.hotMovies} />
- *       <HotTVShows shows={data.hotTvShows} />
  *       {errors.length > 0 && <ErrorBanner errors={errors} />}
  *     </div>
  *   );
  * }
  * ```
  */
-export function useHomePageQueries(): HomePageQueriesResult {
+export function useHomePageQueries(config?: HomePageConfig): HomePageQueriesResult {
+  // 默认所有模块都启用
+  const enabledConfig = useMemo(() => ({
+    showHotMovies: config?.showHotMovies ?? true,
+    showHotTvShows: config?.showHotTvShows ?? true,
+    showHotVariety: config?.showHotVariety ?? true,
+    showNewAnime: config?.showNewAnime ?? true,
+    showHotShortDramas: config?.showHotShortDramas ?? true,
+  }), [config]);
+
   // 使用 useCallback 缓存 combine 函数，避免每次渲染都重新创建
   const combine = useCallback((results: any[]) => {
     const [
@@ -147,6 +167,7 @@ export function useHomePageQueries(): HomePageQueriesResult {
         staleTime: 2 * 60 * 1000, // 2分钟 - 热门内容更新较频繁
         gcTime: 10 * 60 * 1000, // 10分钟
         retry: 2, // 失败重试2次
+        enabled: enabledConfig.showHotMovies, // 🔥 根据配置决定是否执行查询
       },
       // 2. 热门电视剧
       {
@@ -156,6 +177,7 @@ export function useHomePageQueries(): HomePageQueriesResult {
         staleTime: 2 * 60 * 1000,
         gcTime: 10 * 60 * 1000,
         retry: 2,
+        enabled: enabledConfig.showHotTvShows, // 🔥 根据配置决定是否执行查询
       },
       // 3. 热门综艺
       {
@@ -165,6 +187,7 @@ export function useHomePageQueries(): HomePageQueriesResult {
         staleTime: 2 * 60 * 1000,
         gcTime: 10 * 60 * 1000,
         retry: 2,
+        enabled: enabledConfig.showHotVariety, // 🔥 根据配置决定是否执行查询
       },
       // 4. 热门动漫
       {
@@ -178,6 +201,7 @@ export function useHomePageQueries(): HomePageQueriesResult {
         staleTime: 2 * 60 * 1000,
         gcTime: 10 * 60 * 1000,
         retry: 2,
+        enabled: enabledConfig.showNewAnime, // 🔥 根据配置决定是否执行查询
       },
       // 5. 短剧推荐
       {
@@ -186,14 +210,16 @@ export function useHomePageQueries(): HomePageQueriesResult {
         staleTime: 5 * 60 * 1000, // 5分钟 - 短剧推荐更新较慢
         gcTime: 15 * 60 * 1000, // 15分钟
         retry: 2,
+        enabled: enabledConfig.showHotShortDramas, // 🔥 根据配置决定是否执行查询
       },
-      // 6. 番剧日历
+      // 6. 番剧日历 - 总是启用，因为新番放送模块需要它
       {
         queryKey: ['bangumi', 'calendar'],
         queryFn: () => GetBangumiCalendarData(),
         staleTime: 10 * 60 * 1000, // 10分钟 - 每日更新，可以缓存更久
         gcTime: 30 * 60 * 1000, // 30分钟
         retry: 2,
+        enabled: enabledConfig.showNewAnime, // 🔥 番剧日历跟随新番放送模块
       },
     ],
     combine,

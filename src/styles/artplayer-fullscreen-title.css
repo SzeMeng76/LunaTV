@@ -93,3 +93,35 @@
     padding: 0 12px;
   }
 }
+
+/* ============================================
+   全屏实时时钟样式
+   - 右上角固定位置
+   - 跟随全屏层显示/隐藏
+   - 等宽数字防抖动
+   ============================================ */
+
+.fullscreen-clock {
+  font-size: 20px;
+  font-weight: 600;
+  color: white;
+  text-shadow:
+    0 1px 4px rgba(0, 0, 0, 0.6),
+    0 0 12px rgba(0, 0, 0, 0.3);
+  letter-spacing: 0.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 响应式 - 平板 */
+@media (max-width: 768px) {
+  .fullscreen-clock {
+    font-size: 16px;
+  }
+}
+
+/* 响应式 - 手机 */
+@media (max-width: 480px) {
+  .fullscreen-clock {
+    font-size: 13px;
+  }
+}
