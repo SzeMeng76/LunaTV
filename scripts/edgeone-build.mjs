@@ -276,20 +276,36 @@ function injectLayoutAuthCheck() {
   const authCheck = `
   // EdgeOne SSR auth guard
   const __h = await headers();
-  let __path = __h.get('x-pathname') || __h.get('x-invoke-path') || '';
-  if (!__path) {
-    const __ref = __h.get('referer') || '';
-    try { if (__ref) __path = new URL(__ref).pathname; } catch {}
+  const __rawPath =
+    __h.get('x-pathname') ||
+    __h.get('x-invoke-path') ||
+    __h.get('x-forwarded-uri') ||
+    __h.get('x-original-uri') ||
+    __h.get('x-original-url') ||
+    __h.get('x-rewrite-url') ||
+    __h.get('next-url') ||
+    __h.get('x-next-url') ||
+    '';
+  let __path = '';
+  let __search = '';
+  if (__rawPath) {
+    try {
+      const __url = new URL(__rawPath, 'http://edgeone.local');
+      __path = __url.pathname;
+      __search = __url.search;
+    } catch {
+      const __queryIndex = __rawPath.indexOf('?');
+      __path = __queryIndex === -1 ? __rawPath : __rawPath.slice(0, __queryIndex);
+      __search = __queryIndex === -1 ? '' : __rawPath.slice(__queryIndex);
+    }
   }
-  if (!__path) __path = '/';
 
   const __skipPaths = ${pageSkipPaths};
-  if (!__skipPaths.some((p) => __path.startsWith(p))) {
+  if (__path && !__skipPaths.some((p) => __path.startsWith(p))) {
     const __cookieStore = await cookies();
     const __authCookie = __cookieStore.get('user_auth') || __cookieStore.get('auth');
     if (!__authCookie) {
-      const __search = __h.get('x-search') || '';
-      redirect('/login?redirect=' + encodeURIComponent(__path + __search));
+      redirect('/login?redirect=' + encodeURIComponent(__path + (__h.get('x-search') || __search)));
     }
   }
 `;
