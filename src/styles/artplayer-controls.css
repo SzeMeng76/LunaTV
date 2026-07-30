@@ -36,9 +36,22 @@
 /* ===== Lock Mode Fix ===== */
 /* 修复锁定状态下控制栏背景异常显示的问题 */
 /* ArtPlayer 在锁定状态下会将控制栏移出视野，但 .art-bottom 的渐变背景仍然显示 */
+/* 用户反馈：锁定后黑色背景框还在遮挡字幕，需要完全隐藏 */
+/*
+ * 最佳实践：只使用 display: none 即可完全隐藏元素
+ * - 不渲染到DOM树
+ * - 不占用空间
+ * - 不响应事件
+ * - 性能最优
+ * 参考：https://stackoverflow.com/questions/14731049/visibilityhidden-vs-displaynone-vs-opacity0
+ */
 .art-lock .art-bottom {
-  background: transparent !important;
-  background-image: none !important;
+  display: none !important;
+}
+
+/* 同时隐藏控制栏的所有子元素（防御性编程） */
+.art-lock .art-controls {
+  display: none !important;
 }
 
 /* ===== Danmaku System Mobile Optimization ===== */

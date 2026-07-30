@@ -4,11 +4,34 @@ import { API_CONFIG, ApiSite, getConfig } from '@/lib/config';
 import { getCachedSearchPage, setCachedSearchPage } from '@/lib/search-cache';
 import { SearchResult } from '@/lib/types';
 import { cleanHtmlTags } from '@/lib/utils';
+import { decorateSearchResultQuality } from '@/lib/video-quality';
 // 使用轻量级 switch-chinese 库（93.8KB vs opencc-js 5.6MB）
 import stcasc, { ChineseType } from 'switch-chinese';
 
 // 创建模块级别的繁简转换器实例
 const converter = stcasc();
+
+// 部分源同时提供分享落地页（HTML）和真实的媒体直链，两组集数长度往往相同，
+// 必须优先选带媒体扩展名的分组，否则可能选中无法播放的 HTML 分享页
+const MEDIA_URL_PATTERN = /\.(m3u8|mp4|flv|ts)(\?|#|$)/i;
+
+function isMediaUrlGroup(urls: string[]): boolean {
+  return urls.some((url) => MEDIA_URL_PATTERN.test(url));
+}
+
+// 综合媒体链接优先级和集数长度，判断新分组是否应替换当前分组
+function isBetterEpisodeGroup(
+  candidateUrls: string[],
+  currentUrls: string[]
+): boolean {
+  const candidateIsMedia = isMediaUrlGroup(candidateUrls);
+  const currentIsMedia = isMediaUrlGroup(currentUrls);
+
+  if (candidateIsMedia !== currentIsMedia) {
+    return candidateIsMedia;
+  }
+  return candidateUrls.length > currentUrls.length;
+}
 
 interface ApiSearchItem {
   vod_id: string;
@@ -91,28 +114,28 @@ async function searchWithCache(
             const episode_title_url = title_url.split('$');
             if (
               episode_title_url.length === 2 &&
-              episode_title_url[1].endsWith('.m3u8')
+              /^https?:\/\//i.test(episode_title_url[1].trim())
             ) {
               // 标准格式：第1集$https://xxx.m3u8
               matchTitles.push(episode_title_url[0]);
               matchEpisodes.push(episode_title_url[1]);
             } else if (
               episode_title_url.length === 1 &&
-              episode_title_url[0].endsWith('.m3u8')
+              /^https?:\/\//i.test(episode_title_url[0].trim())
             ) {
               // 纯链接格式：https://xxx.m3u8（无标题信息）
               matchTitles.push(`第${matchEpisodes.length + 1}集`);
               matchEpisodes.push(episode_title_url[0]);
             }
           });
-          if (matchEpisodes.length > episodes.length) {
+          if (isBetterEpisodeGroup(matchEpisodes, episodes)) {
             episodes = matchEpisodes;
             titles = matchTitles;
           }
         });
       }
 
-      return {
+      const result = {
         id: item.vod_id.toString(),
         title: item.vod_name.trim().replace(/\s+/g, ' '),
         poster: item.vod_pic?.trim() || '', // 确保poster为有效字符串，过滤空白
@@ -127,8 +150,10 @@ async function searchWithCache(
         desc: cleanHtmlTags(item.vod_content || ''),
         type_name: item.type_name,
         douban_id: item.vod_douban_id,
-        remarks: item.vod_remarks, // 传递备注信息（如"已完结"等）
+        remarks: item.vod_remarks,
+        quality_tag: item.vod_remarks || item.type_name || item.vod_class || '',
       };
+      return decorateSearchResultQuality(result, item.vod_remarks, item.vod_class);
     });
 
     // 过滤掉集数为 0 的结果
@@ -529,13 +554,13 @@ export async function getDetailFromApi(
         const episode_title_url = title_url.split('$');
         if (
           episode_title_url.length === 2 &&
-          episode_title_url[1].endsWith('.m3u8')
+          /^https?:\/\//i.test(episode_title_url[1].trim())
         ) {
           matchTitles.push(episode_title_url[0]);
           matchEpisodes.push(episode_title_url[1]);
         }
       });
-      if (matchEpisodes.length > episodes.length) {
+      if (isBetterEpisodeGroup(matchEpisodes, episodes)) {
         episodes = matchEpisodes;
         titles = matchTitles;
       }
@@ -548,7 +573,7 @@ export async function getDetailFromApi(
     episodes = matches.map((link: string) => link.replace(/^\$/, ''));
   }
 
-  return {
+  const result = {
     id: id.toString(),
     title: videoDetail.vod_name,
     poster: videoDetail.vod_pic?.trim() || '', // 确保poster为有效字符串，过滤空白
@@ -563,8 +588,10 @@ export async function getDetailFromApi(
     desc: cleanHtmlTags(videoDetail.vod_content),
     type_name: videoDetail.type_name,
     douban_id: videoDetail.vod_douban_id,
-    remarks: videoDetail.vod_remarks, // 传递备注信息（如"已完结"等）
+    remarks: videoDetail.vod_remarks,
+    quality_tag: videoDetail.vod_remarks || videoDetail.type_name || videoDetail.vod_class || '',
   };
+  return decorateSearchResultQuality(result, videoDetail.vod_remarks, videoDetail.vod_class);
 }
 
 async function handleSpecialSourceDetail(

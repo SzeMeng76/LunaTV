@@ -9,7 +9,10 @@ export const revalidate = 0;
 export const fetchCache = 'force-no-store';
 
 // 默认短剧源
-const DEFAULT_SHORT_DRAMA_API = 'https://wwzy.tv/api.php/provide/vod';
+const DEFAULT_SHORT_DRAMA_API = 'https://tyyszyapi.com/api.php/provide/vod';
+
+// 短剧相关分类的关键词（父分类 + 子分类标签）
+const SHORT_DRAMA_KEYWORDS = ['短剧', '女频恋爱', '反转爽剧', '古装仙侠', '年代穿越', '脑洞悬疑', '现代都市'];
 
 // 从单个源获取短剧分类
 async function getCategoriesFromSource(api: string): Promise<{ type_id: number; type_name: string }[]> {
@@ -28,9 +31,9 @@ async function getCategoriesFromSource(api: string): Promise<{ type_id: number; 
   const data = await response.json();
   const categories = data.class || [];
 
-  // 筛选包含"短剧"的分类
+  // 筛选短剧父分类及所有子分类标签
   const shortDramaCategories = categories.filter((cat: any) =>
-    cat.type_name && cat.type_name.includes('短剧')
+    cat.type_name && SHORT_DRAMA_KEYWORDS.some(kw => cat.type_name.includes(kw))
   );
 
   if (shortDramaCategories.length > 0) {
@@ -40,7 +43,7 @@ async function getCategoriesFromSource(api: string): Promise<{ type_id: number; 
     }));
   }
 
-  // 如果没有找到包含"短剧"的分类，返回所有分类供用户查看
+  // 如果没有找到短剧相关分类，返回所有分类供用户查看
   return categories.map((cat: any) => ({
     type_id: cat.type_id,
     type_name: cat.type_name,

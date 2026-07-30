@@ -69,6 +69,14 @@ export class CalendarCacheManager {
         } else {
           throw new Error('KVRocks/Redis存储没有可用的set方法');
         }
+      } else if (storageType === 'sqlite') {
+        // SQLite - 使用通用缓存API
+        if (typeof storage.setCache === 'function') {
+          await storage.setCache(CALENDAR_DATA_KEY, dataStr);
+          await storage.setCache(CALENDAR_TIME_KEY, timestamp);
+        } else {
+          throw new Error('SQLite存储没有可用的setCache方法');
+        }
       } else {
         throw new Error(`不支持的存储类型: ${storageType}`);
       }

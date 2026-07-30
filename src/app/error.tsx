@@ -10,7 +10,22 @@ export default function Error({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  // DOM removeChild errors come from browser translation/extension plugins
+  // mutating React-managed nodes. Auto-reset silently instead of crashing.
+  const isDOMError =
+    error.name === 'NotFoundError' ||
+    error.message?.includes('removeChild') ||
+    error.message?.includes('The object can not be found here') ||
+    error.message?.includes('Node was not found') ||
+    error.message?.includes("Failed to execute 'removeChild'");
+
   useEffect(() => {
+    if (isDOMError) {
+      console.warn('[error.tsx] Suppressed DOM removeChild error (translation/extension):', error.message);
+      reset();
+      return;
+    }
+
     // ChunkLoadError：新版本部署后旧 chunk 失效，自动硬刷新一次
     // 用 10s TTL 防止无限循环；超过 10s 才允许下一次自动刷新
     const isChunkError =
@@ -85,6 +100,9 @@ export default function Error({
     // 打印到控制台
     console.error('🔥 页面崩溃:', crashLog);
   }, [error]);
+
+  // Don't flash error UI while reset() is in flight for DOM errors
+  if (isDOMError) return null;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900 px-4 py-8">

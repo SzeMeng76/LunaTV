@@ -53,3 +53,6 @@ package-lock.json
 # crash logs
 /logs
 crash-reports.jsonl
+
+# sqlite data
+data/

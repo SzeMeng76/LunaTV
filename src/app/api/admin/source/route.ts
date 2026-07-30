@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthInfoFromCookie } from '@/lib/auth';
 import { clearConfigCache, getConfig } from '@/lib/config';
 import { db } from '@/lib/db';
+import { validateProxyTargetUrl } from '@/lib/proxy-security';
 
 export const runtime = 'nodejs';
 
@@ -72,6 +73,16 @@ export async function POST(request: NextRequest) {
         if (adminConfig.SourceConfig.some((s) => s.key === key)) {
           return NextResponse.json({ error: '该源已存在' }, { status: 400 });
         }
+        // 校验采集源地址，拒绝内网/环回等 SSRF 目标，避免管理员（或被盗账号）
+        // 把内部服务地址存进配置，后续被搜索/详情/测速等运行时请求悄悄打到内网
+        try {
+          await validateProxyTargetUrl(api);
+        } catch (err) {
+          return NextResponse.json(
+            { error: `采集源地址不合法：${(err as Error).message}` },
+            { status: 400 }
+          );
+        }
         adminConfig.SourceConfig.push({
           key,
           name,
@@ -101,6 +112,16 @@ export async function POST(request: NextRequest) {
         const entry = adminConfig.SourceConfig.find((s) => s.key === key);
         if (!entry) {
           return NextResponse.json({ error: '源不存在' }, { status: 404 });
+        }
+        if (api) {
+          try {
+            await validateProxyTargetUrl(api);
+          } catch (err) {
+            return NextResponse.json(
+              { error: `采集源地址不合法：${(err as Error).message}` },
+              { status: 400 }
+            );
+          }
         }
         if (name) entry.name = name;
         if (api) entry.api = api;

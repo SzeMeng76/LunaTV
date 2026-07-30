@@ -2,6 +2,7 @@
 
 import { AdminConfig } from './admin.types';
 import { KvrocksStorage } from './kvrocks.db';
+import { SqliteStorage } from './sqlite.db';
 import { RedisStorage } from './redis.db';
 import {
   ContentStat,
@@ -23,6 +24,7 @@ const STORAGE_TYPE =
     | 'redis'
     | 'upstash'
     | 'kvrocks'
+    | 'sqlite'
     | undefined) || 'localstorage';
 
 // 创建存储实例
@@ -34,6 +36,14 @@ function createStorage(): IStorage {
       return new UpstashRedisStorage();
     case 'kvrocks':
       return new KvrocksStorage();
+    case 'sqlite':
+      if (process.env.EDGEONE_PAGES === '1') {
+        throw new Error(
+          '[LunaTV] SQLite storage is not supported on EdgeOne Pages: the platform has no persistent filesystem. ' +
+          'Please set NEXT_PUBLIC_STORAGE_TYPE to "upstash", "redis", or "kvrocks".'
+        );
+      }
+      return new SqliteStorage();
     case 'localstorage':
     default:
       return null as unknown as IStorage;

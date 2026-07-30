@@ -4,12 +4,15 @@ import { getConfig } from './config';
 import { DEFAULT_USER_AGENT } from './user-agent';
 import { ShortDramaItem } from './types';
 
+// 短剧相关分类关键词（父分类 + 子分类标签）
+const SHORT_DRAMA_KEYWORDS = ['短剧', '女频恋爱', '反转爽剧', '古装仙侠', '年代穿越', '脑洞悬疑', '现代都市'];
+
 // 从单个短剧源获取数据（通过分类名称查找）
 async function fetchFromShortDramaSource(
   api: string,
   size: number
 ): Promise<ShortDramaItem[]> {
-  // Step 1: 获取分类列表，找到"短剧"分类的ID
+  // Step 1: 获取分类列表，找到短剧相关分类的ID
   const listUrl = `${api}?ac=list`;
 
   const listResponse = await fetch(listUrl, {
@@ -27,18 +30,21 @@ async function fetchFromShortDramaSource(
   const listData = await listResponse.json();
   const categories = listData.class || [];
 
-  // 查找"短剧"分类（只要包含"短剧"两个字即可）
-  const shortDramaCategory = categories.find((cat: any) =>
-    cat.type_name && cat.type_name.includes('短剧')
+  // 查找短剧相关分类（父分类"短剧"或子分类标签）
+  const shortDramaCategories = categories.filter((cat: any) =>
+    cat.type_name && SHORT_DRAMA_KEYWORDS.some((kw: string) => cat.type_name.includes(kw))
   );
 
-  if (!shortDramaCategory) {
+  if (shortDramaCategories.length === 0) {
     console.log(`该源没有短剧分类`);
     return [];
   }
 
-  const categoryId = shortDramaCategory.type_id;
-  console.log(`找到短剧分类ID: ${categoryId}`);
+  // 优先用父分类"短剧"，没有则用第一个匹配的子分类
+  const primaryCategory = shortDramaCategories.find((cat: any) => cat.type_name === '短剧')
+    || shortDramaCategories[0];
+  const categoryId = primaryCategory.type_id;
+  console.log(`找到短剧分类ID: ${categoryId} (${primaryCategory.type_name})`);
 
   // Step 2: 获取该分类的短剧列表
   const apiUrl = `${api}?ac=detail&t=${categoryId}&pg=1`;
@@ -92,7 +98,7 @@ export async function getRecommendedShortDramas(
     if (shortDramaSources.length === 0) {
       console.log('📺 使用默认短剧源');
       return await fetchFromShortDramaSource(
-        'https://wwzy.tv/api.php/provide/vod',
+        'https://tyyszyapi.com/api.php/provide/vod',
         size
       );
     }
@@ -138,7 +144,7 @@ export async function getRecommendedShortDramas(
     try {
       console.log('⚠️ 出错，fallback到默认源');
       return await fetchFromShortDramaSource(
-        'https://wwzy.tv/api.php/provide/vod',
+        'https://tyyszyapi.com/api.php/provide/vod',
         size
       );
     } catch (fallbackError) {

@@ -9,44 +9,13 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const fetchCache = 'force-no-store';
 
-// 从单个短剧源获取数据（通过分类名称查找）
+// 从单个短剧源获取数据（直接按 categoryId 查询）
 async function fetchListFromSource(
   api: string,
+  categoryId: number,
   page: number,
   size: number
 ) {
-  // Step 1: 获取分类列表，找到"短剧"分类的ID
-  const listUrl = `${api}?ac=list`;
-
-  const listResponse = await fetch(listUrl, {
-    headers: {
-      'User-Agent': DEFAULT_USER_AGENT,
-      'Accept': 'application/json',
-    },
-    signal: AbortSignal.timeout(10000),
-  });
-
-  if (!listResponse.ok) {
-    throw new Error(`HTTP error! status: ${listResponse.status}`);
-  }
-
-  const listData = await listResponse.json();
-  const categories = listData.class || [];
-
-  // 查找"短剧"分类（只要包含"短剧"两个字即可）
-  const shortDramaCategory = categories.find((cat: any) =>
-    cat.type_name && cat.type_name.includes('短剧')
-  );
-
-  if (!shortDramaCategory) {
-    console.log(`该源没有短剧分类`);
-    return { list: [], hasMore: false };
-  }
-
-  const categoryId = shortDramaCategory.type_id;
-  console.log(`找到短剧分类ID: ${categoryId}`);
-
-  // Step 2: 获取该分类的短剧列表
   const apiUrl = `${api}?ac=detail&t=${categoryId}&pg=${page}`;
 
   const response = await fetch(apiUrl, {
@@ -102,7 +71,8 @@ async function getShortDramaListInternal(
     // 如果没有配置短剧源，使用默认源
     if (shortDramaSources.length === 0) {
       return await fetchListFromSource(
-        'https://wwzy.tv/api.php/provide/vod',
+        'https://tyyszyapi.com/api.php/provide/vod',
+        category,
         page,
         size
       );
@@ -111,7 +81,7 @@ async function getShortDramaListInternal(
     // 有配置短剧源，聚合所有源的数据
     const results = await Promise.allSettled(
       shortDramaSources.map(source => {
-        return fetchListFromSource(source.api, page, size);
+        return fetchListFromSource(source.api, category, page, size);
       })
     );
 
@@ -145,7 +115,8 @@ async function getShortDramaListInternal(
     // fallback到默认源
     try {
       return await fetchListFromSource(
-        'https://wwzy.tv/api.php/provide/vod',
+        'https://tyyszyapi.com/api.php/provide/vod',
+        category,
         page,
         size
       );

@@ -1,9 +1,10 @@
 'use client';
 
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
+import { toast } from 'sonner';
 import { M3U8DownloadTask, parseM3U8, downloadM3U8Video, PauseResumeController, StreamSaverMode } from '@/lib/download';
 import type { DownloadProgress } from '@/lib/download';
-import { getBestStreamMode, detectStreamModeSupport, type StreamModeSupport } from '@/lib/download/stream-mode-detector';
+import { getBestStreamMode, detectStreamModeSupport, estimateServiceWorkerRisk, type StreamModeSupport } from '@/lib/download/stream-mode-detector';
 import {
   getAllTasks,
   saveTask,
@@ -181,6 +182,20 @@ export function DownloadProvider({ children }: { children: React.ReactNode }) {
         const m3u8Task = await parseM3U8(url, requestHeaders);
         console.log('[DownloadContext] M3U8 解析成功，片段数:', m3u8Task.rangeDownload.targetSegment);
 
+        // Service Worker 模式在长视频/慢网络下有被浏览器终止导致下载不完整的风险
+        // 主动提醒用户，避免"进度显示100%但文件不完整"的静默失败
+        if (
+          settings.streamMode === 'service-worker' &&
+          estimateServiceWorkerRisk(m3u8Task.durationSecond, settings.concurrency)
+        ) {
+          toast.warning('当前下载模式可能导致长视频下载不完整', {
+            description: streamModeSupport.fileSystem
+              ? '浏览器会在约5分钟无活动后关闭下载通道，建议前往下载设置切换为"文件系统直写"模式'
+              : '浏览器会在约5分钟无活动后关闭下载通道，建议使用 Chrome/Edge 浏览器以获得更稳定的下载',
+            duration: 8000,
+          });
+        }
+
         // 创建任务对象
         const taskId = `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         const newTask: M3U8DownloadTask = {
@@ -208,7 +223,7 @@ export function DownloadProvider({ children }: { children: React.ReactNode }) {
         throw error;
       }
     },
-    []
+    [settings.streamMode, settings.concurrency, streamModeSupport.fileSystem]
   );
 
   const startTask = useCallback(

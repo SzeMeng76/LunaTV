@@ -99,10 +99,34 @@ export function getStreamModeDescription(mode: StreamSaverMode): string {
     case 'file-system':
       return '直接写入磁盘，无大小限制（推荐）';
     case 'service-worker':
-      return '边下边存，无大小限制，适合超大文件';
+      return '边下边存，无大小限制；⚠️ 浏览器会在约5分钟无活动后关闭 Service Worker，长视频或慢网络下可能导致下载不完整';
     case 'disabled':
       return '内存下载，适合小文件（< 500MB）';
     default:
       return '';
   }
+}
+
+/**
+ * 估算 Service Worker 模式在给定时长/并发下是否有较高的“存活超时”风险
+ * 浏览器通常在 Service Worker 空闲/运行约 5 分钟后将其终止，
+ * 一旦终止，边下边存会静默丢失后续数据但不会报错
+ * @param durationSecond 视频时长（秒）
+ * @param concurrency 并发下载数
+ */
+export function estimateServiceWorkerRisk(
+  durationSecond: number,
+  concurrency: number
+): boolean {
+  // 粗略估算：按 2Mbps 码率、6 线程并发为基准，估算下载耗时
+  const estimatedBitrateBps = 2 * 1024 * 1024; // 2Mbps
+  const estimatedTotalBytes = (durationSecond * estimatedBitrateBps) / 8;
+  const baselineConcurrency = 6;
+  const effectiveConcurrency = Math.max(1, concurrency || baselineConcurrency);
+  // 假设单线程下载速度约 1MB/s，随并发数线性提升（保守估计）
+  const estimatedSpeedBps = 1 * 1024 * 1024 * effectiveConcurrency;
+  const estimatedDownloadSeconds = estimatedTotalBytes / estimatedSpeedBps;
+
+  // 预计下载耗时超过 4 分钟（留出安全余量），认为有较高的 SW 超时风险
+  return estimatedDownloadSeconds > 240;
 }

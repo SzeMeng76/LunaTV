@@ -117,7 +117,7 @@ export async function GET(request: NextRequest) {
       target
     );
     const list = doubanData.items
-      .filter((item) => item.type == 'movie' || item.type == 'tv')
+      .filter((item) => (item.type == 'movie' || item.type == 'tv') && item.id && item.title)
       .map((item) => ({
         id: item.id,
         title: item.title,

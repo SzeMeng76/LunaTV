@@ -664,22 +664,26 @@ function SearchPageClient() {
     source: string;
     title: string;
     year: string;
+    resolution: string;
     yearOrder: 'none' | 'asc' | 'desc';
   }>({
     source: 'all',
     title: 'all',
     year: 'all',
+    resolution: 'all',
     yearOrder: 'none',
   });
   const [filterAgg, setFilterAgg] = useState<{
     source: string;
     title: string;
     year: string;
+    resolution: string;
     yearOrder: 'none' | 'asc' | 'desc';
   }>({
     source: 'all',
     title: 'all',
     year: 'all',
+    resolution: 'all',
     yearOrder: 'none',
   });
 
@@ -911,6 +915,8 @@ function SearchPageClient() {
     const sourcesSet = new Map<string, string>();
     const titlesSet = new Set<string>();
     const yearsSet = new Set<string>();
+    let hasUnknownResolution = false;
+    const resolutionLevelsSet = new Set<number>();
 
     searchResults.forEach((item) => {
       if (item.source && item.source_name) {
@@ -918,6 +924,9 @@ function SearchPageClient() {
       }
       if (item.title) titlesSet.add(item.title);
       if (item.year) yearsSet.add(item.year);
+      const level = item.resolution_level || 0;
+      if (level > 0) resolutionLevelsSet.add(level);
+      else hasUnknownResolution = true;
     });
 
     const sourceOptions: { label: string; value: string }[] = [
@@ -946,16 +955,26 @@ function SearchPageClient() {
       ...(hasUnknown ? [{ label: '未知', value: 'unknown' }] : []),
     ];
 
+    const resolutionOptions: { label: string; value: string }[] = [
+      { label: '全部清晰度', value: 'all' },
+      ...(resolutionLevelsSet.has(2160) ? [{ label: '4K+', value: '2160' }] : []),
+      ...(resolutionLevelsSet.has(1080) ? [{ label: '1080p+', value: '1080' }] : []),
+      ...(resolutionLevelsSet.has(720) ? [{ label: '720p+', value: '720' }] : []),
+      ...(hasUnknownResolution ? [{ label: '未知', value: 'unknown' }] : []),
+    ];
+
     const categoriesAll: SearchFilterCategory[] = [
       { key: 'source', label: '来源', options: sourceOptions },
       { key: 'title', label: '标题', options: titleOptions },
       { key: 'year', label: '年份', options: yearOptions },
+      { key: 'resolution', label: '清晰度', options: resolutionOptions },
     ];
 
     const categoriesAgg: SearchFilterCategory[] = [
       { key: 'source', label: '来源', options: sourceOptions },
       { key: 'title', label: '标题', options: titleOptions },
       { key: 'year', label: '年份', options: yearOptions },
+      { key: 'resolution', label: '清晰度', options: resolutionOptions },
     ];
 
     return { categoriesAll, categoriesAgg };
@@ -963,7 +982,15 @@ function SearchPageClient() {
 
   // 非聚合：应用筛选与排序
   const filteredAllResults = useMemo(() => {
-    const { source, title, year, yearOrder } = filterAll;
+    const { source, title, year, resolution, yearOrder } = filterAll;
+
+    const matchesResolution = (item: SearchResult) => {
+      if (resolution === 'all') return true;
+      const level = item.resolution_level || 0;
+      if (resolution === 'unknown') return level === 0;
+      const minLevel = parseInt(resolution, 10);
+      return level >= minLevel;
+    };
 
     // 首先应用精确搜索过滤
     const exactSearchFiltered = exactSearch
@@ -976,6 +1003,7 @@ function SearchPageClient() {
       if (source !== 'all' && item.source !== source) return false;
       if (title !== 'all' && item.title !== title) return false;
       if (year !== 'all' && item.year !== year) return false;
+      if (!matchesResolution(item)) return false;
       return true;
     });
 
@@ -1019,7 +1047,16 @@ function SearchPageClient() {
 
   // 聚合：应用筛选与排序
   const filteredAggResults = useMemo(() => {
-    const { source, title, year, yearOrder } = filterAgg as any;
+    const { source, title, year, resolution, yearOrder } = filterAgg as any;
+
+    const matchesResolution = (item: SearchResult) => {
+      if (resolution === 'all') return true;
+      const level = item.resolution_level || 0;
+      if (resolution === 'unknown') return level === 0;
+      const minLevel = parseInt(resolution, 10);
+      return level >= minLevel;
+    };
+
     const filtered = aggregatedResults.filter(([_, group]) => {
       const gTitle = group[0]?.title ?? '';
       const gYear = group[0]?.year ?? 'unknown';
@@ -1028,6 +1065,7 @@ function SearchPageClient() {
       if (!hasSource) return false;
       if (title !== 'all' && gTitle !== title) return false;
       if (year !== 'all' && gYear !== year) return false;
+      if (resolution !== 'all' && !group.some((item) => matchesResolution(item))) return false;
       return true;
     });
 

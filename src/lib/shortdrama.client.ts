@@ -17,7 +17,7 @@ import { DEFAULT_USER_AGENT } from './user-agent';
 const pendingRequests = new Map<string, Promise<any>>();
 
 // 新的视频源 API（资源站采集接口）- 用于分类和搜索
-const SHORTDRAMA_API_BASE = 'https://wwzy.tv/api.php/provide/vod';
+const SHORTDRAMA_API_BASE = 'https://tyyszyapi.com/api.php/provide/vod';
 
 // 检测是否为移动端环境
 const isMobile = () => {

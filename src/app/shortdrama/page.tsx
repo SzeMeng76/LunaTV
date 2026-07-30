@@ -75,6 +75,18 @@ export default function ShortDramaPage() {
     [data]
   );
 
+  // 加载完成后如果当前分类是空的，自动跳到下一个有内容的分类
+  useEffect(() => {
+    if (isLoading || isSearchMode || !selectedCategory || categories.length === 0) return;
+    if (data && allDramas.length === 0) {
+      const currentIndex = categories.findIndex(c => c.type_id === selectedCategory);
+      const next = categories[currentIndex + 1];
+      if (next) {
+        setSelectedCategory(next.type_id);
+      }
+    }
+  }, [isLoading, data, allDramas, selectedCategory, categories, isSearchMode]);
+
   const observer = useRef<IntersectionObserver | undefined>(undefined);
   const lastDramaElementRef = useCallback(
     (node: HTMLDivElement) => {

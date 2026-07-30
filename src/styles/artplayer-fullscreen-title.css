@@ -93,3 +93,28 @@
     padding: 0 12px;
   }
 }
+
+/* ============================================
+   全屏实时时钟样式
+   ============================================ */
+
+.fullscreen-clock {
+  font-size: 28px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6), 0 0 12px rgba(0, 0, 0, 0.3);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 1px;
+}
+
+@media (max-width: 768px) {
+  .fullscreen-clock {
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .fullscreen-clock {
+    font-size: 16px;
+  }
+}

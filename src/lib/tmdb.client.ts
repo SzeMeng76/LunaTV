@@ -1,12 +1,24 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { getConfig } from '@/lib/config';
+import type { AdminConfig } from '@/lib/admin.types';
 import { TMDB_CACHE_EXPIRE, getCacheKey, getCache, setCache } from '@/lib/tmdb-cache';
 import { DEFAULT_USER_AGENT } from '@/lib/user-agent';
 
 // TMDB API 配置
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 const TMDB_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
+
+/**
+ * 若已启用 VideoProxyConfig（Cloudflare Worker 代理），把目标 URL 包一层代理，
+ * 用于绕过 TMDB 在国内的访问限制/加速图片加载。未启用时原样返回。
+ */
+export function applyCorsProxy(url: string, config: AdminConfig): string {
+  const proxyConfig = config.VideoProxyConfig;
+  if (!proxyConfig?.enabled || !proxyConfig.proxyUrl) return url;
+  const base = proxyConfig.proxyUrl.replace(/\/$/, '');
+  return `${base}/?url=${encodeURIComponent(url)}`;
+}
 
 // TMDB API 响应类型
 interface TMDBPerson {
@@ -239,9 +251,10 @@ async function fetchTMDB<T>(endpoint: string, params: Record<string, string> = {
     url.searchParams.append(key, value);
   });
 
+  const requestUrl = applyCorsProxy(url.toString(), config);
   console.log(`[TMDB API] 请求: ${endpoint}`);
 
-  const response = await fetch(url.toString(), {
+  const response = await fetch(requestUrl, {
     headers: {
       'Accept': 'application/json',
       'User-Agent': DEFAULT_USER_AGENT,
@@ -449,6 +462,7 @@ export async function searchTMDBActorWorks(
     }
 
     console.log(`✅ [TMDB] TMDB功能已启用`);
+    const config = await getConfig();
     // 检查缓存 - 为整个搜索结果缓存
     const cacheKey = getCacheKey('actor_works', { actorName, type, ...filterOptions });
     console.log(`🔑 [TMDB] 缓存Key: ${cacheKey}`);
@@ -602,7 +616,7 @@ export async function searchTMDBActorWorks(
         return {
           id: work.id.toString(),
           title: work.title || work.name || '',
-          poster: work.poster_path ? `${TMDB_IMAGE_BASE_URL}${work.poster_path}` : '',
+          poster: work.poster_path ? applyCorsProxy(`${TMDB_IMAGE_BASE_URL}${work.poster_path}`, config) : '',
           rate: work.vote_average ? work.vote_average.toFixed(1) : '',
           year: year,
           popularity: work.popularity,

@@ -92,6 +92,8 @@ export interface ShortDramaItem {
   backdrop?: string; // 高清背景图
   vote_average?: number; // 用户评分 (0-10)
   tmdb_id?: number; // TMDB ID
+  douban_id?: string; // 豆瓣ID
+  year?: string; // 年份
 }
 
 // 短剧解析结果数据结构
@@ -258,6 +260,9 @@ export interface SearchResult {
   type_name?: string;
   douban_id?: number;
   remarks?: string; // 备注信息（如"已完结"、"更新至20集"等）
+  resolution?: string; // 视频分辨率（如"1080P"、"4K"）
+  resolution_level?: number; // 分辨率等级（用于排序）
+  quality_tag?: string; // 画质标签（如"蓝光"、"高清"等）
   drama_name?: string; // 短剧名称（用于备用API fallback）
   metadata?: {
     // 备用API提供的额外元数据

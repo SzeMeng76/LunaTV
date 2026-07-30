@@ -26,6 +26,7 @@ export {
   getStreamModeName,
   getStreamModeIcon,
   getStreamModeDescription,
+  estimateServiceWorkerRisk,
 } from './stream-mode-detector';
 
 // 从 URL 规范化工具导出

@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
       {
         error: '不支持本地存储进行管理员配置',
       },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -38,6 +38,10 @@ export async function POST(request: NextRequest) {
       DoubanProxy,
       DoubanImageProxyType,
       DoubanImageProxy,
+      BangumiApiType,
+      BangumiApiProxy,
+      BangumiImageProxyType,
+      BangumiImageProxy,
       DisableYellowFilter,
       ShowAdultContent,
       FluidSearch,
@@ -57,6 +61,10 @@ export async function POST(request: NextRequest) {
       DoubanProxy: string;
       DoubanImageProxyType: string;
       DoubanImageProxy: string;
+      BangumiApiType?: string;
+      BangumiApiProxy?: string;
+      BangumiImageProxyType?: string;
+      BangumiImageProxy?: string;
       DisableYellowFilter: boolean;
       ShowAdultContent: boolean;
       FluidSearch: boolean;
@@ -98,7 +106,7 @@ export async function POST(request: NextRequest) {
     if (username !== process.env.USERNAME) {
       // 管理员
       const user = adminConfig.UserConfig.Users.find(
-        (u) => u.username === username
+        (u) => u.username === username,
       );
       if (!user || user.role !== 'admin' || user.banned) {
         return NextResponse.json({ error: '权限不足' }, { status: 401 });
@@ -116,6 +124,10 @@ export async function POST(request: NextRequest) {
       DoubanProxy,
       DoubanImageProxyType,
       DoubanImageProxy,
+      BangumiApiType: BangumiApiType || 'server',
+      BangumiApiProxy: BangumiApiProxy || '',
+      BangumiImageProxyType: BangumiImageProxyType || 'server',
+      BangumiImageProxy: BangumiImageProxy || '',
       DisableYellowFilter,
       ShowAdultContent,
       FluidSearch,
@@ -169,11 +181,12 @@ export async function POST(request: NextRequest) {
       { ok: true, shouldReload: true }, // 添加shouldReload标志通知前端刷新页面
       {
         headers: {
-          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0',
+          'Cache-Control':
+            'no-store, no-cache, must-revalidate, proxy-revalidate',
+          Pragma: 'no-cache',
+          Expires: '0',
         },
-      }
+      },
     );
   } catch (error) {
     console.error('更新站点配置失败:', error);
@@ -182,7 +195,7 @@ export async function POST(request: NextRequest) {
         error: '更新站点配置失败',
         details: (error as Error).message,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

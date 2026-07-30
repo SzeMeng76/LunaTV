@@ -34,12 +34,11 @@ import NetDiskButton from '@/components/play/NetDiskButton';
 import CollapseButton from '@/components/play/CollapseButton';
 import BackToTopButton from '@/components/play/BackToTopButton';
 import LoadingScreen from '@/components/play/LoadingScreen';
-import VideoInfoSection from '@/components/play/VideoInfoSection';
+import PlayInfoPanel from '@/components/play/PlayInfoPanel';
 import VideoLoadingOverlay from '@/components/play/VideoLoadingOverlay';
 import WatchRoomSyncBanner from '@/components/play/WatchRoomSyncBanner';
 import SourceSwitchDialog from '@/components/play/SourceSwitchDialog';
 import OwnerChangeDialog from '@/components/play/OwnerChangeDialog';
-import VideoCoverDisplay from '@/components/play/VideoCoverDisplay';
 import PlayErrorDisplay from '@/components/play/PlayErrorDisplay';
 import DanmuSettingsPanel from '@/components/play/DanmuSettingsPanel';
 import WebSRSettingsPanel from '@/components/play/WebSRSettingsPanel';
@@ -67,8 +66,12 @@ import {
 } from '@/lib/douban.client';
 import { SearchResult } from '@/lib/types';
 import {
+  applyFirstPartyM3u8Proxy,
+  applyVideoPlayProxy,
   getVideoResolutionFromM3u8,
+  isFirstPartyM3u8Proxy,
   processImageUrl,
+  stripVideoPlayProxy,
   VideoSourceTestResult,
 } from '@/lib/utils';
 import { useWatchRoomContextSafe } from '@/components/WatchRoomProvider';
@@ -551,6 +554,18 @@ function PlayPageClient() {
   const loadingMovieDetails = movieDetailsStatus === 'pending';
   const loadingComments = commentsStatus === 'pending';
 
+  // TMDB 数据
+  const [tmdbData, setTmdbData] = useState<{
+    backdrop: string | null;
+    poster: string | null;
+    logo: string | null;
+    title: string | null;
+    overview: string | null;
+    rating: number | null;
+    year: string | null;
+    numberOfSeasons: number | null;
+  } | null>(null);
+
   // 当前源和ID
   const [currentSource, setCurrentSource] = useState(
     searchParams.get('source') || '',
@@ -574,6 +589,29 @@ function PlayPageClient() {
   // 搜索所需信息
   const [searchTitle] = useState(searchParams.get('stitle') || '');
   const [searchType] = useState(searchParams.get('stype') || '');
+
+  // TMDB 数据获取
+  const tmdbFetchedRef = useRef(false);
+  useEffect(() => {
+    if (!videoTitle) return;
+    if (tmdbFetchedRef.current) return;
+    tmdbFetchedRef.current = true;
+    let cancelled = false;
+    const params = new URLSearchParams({ title: videoTitle });
+    if (videoYear) params.set('year', videoYear);
+    if (movieDetails?.original_title)
+      params.set('original_title', movieDetails.original_title);
+    if (searchType) params.set('stype', searchType);
+    fetch(`/api/tmdb/backdrop?${params.toString()}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((json) => {
+        if (!cancelled && json?.data) setTmdbData(json.data);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [videoTitle, videoYear, movieDetails?.original_title, searchType]);
 
   // 是否需要优选
   const [needPrefer, setNeedPrefer] = useState(
@@ -758,6 +796,24 @@ function PlayPageClient() {
       </div>
     `;
   }, [currentEpisodeIndex, detail, portalContainer]);
+
+  // 全屏实时时钟 — 每秒更新一次
+  useEffect(() => {
+    const updateClock = () => {
+      if (!artPlayerRef.current) return;
+      const clockLayer = artPlayerRef.current.layers['fullscreen-clock'];
+      if (!clockLayer) return;
+      const now = new Date();
+      const hh = String(now.getHours()).padStart(2, '0');
+      const mm = String(now.getMinutes()).padStart(2, '0');
+      const ss = String(now.getSeconds()).padStart(2, '0');
+      clockLayer.innerHTML = `<span class="fullscreen-clock">${hh}:${mm}:${ss}</span>`;
+    };
+
+    updateClock();
+    const interval = setInterval(updateClock, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   // 获取自定义去广告代码
   useEffect(() => {
@@ -988,6 +1044,8 @@ function PlayPageClient() {
   const lastVolumeRef = useRef<number>(0.7);
   // 上次使用的播放速率，从 localStorage 恢复
   const lastPlaybackRateRef = useRef<number>(loadPlaybackRate());
+  // 标记是否正在切换源/集数，用于阻止 ratechange 保存瞬态的播放速率重置
+  const isSourceSwitchingRef = useRef(false);
 
   const [sourceSearchLoading, setSourceSearchLoading] = useState(false);
   const [sourceSearchError, setSourceSearchError] = useState<string | null>(
@@ -2425,7 +2483,7 @@ function PlayPageClient() {
 
         if (response.ok) {
           const result = await response.json();
-          const newUrl = result.url || '';
+          const newUrl = applyVideoPlayProxy(result.url || '');
           if (newUrl !== videoUrl) {
             setVideoUrl(newUrl);
           }
@@ -2454,6 +2512,11 @@ function PlayPageClient() {
       if (isEmbySource && newUrl && currentAudioTrackRef.current >= 0) {
         newUrl = appendAudioStreamIndex(newUrl, currentAudioTrackRef.current);
         console.log('🎵 换集时应用音轨参数:', currentAudioTrackRef.current);
+      }
+
+      // ☁️ Emby 源需要自定义鉴权头，不走 Cloudflare Worker 代理；其余源套一层加速
+      if (!isEmbySource) {
+        newUrl = applyVideoPlayProxy(newUrl);
       }
 
       if (newUrl !== videoUrl) {
@@ -3754,6 +3817,83 @@ function PlayPageClient() {
     initFromHistory();
   }, []);
 
+  // 🚀 换源完成后加载弹幕（由 switchQuality 的 Promise 触发，而非固定延迟）
+  const loadDanmuAfterSourceSwitch = async () => {
+    if (
+      !artPlayerRef.current?.plugins?.artplayerPluginDanmuku ||
+      !externalDanmuEnabledRef.current
+    ) {
+      return;
+    }
+    console.log('🔄 换源完成，开始优化弹幕加载...');
+
+    // 确保状态完全重置
+    lastDanmuLoadKeyRef.current = '';
+    danmuLoadingRef.current = false;
+
+    try {
+      const startTime = performance.now();
+      const result = await loadExternalDanmu();
+
+      if (
+        result.count > 0 &&
+        artPlayerRef.current?.plugins?.artplayerPluginDanmuku
+      ) {
+        const plugin = artPlayerRef.current.plugins.artplayerPluginDanmuku;
+
+        // 🚀 确保在加载新弹幕前完全清空旧弹幕
+        plugin.reset(); // 立即回收所有正在显示的弹幕DOM
+        plugin.load(); // 不传参数，完全清空队列
+        console.log('🧹 换源后已清空旧弹幕，准备加载新弹幕');
+
+        // 🚀 优化大量弹幕的加载：分批处理，减少阻塞
+        if (result.count > 1000) {
+          console.log(`📊 检测到大量弹幕 (${result.count}条)，启用分批加载`);
+
+          // 先加载前500条，快速显示
+          const firstBatch = result.data.slice(0, 500);
+          plugin.load(firstBatch);
+
+          // 剩余弹幕分批异步加载，避免阻塞
+          const remainingBatches = [];
+          for (let i = 500; i < result.data.length; i += 300) {
+            remainingBatches.push(result.data.slice(i, i + 300));
+          }
+
+          // 使用requestIdleCallback分批加载剩余弹幕
+          remainingBatches.forEach((batch, index) => {
+            setTimeout(
+              () => {
+                if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
+                  // 将批次弹幕追加到现有队列
+                  batch.forEach((danmu) => {
+                    plugin.emit(danmu).catch(console.warn);
+                  });
+                }
+              },
+              (index + 1) * 100,
+            ); // 每100ms加载一批
+          });
+
+          console.log(
+            `⚡ 分批加载完成: 首批${firstBatch.length}条 + ${remainingBatches.length}个后续批次`,
+          );
+        } else {
+          // 弹幕数量较少，正常加载
+          plugin.load(result.data);
+          console.log(`✅ 换源后弹幕加载完成: ${result.count} 条`);
+        }
+
+        const loadTime = performance.now() - startTime;
+        console.log(`⏱️ 弹幕加载耗时: ${loadTime.toFixed(2)}ms`);
+      } else {
+        console.log('📭 换源后没有弹幕数据');
+      }
+    } catch (error) {
+      console.error('❌ 换源后弹幕加载失败:', error);
+    }
+  };
+
   // 🚀 优化的换源处理（防连续点击）
   const handleSourceChange = async (
     newSource: string,
@@ -3843,6 +3983,8 @@ function PlayPageClient() {
       );
       if (!newDetail) {
         setError('未找到匹配结果');
+        isSourceChangingRef.current = false;
+        setIsVideoLoading(false);
         return;
       }
 
@@ -4731,6 +4873,9 @@ function PlayPageClient() {
           const savedPlaybackRate = loadPlaybackRate();
           lastPlaybackRateRef.current = savedPlaybackRate;
 
+          // 标记切换中，阻止 video:ratechange 将浏览器重置的 1.0 保存到 localStorage
+          isSourceSwitchingRef.current = true;
+
           let switchPromise: Promise<any>;
           if (isEpisodeChange) {
             console.log(`🎯 开始切换集数: ${videoUrl} (重置播放时间到0)`);
@@ -4781,6 +4926,8 @@ function PlayPageClient() {
             artPlayerRef.current.playbackRate = savedPlaybackRate;
             console.log(`✅ 恢复播放速率: ${savedPlaybackRate}x`);
           }
+          // 切换完成，恢复 ratechange 的正常保存行为
+          isSourceSwitchingRef.current = false;
 
           if (artPlayerRef.current?.video) {
             ensureVideoSource(
@@ -4919,6 +5066,12 @@ function PlayPageClient() {
               if (video.hls) {
                 video.hls.destroy();
               }
+
+              // ☁️ 新地址加载，重置 Worker 代理 / 第一方代理降级标记
+              (video as any)._proxyFallbackDone = false;
+              (video as any)._firstPartyProxyFallbackDone = false;
+              (video as any)._currentHlsUrl = url;
+              (video as any)._consecutiveNetworkErrorCount = 0;
 
               // 在函数内部重新检测iOS13+设备
               const localIsIOS13 = isIOS13;
@@ -5087,6 +5240,41 @@ function PlayPageClient() {
                 },
               );
 
+              // 依次尝试：Worker 代理 -> 直连 -> 本站第一方代理，每一级只降级一次。
+              // 返回 true 表示已发起下一级 loadSource，调用方不应再做其他恢复动作；
+              // 返回 false 表示所有降级手段已用尽。
+              const tryFallbackOrGiveUp = (): boolean => {
+                const activeUrl = (video as any)._currentHlsUrl || url;
+
+                // ☁️ Worker 代理请求失败（超时/502/畸形响应等）时，自动降级到直连原始地址
+                const rawUrl = !(video as any)._proxyFallbackDone
+                  ? stripVideoPlayProxy(activeUrl)
+                  : null;
+                if (rawUrl) {
+                  console.warn('Worker 代理错误，降级为直连:', rawUrl);
+                  (video as any)._proxyFallbackDone = true;
+                  (video as any)._currentHlsUrl = rawUrl;
+                  (video as any)._consecutiveNetworkErrorCount = 0;
+                  hls.loadSource(rawUrl);
+                  return true;
+                }
+                // 🧭 直连失败时，最后尝试走本站第一方 m3u8 代理——常见于上游要求
+                // 特定 Referer/UA 或不返回 CORS 头，浏览器直连必然失败。
+                if (
+                  !(video as any)._firstPartyProxyFallbackDone &&
+                  !isFirstPartyM3u8Proxy(activeUrl)
+                ) {
+                  (video as any)._firstPartyProxyFallbackDone = true;
+                  const proxiedUrl = applyFirstPartyM3u8Proxy(activeUrl);
+                  console.warn('直连错误，降级为第一方代理:', proxiedUrl);
+                  (video as any)._currentHlsUrl = proxiedUrl;
+                  (video as any)._consecutiveNetworkErrorCount = 0;
+                  hls.loadSource(proxiedUrl);
+                  return true;
+                }
+                return false;
+              };
+
               hls.on(Hls.Events.ERROR, function (event: any, data: any) {
                 console.error('HLS Error:', event, data);
 
@@ -5119,17 +5307,51 @@ function PlayPageClient() {
                   return;
                 }
 
+                // 旧版/不兼容的代理（例如未实现 m3u8 重写的 Worker）常常不会让 hls.js
+                // 判定为 fatal：分片请求持续失败但清晰度切换/内部重试机制会不断吸收错误，
+                // 播放器只是卡住不报错。这里独立计数非 fatal 的网络错误，达到阈值时
+                // 主动触发降级，而不是干等一个永远不会到来的 fatal 事件。
+                if (
+                  !data.fatal &&
+                  data.type === Hls.ErrorTypes.NETWORK_ERROR &&
+                  (data.details === Hls.ErrorDetails.FRAG_LOAD_ERROR ||
+                    data.details === Hls.ErrorDetails.FRAG_LOAD_TIMEOUT ||
+                    data.details === Hls.ErrorDetails.LEVEL_LOAD_ERROR ||
+                    data.details === Hls.ErrorDetails.LEVEL_LOAD_TIMEOUT)
+                ) {
+                  const count =
+                    ((video as any)._consecutiveNetworkErrorCount || 0) + 1;
+                  (video as any)._consecutiveNetworkErrorCount = count;
+                  if (count >= 8) {
+                    console.warn(
+                      `连续 ${count} 次非致命网络错误，主动降级:`,
+                      data.details,
+                    );
+                    tryFallbackOrGiveUp();
+                  }
+                  return;
+                }
+
                 if (data.fatal) {
                   switch (data.type) {
-                    case Hls.ErrorTypes.NETWORK_ERROR:
+                    case Hls.ErrorTypes.NETWORK_ERROR: {
+                      if (tryFallbackOrGiveUp()) {
+                        break;
+                      }
                       console.log('网络错误，尝试恢复...');
                       hls.startLoad();
                       break;
+                    }
                     case Hls.ErrorTypes.MEDIA_ERROR:
                       console.log('媒体错误，尝试恢复...');
                       hls.recoverMediaError();
                       break;
                     default:
+                      // OTHER_ERROR / MUX_ERROR / KEY_SYSTEM_ERROR 等非网络类致命错误，
+                      // 仍有可能是代理返回了畸形内容导致的解封装失败，降级一次再放弃。
+                      if (tryFallbackOrGiveUp()) {
+                        break;
+                      }
                       console.log('无法恢复的错误');
                       hls.destroy();
                       break;
@@ -5728,6 +5950,22 @@ function PlayPageClient() {
               display: 'none',
               pointerEvents: 'none',
               zIndex: '20',
+            },
+          });
+
+          // 全屏实时时钟层（右上角）
+          artPlayerRef.current.layers.add({
+            name: 'fullscreen-clock',
+            html: '<span class="fullscreen-clock">--:--:--</span>',
+            style: {
+              position: 'absolute',
+              top: '0',
+              right: '24px',
+              height: '80px',
+              display: 'none',
+              pointerEvents: 'none',
+              zIndex: '21',
+              alignItems: 'center',
             },
           });
 
@@ -6377,6 +6615,14 @@ function PlayPageClient() {
           lastVolumeRef.current = artPlayerRef.current.volume;
         });
         artPlayerRef.current.on('video:ratechange', () => {
+          // 切换源/集数时，浏览器会重置 playbackRate 到 1.0 并触发 ratechange，
+          // 此时保存会覆盖用户设置的倍速。跳过这个瞬态事件。
+          if (isSourceSwitchingRef.current) {
+            console.log(
+              `⏭️ 忽略切换中的 ratechange: ${artPlayerRef.current.playbackRate}`,
+            );
+            return;
+          }
           lastPlaybackRateRef.current = sanitizePlaybackRate(
             artPlayerRef.current.playbackRate,
           );
@@ -6395,6 +6641,10 @@ function PlayPageClient() {
           const titleLayer = artPlayerRef.current?.layers['fullscreen-title'];
           if (titleLayer) {
             titleLayer.style.display = isFullscreen ? 'block' : 'none';
+          }
+          const clockLayer = artPlayerRef.current?.layers['fullscreen-clock'];
+          if (clockLayer) {
+            clockLayer.style.display = isFullscreen ? 'flex' : 'none';
           }
 
           // 应用保存的透明度设置
@@ -6475,6 +6725,10 @@ function PlayPageClient() {
           const titleLayer = artPlayerRef.current?.layers['fullscreen-title'];
           if (titleLayer) {
             titleLayer.style.display = isFullscreenWeb ? 'block' : 'none';
+          }
+          const clockLayer = artPlayerRef.current?.layers['fullscreen-clock'];
+          if (clockLayer) {
+            clockLayer.style.display = isFullscreenWeb ? 'flex' : 'none';
           }
         });
 
@@ -6624,12 +6878,12 @@ function PlayPageClient() {
             ) {
               artPlayerRef.current.volume = lastVolumeRef.current;
             }
+            // 优先从 localStorage 恢复播放速率（防止 ref 被切换中的 ratechange 污染）
+            const targetRate = loadPlaybackRate();
             if (
-              Math.abs(
-                artPlayerRef.current.playbackRate - lastPlaybackRateRef.current,
-              ) > 0.01
+              Math.abs(artPlayerRef.current.playbackRate - targetRate) > 0.01
             ) {
-              artPlayerRef.current.playbackRate = lastPlaybackRateRef.current;
+              artPlayerRef.current.playbackRate = targetRate;
             }
             artPlayerRef.current.notice.show = '';
           }, 0);
@@ -6887,8 +7141,8 @@ function PlayPageClient() {
     <>
       <PageLayout activePath='/play'>
         <div className='flex flex-col gap-3 py-4 px-5 lg:px-[3rem] 2xl:px-20 pb-40 md:pb-safe-bottom'>
-          {/* 第一行：影片标题 */}
-          <div className='py-1'>
+          {/* 第一行：影片标题（小屏幕用，大屏幕在 PlayInfoPanel 里） */}
+          <div className='py-1 lg:hidden'>
             <h1 className='text-xl font-semibold text-gray-900 dark:text-gray-100'>
               {videoTitle || '影片标题'}
               {totalEpisodes > 1 && (
@@ -7015,6 +7269,8 @@ function PlayPageClient() {
                       source={currentSource}
                       id={currentId}
                       title={detail.title}
+                      doubanId={videoDoubanId}
+                      year={videoYear}
                       episodeIndex={currentEpisodeIndex}
                       artPlayerRef={artPlayerRef}
                       currentTime={currentPlayTime}
@@ -7088,45 +7344,47 @@ function PlayPageClient() {
           </div>
 
           {/* 详情展示 */}
-          <div className='grid grid-cols-1 md:grid-cols-4 gap-4'>
-            {/* 文字区 - 使用独立组件优化性能 */}
-            <VideoInfoSection
-              videoTitle={videoTitle}
-              videoYear={videoYear}
-              videoCover={videoCover}
-              videoDoubanId={videoDoubanId}
-              currentSource={currentSource}
-              favorited={favorited}
-              onToggleFavorite={handleToggleFavorite}
-              detail={detail}
-              movieDetails={movieDetails}
-              bangumiDetails={bangumiDetails}
-              shortdramaDetails={shortdramaDetails}
-              movieComments={movieComments}
-              commentsError={commentsError?.message || null}
-              loadingMovieDetails={loadingMovieDetails}
-              loadingBangumiDetails={loadingBangumiDetails}
-              loadingComments={loadingComments}
-              loadingCelebrityWorks={loadingCelebrityWorks}
-              selectedCelebrityName={selectedCelebrityName}
-              celebrityWorks={celebrityWorks}
-              onCelebrityClick={handleCelebrityClick}
-              onClearCelebrity={() => {
-                setSelectedCelebrityName(null);
-                setCelebrityWorks([]);
-              }}
-              processImageUrl={processImageUrl}
-            />
-
-            {/* 封面展示 */}
-            <VideoCoverDisplay
-              videoCover={videoCover}
-              bangumiDetails={bangumiDetails}
-              videoTitle={videoTitle}
-              videoDoubanId={videoDoubanId}
-              processImageUrl={processImageUrl}
-            />
-          </div>
+          <PlayInfoPanel
+            title={tmdbData?.title || videoTitle}
+            year={tmdbData?.year || videoYear}
+            cover={videoCover}
+            sourceName={detail?.source_name}
+            totalEpisodes={totalEpisodes}
+            currentEpisodeIndex={currentEpisodeIndex}
+            episodeName={detail?.episodes_titles?.[currentEpisodeIndex]}
+            backdropUrl={
+              tmdbData?.backdrop ||
+              (movieDetails?.backdrop
+                ? `/api/image-proxy?url=${encodeURIComponent(movieDetails.backdrop)}`
+                : null)
+            }
+            tmdbPoster={tmdbData?.poster}
+            tmdbOverview={tmdbData?.overview}
+            tmdbRating={tmdbData?.rating}
+            tmdbLogo={tmdbData?.logo}
+            tmdbNumberOfSeasons={tmdbData?.numberOfSeasons}
+            favorited={favorited}
+            onToggleFavorite={handleToggleFavorite}
+            detail={detail}
+            movieDetails={movieDetails}
+            bangumiDetails={bangumiDetails}
+            shortdramaDetails={shortdramaDetails}
+            movieComments={movieComments}
+            commentsError={commentsError?.message || null}
+            loadingMovieDetails={loadingMovieDetails}
+            loadingBangumiDetails={loadingBangumiDetails}
+            loadingComments={loadingComments}
+            loadingCelebrityWorks={loadingCelebrityWorks}
+            selectedCelebrityName={selectedCelebrityName}
+            celebrityWorks={celebrityWorks}
+            onCelebrityClick={handleCelebrityClick}
+            onClearCelebrity={() => {
+              setSelectedCelebrityName(null);
+              setCelebrityWorks([]);
+            }}
+            videoDoubanId={videoDoubanId}
+            currentSource={currentSource}
+          />
         </div>
 
         {/* 返回顶部悬浮按钮 - 使用独立组件优化性能 */}

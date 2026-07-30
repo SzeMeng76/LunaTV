@@ -4,7 +4,7 @@ import { ArrowDownWideNarrow, ArrowUpDown,ArrowUpNarrowWide } from 'lucide-react
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
-export type SearchFilterKey = 'source' | 'title' | 'year' | 'yearOrder';
+export type SearchFilterKey = 'source' | 'title' | 'year' | 'yearOrder' | 'resolution';
 
 export interface SearchFilterOption {
   label: string;
@@ -28,6 +28,7 @@ const DEFAULTS: Record<SearchFilterKey, string> = {
   title: 'all',
   year: 'all',
   yearOrder: 'none',
+  resolution: 'all',
 };
 
 const SearchResultFilter: React.FC<SearchResultFilterProps> = ({ categories, values, onChange }) => {

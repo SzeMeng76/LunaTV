@@ -33,7 +33,7 @@ const PROXY_CANDIDATES: string[] = [
 const FALLBACK_JAR_BASE64 =
   'UEsDBBQACAgIACVFfFcAAAAAAAAAAAAAAAAJAAAATUVUQS1JTkYvUEsHCAAAAAACAAAAAAAAACVFfFcAAAAAAAAAAAAAAAANAAAATUVUQS1JTkYvTUFOSUZFU1QuTUZNYW5pZmVzdC1WZXJzaW9uOiAxLjAKQ3JlYXRlZC1CeTogMS44LjBfNDIxIChPcmFjbGUgQ29ycG9yYXRpb24pCgpQSwcIj79DCUoAAABLAAAAUEsDBBQACAgIACVFfFcAAAAAAAAAAAAAAAAMAAAATWVkaWFVdGlscy5jbGFzczWRSwrCQBBER3trbdPxm4BuBHfiBxHFH4hCwJX4ATfFCrAxnWnYgZCTuPIIHkCPYE+lM5NoILPpoqvrVVd1JslCaLB3MpILJ5xRz5gbMeMS+oyeBOc4xSWucYsZN3CHe7zgiQue8YJXvOEdH/jEFz7whW984weZ+Ecm/pGJf2TiH5n4Ryb+kYl/ZOIfmfhHJv6RiX9k4h+Z+Ecm/pGJf2TiH5n4Ryb+kYl/ZOIfGQaaaXzgE1/4xje+8Y1vfOMb3/jGN77xjW98q9c0TdM0TdM0TdM0TdM0TdM0TdM0TdM0TdM0TdM0TdM0TdM0TdM0TdM0TdM0TdM0TdM0TdM0TdM0TdM0TdM0TdM0TdM0TdM0TdM0TdM0TdM0TdM0TdM0TdM0TdM0TdM0TdM0TdM0TdM0TdM0TdM0TdM0TdM0TdM0TdM0TdM0TdM0TdM0TdM0TdM0TdM0TdM0TdM0TdOI06nO7p48NRQjICAgICAgICAgICAgICAoKCgoKCgoKCgoKCgoKChoqKioqKioqKio;';
 
-interface SpiderJarInfo {
+export interface SpiderJarInfo {
   buffer: Buffer;
   md5: string;
   source: string; // url or 'fallback'
@@ -87,6 +87,8 @@ function isLikelyDomesticEnvironment(): boolean {
 }
 
 let cache: SpiderJarInfo | null = null;
+let inFlight: Promise<SpiderJarInfo> | null = null;
+const jarVersions = new Map<string, SpiderJarInfo>();
 const SUCCESS_TTL = 4 * 60 * 60 * 1000; // 成功时缓存4小时
 const FAILURE_TTL = 10 * 60 * 1000; // 失败时缓存10分钟
 const failedSources: Set<string> = new Set(); // 记录失败的源
@@ -178,7 +180,53 @@ function md5(buf: Buffer): string {
   return crypto.createHash('md5').update(buf).digest('hex');
 }
 
-export async function getSpiderJar(
+function rememberJarVersion(info: SpiderJarInfo): void {
+  jarVersions.delete(info.md5);
+  jarVersions.set(info.md5, info);
+
+  while (jarVersions.size > 4) {
+    const oldestMd5 = jarVersions.keys().next().value as string | undefined;
+    if (!oldestMd5) break;
+    jarVersions.delete(oldestMd5);
+  }
+}
+
+export function getFallbackSpiderJarInfo(tried = 0): SpiderJarInfo {
+  const buffer = Buffer.from(FALLBACK_JAR_BASE64, 'base64');
+  const fallbackMd5 = md5(buffer);
+  const existing = jarVersions.get(fallbackMd5);
+  if (existing) {
+    return { ...existing, cached: true, tried };
+  }
+
+  const info: SpiderJarInfo = {
+    buffer,
+    md5: fallbackMd5,
+    source: 'fallback',
+    success: false,
+    cached: false,
+    timestamp: Date.now(),
+    size: buffer.length,
+    tried,
+  };
+  rememberJarVersion(info);
+  return info;
+}
+
+export function getSpiderJarByMd5(expectedMd5: string): SpiderJarInfo | null {
+  const normalizedMd5 = expectedMd5.trim().toLowerCase();
+  if (!/^[a-f0-9]{32}$/.test(normalizedMd5)) return null;
+
+  const remembered = jarVersions.get(normalizedMd5);
+  if (remembered) {
+    return { ...remembered, cached: true };
+  }
+
+  const fallback = getFallbackSpiderJarInfo();
+  return fallback.md5 === normalizedMd5 ? fallback : null;
+}
+
+async function loadSpiderJar(
   forceRefresh = false,
   customUrl?: string
 ): Promise<SpiderJarInfo> {
@@ -200,6 +248,7 @@ export async function getSpiderJar(
         tried: 1,
       };
       cache = info;
+      rememberJarVersion(info);
       return info;
     }
     console.warn(`[SpiderJar] 自定义 jar 获取失败，回退到默认源`);
@@ -245,6 +294,7 @@ export async function getSpiderJar(
         tried,
       };
       cache = info;
+      rememberJarVersion(info);
       return info;
     } else {
       // 失败时添加到失败列表
@@ -253,19 +303,31 @@ export async function getSpiderJar(
   }
 
   // fallback - 总是成功，永远不返回 404
-  const fb = Buffer.from(FALLBACK_JAR_BASE64, 'base64');
-  const info: SpiderJarInfo = {
-    buffer: fb,
-    md5: md5(fb),
-    source: 'fallback',
-    success: false,
-    cached: false,
-    timestamp: now,
-    size: fb.length,
-    tried,
-  };
+  const info = getFallbackSpiderJarInfo(tried);
   cache = info;
   return info;
+}
+
+export async function getSpiderJar(
+  forceRefresh = false,
+  customUrl?: string
+): Promise<SpiderJarInfo> {
+  // 自定义 URL 请求不参与去重/缓存合并，直接独立加载
+  if (customUrl) {
+    return loadSpiderJar(forceRefresh, customUrl);
+  }
+
+  if (inFlight) return inFlight;
+
+  const request = loadSpiderJar(forceRefresh);
+  inFlight = request;
+  try {
+    return await request;
+  } finally {
+    if (inFlight === request) {
+      inFlight = null;
+    }
+  }
 }
 
 export function getSpiderStatus() {

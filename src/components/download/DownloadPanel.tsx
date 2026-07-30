@@ -4,12 +4,49 @@ import React from 'react';
 import { useDownload } from '@/contexts/DownloadContext';
 import { M3U8DownloadTask } from '@/lib/download';
 import { getStreamModeName, getStreamModeIcon } from '@/lib/download';
+import { getTaskSegments } from '@/lib/download/download-idb';
 import { formatTime } from '@/lib/time';
 import { DownloadSettingsModal } from './DownloadSettingsModal';
 
 export function DownloadPanel() {
   const { tasks, showDownloadPanel, setShowDownloadPanel, startTask, pauseTask, cancelTask, retryFailedSegments, getProgress, settings, setSettings, streamModeSupport } = useDownload();
   const [showSettings, setShowSettings] = React.useState(false);
+  const [exportingIds, setExportingIds] = React.useState<Set<string>>(new Set());
+
+  const handleExport = async (task: M3U8DownloadTask) => {
+    if (exportingIds.has(task.id)) return;
+    setExportingIds((prev) => new Set(prev).add(task.id));
+    try {
+      const segmentsMap = await getTaskSegments(task.id);
+      if (segmentsMap.size === 0) {
+        alert('未找到缓存分片，当前下载模式可能未保存到 IndexedDB，无法导出。');
+        return;
+      }
+      const sorted = Array.from(segmentsMap.entries())
+        .sort(([a], [b]) => a - b)
+        .map(([, buf]) => buf);
+      const blob = new Blob(sorted, { type: 'video/MP2T' });
+      const filename = `${task.title.replace(/[\\/:*?"<>|]/g, '_').trim().slice(0, 120) || 'download'}.ts`;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (err) {
+      console.error('导出失败:', err);
+      alert(`导出失败：${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setExportingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(task.id);
+        return next;
+      });
+    }
+  };
 
   if (!showDownloadPanel) {
     return null;
@@ -235,6 +272,18 @@ export function DownloadPanel() {
                       </button>
                     )}
 
+                    {task.status === 'done' && (
+                      <button
+                        onClick={() => handleExport(task)}
+                        disabled={exportingIds.has(task.id)}
+                        className='flex items-center gap-1 px-3 py-1.5 bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white text-xs font-medium rounded transition-colors'
+                      >
+                        <svg className='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                          <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4' />
+                        </svg>
+                        {exportingIds.has(task.id) ? '导出中...' : '导出'}
+                      </button>
+                    )}
                     <button
                       onClick={() => cancelTask(task.id)}
                       className='flex items-center gap-1 px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-medium rounded transition-colors'

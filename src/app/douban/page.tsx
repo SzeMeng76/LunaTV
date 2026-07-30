@@ -55,6 +55,11 @@ const doubanListOptions = (
         return { code: 200, message: 'success', list: [] };
       }
       const calendarData = await GetBangumiCalendarData();
+      // Guard against non-array response (API blocked or error in CN environment)
+      if (!Array.isArray(calendarData)) {
+        console.warn('[Bangumi] Calendar data is not an array, API may be blocked:', calendarData);
+        return { code: 200, message: 'success', list: [] };
+      }
       const weekdayData = calendarData.find((item) => item.weekday.en === selectedWeekday);
       if (weekdayData) {
         return {
@@ -183,9 +188,9 @@ function DoubanPageClient() {
     doubanListOptions(type, primarySelection, secondarySelection, multiLevelValues, selectedWeekday, customCategories)
   );
 
-  // 扁平化所有页面数据
+  // 扁平化所有页面数据，过滤掉 null/undefined 项
   const allItems = useMemo(
-    () => data?.pages.flatMap((page) => page.list) ?? [],
+    () => data?.pages.flatMap((page) => page.list).filter((item): item is DoubanItem => !!item?.id) ?? [],
     [data]
   );
 
