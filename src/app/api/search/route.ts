@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
     Promise.race([
       searchFromApi(site, query, searchVariants), // 传入预计算的变体
       new Promise((_, reject) =>
-        setTimeout(() => reject(new Error(`${site.name} timeout`)), 20000)
+        setTimeout(() => reject(new Error(`${site.name} timeout`)), 10000)
       ),
     ]).catch((err) => {
       console.warn(`搜索失败 ${site.name}:`, err.message);

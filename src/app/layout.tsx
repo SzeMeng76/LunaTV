@@ -2,6 +2,7 @@
 
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
+import nextDynamic from 'next/dynamic';
 import { cookies } from 'next/headers';
 import { Suspense } from 'react';
 import { Toaster } from 'sonner';
@@ -14,19 +15,31 @@ import { GlobalErrorIndicator } from '../components/GlobalErrorIndicator';
 import { GlobalDOMErrorHandler } from '../components/GlobalDOMErrorHandler';
 import { DOMErrorBoundary } from '../components/DOMErrorBoundary';
 import { ChunkErrorGuard } from '../components/ChunkErrorGuard';
-import { TranslationWarningToast } from '../components/TranslationWarningToast';
 import NavigationShell from '../components/NavigationShell';
-import { SessionTracker } from '../components/SessionTracker';
 import { SiteProvider } from '../components/SiteProvider';
 import { ThemeProvider } from '../components/ThemeProvider';
 import { WatchRoomProvider } from '../components/WatchRoomProvider';
-import { DownloadProvider } from '../contexts/DownloadContext';
-import { GlobalCacheProvider } from '../contexts/GlobalCacheContext';
-import { DownloadPanel } from '../components/download/DownloadPanel';
-import ChatFloatingWindow from '../components/watch-room/ChatFloatingWindow';
+import { DownloadProvider } from '@/contexts/DownloadContext';
+import { GlobalCacheProvider } from '@/contexts/GlobalCacheContext';
 import QueryProvider from '../components/QueryProvider';
 import { CinematicLoadingFallback } from '../components/CinematicLoadingFallback';
-import RouteWarmup from '../components/RouteWarmup';
+
+// 懒加载非关键 UI 组件，减少首屏 JS 体积（代码分割）
+const TranslationWarningToast = nextDynamic(() =>
+  import('../components/TranslationWarningToast').then(
+    (m) => m.TranslationWarningToast,
+  ),
+);
+const SessionTracker = nextDynamic(() =>
+  import('../components/SessionTracker').then((m) => m.SessionTracker),
+);
+const RouteWarmup = nextDynamic(() => import('../components/RouteWarmup'));
+const DownloadPanel = nextDynamic(() =>
+  import('../components/download/DownloadPanel').then((m) => m.DownloadPanel),
+);
+const ChatFloatingWindow = nextDynamic(
+  () => import('../components/watch-room/ChatFloatingWindow'),
+);
 
 const inter = Inter({ subsets: ['latin'] });
 export const dynamic = 'force-dynamic';
