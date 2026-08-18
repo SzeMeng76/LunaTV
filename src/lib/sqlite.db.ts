@@ -3,11 +3,21 @@ import { createHash } from 'crypto';
 import fs from 'fs';
 import path from 'path';
 
-// node:sqlite is only available in Node.js 22.5+; dynamic require avoids
-// a hard crash on runtimes that don't ship this built-in (e.g. EdgeOne Pages
-// with Node.js 20). The import is deferred to the constructor so the module
-// can be loaded safely and will only throw when SqliteStorage is actually
-// instantiated on an unsupported runtime.
+// node:sqlite is only available in Node.js 22.5+.
+//
+// Turbopack compatibility: Turbopack (Next.js 16 default bundler) has a static
+// NODE_EXTERNALS list that doesn't include "sqlite". When Turbopack encounters
+// require('node:sqlite'), it throws:
+//   "Unsupported external type Url for commonjs reference"
+//
+// Workaround: process.getBuiltinModule() (Node.js 22.12+) retrieves built-in
+// modules directly from the runtime, completely bypassing the bundler's module
+// resolution. Turbopack sees a normal function call (not require()), so it
+// never attempts to resolve "node:sqlite" at build time.
+//
+// Fallback: eval-based require for Node.js 22.5-22.11 where getBuiltinModule
+// doesn't exist yet. The eval string prevents Turbopack from statically
+// analyzing the require() call at build time.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type DatabaseSync = any;
 
@@ -33,8 +43,17 @@ export class SqliteStorage implements IStorage {
   private cleanupTimer: ReturnType<typeof setInterval> | null = null;
 
   constructor() {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { DatabaseSync } = require('node:sqlite') as { DatabaseSync: new (path: string) => DatabaseSync };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let sqliteModule: any;
+    if (typeof process.getBuiltinModule === 'function') {
+      sqliteModule = process.getBuiltinModule('node:sqlite');
+    } else {
+      // Fallback for Node.js 22.5-22.11: eval string prevents Turbopack
+      // from statically analyzing the require() call at build time.
+      // eslint-disable-next-line no-eval
+      sqliteModule = eval("require('node:sqlite')");
+    }
+    const { DatabaseSync } = sqliteModule as { DatabaseSync: new (path: string) => DatabaseSync };
 
     const isBuild = process.env.IS_BUILD_PHASE === 'true';
 
