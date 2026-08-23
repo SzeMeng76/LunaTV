@@ -42,6 +42,7 @@
 ## 💡 核心增强亮点
 
 ### 🎥 内容生态扩展
+
 - **多人观影房**：支持同步播放、屏幕共享、实时聊天、语音通话，WebRTC 实时传输，画质预设可调 → [详细文档](docs/deployment/WATCH_ROOM_DEPLOYMENT.md)
 - **Emby 私有库**：完整的 Emby 媒体服务器集成，支持免密登录、认证模式切换和多音轨播放 → [详细文档](docs/integration/EMBY_GUIDE.md)
 - **YouTube 集成**：完整的 YouTube 搜索、播放、直播功能，支持热门视频和地区选择器
@@ -55,6 +56,7 @@
 - **豆瓣快速信息面板**：移动端 ActionSheet 接入豆瓣详情，支持 quick-info 和 suggest API
 
 ### 🎬 播放器增强
+
 - **TMDB Hero Banner**：播放页以 TMDB backdrop 为主视觉，展示 logo、海报、评分、简介，支持多季徽章
 - **剧集选择器增强**：手动速度测试功能，实时显示源状态徽章（可用/不可用/测试中）
 - **控制栏透明度控制**：可自定义控制栏遮挡度（10-80%），实时调整透明度和模糊效果，改善字幕可见性
@@ -66,23 +68,27 @@
 - **视频分辨率筛选**：自动推断视频流分辨率并支持按分辨率筛选源
 
 ### 🔔 内容追踪系统
+
 - **即将上映提醒**：完整的即将上映内容关注列表和提醒系统
 - **自动发布通知**：收藏内容发布时自动推送通知
 - **邀请码系统**：支持邀请码注册、历史记录和管理功能
 
 ### 🤖 智能推荐系统
+
 - **AI 智能助手**：支持 GPT-5/o 系列模型，流式传输 → [详细文档](docs/features/AI_FEATURES.md)
 - **Tavily 搜索模式**：无需 AI API 的搜索模式
 - **TMDB 演员搜索**：完整的演员搜索、过滤和缓存
 - **发布日历**：即将上映内容预览和跟踪
 
 ### 💬 弹幕生态系统
+
 - **第三方弹幕 API**：集成腾讯、爱奇艺、优酷、B站等主流平台
 - **智能性能优化**：分级渲染、Web Worker 加速
 - **手动弹幕匹配**：精准获取对应弹幕
 - **综合设置面板**：完整的弹幕配置
 
 ### 📊 性能与监控
+
 - **性能监控仪表板**：完整的 API 性能监控系统
 - **流量监控系统**：真实流量监控、域名分解
 - **播放统计增强**：记录用户登入 IP、归属地（城市/省份/国家）、设备类型、浏览器及操作系统，管理员可在统计面板查看
@@ -130,28 +136,33 @@ pnpm dev
 ## 📚 文档导航
 
 ### 核心文档
+
 - 📖 [完整文档中心](docs/README.md) - 所有文档的导航页
 - 🚀 [部署指南](docs/deployment/DEPLOYMENT.md) - Docker、Vercel 等部署方式
 - ⚙️ [配置说明](docs/deployment/CONFIGURATION.md) - 环境变量和功能配置
 - 📱 [移动端使用](docs/mobile/MOBILE.md) - 移动端 APP 和 AndroidTV 使用
 
 ### 功能文档
+
 - 🤖 [AI 功能详解](docs/features/AI_FEATURES.md)
 - 📥 [下载功能](docs/features/DOWNLOAD_FEATURES.md)
 - 📺 [虚拟滚动指南](docs/features/VIRTUAL_SCROLL_GUIDE.md)
 - 🎥 [观影房部署](docs/deployment/WATCH_ROOM_DEPLOYMENT.md)
 
 ### 集成指南
+
 - 🎬 [Emby 集成](docs/integration/EMBY_GUIDE.md)
 - 📺 [TVBox 集成](docs/integration/TVBOX.md)
 - 🔒 [TVBox 安全](docs/integration/TVBOX_SECURITY.md)
 
 ### 认证配置
+
 - 🔐 [OIDC 认证](docs/authentication/OIDC_SETUP.md)
 - 💬 [Telegram 认证](docs/authentication/TELEGRAM_AUTH.md)
 - 🌐 [可信网络](docs/authentication/TRUSTED_NETWORK.md)
 
 ### 高级配置
+
 - 🔧 [代理配置](docs/advanced/PROXY_CONFIG.md)
 - 🚫 [广告过滤](docs/advanced/CUSTOM_AD_FILTER.md)
 - ⏭️ [跳过控制器](docs/advanced/SKIP_CONTROLLER_GUIDE.md)
@@ -181,6 +192,7 @@ pnpm dev
 本项目采用 [CC BY-NC-SA 4.0 协议](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans) 开源。
 
 **这意味着**：
+
 - ✅ 您可以自由地分享、复制和修改本项目
 - ✅ 您必须给予适当的署名，提供指向本许可协议的链接
 - ❌ 您不得将本项目用于商业目的
@@ -193,12 +205,14 @@ pnpm dev
 ## 🙏 致谢
 
 ### 原始项目
+
 - [MoonTV](https://github.com/MoonTechLab/LunaTV) — 项目原始版本
 - [Selene](https://github.com/MoonTechLab/Selene) — 官方移动端 APP（iOS / Android 手机）
 - [Selene-TV](https://github.com/MoonTechLab/Selene-TV) — 官方 Android TV 客户端，针对遥控器设备优化
 - [LibreTV](https://github.com/LibreSpark/LibreTV) — 灵感来源
 
 ### 核心依赖
+
 - [Next.js](https://nextjs.org/) — React 框架
 - [ArtPlayer](https://github.com/zhw2590582/ArtPlayer) — 强大的网页视频播放器
 - [HLS.js](https://github.com/video-dev/hls.js) — HLS 流媒体支持
@@ -206,18 +220,22 @@ pnpm dev
 - [Tailwind CSS](https://tailwindcss.com/) — CSS 框架
 
 ### 数据源与服务
+
 - [豆瓣](https://movie.douban.com/) — 影视信息数据
 - [TMDB](https://www.themoviedb.org/) — 电影数据库
 - [Bangumi](https://bangumi.tv/) — 动漫信息
 
 ### 设计与实现参考
+
 本项目在开发过程中参考了以下优秀开源项目的设计思路和实现方案：
+
 - **[MoonTVPlus](https://github.com/mtvpls/MoonTVPlus)** — 观影室同步播放、移动端优化等功能实现参考
 - **[DecoTV](https://github.com/Decohererk/DecoTV)** — TVBox 安全策略、性能优化、UI 设计等实现参考
 
 感谢这些项目及其作者的开源贡献和优秀实现！
 
 ### 特别感谢
+
 - 所有提供免费影视接口的站点
 - 开源社区的贡献者们
 - 使用并反馈问题的用户们
@@ -226,7 +244,13 @@ pnpm dev
 
 ## 📊 Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=SzeMeng76/LunaTV&type=Date)](https://www.star-history.com/#SzeMeng76/LunaTV&Date)
+<a href="https://www.star-history.com/?repos=SzeMeng76%2FLunaTV&type=date&legend=top-left">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=SzeMeng76/LunaTV&type=date&theme=dark&legend=top-left&sealed_token=iij9XuMQwh5rb8SNAKGkKG5rQoIEeYszjWID7ySfhAdCizmcs0StkAebYFZMZOzsSKDK1sYEu3OfbTZO9KQmhzwxg11xBpI8j_clH-lZWfr14521J0-L7Q" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=SzeMeng76/LunaTV&type=date&legend=top-left&sealed_token=iij9XuMQwh5rb8SNAKGkKG5rQoIEeYszjWID7ySfhAdCizmcs0StkAebYFZMZOzsSKDK1sYEu3OfbTZO9KQmhzwxg11xBpI8j_clH-lZWfr14521J0-L7Q" />
+    <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=SzeMeng76/LunaTV&type=date&legend=top-left&sealed_token=iij9XuMQwh5rb8SNAKGkKG5rQoIEeYszjWID7ySfhAdCizmcs0StkAebYFZMZOzsSKDK1sYEu3OfbTZO9KQmhzwxg11xBpI8j_clH-lZWfr14521J0-L7Q" />
+  </picture>
+</a>
 
 ---
 
@@ -237,5 +261,3 @@ pnpm dev
 Made with ❤️ by LunaTV Enhanced Edition Team
 
 </div>
-
-

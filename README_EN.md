@@ -42,6 +42,7 @@ This project is for educational purposes only. Do not use for commercial purpose
 ## 💡 Key Enhancements
 
 ### 🎥 Content Ecosystem
+
 - **Multi-User Watch Room**: Synchronized playback, screen sharing, real-time chat, voice calls, WebRTC streaming, adjustable quality presets → [Documentation](docs/deployment/WATCH_ROOM_DEPLOYMENT.md)
 - **Emby Private Library**: Complete Emby media server integration with passwordless login, auth mode switcher, and multi-audio track playback → [Documentation](docs/integration/EMBY_GUIDE.md)
 - **YouTube Integration**: Full YouTube search, playback, live streaming, popular videos with region selector
@@ -55,6 +56,7 @@ This project is for educational purposes only. Do not use for commercial purpose
 - **Douban Quick Info Panel**: Mobile ActionSheet with Douban details via quick-info and suggest API
 
 ### 🎬 Player Enhancements
+
 - **TMDB Hero Banner**: Play page uses TMDB backdrop as main visual with logo, poster, rating, overview, and multi-season badge
 - **Episode Selector Enhancement**: Manual speed test feature with real-time source status badges (Available/Unavailable/Testing)
 - **Control Bar Opacity Control**: Customizable control bar obstruction (10-80%), real-time transparency and blur adjustment for better subtitle visibility
@@ -66,23 +68,27 @@ This project is for educational purposes only. Do not use for commercial purpose
 - **Video Resolution Filtering**: Auto-infer video stream resolution with resolution-based source filtering
 
 ### 🔔 Content Tracking System
+
 - **Upcoming Content Reminders**: Complete watchlist and reminder system for upcoming content
 - **Auto Release Notifications**: Automatic push notifications when favorited content is released
 - **Invite Code System**: Registration system with invite codes, history tracking, and management
 
 ### 🤖 AI Recommendation System
+
 - **AI Assistant**: GPT-5/o series models support, streaming → [Documentation](docs/features/AI_FEATURES.md)
 - **Tavily Search Mode**: Search mode without AI API
 - **TMDB Actor Search**: Complete actor search, filtering, and caching
 - **Release Calendar**: Preview and track upcoming content
 
 ### 💬 Danmaku Ecosystem
+
 - **Third-party Danmaku API**: Integration with Tencent, iQiyi, Youku, Bilibili
 - **Smart Performance**: Tiered rendering, Web Worker acceleration
 - **Manual Danmaku Matching**: Precise danmaku retrieval
 - **Comprehensive Settings**: Complete danmaku configuration panel
 
 ### 📊 Performance & Monitoring
+
 - **Performance Dashboard**: Complete API performance monitoring
 - **Traffic Monitoring**: Real traffic monitoring and domain analysis
 - **Enhanced Watch Statistics**: Records login IP, geolocation (city/region/country), device type, browser and OS per login — visible to admins in the stats dashboard
@@ -130,28 +136,33 @@ pnpm dev
 ## 📚 Documentation
 
 ### Core Documentation
+
 - 📖 [Documentation Center](docs/README.md) - Navigation page for all docs
 - 🚀 [Deployment Guide](docs/deployment/DEPLOYMENT.md) - Docker, Vercel deployment
 - ⚙️ [Configuration](docs/deployment/CONFIGURATION.md) - Environment variables and settings
 - 📱 [Mobile Guide](docs/mobile/MOBILE.md) - Mobile APP and AndroidTV usage
 
 ### Feature Documentation
+
 - 🤖 [AI Features](docs/features/AI_FEATURES.md)
 - 📥 [Download Features](docs/features/DOWNLOAD_FEATURES.md)
 - 📺 [Virtual Scroll Guide](docs/features/VIRTUAL_SCROLL_GUIDE.md)
 - 🎥 [Watch Room Deployment](docs/deployment/WATCH_ROOM_DEPLOYMENT.md)
 
 ### Integration Guides
+
 - 🎬 [Emby Integration](docs/integration/EMBY_GUIDE.md)
 - 📺 [TVBox Integration](docs/integration/TVBOX.md)
 - 🔒 [TVBox Security](docs/integration/TVBOX_SECURITY.md)
 
 ### Authentication
+
 - 🔐 [OIDC Setup](docs/authentication/OIDC_SETUP.md)
 - 💬 [Telegram Auth](docs/authentication/TELEGRAM_AUTH.md)
 - 🌐 [Trusted Network](docs/authentication/TRUSTED_NETWORK.md)
 
 ### Advanced Configuration
+
 - 🔧 [Proxy Config](docs/advanced/PROXY_CONFIG.md)
 - 🚫 [Ad Filter](docs/advanced/CUSTOM_AD_FILTER.md)
 - ⏭️ [Skip Controller](docs/advanced/SKIP_CONTROLLER_GUIDE.md)
@@ -181,6 +192,7 @@ For detailed security configuration and privacy protection, see [Security Docume
 This project is licensed under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
 
 **This means**:
+
 - ✅ You are free to share, copy, and modify this project
 - ✅ You must give appropriate credit and provide a link to the license
 - ❌ You may not use this project for commercial purposes
@@ -193,12 +205,14 @@ Based on [MoonTV](https://github.com/MoonTechLab/LunaTV).
 ## 🙏 Acknowledgments
 
 ### Original Projects
+
 - [MoonTV](https://github.com/MoonTechLab/LunaTV) — Original project
 - [Selene](https://github.com/MoonTechLab/Selene) — Official mobile APP (iOS / Android phones)
 - [Selene-TV](https://github.com/MoonTechLab/Selene-TV) — Official Android TV client, optimized for remote control devices
 - [LibreTV](https://github.com/LibreSpark/LibreTV) — Inspiration source
 
 ### Core Dependencies
+
 - [Next.js](https://nextjs.org/) — React framework
 - [ArtPlayer](https://github.com/zhw2590582/ArtPlayer) — Powerful web video player
 - [HLS.js](https://github.com/video-dev/hls.js) — HLS streaming support
@@ -206,18 +220,22 @@ Based on [MoonTV](https://github.com/MoonTechLab/LunaTV).
 - [Tailwind CSS](https://tailwindcss.com/) — CSS framework
 
 ### Data Sources & Services
+
 - [Douban](https://movie.douban.com/) — Movie information data
 - [TMDB](https://www.themoviedb.org/) — Movie database
 - [Bangumi](https://bangumi.tv/) — Anime information
 
 ### Design & Implementation References
+
 This project references design ideas and implementations from these excellent open-source projects:
+
 - **[MoonTVPlus](https://github.com/mtvpls/MoonTVPlus)** — Watch room sync playback, mobile optimization
 - **[DecoTV](https://github.com/Decohererk/DecoTV)** — TVBox security strategy, performance optimization, UI design
 
 Thanks to these projects and their authors for their open-source contributions!
 
 ### Special Thanks
+
 - All sites providing free video APIs
 - Open-source community contributors
 - Users who provide feedback
@@ -226,7 +244,13 @@ Thanks to these projects and their authors for their open-source contributions!
 
 ## 📊 Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=SzeMeng76/LunaTV&type=Date)](https://www.star-history.com/#SzeMeng76/LunaTV&Date)
+<a href="https://www.star-history.com/?repos=SzeMeng76%2FLunaTV&type=date&legend=top-left">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=SzeMeng76/LunaTV&type=date&theme=dark&legend=top-left&sealed_token=iij9XuMQwh5rb8SNAKGkKG5rQoIEeYszjWID7ySfhAdCizmcs0StkAebYFZMZOzsSKDK1sYEu3OfbTZO9KQmhzwxg11xBpI8j_clH-lZWfr14521J0-L7Q" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=SzeMeng76/LunaTV&type=date&legend=top-left&sealed_token=iij9XuMQwh5rb8SNAKGkKG5rQoIEeYszjWID7ySfhAdCizmcs0StkAebYFZMZOzsSKDK1sYEu3OfbTZO9KQmhzwxg11xBpI8j_clH-lZWfr14521J0-L7Q" />
+    <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=SzeMeng76/LunaTV&type=date&legend=top-left&sealed_token=iij9XuMQwh5rb8SNAKGkKG5rQoIEeYszjWID7ySfhAdCizmcs0StkAebYFZMZOzsSKDK1sYEu3OfbTZO9KQmhzwxg11xBpI8j_clH-lZWfr14521J0-L7Q" />
+  </picture>
+</a>
 
 ---
 

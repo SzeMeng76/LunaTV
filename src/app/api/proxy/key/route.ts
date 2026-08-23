@@ -3,8 +3,13 @@
 import { NextResponse } from "next/server";
 
 import { getConfig } from "@/lib/config";
+import { readArrayBufferLimited } from "@/lib/proxy-security";
+import { DEFAULT_USER_AGENT } from "@/lib/user-agent";
 
 export const runtime = 'nodejs';
+
+// AES 密钥文件正常只有 16 字节，给个宽松上限防御异常上游
+const MAX_KEY_BYTES = 1 * 1024 * 1024; // 1MB
 
 // Key 缓存管理
 const keyCache = new Map<string, { data: ArrayBuffer; timestamp: number; etag?: string }>();
@@ -81,12 +86,16 @@ export async function GET(request: Request) {
   }
 
   const config = await getConfig();
-  const liveSource = config.LiveConfig?.find((s: any) => s.key === source);
-  if (!liveSource) {
-    keyStats.errors++;
-    return NextResponse.json({ error: 'Source not found' }, { status: 404 });
+  // 点播场景不携带 moontv-source（该参数只用于直播源的 UA 定制），此时使用默认浏览器 UA。
+  let ua = DEFAULT_USER_AGENT;
+  if (source) {
+    const liveSource = config.LiveConfig?.find((s: any) => s.key === source);
+    if (!liveSource) {
+      keyStats.errors++;
+      return NextResponse.json({ error: 'Source not found' }, { status: 404 });
+    }
+    ua = liveSource.ua || ua;
   }
-  const ua = liveSource.ua || 'AptvPlayer/1.4.10';
 
   const decodedUrl = decodeURIComponent(url);
   const cacheKey = `${source}-${decodedUrl}`;
@@ -173,7 +182,7 @@ export async function GET(request: Request) {
       }, { status: response.status >= 500 ? 500 : response.status });
     }
     
-    const keyData = await response.arrayBuffer();
+    const keyData = await readArrayBufferLimited(response, MAX_KEY_BYTES);
     const etag = response.headers.get('ETag');
     
     // 缓存 key 数据

@@ -1,3 +1,25 @@
+## [6.6.4] - 2026-08-23
+
+### Added
+
+- 🌐 CORSAPI Cloudflare Worker 代理：Bangumi 数据/图片代理、TMDB 请求均新增 Cloudflare Worker 加速选项；VideoProxyConfig 开关同时加速 m3u8/视频播放流，Emby 源跳过（需自定义鉴权头）
+- 🎬 Bangumi 数据源新增桜色镜像站（bangumi.lol）选项
+- 🛡️ VOD 播放容错：直连失败时自动降级到第一方 HLS 代理，形成直连 -> Worker 直连 -> 第一方代理三级 fallback
+
+### Changed
+
+- 📦 依赖升级：hls.js 1.6.16→1.7.1、TanStack Query/react-virtual 系列升级至 5.102.0/3.14.10、@mui/material 升级至 9.3.1、sonner 升级至 2.0.8、ipaddr.js 升级至 2.5.0，EdgeOne Node.js 版本调整为 22.11.0 LTS
+- ⚡ 播放体验优化：关闭点播场景 lowLatencyMode 减少卡顿；换源后弹幕改为跟随实际切换完成触发；换源时清除旧播放记录改为异步执行，避免阻塞状态更新
+- 🚀 性能优化：非关键组件改为动态导入减少首屏 JS 体积；响应缓存策略细化（public/private）；搜索单源超时从 20s 降至 10s；登入地理位置查询改为异步执行不阻塞登录
+
+### Fixed
+
+- 🛡️ 安全加固：检测弱默认密码并跳转警告页；代理路由响应体加大小上限防止内存打爆；采集源保存新增 SSRF 校验；登录接口加暴力破解限流
+- 🌐 EdgeOne 部署修复：修复首页未跳转 /login 及 middleware/proxy 构建冲突；修复 Next.js 16 proxy.ts 导致的 /warning 误重定向；修复 node:sqlite 导致的部署崩溃
+- 🎬 播放修复：支持非 m3u8 URL 并修复反向代理端口问题；修复分享页链接被误判优先于真实 m3u8 链接的问题；修复 corsapi bangumi 代理路径拼接错误
+- 📱 UI/交互修复：修复登录/注册页错误提示动画错位；修复 iOS 沉浸式状态栏未生效问题；修复分片下载失败时仍误报“下载完成”的问题
+- 🔧 其他修复：Spider JAR md5 锁定版本并加并发去重，避免 TVBox 校验不一致
+
 ## [6.6.3] - 2026-06-26
 
 ### Added

@@ -491,3 +491,29 @@ html:not(.dark) .hover\:bg-slate-50:hover {
 .animate-slide-down {
   animation: slide-down 0.3s ease-out forwards;
 }
+
+/* ============================================
+   Inline form message animation (no translateX,
+   safe for elements in normal document flow)
+   ============================================ */
+@keyframes shake-in {
+  0% {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(0) translateX(-4px);
+  }
+  80% {
+    transform: translateX(3px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-shake-in {
+  animation: shake-in 0.35s ease-out forwards;
+}

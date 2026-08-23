@@ -791,7 +791,9 @@ export async function GET(request: NextRequest) {
     // 🔑 混合策略：优先使用 Vercel Blob CDN，降级到本地代理
     // Blob CDN: 全球加速，减轻服务器负载（仅 Vercel 部署可用）
     // 本地代理: 兼容所有部署环境，确保 100% 可用
-    let finalSpiderUrl = `${baseUrl}/api/proxy/spider.jar;md5;${jarInfo.md5}`;
+    // 🔑 URL 上带 ?md5= 锁定本次生成的具体版本，避免 config 与代理响应之间
+    // jar 轮换/刷新导致 TVBox 校验 md5 与实际下载字节不一致 (409 由代理端点保护)
+    let finalSpiderUrl = `${baseUrl}/api/proxy/spider.jar?md5=${jarInfo.md5};md5;${jarInfo.md5}`;
 
     // 尝试使用 Blob CDN（仅 Vercel 环境）
     if (!globalSpiderJar) {

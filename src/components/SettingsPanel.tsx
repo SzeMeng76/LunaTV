@@ -38,12 +38,16 @@ const doubanDataSourceOptions = [
 const bangumiApiTypeOptions = [
   { value: 'server', label: '服务端转发（默认，访问官方 api.bgm.tv）' },
   { value: 'cmliussss', label: 'Bangumi 反代 By CMLiussss（解决服务器被墙）' },
+  { value: 'corsapi', label: 'Cloudflare Worker 代理 By Smone' },
+  { value: 'sakura', label: '桜色镜像站（bangumi.lol，第三方镜像）' },
   { value: 'custom', label: '自定义反代地址' },
 ];
 
 const bangumiImageProxyTypeOptions = [
   { value: 'server', label: '服务器代理（默认，由服务器代理请求）' },
   { value: 'cmliussss', label: 'Bangumi 图片 CDN By CMLiussss' },
+  { value: 'corsapi', label: 'Cloudflare Worker 代理 By Smone' },
+  { value: 'sakura', label: '桜色镜像站（bangumi.lol，第三方镜像）' },
   { value: 'direct', label: '直连（浏览器直接请求 lain.bgm.tv）' },
   { value: 'custom', label: '自定义代理' },
 ];

@@ -90,6 +90,8 @@ export async function GET(request: NextRequest) {
           fromCache: true,
           cacheSource: 'database',
           cacheTimestamp: new Date().toISOString()
+        }, {
+          headers: { 'Cache-Control': 'private, max-age=3600' }
         });
       }
 
@@ -116,7 +118,9 @@ export async function GET(request: NextRequest) {
         console.warn('YouTube地区列表缓存保存失败:', cacheError);
       }
 
-      return NextResponse.json(responseData);
+      return NextResponse.json(responseData, {
+        headers: { 'Cache-Control': 'private, max-age=3600' }
+      });
     }
 
     // 使用真实的YouTube API获取地区列表
@@ -184,7 +188,9 @@ export async function GET(request: NextRequest) {
     }
 
     console.log(`✅ YouTube地区列表获取完成: ${responseData.regions.length} 个地区`);
-    return NextResponse.json(responseData);
+    return NextResponse.json(responseData, {
+      headers: { 'Cache-Control': 'private, max-age=3600' }
+    });
 
   } catch (error) {
     console.error('YouTube地区列表获取失败:', error);

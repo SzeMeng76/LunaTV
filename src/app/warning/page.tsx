@@ -5,7 +5,14 @@ export const metadata: Metadata = {
   description: '站点安全配置警告',
 };
 
-export default function WarningPage() {
+export default async function WarningPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ reason?: string }>;
+}) {
+  const { reason } = await searchParams;
+  const isWeakPassword = reason === 'weak-password';
+
   return (
     <div translate="no" className='min-h-screen bg-linear-to-br from-red-50 to-orange-50 flex items-center justify-center p-4'>
       <div className='max-w-2xl w-full bg-white rounded-2xl shadow-2xl p-4 sm:p-8 border border-red-200'>
@@ -43,7 +50,9 @@ export default function WarningPage() {
               ⚠️ 安全风险提示
             </p>
             <p className='text-sm sm:text-base text-red-700'>
-              检测到您的站点未配置访问控制，存在潜在的安全风险和法律合规问题。
+              {isWeakPassword
+                ? '检测到您的站点密码为常见弱密码/默认密码，可被轻易猜中，存在潜在的安全风险和法律合规问题。'
+                : '检测到您的站点未配置访问控制，存在潜在的安全风险和法律合规问题。'}
             </p>
           </div>
 
@@ -76,11 +85,23 @@ export default function WarningPage() {
               🔒 安全配置建议
             </h3>
             <p className='text-sm sm:text-base text-yellow-700'>
-              请立即配置{' '}
-              <code className='bg-yellow-100 px-1.5 py-0.5 rounded text-xs sm:text-sm font-mono'>
-                PASSWORD
-              </code>{' '}
-              环境变量以启用访问控制。
+              {isWeakPassword ? (
+                <>
+                  您已配置{' '}
+                  <code className='bg-yellow-100 px-1.5 py-0.5 rounded text-xs sm:text-sm font-mono'>
+                    PASSWORD
+                  </code>{' '}
+                  环境变量，但其值命中常见弱密码/默认密码黑名单（如 admin、admin123、password、123456 等）。请立即修改为一个不在此列表中的强密码。
+                </>
+              ) : (
+                <>
+                  请立即配置{' '}
+                  <code className='bg-yellow-100 px-1.5 py-0.5 rounded text-xs sm:text-sm font-mono'>
+                    PASSWORD
+                  </code>{' '}
+                  环境变量以启用访问控制。
+                </>
+              )}
             </p>
           </div>
         </div>

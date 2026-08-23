@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { after, NextRequest, NextResponse } from 'next/server';
 
 import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getConfig } from '@/lib/config';
@@ -307,54 +307,40 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // 收集 IP 和设备信息
+    // 收集 IP 和设备信息（地理位置查询较慢，不阻塞响应）
     const ip = getClientIp(request);
     const ua = request.headers.get('user-agent') || '';
     const { device, browser, os } = parseUserAgent(ua);
-    const location = await getIpLocation(ip);
 
-    const loginMeta = { ip, location, device, browser, os };
-
-    // 获取当前用户统计数据
+    // 获取当前用户统计数据（用于立即返回 loginCount，实际计数仍由 updateUserLoginStats 落库）
     const currentStats = await db.getUserPlayStat(authInfo.username);
+    const nextLoginCount = (currentStats.loginCount || 0) + 1;
 
-    // 更新登入时间相关统计
-    const updatedStats = {
-      ...currentStats,
-      lastLoginTime: loginTime,
-      lastLoginDate: loginTime,
-      firstLoginTime: currentStats.firstLoginTime || currentStats.lastLoginDate || loginTime,
-      loginCount: (currentStats.loginCount || 0) + 1,
-      lastUpdateTime: loginTime,
-      lastLoginIp: ip,
-      lastLoginLocation: location,
-      lastLoginDevice: device,
-      lastLoginBrowser: browser,
-      lastLoginOs: os,
-    };
-
-    // 保存登入统计到数据库
-    try {
-      await db.updateUserLoginStats(authInfo.username, loginTime, updatedStats.loginCount === 1, loginMeta);
-      console.log('用户登入统计已保存到数据库:', {
-        username: authInfo.username,
-        loginTime,
-        ip,
-        location,
-        device,
-        isFirstLogin: updatedStats.loginCount === 1
-      });
-    } catch (saveError) {
-      console.error('保存登入统计失败:', saveError);
-    }
+    // 响应返回后再查地理位置、写数据库，避免登录跳转被外部 API 拖慢
+    after(async () => {
+      try {
+        const location = await getIpLocation(ip);
+        const loginMeta = { ip, location, device, browser, os };
+        await db.updateUserLoginStats(authInfo.username, loginTime, nextLoginCount === 1, loginMeta);
+        console.log('用户登入统计已保存到数据库:', {
+          username: authInfo.username,
+          loginTime,
+          ip,
+          location,
+          device,
+          isFirstLogin: nextLoginCount === 1
+        });
+      } catch (saveError) {
+        console.error('保存登入统计失败:', saveError);
+      }
+    });
 
     return NextResponse.json({
       success: true,
       message: '登入时间记录成功',
       loginTime,
-      loginCount: updatedStats.loginCount,
+      loginCount: nextLoginCount,
       ip,
-      location,
       device,
     });
   } catch (error) {

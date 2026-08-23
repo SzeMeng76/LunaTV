@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConfig } from '@/lib/config';
+import { applyCorsProxy } from '@/lib/tmdb.client';
 import { db } from '@/lib/db';
 
 export const runtime = 'nodejs';
@@ -39,13 +40,13 @@ export async function GET(request: NextRequest) {
     const logo = sorted.find((l: any) => l.iso_639_1 === 'zh') ||
       sorted.find((l: any) => l.iso_639_1 === 'en') ||
       sorted[0];
-    return logo?.file_path ? `https://image.tmdb.org/t/p/w500${logo.file_path}` : null;
+    return logo?.file_path ? applyCorsProxy(`https://image.tmdb.org/t/p/w500${logo.file_path}`, config) : null;
   };
 
   const trySearch = async (query: string, type: 'movie' | 'tv') => {
     try {
       const res = await fetch(
-        `${base}/search/${type}?api_key=${apiKey}&language=${lang}&query=${encodeURIComponent(query)}`,
+        applyCorsProxy(`${base}/search/${type}?api_key=${apiKey}&language=${lang}&query=${encodeURIComponent(query)}`, config),
         { signal: AbortSignal.timeout(6000) }
       );
       if (!res.ok) return null;
@@ -54,7 +55,7 @@ export async function GET(request: NextRequest) {
       if (!hit) return null;
 
       const imagesRes = await fetch(
-        `${base}/${type}/${hit.id}/images?api_key=${apiKey}`,
+        applyCorsProxy(`${base}/${type}/${hit.id}/images?api_key=${apiKey}`, config),
         { signal: AbortSignal.timeout(6000) }
       );
       const images = imagesRes.ok ? await imagesRes.json() : null;
@@ -65,7 +66,7 @@ export async function GET(request: NextRequest) {
       if (type === 'tv') {
         try {
           const detailRes = await fetch(
-            `${base}/tv/${hit.id}?api_key=${apiKey}&language=${lang}`,
+            applyCorsProxy(`${base}/tv/${hit.id}?api_key=${apiKey}&language=${lang}`, config),
             { signal: AbortSignal.timeout(6000) }
           );
           if (detailRes.ok) {
@@ -76,8 +77,8 @@ export async function GET(request: NextRequest) {
       }
 
       return {
-        backdrop: hit.backdrop_path ? `https://image.tmdb.org/t/p/w1280${hit.backdrop_path}` : null,
-        poster: hit.poster_path ? `https://image.tmdb.org/t/p/w500${hit.poster_path}` : null,
+        backdrop: hit.backdrop_path ? applyCorsProxy(`https://image.tmdb.org/t/p/w1280${hit.backdrop_path}`, config) : null,
+        poster: hit.poster_path ? applyCorsProxy(`https://image.tmdb.org/t/p/w500${hit.poster_path}`, config) : null,
         logo: logoUrl,
         title: (type === 'movie' ? hit.title : hit.name) || null,
         overview: hit.overview || null,

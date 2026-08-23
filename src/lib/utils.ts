@@ -81,16 +81,16 @@ export {
 };
 
 function getBangumiImageProxyConfig(): {
-  proxyType: 'server' | 'cmliussss' | 'custom' | 'direct';
+  proxyType: 'server' | 'cmliussss' | 'corsapi' | 'sakura' | 'custom' | 'direct';
   proxyUrl: string;
 } {
-  let bangumiImageProxyType: 'server' | 'cmliussss' | 'custom' | 'direct' = 'server';
+  let bangumiImageProxyType: 'server' | 'cmliussss' | 'corsapi' | 'sakura' | 'custom' | 'direct' = 'server';
   let bangumiImageProxyUrl = '';
 
   if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
     const storedType = localStorage.getItem('bangumiImageProxyType');
     const runtimeType = (window as any).RUNTIME_CONFIG?.BANGUMI_IMAGE_PROXY_TYPE;
-    bangumiImageProxyType = (storedType || runtimeType || 'server') as 'server' | 'cmliussss' | 'custom' | 'direct';
+    bangumiImageProxyType = (storedType || runtimeType || 'server') as 'server' | 'cmliussss' | 'corsapi' | 'sakura' | 'custom' | 'direct';
     bangumiImageProxyUrl =
       localStorage.getItem('bangumiImageProxyUrl') ||
       (window as any).RUNTIME_CONFIG?.BANGUMI_IMAGE_PROXY ||
@@ -159,6 +159,13 @@ export function processImageUrl(originalUrl: string): string {
     switch (bangumiProxyType) {
       case 'cmliussss':
         return originalUrl.replace(/lain\.bgm\.tv/g, 'img.doubanio.cmliussss.net');
+      case 'sakura':
+        // 桜色镜像站：全域名镜像 bgm.tv -> bangumi.lol
+        return originalUrl.replace(/lain\.bgm\.tv/g, 'lain.bangumi.lol').replace(/bgm\.tv/g, 'bangumi.lol');
+      case 'corsapi': {
+        const base = bangumiProxyUrl || 'https://corsapi.smone.workers.dev';
+        return `${base.replace(/\/$/, '')}/?url=${encodeURIComponent(originalUrl)}`;
+      }
       case 'custom':
         if (bangumiProxyUrl) return `${bangumiProxyUrl}${encodeURIComponent(originalUrl)}`;
         return `/api/proxy/logo?url=${encodeURIComponent(originalUrl)}`;
@@ -214,6 +221,59 @@ export interface VideoSourceTestResult {
   message?: string;          // 新增：详细消息
   playable?: boolean;        // 新增：是否可播放
   testedAt?: number;         // 新增：测试时间戳
+}
+
+// 视频播放代理配置（Cloudflare Worker 加速播放流，与 VideoProxyConfig 共用同一开关）
+function getVideoPlayProxyConfig(): { enabled: boolean; proxyUrl: string } {
+  if (typeof window === 'undefined') return { enabled: false, proxyUrl: '' };
+  const rc = (window as any).RUNTIME_CONFIG;
+  return {
+    enabled: !!rc?.VIDEO_PROXY_ENABLED,
+    proxyUrl: (rc?.VIDEO_PROXY_URL || '').replace(/\/$/, ''),
+  };
+}
+
+// 把真实播放地址包一层 Cloudflare Worker 代理（m3u8 走 /m3u8 端点，自动重写 .ts 子链接；其他格式走通用 /?url= 端点）
+export function applyVideoPlayProxy(url: string): string {
+  if (!url || !/^https?:\/\//i.test(url)) return url;
+
+  const { enabled, proxyUrl } = getVideoPlayProxyConfig();
+  if (!enabled || !proxyUrl) return url;
+
+  // 已经代理过，避免套娃
+  if (url.startsWith(proxyUrl)) return url;
+
+  const isM3u8 = /\.m3u8(\?|#|$)/i.test(url);
+  const endpoint = isM3u8 ? '/m3u8' : '/';
+  return `${proxyUrl}${endpoint}?url=${encodeURIComponent(url)}`;
+}
+
+// Worker 代理请求失败（超时/502等）时，从代理地址还原出真实地址，用于自动降级直连
+export function stripVideoPlayProxy(url: string): string | null {
+  if (!url) return null;
+  const { proxyUrl } = getVideoPlayProxyConfig();
+  if (!proxyUrl || !url.startsWith(proxyUrl)) return null;
+
+  try {
+    const parsed = new URL(url);
+    const raw = parsed.searchParams.get('url');
+    return raw ? decodeURIComponent(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+// 直连原始地址失败（上游要求特定 Referer/UA 或不返回 CORS 头）时，最后一层兜底：
+// 改走本站自带的 /api/proxy/m3u8，由服务端代为请求并改写分片/密钥 URI。
+// 与 applyVideoPlayProxy 的外部 Worker 相互独立，不依赖 VideoProxyConfig 是否启用。
+export function applyFirstPartyM3u8Proxy(url: string): string {
+  if (!url || typeof window === 'undefined') return url;
+  return `/api/proxy/m3u8?url=${encodeURIComponent(url)}`;
+}
+
+// 判断某地址是否已经指向本站的第一方 m3u8 代理，避免重复包裹
+export function isFirstPartyM3u8Proxy(url: string): boolean {
+  return !!url && url.startsWith('/api/proxy/m3u8?url=');
 }
 
 // 新增：格式化速度显示

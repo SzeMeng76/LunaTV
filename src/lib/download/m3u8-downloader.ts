@@ -1018,6 +1018,32 @@ export async function downloadM3U8Video(
 
     // 边下边存模式：关闭流
     if (writer) {
+      // 检查下载范围内是否有片段最终失败（重试耗尽后被跳过）
+      const failedInRange = task.finishList
+        .slice(startSegment - 1, endSegment)
+        .filter(item => item.status === 'error').length;
+
+      if (failedInRange > 0) {
+        // 有片段永久失败：文件已经不完整，中止写入而不是谎报"下载完成"
+        // writer.abort() 会撤销已写入的部分内容，不会在磁盘上留下一个损坏的小文件
+        try {
+          await writer.abort();
+        } catch (abortError) {
+          // eslint-disable-next-line no-console
+          console.error('中止流失败:', abortError);
+        }
+
+        onProgress?.({
+          current: completedCount,
+          total: totalSegments,
+          percentage: Math.floor((completedCount / totalSegments) * 100),
+          status: 'error',
+          message: `${failedInRange} 个片段下载失败，下载已中止`,
+        });
+
+        throw new Error(`${failedInRange} 个片段下载失败，下载已中止`);
+      }
+
       try {
         // 如果使用了流式转码器，需要先完成转码
         if (streamingTransmuxer) {
@@ -1025,7 +1051,7 @@ export async function downloadM3U8Video(
         } else {
           await writer.close();
         }
-        
+
         onProgress?.({
           current: completedCount,
           total: totalSegments,
@@ -1064,24 +1090,24 @@ export async function downloadM3U8Video(
     .some(item => item.status === 'error');
 
   if (hasFailedSegments) {
-    // 有失败片段，不执行保存，保持下载状态等待手动重试
+    // 有失败片段：不能合并出一个完整文件，必须报错而不是静默返回，
+    // 否则调用方（DownloadContext）会误将任务标记为"完成"
     const failedCount = task.finishList
       .slice(startSegment - 1, endSegment)
       .filter(item => item.status === 'error').length;
-    
+
     // eslint-disable-next-line no-console
     console.warn(`⚠️ 有 ${failedCount} 个片段下载失败，等待手动重试...`);
-    
+
     onProgress?.({
       current: completedCount,
       total: totalSegments,
       percentage: Math.floor((completedCount / totalSegments) * 100),
-      status: 'downloading',
-      message: `${failedCount} 个片段失败，等待重试...`,
+      status: 'error',
+      message: `${failedCount} 个片段失败，请点击"重试失败片段"`,
     });
-    
-    // 不继续执行合并，保持下载状态
-    return;
+
+    throw new Error(`${failedCount} 个片段下载失败，请重试`);
   }
 
   // 按顺序合并片段
