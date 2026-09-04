@@ -127,22 +127,27 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        // 使用 V1 注册用户
-        await db.registerUser(targetUsername!, targetPassword);
-
         // 获取用户组信息
         const { userGroup } = body as { userGroup?: string };
+        const tags = userGroup && userGroup.trim() ? [userGroup] : undefined;
 
-        // 更新配置
+        // 同步创建 V1(V1 密码存储,登录/校验走 db.verifyUser)与 V2(用户资料
+        // hash u:<user>:info + users:list 有序集合,管理端用户列表/统计读取)。
+        // 此前这里只调 db.registerUser(V1),新用户不会出现在基于
+        // getAllUsers()/users:list 的用户列表里,表现为“添加用户后列表无变化”。
+        await db.registerUser(targetUsername!, targetPassword);
+        await db.createUserV2(targetUsername!, targetPassword, 'user', tags);
+
+        // 更新配置(V1 Users 数组,登录/权限判定亦依赖它)
         const newUser: any = {
           username: targetUsername!,
           role: 'user',
           createdAt: Date.now(),
         };
 
-        // 如果指定了用户组，添加到tags中
-        if (userGroup && userGroup.trim()) {
-          newUser.tags = [userGroup];
+        // 如果指定了用户组,添加到tags中
+        if (tags && tags.length > 0) {
+          newUser.tags = tags;
         }
 
         adminConfig.UserConfig.Users.push(newUser);
