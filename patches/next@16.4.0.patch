@@ -1,0 +1,23 @@
+diff --git a/dist/build/utils.js b/dist/build/utils.js
+index cba841e90864a3e71b8eb34271202b2cd8853558..bf91ba2a5e658a1f08d61dd5f219195015746d42 100644
+--- a/dist/build/utils.js
++++ b/dist/build/utils.js
+@@ -1061,7 +1061,8 @@ async function copyTracedFiles(dir, distDir, pageKeys, appPageKeys, tracingRoot,
+         } catch (err) {
+             // Windows doesn't support creating symlinks without elevated privileges,
+             // unless "Developer Mode" is turned on. If we failed to create a symlink
+-            // due to EPERM, try creating a junction point instead.
++            // due to EPERM (or ENOENT when the symlink targets a directory on some
++            // Windows setups), try creating a junction point instead.
+             //
+             // Ideally we'd just preserve the input file type (junction point or
+             // symlink), but there's no API in node.js to differentiate between a
+@@ -1072,7 +1073,7 @@ async function copyTracedFiles(dir, distDir, pageKeys, appPageKeys, tracingRoot,
+             // Note: Junction targets are stored as absolute paths, so this fallback
+             // is not relocatable even when the preferred symlink above is relative,
+             // but it's the best we can do.
+-            if (process.platform === 'win32' && err.code === 'EPERM' && isDirectory) {
++            if (process.platform === 'win32' && (err.code === 'EPERM' || err.code === 'ENOENT') && isDirectory) {
+                 try {
+                     await _fs.promises.symlink(_path.default.resolve(_path.default.dirname(linkPath), target), linkPath, 'junction');
+                 } catch (junctionErr) {
