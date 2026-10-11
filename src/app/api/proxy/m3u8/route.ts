@@ -454,8 +454,14 @@ function builtinAdFilter(m3u8Content: string): string {
     if (isAdUrl(f.url)) drop[i] = true;
   });
 
+  // 2e. 片头贴片：首段（第一个 DISCONTINUITY 组）被包夹且总时长 ≤65s、
+  //     分片 ≤10 —— 15/30/60s 标准贴片全部覆盖；上限卡在 OP 片头曲
+  //     （常见 85-90s）之下，避免误删正片片头
+  let firstDiscGroupSeen = false;
   for (let i = 0; i < frags.length; i += 1) {
     if (!frags[i].disc) continue;
+    const isFirstDiscGroup = !firstDiscGroupSeen;
+    firstDiscGroupSeen = true;
     let total = 0;
     let hasTiny = false;
     let count = 0;
@@ -470,7 +476,9 @@ function builtinAdFilter(m3u8Content: string): string {
     const enclosed = j < frags.length && frags[j].disc;
     const isAdSegment =
       total > 0 &&
-      ((enclosed && total <= 90 && hasTiny) || (total <= 30 && count <= 8));
+      ((enclosed && total <= 90 && hasTiny) ||
+        (total <= 30 && count <= 8) ||
+        (enclosed && isFirstDiscGroup && total <= 65 && count <= 10));
     if (isAdSegment) {
       for (let k = i; k < j; k += 1) drop[k] = true;
     }
