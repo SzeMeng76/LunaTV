@@ -144,8 +144,8 @@ export async function saveTask(
   const transaction = db.transaction([TASKS_STORE], 'readwrite');
   const store = transaction.objectStore(TASKS_STORE);
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { downloadedSegments, ...taskWithoutSegments } = task;
+  const { downloadedSegments: _downloadedSegments, ...taskWithoutSegments } =
+    task;
 
   // 深度清理 aesConf，key 为纯 ArrayBuffer 可被 IndexedDB 直接序列化
   const cleanedTask = {

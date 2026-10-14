@@ -1,16 +1,16 @@
-/* eslint-disable react-hooks/exhaustive-deps, @typescript-eslint/no-explicit-any,@typescript-eslint/no-non-null-assertion,no-empty */
+/* eslint-disable react-hooks/exhaustive-deps */
 'use client';
 
+import {
+  experimental_streamedQuery as streamedQuery,
+  infiniteQueryOptions,
+  useInfiniteQuery,
+  useQuery,
+} from '@tanstack/react-query';
 import { ChevronUp, Grid2x2, List, Play, Search, X } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import Select from 'react-select';
-import {
-  useQuery,
-  useInfiniteQuery,
-  infiniteQueryOptions,
-  experimental_streamedQuery as streamedQuery,
-} from '@tanstack/react-query';
 
 import {
   addSearchHistory,
@@ -25,21 +25,23 @@ import { SearchResult } from '@/lib/types';
 
 type SSEChunk =
   | { type: 'start'; totalSources: number }
-  | { type: 'source_result'; results: SearchResult[] } // 80ms 批量
-  | { type: 'source_progress' } // 进度 +1（无数据）
-  | { type: 'source_error' }
+  | { type: 'source_result'; results: SearchResult[]; source?: string } // 80ms 批量（source 用于同源两阶段推送的去重替换）
+  | { type: 'source_progress'; source?: string } // 进度 +1（无数据）
+  | { type: 'source_error'; source?: string }
   | { type: 'complete'; completedSources: number };
 
 type StreamedState = {
   results: SearchResult[];
   totalSources: number;
   completedSources: number;
+  seenSources: string[]; // 已计入进度的源 key（同源两阶段推送/去重）
 };
 
 const STREAMED_INITIAL: StreamedState = {
   results: [],
   totalSources: 0,
   completedSources: 0,
+  seenSources: [],
 };
 
 /**
@@ -57,8 +59,7 @@ function eventSourceIterable(
   return {
     [Symbol.asyncIterator]() {
       type Item =
-        | { value: SSEChunk; done: false }
-        | { value: undefined; done: true };
+        { value: SSEChunk; done: false } | { value: undefined; done: true };
       const queue: Item[] = [];
       let waiting: ((item: Item) => void) | null = null;
       let closed = false;
@@ -79,7 +80,17 @@ function eventSourceIterable(
       const flushPending = () => {
         flushTimer = null;
         if (pending.length === 0) return;
-        enqueue({ type: 'source_result', results: pending });
+        // 按源分组发出：保证前端按源替换语义不会误删其他源的结果
+        const groups = new Map<string | undefined, SearchResult[]>();
+        for (const r of pending) {
+          const key = r.source as string | undefined;
+          const arr = groups.get(key);
+          if (arr) arr.push(r);
+          else groups.set(key, [r]);
+        }
+        for (const [src, results] of groups) {
+          enqueue({ type: 'source_result', results, source: src });
+        }
         pending = [];
       };
 
@@ -120,8 +131,8 @@ function eventSourceIterable(
               });
               break;
             case 'source_result':
-              // 进度立即更新
-              enqueue({ type: 'source_progress' });
+              // 进度立即更新（带 source 供前端去重）
+              enqueue({ type: 'source_progress', source: payload.source });
               // 数据缓冲 80ms 批量
               if (
                 Array.isArray(payload.results) &&
@@ -134,7 +145,7 @@ function eventSourceIterable(
               }
               break;
             case 'source_error':
-              enqueue({ type: 'source_error' });
+              enqueue({ type: 'source_error', source: payload.source });
               break;
             case 'complete':
               try {
@@ -173,22 +184,22 @@ function eventSourceIterable(
   };
 }
 
+import stcasc from 'switch-chinese';
+
+import AcgSearch from '@/components/AcgSearch';
+import BilibiliUpuserCard from '@/components/BilibiliUpuserCard';
+import BilibiliVideoCard from '@/components/BilibiliVideoCard';
 import ImageViewer from '@/components/ImageViewer';
+import NetDiskSearchResults from '@/components/NetDiskSearchResults';
 import PageLayout from '@/components/PageLayout';
 import SearchResultFilter, {
   SearchFilterCategory,
 } from '@/components/SearchResultFilter';
 import SearchSuggestions from '@/components/SearchSuggestions';
+import TMDBFilterPanel, { TMDBFilterState } from '@/components/TMDBFilterPanel';
 import VideoCard, { VideoCardHandle } from '@/components/VideoCard';
 import VirtualGrid from '@/components/VirtualGrid';
-import NetDiskSearchResults from '@/components/NetDiskSearchResults';
 import YouTubeVideoCard from '@/components/YouTubeVideoCard';
-import BilibiliVideoCard from '@/components/BilibiliVideoCard';
-import BilibiliUpuserCard from '@/components/BilibiliUpuserCard';
-import DirectYouTubePlayer from '@/components/DirectYouTubePlayer';
-import TMDBFilterPanel, { TMDBFilterState } from '@/components/TMDBFilterPanel';
-import AcgSearch from '@/components/AcgSearch';
-import stcasc from 'switch-chinese';
 
 const chineseConverter = stcasc();
 
@@ -497,7 +508,7 @@ function SearchPageClient() {
 
   // ACG动漫磁力搜索相关状态
   const [acgTriggerSearch, setAcgTriggerSearch] = useState<boolean>();
-  const [acgError, setAcgError] = useState<string | null>(null);
+  const [, setAcgError] = useState<string | null>(null);
 
   // YouTube搜索相关状态
   const [youtubeResults, setYoutubeResults] = useState<any[] | null>(null);
@@ -517,7 +528,7 @@ function SearchPageClient() {
   const [youtubeRegions, setYoutubeRegions] = useState<
     Array<{ id: string; name: string }>
   >([]);
-  const [youtubeRegionsLoading, setYoutubeRegionsLoading] = useState(false);
+  const [, setYoutubeRegionsLoading] = useState(false);
 
   // 使用 useInfiniteQuery 获取 YouTube 热门推荐
   const {
@@ -561,16 +572,12 @@ function SearchPageClient() {
   );
 
   // 使用 useQuery 获取 Bilibili 热门推荐
-  const {
-    data: bilibiliPopular,
-    isLoading: isLoadingBilibiliPopular,
-    error: bilibiliPopularError,
-    refetch: refetchBilibiliPopular,
-  } = useQuery(
-    bilibiliPopularOptions(
-      searchType === 'bilibili' && bilibiliMode === 'popular',
-    ),
-  );
+  const { data: bilibiliPopular, isLoading: isLoadingBilibiliPopular } =
+    useQuery(
+      bilibiliPopularOptions(
+        searchType === 'bilibili' && bilibiliMode === 'popular',
+      ),
+    );
 
   // TMDB演员搜索相关状态
   const [tmdbActorResults, setTmdbActorResults] = useState<any[] | null>(null);
@@ -793,13 +800,36 @@ function SearchPageClient() {
               results: [],
               totalSources: chunk.totalSources,
               completedSources: 0,
+              seenSources: [],
             };
-          case 'source_result':
+          case 'source_result': {
+            // 同一源可能两阶段推送（第一页 → 全量）：按源替换，避免重复
+            const src = chunk.source;
+            if (src) {
+              const rest = acc.results.filter((r) => r.source !== src);
+              return { ...acc, results: rest.concat(chunk.results) };
+            }
             return { ...acc, results: acc.results.concat(chunk.results) };
-          case 'source_progress':
-            return { ...acc, completedSources: acc.completedSources + 1 };
-          case 'source_error':
-            return { ...acc, completedSources: acc.completedSources + 1 };
+          }
+          case 'source_progress': {
+            // 进度按源去重（同一源的首推与全量推送只计一次）
+            const src = chunk.source;
+            if (src && acc.seenSources.includes(src)) return acc;
+            return {
+              ...acc,
+              seenSources: src ? [...acc.seenSources, src] : acc.seenSources,
+              completedSources: acc.completedSources + 1,
+            };
+          }
+          case 'source_error': {
+            const src = chunk.source;
+            if (src && acc.seenSources.includes(src)) return acc;
+            return {
+              ...acc,
+              seenSources: src ? [...acc.seenSources, src] : acc.seenSources,
+              completedSources: acc.completedSources + 1,
+            };
+          }
           case 'complete':
             return {
               ...acc,
@@ -957,9 +987,15 @@ function SearchPageClient() {
 
     const resolutionOptions: { label: string; value: string }[] = [
       { label: '全部清晰度', value: 'all' },
-      ...(resolutionLevelsSet.has(2160) ? [{ label: '4K+', value: '2160' }] : []),
-      ...(resolutionLevelsSet.has(1080) ? [{ label: '1080p+', value: '1080' }] : []),
-      ...(resolutionLevelsSet.has(720) ? [{ label: '720p+', value: '720' }] : []),
+      ...(resolutionLevelsSet.has(2160)
+        ? [{ label: '4K+', value: '2160' }]
+        : []),
+      ...(resolutionLevelsSet.has(1080)
+        ? [{ label: '1080p+', value: '1080' }]
+        : []),
+      ...(resolutionLevelsSet.has(720)
+        ? [{ label: '720p+', value: '720' }]
+        : []),
       ...(hasUnknownResolution ? [{ label: '未知', value: 'unknown' }] : []),
     ];
 
@@ -1065,7 +1101,11 @@ function SearchPageClient() {
       if (!hasSource) return false;
       if (title !== 'all' && gTitle !== title) return false;
       if (year !== 'all' && gYear !== year) return false;
-      if (resolution !== 'all' && !group.some((item) => matchesResolution(item))) return false;
+      if (
+        resolution !== 'all' &&
+        !group.some((item) => matchesResolution(item))
+      )
+        return false;
       return true;
     });
 
@@ -1112,115 +1152,6 @@ function SearchPageClient() {
         : bTitle.localeCompare(aTitle);
     });
   }, [aggregatedResults, filterAgg, searchQuery]);
-
-  useEffect(() => {
-    // 无搜索参数时聚焦搜索框
-    !searchParams.get('q') && document.getElementById('searchInput')?.focus();
-
-    // 初始加载搜索历史
-    getSearchHistory().then(setSearchHistory);
-
-    // 检查URL参数并处理初始搜索
-    const initialQuery = searchParams.get('q');
-    if (initialQuery) {
-      setSearchQuery(initialQuery);
-      setShowResults(true);
-      // 如果当前是网盘搜索模式，触发网盘搜索
-      if (searchType === 'netdisk') {
-        handleNetDiskSearch(initialQuery);
-      }
-    }
-
-    // 读取流式搜索设置
-    if (typeof window !== 'undefined') {
-      const savedFluidSearch = localStorage.getItem('fluidSearch');
-      const defaultFluidSearch =
-        (window as any).RUNTIME_CONFIG?.FLUID_SEARCH !== false;
-      if (savedFluidSearch !== null) {
-        setUseFluidSearch(JSON.parse(savedFluidSearch));
-      } else if (defaultFluidSearch !== undefined) {
-        setUseFluidSearch(defaultFluidSearch);
-      }
-
-      // 读取精确搜索设置
-      const savedExactSearch = localStorage.getItem('exactSearch');
-      if (savedExactSearch !== null) {
-        setExactSearch(savedExactSearch === 'true');
-      }
-    }
-
-    // 监听搜索历史更新事件
-    const unsubscribe = subscribeToDataUpdates(
-      'searchHistoryUpdated',
-      (newHistory: string[]) => {
-        setSearchHistory(newHistory);
-      },
-    );
-
-    // 获取滚动位置的函数 - 专门针对 body 滚动
-    const getScrollTop = () => {
-      return document.body.scrollTop || 0;
-    };
-
-    // 使用 requestAnimationFrame 持续检测滚动位置
-    let isRunning = false;
-    const checkScrollPosition = () => {
-      if (!isRunning) return;
-
-      const scrollTop = getScrollTop();
-      const shouldShow = scrollTop > 300;
-      setShowBackToTop(shouldShow);
-
-      requestAnimationFrame(checkScrollPosition);
-    };
-
-    // 启动持续检测
-    isRunning = true;
-    checkScrollPosition();
-
-    // 监听 body 元素的滚动事件
-    const handleScroll = () => {
-      const scrollTop = getScrollTop();
-      setShowBackToTop(scrollTop > 300);
-    };
-
-    document.body.addEventListener('scroll', handleScroll, { passive: true });
-
-    return () => {
-      unsubscribe();
-      isRunning = false; // 停止 requestAnimationFrame 循环
-
-      // 移除 body 滚动事件监听器
-      document.body.removeEventListener('scroll', handleScroll);
-    };
-  }, []);
-
-  // 监听搜索类型变化，如果切换到网盘/YouTube/Bilibili/TMDB演员搜索且有搜索词，立即搜索
-  useEffect(() => {
-    if (
-      (searchType === 'netdisk' ||
-        searchType === 'youtube' ||
-        searchType === 'bilibili' ||
-        searchType === 'tmdb-actor') &&
-      showResults
-    ) {
-      const currentQuery = searchQuery.trim() || searchParams.get('q');
-      if (currentQuery) {
-        if (searchType === 'netdisk' && netdiskResourceType === 'netdisk') {
-          handleNetDiskSearch(currentQuery);
-        } else if (searchType === 'netdisk' && netdiskResourceType === 'acg') {
-          // ACG 搜索：触发 AcgSearch 组件搜索
-          setAcgTriggerSearch((prev) => !prev);
-        } else if (searchType === 'youtube') {
-          handleYouTubeSearch(currentQuery);
-        } else if (searchType === 'bilibili') {
-          handleBilibiliSearch(currentQuery);
-        } else if (searchType === 'tmdb-actor') {
-          handleTmdbActorSearch(currentQuery, tmdbActorType, tmdbFilterState);
-        }
-      }
-    }
-  }, [searchType, netdiskResourceType, showResults, searchQuery, searchParams]);
 
   useEffect(() => {
     // 当搜索参数变化时更新 UI 状态（数据获取由 TanStack Query 驱动）
@@ -1498,6 +1429,115 @@ function SearchPageClient() {
     }
   };
 
+  useEffect(() => {
+    // 无搜索参数时聚焦搜索框
+    !searchParams.get('q') && document.getElementById('searchInput')?.focus();
+
+    // 初始加载搜索历史
+    getSearchHistory().then(setSearchHistory);
+
+    // 检查URL参数并处理初始搜索
+    const initialQuery = searchParams.get('q');
+    if (initialQuery) {
+      setSearchQuery(initialQuery);
+      setShowResults(true);
+      // 如果当前是网盘搜索模式，触发网盘搜索
+      if (searchType === 'netdisk') {
+        handleNetDiskSearch(initialQuery);
+      }
+    }
+
+    // 读取流式搜索设置
+    if (typeof window !== 'undefined') {
+      const savedFluidSearch = localStorage.getItem('fluidSearch');
+      const defaultFluidSearch =
+        (window as any).RUNTIME_CONFIG?.FLUID_SEARCH !== false;
+      if (savedFluidSearch !== null) {
+        setUseFluidSearch(JSON.parse(savedFluidSearch));
+      } else if (defaultFluidSearch !== undefined) {
+        setUseFluidSearch(defaultFluidSearch);
+      }
+
+      // 读取精确搜索设置
+      const savedExactSearch = localStorage.getItem('exactSearch');
+      if (savedExactSearch !== null) {
+        setExactSearch(savedExactSearch === 'true');
+      }
+    }
+
+    // 监听搜索历史更新事件
+    const unsubscribe = subscribeToDataUpdates(
+      'searchHistoryUpdated',
+      (newHistory: string[]) => {
+        setSearchHistory(newHistory);
+      },
+    );
+
+    // 获取滚动位置的函数 - 专门针对 body 滚动
+    const getScrollTop = () => {
+      return document.body.scrollTop || 0;
+    };
+
+    // 使用 requestAnimationFrame 持续检测滚动位置
+    let isRunning = false;
+    const checkScrollPosition = () => {
+      if (!isRunning) return;
+
+      const scrollTop = getScrollTop();
+      const shouldShow = scrollTop > 300;
+      setShowBackToTop(shouldShow);
+
+      requestAnimationFrame(checkScrollPosition);
+    };
+
+    // 启动持续检测
+    isRunning = true;
+    checkScrollPosition();
+
+    // 监听 body 元素的滚动事件
+    const handleScroll = () => {
+      const scrollTop = getScrollTop();
+      setShowBackToTop(scrollTop > 300);
+    };
+
+    document.body.addEventListener('scroll', handleScroll, { passive: true });
+
+    return () => {
+      unsubscribe();
+      isRunning = false; // 停止 requestAnimationFrame 循环
+
+      // 移除 body 滚动事件监听器
+      document.body.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+
+  // 监听搜索类型变化，如果切换到网盘/YouTube/Bilibili/TMDB演员搜索且有搜索词，立即搜索
+  useEffect(() => {
+    if (
+      (searchType === 'netdisk' ||
+        searchType === 'youtube' ||
+        searchType === 'bilibili' ||
+        searchType === 'tmdb-actor') &&
+      showResults
+    ) {
+      const currentQuery = searchQuery.trim() || searchParams.get('q');
+      if (currentQuery) {
+        if (searchType === 'netdisk' && netdiskResourceType === 'netdisk') {
+          handleNetDiskSearch(currentQuery);
+        } else if (searchType === 'netdisk' && netdiskResourceType === 'acg') {
+          // ACG 搜索：触发 AcgSearch 组件搜索
+          setAcgTriggerSearch((prev) => !prev);
+        } else if (searchType === 'youtube') {
+          handleYouTubeSearch(currentQuery);
+        } else if (searchType === 'bilibili') {
+          handleBilibiliSearch(currentQuery);
+        } else if (searchType === 'tmdb-actor') {
+          handleTmdbActorSearch(currentQuery, tmdbActorType, tmdbFilterState);
+        }
+      }
+    }
+  }, [searchType, netdiskResourceType, showResults, searchQuery, searchParams]);
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = searchQuery.trim().replace(/\s+/g, ' ');
@@ -1559,7 +1599,7 @@ function SearchPageClient() {
         top: 0,
         behavior: 'smooth',
       });
-    } catch (error) {
+    } catch {
       // 如果平滑滚动完全失败，使用立即滚动
       document.body.scrollTop = 0;
     }
@@ -1633,7 +1673,6 @@ function SearchPageClient() {
                 <button
                   type='button'
                   onClick={() => {
-                    const wasAlreadyYoutube = searchType === 'youtube';
                     setSearchType('youtube');
                     // 清除之前的YouTube搜索状态，确保重新开始
                     setYoutubeError(null);

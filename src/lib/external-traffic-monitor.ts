@@ -25,23 +25,6 @@ const MAX_CACHE_AGE = 48 * 60 * 60 * 1000; // 48小时（与性能监控保持�
 let dataLoaded = false;
 
 /**
- * 从 Kvrocks 加载历史数据（已禁用持久化）
- */
-async function loadFromKvrocks(): Promise<void> {
-  if (dataLoaded) return;
-  // 持久化已禁用，直接标记为已加载
-  dataLoaded = true;
-}
-
-/**
- * 保存数据到 Kvrocks（已禁用持久化）
- */
-async function saveToKvrocks(): Promise<void> {
-  // 持久化已禁用，不再保存到 Kvrocks
-  return;
-}
-
-/**
  * 记录外部请求流量
  */
 export function recordExternalTraffic(metrics: ExternalTrafficMetrics): void {
@@ -56,7 +39,10 @@ export function recordExternalTraffic(metrics: ExternalTrafficMetrics): void {
   // 清理超过48小时的旧数据
   const now = Date.now();
   const cutoffTime = now - MAX_CACHE_AGE;
-  while (externalTrafficCache.length > 0 && externalTrafficCache[0].timestamp < cutoffTime) {
+  while (
+    externalTrafficCache.length > 0 &&
+    externalTrafficCache[0].timestamp < cutoffTime
+  ) {
     externalTrafficCache.shift();
   }
 
@@ -77,7 +63,7 @@ export async function getExternalTrafficStats(hours: number = 1) {
 
   // 过滤时间范围内的数据
   const filteredData = externalTrafficCache.filter(
-    (item) => item.timestamp >= startTime
+    (item) => item.timestamp >= startTime,
   );
 
   if (filteredData.length === 0) {
@@ -94,14 +80,21 @@ export async function getExternalTrafficStats(hours: number = 1) {
   // 计算总流量
   const totalTraffic = filteredData.reduce(
     (sum, item) => sum + item.requestSize + item.responseSize,
-    0
+    0,
   );
-  const requestTraffic = filteredData.reduce((sum, item) => sum + item.requestSize, 0);
-  const responseTraffic = filteredData.reduce((sum, item) => sum + item.responseSize, 0);
+  const requestTraffic = filteredData.reduce(
+    (sum, item) => sum + item.requestSize,
+    0,
+  );
+  const responseTraffic = filteredData.reduce(
+    (sum, item) => sum + item.responseSize,
+    0,
+  );
 
   // 计算平均响应时间
   const avgDuration = Math.round(
-    filteredData.reduce((sum, item) => sum + item.duration, 0) / filteredData.length
+    filteredData.reduce((sum, item) => sum + item.duration, 0) /
+      filteredData.length,
   );
 
   // 按域名分组统计
@@ -134,7 +127,7 @@ export async function getExternalTrafficStats(hours: number = 1) {
       }
       byDomain[domain].requests++;
       byDomain[domain].traffic += item.requestSize + item.responseSize;
-    } catch (e) {
+    } catch {
       // URL 解析失败，记录但不显示
       invalidUrlCount++;
       // 记录前5个无效URL用于调试
@@ -164,7 +157,7 @@ export async function getExternalTrafficStats(hours: number = 1) {
  */
 export async function monitoredFetch(
   url: string | URL,
-  options?: RequestInit
+  options?: RequestInit,
 ): Promise<Response> {
   const startTime = Date.now();
 

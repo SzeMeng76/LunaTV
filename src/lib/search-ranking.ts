@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 /**
  * 搜索结果相关性排序工具
  *
@@ -32,7 +30,7 @@ function levenshteinDistance(str1: string, str2: string): number {
       matrix[i][j] = Math.min(
         matrix[i - 1][j] + 1, // 删除
         matrix[i][j - 1] + 1, // 插入
-        matrix[i - 1][j - 1] + cost // 替换
+        matrix[i - 1][j - 1] + cost, // 替换
       );
     }
   }
@@ -68,7 +66,7 @@ function containsCharsInOrder(title: string, keyword: string): boolean {
  */
 export function calculateRelevanceScore(
   result: SearchResult,
-  query: string
+  query: string,
 ): number {
   const title = (result.title || '').trim();
   const keyword = query.trim();
@@ -144,7 +142,7 @@ export function calculateRelevanceScore(
  */
 export function rankSearchResults(
   results: SearchResult[],
-  query: string
+  query: string,
 ): SearchResult[] {
   if (!results || results.length === 0) return [];
 
@@ -181,7 +179,7 @@ export function rankSearchResults(
  */
 export function groupSearchResultsByRelevance(
   results: SearchResult[],
-  query: string
+  query: string,
 ): {
   exact: SearchResult[]; // 精确匹配（分数 >= 80）
   high: SearchResult[]; // 高相关（60 <= 分数 < 80）

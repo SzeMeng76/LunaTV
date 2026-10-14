@@ -1,15 +1,15 @@
 'use client';
 
 import {
-  ArrowPathIcon,
-  CheckCircleIcon,
-  ClockIcon,
-  ExclamationTriangleIcon,
-  MagnifyingGlassIcon,
-  PlayIcon,
-  XCircleIcon,
-  XMarkIcon,
-} from '@heroicons/react/24/outline';
+  RefreshCw as ArrowPathIcon,
+  CheckCircle2 as CheckCircleIcon,
+  Clock as ClockIcon,
+  AlertTriangle as ExclamationTriangleIcon,
+  Search as MagnifyingGlassIcon,
+  Play as PlayIcon,
+  XCircle as XCircleIcon,
+  X as XMarkIcon,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -43,13 +43,17 @@ interface SourceTestResult {
 function computeMatchRate(results: SearchResult[], q: string) {
   const lowerQ = (q || '').toLowerCase();
   if (!results || results.length === 0) return 0;
-  const hit = results.filter((r) => (r.title || '').toLowerCase().includes(lowerQ)).length;
+  const hit = results.filter((r) =>
+    (r.title || '').toLowerCase().includes(lowerQ),
+  ).length;
   return hit / results.length;
 }
 
 function computeTopMatches(results: SearchResult[], q: string) {
   const lowerQ = (q || '').toLowerCase();
-  const hit = results.filter((r) => (r.title || '').toLowerCase().includes(lowerQ));
+  const hit = results.filter((r) =>
+    (r.title || '').toLowerCase().includes(lowerQ),
+  );
   return hit.slice(0, 3).map((r) => r.title || '');
 }
 
@@ -93,13 +97,13 @@ async function getAllApiSites(): Promise<ApiSite[]> {
 // 测试单个源
 async function testSource(
   sourceKey: string,
-  query: string
+  query: string,
 ): Promise<SourceTestResult> {
   const startTime = Date.now();
 
   try {
     const response = await fetch(
-      `/api/source-test?q=${encodeURIComponent(query)}&source=${sourceKey}`
+      `/api/source-test?q=${encodeURIComponent(query)}&source=${sourceKey}`,
     );
     const responseTime = Date.now() - startTime;
 
@@ -173,7 +177,7 @@ export default function SourceTestModule() {
   const [sources, setSources] = useState<ApiSite[]>([]);
   const [searchKeyword, setSearchKeyword] = useState('斗罗大陆');
   const [testResults, setTestResults] = useState<Map<string, SourceTestResult>>(
-    new Map()
+    new Map(),
   );
   const [isTestingAll, setIsTestingAll] = useState(false);
   const [selectedResults, setSelectedResults] = useState<SearchResult[]>([]);
@@ -215,8 +219,8 @@ export default function SourceTestModule() {
             status: 'testing',
             results: [],
             disabled: source.disabled,
-          })
-        )
+          }),
+        ),
     );
 
     const result = await testSource(sourceKey, searchKeyword);
@@ -259,8 +263,8 @@ export default function SourceTestModule() {
             prev.set(source.key, {
               ...prev.get(source.key)!,
               status: 'testing',
-            })
-          )
+            }),
+          ),
       );
 
       const result = await testSource(source.key, searchKeyword);
@@ -331,8 +335,8 @@ export default function SourceTestModule() {
       // 本地更新状态
       setSources((prev) =>
         prev.map((s) =>
-          s.key === source.key ? { ...s, disabled: !s.disabled } : s
-        )
+          s.key === source.key ? { ...s, disabled: !s.disabled } : s,
+        ),
       );
       setTestResults(
         (prev) =>
@@ -345,8 +349,8 @@ export default function SourceTestModule() {
                 results: [],
               }),
               disabled: !source.disabled,
-            })
-          )
+            }),
+          ),
       );
     } catch (e: any) {
       alert(e.message || '操作失败');
@@ -361,30 +365,30 @@ export default function SourceTestModule() {
 
     const enabledTotal = enabledResults.length;
     const enabledSuccess = enabledResults.filter(
-      (r) => r.status === 'success'
+      (r) => r.status === 'success',
     ).length;
     const enabledError = enabledResults.filter(
-      (r) => r.status === 'error'
+      (r) => r.status === 'error',
     ).length;
     const enabledTimeout = enabledResults.filter(
-      (r) => r.status === 'timeout'
+      (r) => r.status === 'timeout',
     ).length;
     const enabledTesting = enabledResults.filter(
-      (r) => r.status === 'testing'
+      (r) => r.status === 'testing',
     ).length;
 
     const disabledTotal = disabledResults.length;
     const disabledSuccess = disabledResults.filter(
-      (r) => r.status === 'success'
+      (r) => r.status === 'success',
     ).length;
     const disabledError = disabledResults.filter(
-      (r) => r.status === 'error'
+      (r) => r.status === 'error',
     ).length;
     const disabledTimeout = disabledResults.filter(
-      (r) => r.status === 'timeout'
+      (r) => r.status === 'timeout',
     ).length;
     const disabledTesting = disabledResults.filter(
-      (r) => r.status === 'testing'
+      (r) => r.status === 'testing',
     ).length;
 
     const total = results.length;
@@ -713,7 +717,7 @@ export default function SourceTestModule() {
                   <div className='flex items-center gap-3 flex-1'>
                     {getStatusIcon(
                       result?.status || 'pending',
-                      source.disabled
+                      source.disabled,
                     )}
                     <div className='flex-1 min-w-0'>
                       <div className='flex items-center gap-2 flex-wrap'>
@@ -734,7 +738,10 @@ export default function SourceTestModule() {
                       </div>
                       <div className='text-sm text-gray-500 dark:text-gray-400 mt-1'>
                         <div className='font-mono text-xs'>{source.key}</div>
-                        <div className='truncate hover:whitespace-normal hover:break-all transition-all cursor-pointer' title={source.api}>
+                        <div
+                          className='truncate hover:whitespace-normal hover:break-all transition-all cursor-pointer'
+                          title={source.api}
+                        >
                           {source.api}
                         </div>
                       </div>
@@ -759,7 +766,9 @@ export default function SourceTestModule() {
                           </div>
                         )}
                         {result.status === 'error' && (
-                          <div className='text-sm text-red-600 font-medium'>请求失败</div>
+                          <div className='text-sm text-red-600 font-medium'>
+                            请求失败
+                          </div>
                         )}
                         {result.status === 'timeout' && (
                           <div className='text-sm text-yellow-600 font-medium'>
@@ -767,7 +776,9 @@ export default function SourceTestModule() {
                           </div>
                         )}
                         {result.status === 'testing' && (
-                          <div className='text-sm text-blue-600 font-medium'>测试中...</div>
+                          <div className='text-sm text-blue-600 font-medium'>
+                            测试中...
+                          </div>
                         )}
                         {result.topMatches && result.topMatches.length > 0 && (
                           <div
@@ -803,8 +814,8 @@ export default function SourceTestModule() {
                       {result?.status === 'testing'
                         ? '测试中'
                         : source.disabled
-                        ? '测试禁用源'
-                        : '单独测试'}
+                          ? '测试禁用源'
+                          : '单独测试'}
                     </button>
 
                     <button
@@ -825,7 +836,8 @@ export default function SourceTestModule() {
                   <div className='mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 md:hidden'>
                     <div className='flex items-center justify-between text-sm'>
                       <div className='text-gray-600 dark:text-gray-400'>
-                        {result.responseTime && `响应时间: ${result.responseTime}ms`}
+                        {result.responseTime &&
+                          `响应时间: ${result.responseTime}ms`}
                       </div>
                       {result.status === 'success' && (
                         <div className='text-green-600 font-medium'>
@@ -844,14 +856,21 @@ export default function SourceTestModule() {
                         <div className='text-red-600 font-medium'>请求失败</div>
                       )}
                       {result.status === 'timeout' && (
-                        <div className='text-yellow-600 font-medium'>请求超时</div>
+                        <div className='text-yellow-600 font-medium'>
+                          请求超时
+                        </div>
                       )}
                       {result.status === 'testing' && (
-                        <div className='text-blue-600 font-medium'>测试中...</div>
+                        <div className='text-blue-600 font-medium'>
+                          测试中...
+                        </div>
                       )}
                     </div>
                     {result.topMatches && result.topMatches.length > 0 && (
-                      <div className='text-xs text-gray-500 mt-1' title={result.topMatches.join(' | ')}>
+                      <div
+                        className='text-xs text-gray-500 mt-1'
+                        title={result.topMatches.join(' | ')}
+                      >
                         示例: {result.topMatches.slice(0, 2).join(', ')}
                       </div>
                     )}
@@ -870,7 +889,8 @@ export default function SourceTestModule() {
       </div>
 
       {/* 结果详情侧边抽屉 - 使用 Portal 渲染到 body */}
-      {mounted && showResultsModal &&
+      {mounted &&
+        showResultsModal &&
         createPortal(
           <>
             {/* 遮罩层 */}
@@ -903,7 +923,9 @@ export default function SourceTestModule() {
                       <p className='text-sm text-gray-500 dark:text-gray-400'>
                         来源: {selectedResults[0].source_name}
                       </p>
-                      <span className='text-gray-300 dark:text-gray-600'>•</span>
+                      <span className='text-gray-300 dark:text-gray-600'>
+                        •
+                      </span>
                       <p className='text-sm text-gray-500 dark:text-gray-400'>
                         关键词: {searchKeyword}
                       </p>
@@ -950,7 +972,7 @@ export default function SourceTestModule() {
               </div>
             </div>
           </>,
-          document.body
+          document.body,
         )}
 
       {/* 空状态 */}

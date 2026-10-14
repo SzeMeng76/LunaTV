@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+
 import { getAuthInfoFromCookie } from '@/lib/auth';
-import { ClientCache } from '@/lib/client-cache';
-import { db } from '@/lib/db';
 import { DatabaseCacheManager } from '@/lib/database-cache';
+import { db } from '@/lib/db';
 
 export const runtime = 'nodejs';
 
@@ -473,7 +473,7 @@ async function clearExpiredCache(): Promise<number> {
             clearedCount++;
           }
         }
-      } catch (error) {
+      } catch {
         // 数据格式错误，清理掉
         localStorage.removeItem(key);
         clearedCount++;
@@ -511,15 +511,4 @@ async function clearAllCache(): Promise<number> {
     bilibiliCount +
     searchCount
   );
-}
-
-// 格式化字节大小
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B';
-
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }

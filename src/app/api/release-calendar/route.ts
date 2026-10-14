@@ -1,16 +1,14 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getAuthInfoFromCookie } from '@/lib/auth';
-import { getReleaseCalendar, getFilters } from '@/lib/release-calendar-scraper';
-import { ReleaseCalendarResult } from '@/lib/types';
 import { CalendarCacheManager } from '@/lib/calendar-cache';
+import { getFilters, getReleaseCalendar } from '@/lib/release-calendar-scraper';
+import { ReleaseCalendarResult } from '@/lib/types';
 
 export const runtime = 'nodejs';
 
 // 🔄 缓存管理已迁移到数据库（CalendarCacheManager）
 // 移除内存缓存，使用数据库缓存实现全局共享
-
 
 export async function GET(request: NextRequest) {
   // 检查用户认证
@@ -28,24 +26,24 @@ export async function GET(request: NextRequest) {
     const genre = searchParams.get('genre');
     const dateFrom = searchParams.get('dateFrom');
     const dateTo = searchParams.get('dateTo');
-    const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : undefined;
+    const limit = searchParams.get('limit')
+      ? parseInt(searchParams.get('limit')!)
+      : undefined;
     const offset = parseInt(searchParams.get('offset') || '0');
-    const refresh = searchParams.get('refresh') === 'true' || searchParams.has('nocache');
+    const refresh =
+      searchParams.get('refresh') === 'true' || searchParams.has('nocache');
 
     // 参数验证
     if (type && !['movie', 'tv'].includes(type)) {
       return NextResponse.json(
         { error: 'type 参数必须是 movie 或 tv' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // 移除limit限制，因为实际数据量只有65个项目
     if (offset < 0) {
-      return NextResponse.json(
-        { error: 'offset 不能为负数' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'offset 不能为负数' }, { status: 400 });
     }
 
     // 🔍 检查数据库缓存（除非强制刷新）
@@ -58,35 +56,39 @@ export async function GET(request: NextRequest) {
         let filteredItems = cachedData.items;
 
         if (type) {
-          filteredItems = filteredItems.filter((item: any) => item.type === type);
+          filteredItems = filteredItems.filter(
+            (item: any) => item.type === type,
+          );
         }
 
         if (region && region !== '全部') {
           filteredItems = filteredItems.filter((item: any) =>
-            item.region.includes(region)
+            item.region.includes(region),
           );
         }
 
         if (genre && genre !== '全部') {
           filteredItems = filteredItems.filter((item: any) =>
-            item.genre.includes(genre)
+            item.genre.includes(genre),
           );
         }
 
         if (dateFrom) {
-          filteredItems = filteredItems.filter((item: any) =>
-            item.releaseDate >= dateFrom
+          filteredItems = filteredItems.filter(
+            (item: any) => item.releaseDate >= dateFrom,
           );
         }
 
         if (dateTo) {
-          filteredItems = filteredItems.filter((item: any) =>
-            item.releaseDate <= dateTo
+          filteredItems = filteredItems.filter(
+            (item: any) => item.releaseDate <= dateTo,
           );
         }
 
         const total = filteredItems.length;
-        const items = limit ? filteredItems.slice(offset, offset + limit) : filteredItems.slice(offset);
+        const items = limit
+          ? filteredItems.slice(offset, offset + limit)
+          : filteredItems.slice(offset);
         const hasMore = limit ? offset + limit < total : false;
 
         return NextResponse.json({
@@ -132,9 +134,12 @@ export async function GET(request: NextRequest) {
         filters,
       };
 
-      const saveSuccess = await CalendarCacheManager.saveCalendarData(cacheData);
+      const saveSuccess =
+        await CalendarCacheManager.saveCalendarData(cacheData);
       if (saveSuccess) {
-        console.log(`✅ 发布日历数据库缓存已更新，包含 ${allData.items.length} 项`);
+        console.log(
+          `✅ 发布日历数据库缓存已更新，包含 ${allData.items.length} 项`,
+        );
       } else {
         console.warn('⚠️ 数据库缓存更新失败，但不影响API响应');
       }
@@ -148,7 +153,7 @@ export async function GET(request: NextRequest) {
         error: '获取发布日历失败',
         details: (error as Error).message,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -183,7 +188,9 @@ export async function POST(request: NextRequest) {
     const saveSuccess = await CalendarCacheManager.saveCalendarData(cacheData);
 
     if (saveSuccess) {
-      console.log(`✅ 发布日历数据库缓存刷新完成，包含 ${calendarData.items.length} 项`);
+      console.log(
+        `✅ 发布日历数据库缓存刷新完成，包含 ${calendarData.items.length} 项`,
+      );
     } else {
       console.warn('⚠️ 数据库缓存刷新失败');
     }
@@ -201,7 +208,7 @@ export async function POST(request: NextRequest) {
         error: '刷新发布日历缓存失败',
         details: (error as Error).message,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

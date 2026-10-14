@@ -1,4 +1,4 @@
-/* eslint-disable no-console, @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion */
+/* eslint-disable no-console */
 
 import { Redis } from '@upstash/redis';
 
@@ -285,7 +285,7 @@ export class UpstashRedisStorage implements IStorage {
           this.client.del(this.oidcSubKey(userInfo.oidcSub!)),
         );
       }
-    } catch (e) {
+    } catch {
       // 忽略错误，用户信息可能已被删除
     }
 
@@ -476,7 +476,7 @@ export class UpstashRedisStorage implements IStorage {
           const parsed = JSON.parse(tagsStr);
           parsedTags = Array.isArray(parsed) ? parsed : [parsed];
         }
-      } catch (e) {
+      } catch {
         // JSON 解析失败，可能是单个字符串值
         console.warn(`用户 ${userName} tags 解析失败，原始值:`, userInfo.tags);
         const tagsStr = ensureString(userInfo.tags);
@@ -500,7 +500,7 @@ export class UpstashRedisStorage implements IStorage {
           const parsed = JSON.parse(apisStr);
           parsedApis = Array.isArray(parsed) ? parsed : [parsed];
         }
-      } catch (e) {
+      } catch {
         console.warn(`用户 ${userName} enabledApis 解析失败`);
         const apisStr = ensureString(userInfo.enabledApis);
         if (apisStr.includes(',')) {

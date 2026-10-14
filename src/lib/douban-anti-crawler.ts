@@ -1,5 +1,6 @@
 import * as cheerio from 'cheerio';
 import { createHash } from 'crypto';
+
 import { getRandomUserAgent } from './user-agent';
 
 /**
@@ -76,7 +77,9 @@ function parseVerificationPage(html: string): {
   const red = $('#red').val() as string;
 
   if (!tok || !cha || !red) {
-    console.error('[Douban Anti-Crawler] Failed to extract verification form data');
+    console.error(
+      '[Douban Anti-Crawler] Failed to extract verification form data',
+    );
     return null;
   }
 
@@ -89,7 +92,10 @@ function parseVerificationPage(html: string): {
  * @param forceRefresh 是否强制刷新 cookie
  * @returns cookie 字符串
  */
-export async function getDoubanCookie(url: string, forceRefresh = false): Promise<string> {
+export async function getDoubanCookie(
+  url: string,
+  forceRefresh = false,
+): Promise<string> {
   // 检查缓存
   if (!forceRefresh && isCookieCacheValid()) {
     console.log('[Douban Anti-Crawler] Using cached douban cookie');
@@ -98,9 +104,9 @@ export async function getDoubanCookie(url: string, forceRefresh = false): Promis
 
   const headers = {
     'User-Agent': getRandomUserAgent(),
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
     'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
-    'Referer': 'https://movie.douban.com/',
+    Referer: 'https://movie.douban.com/',
   };
 
   try {
@@ -123,7 +129,9 @@ export async function getDoubanCookie(url: string, forceRefresh = false): Promis
         throw new Error('Unexpected redirect location');
       }
 
-      console.log('[Douban Anti-Crawler] Detected anti-crawler verification, processing...');
+      console.log(
+        '[Douban Anti-Crawler] Detected anti-crawler verification, processing...',
+      );
 
       // 第二步：访问验证页面
       const verifyResponse = await fetch(location, {
@@ -131,7 +139,9 @@ export async function getDoubanCookie(url: string, forceRefresh = false): Promis
       });
 
       if (!verifyResponse.ok) {
-        throw new Error(`Failed to fetch verification page: ${verifyResponse.status}`);
+        throw new Error(
+          `Failed to fetch verification page: ${verifyResponse.status}`,
+        );
       }
 
       const verifyHtml = await verifyResponse.text();
@@ -149,7 +159,9 @@ export async function getDoubanCookie(url: string, forceRefresh = false): Promis
       const sol = proofOfWork(formData.cha, 4);
       const elapsed = Date.now() - startTime;
 
-      console.log(`[Douban Anti-Crawler] Proof of work calculated: ${sol} (${elapsed}ms)`);
+      console.log(
+        `[Douban Anti-Crawler] Proof of work calculated: ${sol} (${elapsed}ms)`,
+      );
 
       // 第五步：提交验证表单
       const formBody = new URLSearchParams({
@@ -202,13 +214,13 @@ export async function getDoubanCookie(url: string, forceRefresh = false): Promis
  */
 export async function fetchDoubanWithVerification(
   url: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
 ): Promise<Response> {
   const headers = {
     'User-Agent': getRandomUserAgent(),
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
     'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
-    'Referer': 'https://movie.douban.com/',
+    Referer: 'https://movie.douban.com/',
     ...options.headers,
   };
 
@@ -226,12 +238,16 @@ export async function fetchDoubanWithVerification(
 
       // 如果成功，直接返回
       if (response.ok) {
-        console.log('[Douban Anti-Crawler] Request succeeded with cached cookie');
+        console.log(
+          '[Douban Anti-Crawler] Request succeeded with cached cookie',
+        );
         return response;
       }
 
       // 如果失败，清除缓存并继续
-      console.log('[Douban Anti-Crawler] Cached cookie failed, will obtain new one');
+      console.log(
+        '[Douban Anti-Crawler] Cached cookie failed, will obtain new one',
+      );
       cookieCache = null;
     }
 
@@ -246,7 +262,9 @@ export async function fetchDoubanWithVerification(
     if (response.status === 302) {
       const location = response.headers.get('location');
       if (location && location.includes('sec.douban.com')) {
-        console.log('[Douban Anti-Crawler] Anti-crawler detected, obtaining cookie...');
+        console.log(
+          '[Douban Anti-Crawler] Anti-crawler detected, obtaining cookie...',
+        );
 
         // 获取验证 cookie（会自动缓存）
         const cookie = await getDoubanCookie(url);
@@ -264,7 +282,10 @@ export async function fetchDoubanWithVerification(
 
     return response;
   } catch (error) {
-    console.error('[Douban Anti-Crawler] Failed to fetch douban with verification:', error);
+    console.error(
+      '[Douban Anti-Crawler] Failed to fetch douban with verification:',
+      error,
+    );
     throw error;
   }
 }

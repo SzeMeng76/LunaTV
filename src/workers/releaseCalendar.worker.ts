@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 // 🚀 Web Worker for processing release calendar data
 // Offloads CPU-intensive operations from main thread
 
@@ -66,8 +64,17 @@ function processReleaseCalendar(input: WorkerInput): WorkerOutput {
   const sevenDaysAgoStr = `${sevenDaysAgo.getFullYear()}-${String(sevenDaysAgo.getMonth() + 1).padStart(2, '0')}-${String(sevenDaysAgo.getDate()).padStart(2, '0')}`;
   const ninetyDaysStr = `${ninetyDaysLater.getFullYear()}-${String(ninetyDaysLater.getMonth() + 1).padStart(2, '0')}-${String(ninetyDaysLater.getDate()).padStart(2, '0')}`;
 
-  console.log('📅 [Worker] 日期范围:', { today, sevenDaysAgoStr, ninetyDaysStr });
-  console.log('📅 [Worker] 前3条数据示例:', releases.slice(0, 3).map(r => ({ title: r.title, releaseDate: r.releaseDate })));
+  console.log('📅 [Worker] 日期范围:', {
+    today,
+    sevenDaysAgoStr,
+    ninetyDaysStr,
+  });
+  console.log(
+    '📅 [Worker] 前3条数据示例:',
+    releases
+      .slice(0, 3)
+      .map((r) => ({ title: r.title, releaseDate: r.releaseDate })),
+  );
 
   const upcoming = releases.filter((item: ReleaseCalendarItem) => {
     const releaseDateStr = item.releaseDate;
@@ -99,7 +106,8 @@ function processReleaseCalendar(input: WorkerInput): WorkerOutput {
 
     let foundSimilar = false;
     for (const [key, existing] of uniqueMap.entries()) {
-      const existingNormalized = normalizedCache.get(key) || normalizeTitle(key);
+      const existingNormalized =
+        normalizedCache.get(key) || normalizeTitle(key);
       if (!normalizedCache.has(key)) {
         normalizedCache.set(key, existingNormalized);
       }
@@ -108,7 +116,8 @@ function processReleaseCalendar(input: WorkerInput): WorkerOutput {
         foundSimilar = true;
 
         // 缓存季数检测结果
-        const itemHasSeason = seasonCache.get(item.title) ?? seasonRegex.test(item.title);
+        const itemHasSeason =
+          seasonCache.get(item.title) ?? seasonRegex.test(item.title);
         const existingHasSeason = seasonCache.get(key) ?? seasonRegex.test(key);
         seasonCache.set(item.title, itemHasSeason);
         seasonCache.set(key, existingHasSeason);
@@ -117,7 +126,10 @@ function processReleaseCalendar(input: WorkerInput): WorkerOutput {
         if (!itemHasSeason && existingHasSeason) {
           uniqueMap.delete(key);
           uniqueMap.set(item.title, item);
-        } else if (itemHasSeason === existingHasSeason && item.releaseDate < existing.releaseDate) {
+        } else if (
+          itemHasSeason === existingHasSeason &&
+          item.releaseDate < existing.releaseDate
+        ) {
           uniqueMap.delete(key);
           uniqueMap.set(item.title, item);
         }
@@ -144,11 +156,23 @@ function processReleaseCalendar(input: WorkerInput): WorkerOutput {
   thirtyDaysLater.setDate(thirtyDaysLater.getDate() + 30);
   const thirtyDaysLaterStr = `${thirtyDaysLater.getFullYear()}-${String(thirtyDaysLater.getMonth() + 1).padStart(2, '0')}-${String(thirtyDaysLater.getDate()).padStart(2, '0')}`;
 
-  const recentlyReleased = uniqueUpcoming.filter((i: ReleaseCalendarItem) => i.releaseDate < todayStr);
-  const releasingToday = uniqueUpcoming.filter((i: ReleaseCalendarItem) => i.releaseDate === todayStr);
-  const nextSevenDays = uniqueUpcoming.filter((i: ReleaseCalendarItem) => i.releaseDate > todayStr && i.releaseDate <= sevenDaysLaterStr);
-  const nextThirtyDays = uniqueUpcoming.filter((i: ReleaseCalendarItem) => i.releaseDate > sevenDaysLaterStr && i.releaseDate <= thirtyDaysLaterStr);
-  const laterReleasing = uniqueUpcoming.filter((i: ReleaseCalendarItem) => i.releaseDate > thirtyDaysLaterStr);
+  const recentlyReleased = uniqueUpcoming.filter(
+    (i: ReleaseCalendarItem) => i.releaseDate < todayStr,
+  );
+  const releasingToday = uniqueUpcoming.filter(
+    (i: ReleaseCalendarItem) => i.releaseDate === todayStr,
+  );
+  const nextSevenDays = uniqueUpcoming.filter(
+    (i: ReleaseCalendarItem) =>
+      i.releaseDate > todayStr && i.releaseDate <= sevenDaysLaterStr,
+  );
+  const nextThirtyDays = uniqueUpcoming.filter(
+    (i: ReleaseCalendarItem) =>
+      i.releaseDate > sevenDaysLaterStr && i.releaseDate <= thirtyDaysLaterStr,
+  );
+  const laterReleasing = uniqueUpcoming.filter(
+    (i: ReleaseCalendarItem) => i.releaseDate > thirtyDaysLaterStr,
+  );
 
   // 智能分配：总共10个，按时间段分散选取
   const maxTotal = 10;
@@ -170,35 +194,55 @@ function processReleaseCalendar(input: WorkerInput): WorkerOutput {
   if (selectedItems.length < maxTotal) {
     const remaining = maxTotal - selectedItems.length;
 
-    const additionalSeven = nextSevenDays.slice(sevenDayQuota, sevenDayQuota + remaining);
+    const additionalSeven = nextSevenDays.slice(
+      sevenDayQuota,
+      sevenDayQuota + remaining,
+    );
     selectedItems = [...selectedItems, ...additionalSeven];
 
     if (selectedItems.length < maxTotal) {
       const stillRemaining = maxTotal - selectedItems.length;
-      const additionalThirty = nextThirtyDays.slice(thirtyDayQuota, thirtyDayQuota + stillRemaining);
+      const additionalThirty = nextThirtyDays.slice(
+        thirtyDayQuota,
+        thirtyDayQuota + stillRemaining,
+      );
       selectedItems = [...selectedItems, ...additionalThirty];
     }
 
     if (selectedItems.length < maxTotal) {
       const stillRemaining = maxTotal - selectedItems.length;
-      const additionalLater = laterReleasing.slice(laterQuota, laterQuota + stillRemaining);
+      const additionalLater = laterReleasing.slice(
+        laterQuota,
+        laterQuota + stillRemaining,
+      );
       selectedItems = [...selectedItems, ...additionalLater];
     }
 
     if (selectedItems.length < maxTotal) {
       const stillRemaining = maxTotal - selectedItems.length;
-      const additionalRecent = recentlyReleased.slice(recentQuota, recentQuota + stillRemaining);
+      const additionalRecent = recentlyReleased.slice(
+        recentQuota,
+        recentQuota + stillRemaining,
+      );
       selectedItems = [...selectedItems, ...additionalRecent];
     }
 
     // 最后从今日上映补充（限制最多3个）
     if (selectedItems.length < maxTotal) {
       const maxTodayLimit = 3;
-      const currentTodayCount = selectedItems.filter((i: ReleaseCalendarItem) => i.releaseDate === todayStr).length;
+      const currentTodayCount = selectedItems.filter(
+        (i: ReleaseCalendarItem) => i.releaseDate === todayStr,
+      ).length;
       const todayRemaining = maxTodayLimit - currentTodayCount;
       if (todayRemaining > 0) {
-        const stillRemaining = Math.min(maxTotal - selectedItems.length, todayRemaining);
-        const additionalToday = releasingToday.slice(todayQuota, todayQuota + stillRemaining);
+        const stillRemaining = Math.min(
+          maxTotal - selectedItems.length,
+          todayRemaining,
+        );
+        const additionalToday = releasingToday.slice(
+          todayQuota,
+          todayQuota + stillRemaining,
+        );
         selectedItems = [...selectedItems, ...additionalToday];
       }
     }

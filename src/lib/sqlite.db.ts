@@ -8,7 +8,7 @@ import path from 'path';
 // with Node.js 20). The import is deferred to the constructor so the module
 // can be loaded safely and will only throw when SqliteStorage is actually
 // instantiated on an unsupported runtime.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 type DatabaseSync = any;
 
 import { AdminConfig } from './admin.types';
@@ -34,7 +34,6 @@ export class SqliteStorage implements IStorage {
   private cleanupTimer: ReturnType<typeof setInterval> | null = null;
 
   constructor() {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { DatabaseSync } = require('node:sqlite') as {
       DatabaseSync: new (path: string) => DatabaseSync;
     };

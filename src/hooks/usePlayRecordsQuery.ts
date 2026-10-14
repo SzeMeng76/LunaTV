@@ -15,7 +15,8 @@
  * - 自动请求去重：多个组件同时调用只发一次请求
  */
 
-import { useQuery, queryOptions } from '@tanstack/react-query';
+import { queryOptions, useQuery } from '@tanstack/react-query';
+
 import type { PlayRecord } from '@/lib/types';
 
 // ============================================================================
@@ -117,7 +118,7 @@ export function usePlayRecordsArrayQuery(options?: { enabled?: boolean }) {
         throw new Error(`Failed to fetch play records: ${response.status}`);
       }
 
-      const data = await response.json() as Record<string, PlayRecord>;
+      const data = (await response.json()) as Record<string, PlayRecord>;
 
       // 转换为数组并排序
       const recordsArray = Object.entries(data).map(([key, record]) => ({
@@ -154,7 +155,7 @@ export function usePlayRecordsArrayQuery(options?: { enabled?: boolean }) {
 export function usePlayRecordQuery(
   source: string,
   id: string,
-  options?: { enabled?: boolean }
+  options?: { enabled?: boolean },
 ) {
   return useQuery({
     queryKey: ['playRecords', 'single', source, id] as const,
@@ -165,7 +166,7 @@ export function usePlayRecordQuery(
         throw new Error(`Failed to fetch play records: ${response.status}`);
       }
 
-      const data = await response.json() as Record<string, PlayRecord>;
+      const data = (await response.json()) as Record<string, PlayRecord>;
       const key = `${source}+${id}`;
 
       return data[key] || null;

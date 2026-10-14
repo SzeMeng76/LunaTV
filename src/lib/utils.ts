@@ -478,7 +478,7 @@ export async function getVideoResolutionFromM3u8(
           playable: false,
           testedAt: Date.now(),
         };
-      } catch (error) {
+      } catch {
         return {
           quality: '未知',
           loadSpeed: '未知',

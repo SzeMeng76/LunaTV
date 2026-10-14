@@ -18,7 +18,7 @@ export const dynamic = 'force-dynamic';
  * 样式对齐主站登录/注册卡片（白卡片 + 绿主按钮 + 底部"去登录"链接）。
  * 纯 ES5 + XHR，兼容约束见 src/lib/legacy-html.ts。
  */
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   const storageType = process.env.NEXT_PUBLIC_STORAGE_TYPE || 'localstorage';
 
   let siteName = process.env.NEXT_PUBLIC_SITE_NAME || '聚合TV';

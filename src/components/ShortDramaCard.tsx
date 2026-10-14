@@ -1,37 +1,35 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 'use client';
 
+import { useQueryClient } from '@tanstack/react-query';
 import {
-  Play,
-  Star,
-  Heart,
   ExternalLink,
+  Heart,
+  Play,
   PlayCircle,
   Sparkles,
+  Star,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { memo, useEffect, useState, useCallback } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { memo, useCallback, useEffect, useState } from 'react';
 
-import { useLongPress } from '@/hooks/useLongPress';
-import { useToggleFavoriteMutation } from '@/hooks/useFavoritesMutations';
-import { useIsFavoritedQuery } from '@/hooks/useFavoritesQuery';
 import { isAIRecommendFeatureDisabled } from '@/lib/ai-recommend.client';
 import {
-  saveFavorite,
   deleteFavorite,
   generateStorageKey,
+  saveFavorite,
   subscribeToDataUpdates,
 } from '@/lib/db.client';
-import {
-  SHORTDRAMA_CACHE_EXPIRE,
-  getCacheKey,
-  getCache,
-  setCache,
-} from '@/lib/shortdrama-cache';
 import { loadedImageUrls } from '@/lib/imageCache';
+import {
+  getCache,
+  getCacheKey,
+  setCache,
+  SHORTDRAMA_CACHE_EXPIRE,
+} from '@/lib/shortdrama-cache';
 import { ShortDramaItem } from '@/lib/types';
+import { useToggleFavoriteMutation } from '@/hooks/useFavoritesMutations';
+import { useIsFavoritedQuery } from '@/hooks/useFavoritesQuery';
+import { useLongPress } from '@/hooks/useLongPress';
 
 import AIRecommendModal from '@/components/AIRecommendModal';
 import MobileActionSheet from '@/components/MobileActionSheet';
@@ -290,10 +288,6 @@ function ShortDramaCard({
     onClick: handleClick,
     longPressDelay: 500,
   });
-
-  const formatScore = (score: number) => {
-    return score > 0 ? score.toFixed(1) : '--';
-  };
 
   const formatUpdateTime = (updateTime: string) => {
     try {

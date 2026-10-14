@@ -1,6 +1,5 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+import { XMLParser } from 'fast-xml-parser';
 import { NextRequest, NextResponse } from 'next/server';
-import { parseStringPromise } from 'xml2js';
 
 import { getAuthInfoFromCookie } from '@/lib/auth';
 import { db } from '@/lib/db';
@@ -8,11 +7,21 @@ import { DEFAULT_USER_AGENT } from '@/lib/user-agent';
 
 export const runtime = 'nodejs';
 
+const parser = new XMLParser({
+  ignoreAttributes: false,
+  attributeNamePrefix: '@_',
+  textNodeName: '_',
+});
+
+const asArray = (value: any): any[] =>
+  Array.isArray(value) ? value : value == null ? [] : [value];
+
 const pickText = (value: any): string => {
   if (value === undefined || value === null) return '';
   const first = Array.isArray(value) ? value[0] : value;
   if (first === undefined || first === null) return '';
-  if (typeof first === 'object') return String(first._ ?? first.$?.url ?? first.$?.href ?? '');
+  if (typeof first === 'object')
+    return String(first._ ?? first['@_url'] ?? first['@_href'] ?? '');
   return String(first);
 };
 
@@ -34,7 +43,7 @@ export async function POST(req: NextRequest) {
     if (!keyword || typeof keyword !== 'string') {
       return NextResponse.json(
         { error: '搜索关键词不能为空' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -42,7 +51,7 @@ export async function POST(req: NextRequest) {
     if (!trimmedKeyword) {
       return NextResponse.json(
         { error: '搜索关键词不能为空' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -50,7 +59,7 @@ export async function POST(req: NextRequest) {
     if (isNaN(pageNum) || pageNum < 1) {
       return NextResponse.json(
         { error: '页码必须是大于0的整数' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -104,9 +113,9 @@ export async function POST(req: NextRequest) {
     }
 
     const xmlData = await response.text();
-    const parsed = await parseStringPromise(xmlData);
+    const parsed = parser.parse(xmlData);
 
-    if (!parsed?.rss?.channel?.[0]?.item) {
+    if (!parsed?.rss?.channel?.item) {
       return NextResponse.json({
         keyword: trimmedKeyword,
         page: pageNum,
@@ -115,14 +124,15 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const items = parsed.rss.channel[0].item;
+    const items = asArray(parsed.rss.channel.item);
 
     const results = items.map((item: any) => {
       const title = pickText(item.title);
       // Nyaa RSS 中 link 是 .torrent 下载地址，guid 才是详情页
       const torrentUrl = pickText(item.link);
       const detailUrl = pickText(item.guid) || torrentUrl;
-      const guid = detailUrl || torrentUrl || `${title}-${pickText(item.pubDate)}`;
+      const guid =
+        detailUrl || torrentUrl || `${title}-${pickText(item.pubDate)}`;
       const pubDate = pickText(item.pubDate);
       const size = pickText(item['nyaa:size']);
       const category = pickText(item['nyaa:category']);
@@ -176,7 +186,9 @@ export async function POST(req: NextRequest) {
 
     try {
       await db.setCache(cacheKey, responseData, ACG_CACHE_TIME);
-      console.log(`💾 Nyaa 搜索结果已缓存: "${trimmedKeyword}" - ${results.length} 个结果, TTL: ${ACG_CACHE_TIME}s`);
+      console.log(
+        `💾 Nyaa 搜索结果已缓存: "${trimmedKeyword}" - ${results.length} 个结果, TTL: ${ACG_CACHE_TIME}s`,
+      );
     } catch (cacheError) {
       console.warn('Nyaa 搜索缓存保存失败:', cacheError);
     }
@@ -186,7 +198,7 @@ export async function POST(req: NextRequest) {
     console.error('Nyaa 搜索失败:', error);
     return NextResponse.json(
       { error: error.message || '搜索失败' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

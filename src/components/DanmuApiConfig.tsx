@@ -1,6 +1,11 @@
 'use client';
 
-import { AlertCircle, CheckCircle, MessageSquare, ExternalLink } from 'lucide-react';
+import {
+  AlertCircle,
+  CheckCircle,
+  ExternalLink,
+  MessageSquare,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { AdminConfig } from '@/lib/admin.types';
@@ -16,8 +21,15 @@ interface DanmuApiConfigProps {
 
 const DanmuApiConfig = ({ config, refreshConfig }: DanmuApiConfigProps) => {
   const [isLoading, setIsLoading] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [testResult, setTestResult] = useState<{ success: boolean; message: string; count?: number } | null>(null);
+  const [message, setMessage] = useState<{
+    type: 'success' | 'error';
+    text: string;
+  } | null>(null);
+  const [testResult, setTestResult] = useState<{
+    success: boolean;
+    message: string;
+    count?: number;
+  } | null>(null);
   const [isTesting, setIsTesting] = useState(false);
 
   const [settings, setSettings] = useState({
@@ -71,7 +83,10 @@ const DanmuApiConfig = ({ config, refreshConfig }: DanmuApiConfigProps) => {
       const testUrl = `${url}/${token}/api/v2/search/anime?keyword=流浪地球`;
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), settings.timeout * 1000);
+      const timeoutId = setTimeout(
+        () => controller.abort(),
+        settings.timeout * 1000,
+      );
 
       const response = await fetch(testUrl, {
         signal: controller.signal,
@@ -229,7 +244,9 @@ const DanmuApiConfig = ({ config, refreshConfig }: DanmuApiConfigProps) => {
             <div className='space-y-4'>
               {/* 当前使用的 API */}
               <div className='bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3'>
-                <div className='text-xs text-gray-500 dark:text-gray-400 mb-1'>当前使用的API</div>
+                <div className='text-xs text-gray-500 dark:text-gray-400 mb-1'>
+                  当前使用的API
+                </div>
                 <div className='font-mono text-sm text-gray-900 dark:text-gray-100 break-all'>
                   {getCurrentApiConfig().url}
                 </div>
@@ -319,7 +336,10 @@ const DanmuApiConfig = ({ config, refreshConfig }: DanmuApiConfigProps) => {
                     const val = e.target.value;
                     // 允许空值输入，方便用户清空后重新输入
                     if (val === '') {
-                      setSettings((prev) => ({ ...prev, timeout: '' as unknown as number }));
+                      setSettings((prev) => ({
+                        ...prev,
+                        timeout: '' as unknown as number,
+                      }));
                       return;
                     }
                     const num = parseInt(val);
@@ -330,7 +350,10 @@ const DanmuApiConfig = ({ config, refreshConfig }: DanmuApiConfigProps) => {
                   onBlur={() => {
                     // 失去焦点时验证范围
                     const current = settings.timeout;
-                    const num = typeof current === 'number' && !isNaN(current) ? current : 30;
+                    const num =
+                      typeof current === 'number' && !isNaN(current)
+                        ? current
+                        : 30;
                     setSettings((prev) => ({
                       ...prev,
                       timeout: Math.max(5, Math.min(60, num)),

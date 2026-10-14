@@ -1,12 +1,14 @@
 /* eslint-disable no-console */
 import { NextResponse } from 'next/server';
+
 import { getConfig } from '@/lib/config';
 
 export const runtime = 'nodejs';
 
 const DEFAULT_DANMU_API_URL = 'https://smonedanmu.vercel.app';
 const DEFAULT_DANMU_API_TOKEN = 'smonetv';
-const DEFAULT_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36';
+const DEFAULT_USER_AGENT =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36';
 
 interface SearchEpisodeItem {
   episodeId: number;
@@ -143,7 +145,11 @@ export async function GET(request: Request) {
 
     if (!response.ok) {
       return NextResponse.json(
-        { code: 502, message: `弹幕搜索失败: HTTP ${response.status}`, animes: [] },
+        {
+          code: 502,
+          message: `弹幕搜索失败: HTTP ${response.status}`,
+          animes: [],
+        },
         { status: 502 },
       );
     }
@@ -176,7 +182,11 @@ export async function GET(request: Request) {
               .map((ep: any) => {
                 const eid = parsePositiveInt(ep.episodeId);
                 if (!eid) return null;
-                return { episodeId: eid, episodeTitle: readString(ep.episodeTitle) || `episodeId:${eid}` };
+                return {
+                  episodeId: eid,
+                  episodeTitle:
+                    readString(ep.episodeTitle) || `episodeId:${eid}`,
+                };
               })
               .filter((ep: any): ep is SearchEpisodeItem => ep !== null);
           }
@@ -190,7 +200,9 @@ export async function GET(request: Request) {
       }
     }
 
-    console.log(`[danmu-search] Found ${animesWithEpisodes.length} animes for "${keyword}"`);
+    console.log(
+      `[danmu-search] Found ${animesWithEpisodes.length} animes for "${keyword}"`,
+    );
 
     return NextResponse.json(
       {

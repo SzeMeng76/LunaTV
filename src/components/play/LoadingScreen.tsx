@@ -1,8 +1,9 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { memo } from 'react';
+
 import PageLayout from '@/components/PageLayout';
+
 import LoadingProgressIndicator from './LoadingProgressIndicator';
 import SpeedTestProgress from './SpeedTestProgress';
 

@@ -1,10 +1,8 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import { NextRequest, NextResponse } from 'next/server';
 
+import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getCachedEmbyViews, setCachedEmbyViews } from '@/lib/emby-cache';
 import { embyManager } from '@/lib/emby-manager';
-import { getAuthInfoFromCookie } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 
@@ -19,7 +17,7 @@ export async function GET(request: NextRequest) {
     if (!authCookie?.username) {
       return NextResponse.json(
         { error: '未登录', success: false },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -40,7 +38,8 @@ export async function GET(request: NextRequest) {
 
     // 过滤出电影和电视剧媒体库
     const filteredViews = views.filter(
-      (view) => view.CollectionType === 'movies' || view.CollectionType === 'tvshows'
+      (view) =>
+        view.CollectionType === 'movies' || view.CollectionType === 'tvshows',
     );
 
     const response = {

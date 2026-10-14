@@ -1,4 +1,4 @@
-/* eslint-disable no-console,@typescript-eslint/no-explicit-any */
+/* eslint-disable no-console */
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getAuthInfoFromCookie } from '@/lib/auth';
@@ -13,7 +13,10 @@ export async function GET(request: NextRequest) {
   }
 
   if (authInfo.username !== process.env.USERNAME) {
-    return NextResponse.json({ error: 'Forbidden: Owner access required' }, { status: 403 });
+    return NextResponse.json(
+      { error: 'Forbidden: Owner access required' },
+      { status: 403 },
+    );
   }
 
   try {
@@ -34,7 +37,10 @@ export async function DELETE(request: NextRequest) {
   }
 
   if (authInfo.username !== process.env.USERNAME) {
-    return NextResponse.json({ error: 'Forbidden: Owner access required' }, { status: 403 });
+    return NextResponse.json(
+      { error: 'Forbidden: Owner access required' },
+      { status: 403 },
+    );
   }
 
   try {

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+
 import { getConfig } from '@/lib/config';
 import { db } from '@/lib/db';
 
@@ -13,10 +14,7 @@ export async function POST(request: NextRequest) {
     const { jarUrl } = await request.json();
 
     if (!jarUrl || typeof jarUrl !== 'string') {
-      return NextResponse.json(
-        { error: 'Invalid JAR URL' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Invalid JAR URL' }, { status: 400 });
     }
 
     // 验证 URL 格式
@@ -25,7 +23,7 @@ export async function POST(request: NextRequest) {
     } catch {
       return NextResponse.json(
         { error: 'Invalid URL format' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -52,7 +50,7 @@ export async function POST(request: NextRequest) {
         error: 'Failed to save custom JAR configuration',
         message: error instanceof Error ? error.message : 'Unknown error',
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -77,7 +75,7 @@ export async function GET() {
         error: 'Failed to get custom JAR configuration',
         message: error instanceof Error ? error.message : 'Unknown error',
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -105,7 +103,7 @@ export async function DELETE() {
         error: 'Failed to delete custom JAR configuration',
         message: error instanceof Error ? error.message : 'Unknown error',
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

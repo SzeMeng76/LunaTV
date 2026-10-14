@@ -50,7 +50,7 @@ export class SimpleCrypto {
       return Buffer.concat([Buffer.from('Salted__'), salt, encrypted]).toString(
         'base64',
       );
-    } catch (error) {
+    } catch {
       throw new Error('加密失败');
     }
   }
@@ -83,7 +83,7 @@ export class SimpleCrypto {
       }
 
       return decrypted;
-    } catch (error) {
+    } catch {
       throw new Error('解密失败，请检查密码是否正确');
     }
   }

@@ -1,8 +1,18 @@
-/* eslint-disable no-console, @typescript-eslint/no-explicit-any */
+/* eslint-disable no-console */
 'use client';
 
-import { Ticket, Plus, Trash2, Copy, Check, RefreshCw, X, Ban, CheckCircle } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import {
+  Ban,
+  Check,
+  CheckCircle,
+  Copy,
+  Plus,
+  RefreshCw,
+  Ticket,
+  Trash2,
+  X,
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 interface InviteCode {
@@ -20,11 +30,16 @@ interface InviteCode {
 }
 
 const buttonStyles = {
-  primary: 'px-3 py-1.5 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors',
-  success: 'px-3 py-1.5 text-sm font-medium bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors',
-  danger: 'px-3 py-1.5 text-sm font-medium bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors',
-  secondary: 'px-3 py-1.5 text-sm font-medium bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors',
-  dangerSmall: 'px-2 py-1 text-xs font-medium bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors',
+  primary:
+    'px-3 py-1.5 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors',
+  success:
+    'px-3 py-1.5 text-sm font-medium bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors',
+  danger:
+    'px-3 py-1.5 text-sm font-medium bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors',
+  secondary:
+    'px-3 py-1.5 text-sm font-medium bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors',
+  dangerSmall:
+    'px-2 py-1 text-xs font-medium bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors',
 };
 
 export default function InviteCodeManager() {
@@ -223,13 +238,19 @@ export default function InviteCodeManager() {
           <tbody className='divide-y divide-gray-200 dark:divide-gray-700'>
             {codes.length === 0 ? (
               <tr>
-                <td colSpan={7} className='px-4 py-8 text-center text-gray-500 dark:text-gray-400'>
+                <td
+                  colSpan={7}
+                  className='px-4 py-8 text-center text-gray-500 dark:text-gray-400'
+                >
                   暂无邀请码，点击"生成邀请码"创建
                 </td>
               </tr>
             ) : (
               codes.map((code) => (
-                <tr key={code.code} className='hover:bg-gray-50 dark:hover:bg-gray-800/50'>
+                <tr
+                  key={code.code}
+                  className='hover:bg-gray-50 dark:hover:bg-gray-800/50'
+                >
                   <td className='px-4 py-3'>
                     <div className='flex items-center gap-2'>
                       <code className='px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded font-mono text-sm'>
@@ -293,16 +314,31 @@ export default function InviteCodeManager() {
                   </td>
                   <td className='px-4 py-3 text-right'>
                     <div className='flex items-center justify-end gap-2'>
-                      {code.status !== 'expired' && code.status !== 'used_up' && (
-                        <button
-                          onClick={() => handleToggle(code.code, !code.disabled)}
-                          className={code.disabled ? buttonStyles.success.replace('px-3 py-1.5', 'px-2 py-1').replace('text-sm', 'text-xs') : buttonStyles.secondary.replace('px-3 py-1.5', 'px-2 py-1').replace('text-sm', 'text-xs')}
-                          disabled={loading}
-                          title={code.disabled ? '启用' : '禁用'}
-                        >
-                          {code.disabled ? <CheckCircle size={14} /> : <Ban size={14} />}
-                        </button>
-                      )}
+                      {code.status !== 'expired' &&
+                        code.status !== 'used_up' && (
+                          <button
+                            onClick={() =>
+                              handleToggle(code.code, !code.disabled)
+                            }
+                            className={
+                              code.disabled
+                                ? buttonStyles.success
+                                    .replace('px-3 py-1.5', 'px-2 py-1')
+                                    .replace('text-sm', 'text-xs')
+                                : buttonStyles.secondary
+                                    .replace('px-3 py-1.5', 'px-2 py-1')
+                                    .replace('text-sm', 'text-xs')
+                            }
+                            disabled={loading}
+                            title={code.disabled ? '启用' : '禁用'}
+                          >
+                            {code.disabled ? (
+                              <CheckCircle size={14} />
+                            ) : (
+                              <Ban size={14} />
+                            )}
+                          </button>
+                        )}
                       <button
                         onClick={() => handleDelete(code.code)}
                         className={buttonStyles.dangerSmall}
@@ -320,83 +356,90 @@ export default function InviteCodeManager() {
       </div>
 
       {/* 生成邀请码模态框 */}
-      {showCreateModal && createPortal(
-        <div
-          className='fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4'
-          onClick={() => setShowCreateModal(false)}
-        >
+      {showCreateModal &&
+        createPortal(
           <div
-            className='bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md transform transition-all'
-            onClick={(e) => e.stopPropagation()}
+            className='fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4'
+            onClick={() => setShowCreateModal(false)}
           >
-            <div className='flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700'>
-              <h3 className='text-xl font-semibold text-gray-900 dark:text-gray-100'>
-                生成新邀请码
-              </h3>
-              <button
-                onClick={() => setShowCreateModal(false)}
-                className='text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors'
-              >
-                <X size={24} />
-              </button>
-            </div>
-
-            <div className='p-6 space-y-5'>
-              <div>
-                <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                  最大使用次数
-                </label>
-                <input
-                  type='number'
-                  min='1'
-                  max='1000'
-                  value={maxUses}
-                  onChange={(e) => setMaxUses(Number(e.target.value))}
-                  className='w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all'
-                />
-                <p className='mt-1.5 text-xs text-gray-500 dark:text-gray-400'>
-                  每个邀请码可以被使用的次数（1-1000）
-                </p>
+            <div
+              className='bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md transform transition-all'
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className='flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700'>
+                <h3 className='text-xl font-semibold text-gray-900 dark:text-gray-100'>
+                  生成新邀请码
+                </h3>
+                <button
+                  onClick={() => setShowCreateModal(false)}
+                  className='text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors'
+                >
+                  <X size={24} />
+                </button>
               </div>
 
-              <div>
-                <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                  有效期（天）
-                </label>
-                <input
-                  type='number'
-                  min='1'
-                  max='365'
-                  value={expiresIn}
-                  onChange={(e) => setExpiresIn(Number(e.target.value))}
-                  className='w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all'
-                />
-                <p className='mt-1.5 text-xs text-gray-500 dark:text-gray-400'>
-                  邀请码的有效期限（1-365天）
-                </p>
+              <div className='p-6 space-y-5'>
+                <div>
+                  <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+                    最大使用次数
+                  </label>
+                  <input
+                    type='number'
+                    min='1'
+                    max='1000'
+                    value={maxUses}
+                    onChange={(e) => setMaxUses(Number(e.target.value))}
+                    className='w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all'
+                  />
+                  <p className='mt-1.5 text-xs text-gray-500 dark:text-gray-400'>
+                    每个邀请码可以被使用的次数（1-1000）
+                  </p>
+                </div>
+
+                <div>
+                  <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+                    有效期（天）
+                  </label>
+                  <input
+                    type='number'
+                    min='1'
+                    max='365'
+                    value={expiresIn}
+                    onChange={(e) => setExpiresIn(Number(e.target.value))}
+                    className='w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all'
+                  />
+                  <p className='mt-1.5 text-xs text-gray-500 dark:text-gray-400'>
+                    邀请码的有效期限（1-365天）
+                  </p>
+                </div>
+              </div>
+
+              <div className='flex gap-3 p-6 border-t border-gray-200 dark:border-gray-700'>
+                <button
+                  onClick={handleCreate}
+                  disabled={loading}
+                  className={
+                    buttonStyles.success +
+                    ' flex-1 disabled:opacity-50 disabled:cursor-not-allowed'
+                  }
+                >
+                  {loading ? '生成中...' : '生成邀请码'}
+                </button>
+                <button
+                  onClick={() => setShowCreateModal(false)}
+                  disabled={loading}
+                  className={
+                    buttonStyles.secondary +
+                    ' disabled:opacity-50 disabled:cursor-not-allowed'
+                  }
+                >
+                  取消
+                </button>
               </div>
             </div>
-
-            <div className='flex gap-3 p-6 border-t border-gray-200 dark:border-gray-700'>
-              <button
-                onClick={handleCreate}
-                disabled={loading}
-                className={buttonStyles.success + ' flex-1 disabled:opacity-50 disabled:cursor-not-allowed'}
-              >
-                {loading ? '生成中...' : '生成邀请码'}
-              </button>
-              <button
-                onClick={() => setShowCreateModal(false)}
-                disabled={loading}
-                className={buttonStyles.secondary + ' disabled:opacity-50 disabled:cursor-not-allowed'}
-              >
-                取消
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

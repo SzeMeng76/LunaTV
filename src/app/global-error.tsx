@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect } from 'react';
 import { RefreshCw } from 'lucide-react';
+import { useEffect } from 'react';
 
 export default function GlobalError({
   error,
@@ -31,7 +31,10 @@ export default function GlobalError({
       } catch {
         // sessionStorage 可能在隐私模式不可用，忽略
       }
-      console.warn('[ChunkLoadError] 全局错误页自动刷新后仍失败', error.message);
+      console.warn(
+        '[ChunkLoadError] 全局错误页自动刷新后仍失败',
+        error.message,
+      );
       return;
     }
 
@@ -43,11 +46,14 @@ export default function GlobalError({
       digest: error.digest,
       url: typeof window !== 'undefined' ? window.location.href : 'N/A',
       userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'N/A',
-      memory: typeof performance !== 'undefined' && (performance as any).memory ? {
-        used: `${((performance as any).memory.usedJSHeapSize / 1024 / 1024).toFixed(2)} MB`,
-        total: `${((performance as any).memory.totalJSHeapSize / 1024 / 1024).toFixed(2)} MB`,
-        limit: `${((performance as any).memory.jsHeapSizeLimit / 1024 / 1024).toFixed(2)} MB`,
-      } : 'N/A',
+      memory:
+        typeof performance !== 'undefined' && (performance as any).memory
+          ? {
+              used: `${((performance as any).memory.usedJSHeapSize / 1024 / 1024).toFixed(2)} MB`,
+              total: `${((performance as any).memory.totalJSHeapSize / 1024 / 1024).toFixed(2)} MB`,
+              limit: `${((performance as any).memory.jsHeapSizeLimit / 1024 / 1024).toFixed(2)} MB`,
+            }
+          : 'N/A',
       localStorage: (() => {
         if (typeof window === 'undefined') return 'N/A';
         let total = 0;
@@ -58,7 +64,7 @@ export default function GlobalError({
             }
           }
           return `${(total / 1024).toFixed(2)} KB`;
-        } catch (e) {
+        } catch {
           return 'N/A';
         }
       })(),
@@ -101,60 +107,78 @@ export default function GlobalError({
   return (
     <html>
       <body>
-        <div style={{
-          display: 'flex',
-          minHeight: '100vh',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: '#f9fafb',
-          padding: '1rem 1rem 2rem',
-        }}>
-          <div style={{
-            maxWidth: '28rem',
-            width: '100%',
-            backgroundColor: 'white',
-            borderRadius: '0.5rem',
-            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-            padding: '1.5rem 2rem',
-          }}>
+        <div
+          style={{
+            display: 'flex',
+            minHeight: '100vh',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: '#f9fafb',
+            padding: '1rem 1rem 2rem',
+          }}
+        >
+          <div
+            style={{
+              maxWidth: '28rem',
+              width: '100%',
+              backgroundColor: 'white',
+              borderRadius: '0.5rem',
+              boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+              padding: '1.5rem 2rem',
+            }}
+          >
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>💥</div>
-              <h2 style={{
-                fontSize: '1.25rem',
-                fontWeight: 'bold',
-                color: '#111827',
-                marginBottom: '0.5rem',
-              }}>
+              <h2
+                style={{
+                  fontSize: '1.25rem',
+                  fontWeight: 'bold',
+                  color: '#111827',
+                  marginBottom: '0.5rem',
+                }}
+              >
                 应用出错了
               </h2>
-              <p style={{
-                fontSize: '0.875rem',
-                color: '#6b7280',
-                marginBottom: '1.5rem',
-              }}>
+              <p
+                style={{
+                  fontSize: '0.875rem',
+                  color: '#6b7280',
+                  marginBottom: '1.5rem',
+                }}
+              >
                 抱歉，应用遇到了严重问题
               </p>
 
               {process.env.NODE_ENV === 'development' && (
-                <div style={{
-                  marginBottom: '1.5rem',
-                  padding: '0.75rem 1rem',
-                  backgroundColor: '#fef2f2',
-                  borderRadius: '0.5rem',
-                  textAlign: 'left',
-                }}>
-                  <p style={{
-                    fontSize: '0.75rem',
-                    fontFamily: 'monospace',
-                    color: '#dc2626',
-                    wordBreak: 'break-all',
-                  }}>
+                <div
+                  style={{
+                    marginBottom: '1.5rem',
+                    padding: '0.75rem 1rem',
+                    backgroundColor: '#fef2f2',
+                    borderRadius: '0.5rem',
+                    textAlign: 'left',
+                  }}
+                >
+                  <p
+                    style={{
+                      fontSize: '0.75rem',
+                      fontFamily: 'monospace',
+                      color: '#dc2626',
+                      wordBreak: 'break-all',
+                    }}
+                  >
                     {error.message}
                   </p>
                 </div>
               )}
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.5rem',
+                }}
+              >
                 <button
                   onClick={reset}
                   style={{
@@ -172,8 +196,12 @@ export default function GlobalError({
                     fontSize: '0.875rem',
                     transition: 'background-color 0.2s',
                   }}
-                  onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
-                  onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+                  onMouseOver={(e) =>
+                    (e.currentTarget.style.backgroundColor = '#1d4ed8')
+                  }
+                  onMouseOut={(e) =>
+                    (e.currentTarget.style.backgroundColor = '#2563eb')
+                  }
                 >
                   <RefreshCw style={{ width: '1rem', height: '1rem' }} />
                   重新加载
@@ -196,8 +224,12 @@ export default function GlobalError({
                     fontSize: '0.875rem',
                     transition: 'background-color 0.2s',
                   }}
-                  onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#c2410c'}
-                  onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#ea580c'}
+                  onMouseOver={(e) =>
+                    (e.currentTarget.style.backgroundColor = '#c2410c')
+                  }
+                  onMouseOut={(e) =>
+                    (e.currentTarget.style.backgroundColor = '#ea580c')
+                  }
                 >
                   查看崩溃日志
                 </button>
@@ -209,7 +241,10 @@ export default function GlobalError({
                       const keysToKeep = ['auth-token', 'user-preferences'];
                       try {
                         for (let key in localStorage) {
-                          if (!keysToKeep.includes(key) && key.startsWith('moontv_')) {
+                          if (
+                            !keysToKeep.includes(key) &&
+                            key.startsWith('moontv_')
+                          ) {
                             localStorage.removeItem(key);
                           }
                         }
@@ -230,8 +265,12 @@ export default function GlobalError({
                     fontSize: '0.875rem',
                     transition: 'background-color 0.2s',
                   }}
-                  onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#d1d5db'}
-                  onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#e5e7eb'}
+                  onMouseOver={(e) =>
+                    (e.currentTarget.style.backgroundColor = '#d1d5db')
+                  }
+                  onMouseOut={(e) =>
+                    (e.currentTarget.style.backgroundColor = '#e5e7eb')
+                  }
                 >
                   清理缓存并返回首页
                 </button>
@@ -242,7 +281,9 @@ export default function GlobalError({
                       try {
                         const logs = localStorage.getItem('crash-logs');
                         if (logs) {
-                          const blob = new Blob([logs], { type: 'application/json' });
+                          const blob = new Blob([logs], {
+                            type: 'application/json',
+                          });
                           const url = URL.createObjectURL(blob);
                           const a = document.createElement('a');
                           a.href = url;
@@ -265,8 +306,8 @@ export default function GlobalError({
                     fontSize: '0.75rem',
                     transition: 'color 0.2s',
                   }}
-                  onMouseOver={(e) => e.currentTarget.style.color = '#111827'}
-                  onMouseOut={(e) => e.currentTarget.style.color = '#6b7280'}
+                  onMouseOver={(e) => (e.currentTarget.style.color = '#111827')}
+                  onMouseOut={(e) => (e.currentTarget.style.color = '#6b7280')}
                 >
                   下载崩溃日志
                 </button>

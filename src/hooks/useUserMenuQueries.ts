@@ -1,13 +1,12 @@
-/* eslint-disable no-console */
-
 import {
-  useQuery,
-  useMutation,
-  useQueryClient,
   queryOptions,
+  useMutation,
+  useQuery,
+  useQueryClient,
 } from '@tanstack/react-query';
-import { checkForUpdates, type UpdateStatus } from '@/lib/version_check';
+
 import type { PlayRecord } from '@/lib/types';
+import { checkForUpdates, type UpdateStatus } from '@/lib/version_check';
 
 // ─── Emby Config Types ──────────────────────────────────────────────────────
 

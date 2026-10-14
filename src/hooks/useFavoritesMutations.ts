@@ -15,13 +15,14 @@
  * - 乐观更新模式：立即更新 UI，失败时回滚
  */
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { UseMutationResult } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+
 import {
-  saveFavorite,
-  deleteFavorite,
   clearAllFavorites,
+  deleteFavorite,
   type Favorite,
+  saveFavorite,
 } from '@/lib/db.client';
 
 // ============================================================================
@@ -104,16 +105,21 @@ export function useAddFavoriteMutation(): UseMutationResult<
       await queryClient.cancelQueries({ queryKey: ['favorites'] });
 
       // 2. 保存旧数据用于回滚
-      const previousFavorites = queryClient.getQueryData<Record<string, Favorite>>(['favorites']);
+      const previousFavorites = queryClient.getQueryData<
+        Record<string, Favorite>
+      >(['favorites']);
 
       // 3. 立即更新缓存（乐观更新）
-      queryClient.setQueryData<Record<string, Favorite>>(['favorites'], (old = {}) => {
-        const key = `${source}+${id}`;
-        return {
-          ...old,
-          [key]: favorite,
-        };
-      });
+      queryClient.setQueryData<Record<string, Favorite>>(
+        ['favorites'],
+        (old = {}) => {
+          const key = `${source}+${id}`;
+          return {
+            ...old,
+            [key]: favorite,
+          };
+        },
+      );
 
       // 4. 返回上下文，用于 onError 回滚
       return { previousFavorites };
@@ -179,15 +185,20 @@ export function useRemoveFavoriteMutation(): UseMutationResult<
       await queryClient.cancelQueries({ queryKey: ['favorites'] });
 
       // 2. 保存旧数据
-      const previousFavorites = queryClient.getQueryData<Record<string, Favorite>>(['favorites']);
+      const previousFavorites = queryClient.getQueryData<
+        Record<string, Favorite>
+      >(['favorites']);
 
       // 3. 立即从缓存中删除
-      queryClient.setQueryData<Record<string, Favorite>>(['favorites'], (old = {}) => {
-        const key = `${source}+${id}`;
-        const newFavorites = { ...old };
-        delete newFavorites[key];
-        return newFavorites;
-      });
+      queryClient.setQueryData<Record<string, Favorite>>(
+        ['favorites'],
+        (old = {}) => {
+          const key = `${source}+${id}`;
+          const newFavorites = { ...old };
+          delete newFavorites[key];
+          return newFavorites;
+        },
+      );
 
       return { previousFavorites };
     },
@@ -247,7 +258,9 @@ export function useClearFavoritesMutation(): UseMutationResult<
       await queryClient.cancelQueries({ queryKey: ['favorites'] });
 
       // 2. 保存旧数据
-      const previousFavorites = queryClient.getQueryData<Record<string, Favorite>>(['favorites']);
+      const previousFavorites = queryClient.getQueryData<
+        Record<string, Favorite>
+      >(['favorites']);
 
       // 3. 立即清空缓存
       queryClient.setQueryData(['favorites'], {});
@@ -312,22 +325,27 @@ export function useToggleFavoriteMutation(): UseMutationResult<
     onMutate: async ({ source, id, favorite, isFavorited }) => {
       await queryClient.cancelQueries({ queryKey: ['favorites'] });
 
-      const previousFavorites = queryClient.getQueryData<Record<string, Favorite>>(['favorites']);
+      const previousFavorites = queryClient.getQueryData<
+        Record<string, Favorite>
+      >(['favorites']);
 
-      queryClient.setQueryData<Record<string, Favorite>>(['favorites'], (old = {}) => {
-        const key = `${source}+${id}`;
-        const newFavorites = { ...old };
+      queryClient.setQueryData<Record<string, Favorite>>(
+        ['favorites'],
+        (old = {}) => {
+          const key = `${source}+${id}`;
+          const newFavorites = { ...old };
 
-        if (isFavorited) {
-          // 删除
-          delete newFavorites[key];
-        } else {
-          // 添加
-          newFavorites[key] = favorite;
-        }
+          if (isFavorited) {
+            // 删除
+            delete newFavorites[key];
+          } else {
+            // 添加
+            newFavorites[key] = favorite;
+          }
 
-        return newFavorites;
-      });
+          return newFavorites;
+        },
+      );
 
       return { previousFavorites };
     },

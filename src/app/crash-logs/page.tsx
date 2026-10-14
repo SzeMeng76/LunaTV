@@ -1,7 +1,8 @@
 'use client';
 
+import { AlertTriangle, Download, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Trash2, Download, AlertTriangle } from 'lucide-react';
+
 import PageLayout from '@/components/PageLayout';
 
 interface CrashLog {
@@ -60,7 +61,9 @@ export default function CrashLogsPage() {
   };
 
   const downloadLogs = () => {
-    const blob = new Blob([JSON.stringify(logs, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(logs, null, 2)], {
+      type: 'application/json',
+    });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -71,27 +74,27 @@ export default function CrashLogsPage() {
 
   return (
     <PageLayout>
-      <div className="container mx-auto px-4 py-4 sm:py-8 max-w-6xl">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <AlertTriangle className="w-6 h-6 sm:w-8 sm:h-8 text-red-500 flex-shrink-0" />
-            <h1 className="text-2xl sm:text-3xl font-bold">崩溃日志</h1>
+      <div className='container mx-auto px-4 py-4 sm:py-8 max-w-6xl'>
+        <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6'>
+          <div className='flex items-center gap-2 sm:gap-3'>
+            <AlertTriangle className='w-6 h-6 sm:w-8 sm:h-8 text-red-500 flex-shrink-0' />
+            <h1 className='text-2xl sm:text-3xl font-bold'>崩溃日志</h1>
           </div>
-          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <div className='flex flex-col sm:flex-row gap-2 w-full sm:w-auto'>
             {logs.length > 0 && (
               <>
                 <button
                   onClick={downloadLogs}
-                  className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-lg transition-colors text-sm sm:text-base"
+                  className='flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-lg transition-colors text-sm sm:text-base'
                 >
-                  <Download className="w-4 h-4" />
+                  <Download className='w-4 h-4' />
                   <span>下载日志</span>
                 </button>
                 <button
                   onClick={clearLogs}
-                  className="flex items-center justify-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white rounded-lg transition-colors text-sm sm:text-base"
+                  className='flex items-center justify-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white rounded-lg transition-colors text-sm sm:text-base'
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 className='w-4 h-4' />
                   <span>清除日志</span>
                 </button>
               </>
@@ -100,14 +103,16 @@ export default function CrashLogsPage() {
         </div>
 
         {logs.length === 0 ? (
-          <div className="text-center py-12 bg-gray-50 dark:bg-gray-800 rounded-lg">
-            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">暂无崩溃日志</p>
+          <div className='text-center py-12 bg-gray-50 dark:bg-gray-800 rounded-lg'>
+            <p className='text-sm sm:text-base text-gray-600 dark:text-gray-400'>
+              暂无崩溃日志
+            </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+          <div className='grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6'>
             {/* 日志列表 */}
-            <div className="space-y-2 sm:space-y-3">
-              <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">
+            <div className='space-y-2 sm:space-y-3'>
+              <h2 className='text-lg sm:text-xl font-semibold mb-3 sm:mb-4'>
                 崩溃记录 ({logs.length})
               </h2>
               {logs.map((log, index) => (
@@ -120,16 +125,21 @@ export default function CrashLogsPage() {
                       : 'bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 border-2 border-transparent'
                   }`}
                 >
-                  <div className="flex items-start justify-between mb-2">
-                    <span className="text-xs sm:text-sm font-mono text-gray-600 dark:text-gray-400">
+                  <div className='flex items-start justify-between mb-2'>
+                    <span className='text-xs sm:text-sm font-mono text-gray-600 dark:text-gray-400'>
                       {new Date(log.timestamp).toLocaleString('zh-CN')}
                     </span>
                   </div>
-                  <p className="text-xs sm:text-sm font-semibold text-red-600 dark:text-red-400 truncate">
+                  <p className='text-xs sm:text-sm font-semibold text-red-600 dark:text-red-400 truncate'>
                     {log.message}
                   </p>
-                  <div className="mt-2 flex flex-wrap gap-2 sm:gap-4 text-xs text-gray-500 dark:text-gray-500">
-                    <span>内存: {typeof log.memory === 'object' ? log.memory.used : log.memory}</span>
+                  <div className='mt-2 flex flex-wrap gap-2 sm:gap-4 text-xs text-gray-500 dark:text-gray-500'>
+                    <span>
+                      内存:{' '}
+                      {typeof log.memory === 'object'
+                        ? log.memory.used
+                        : log.memory}
+                    </span>
                     <span>存储: {log.localStorage}</span>
                   </div>
                 </div>
@@ -137,41 +147,45 @@ export default function CrashLogsPage() {
             </div>
 
             {/* 日志详情 */}
-            <div className="lg:sticky lg:top-4 lg:self-start">
+            <div className='lg:sticky lg:top-4 lg:self-start'>
               {selectedLog ? (
-                <div className="bg-white dark:bg-gray-800 rounded-lg p-4 sm:p-6 space-y-3 sm:space-y-4">
-                  <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">详细信息</h2>
+                <div className='bg-white dark:bg-gray-800 rounded-lg p-4 sm:p-6 space-y-3 sm:space-y-4'>
+                  <h2 className='text-lg sm:text-xl font-semibold mb-3 sm:mb-4'>
+                    详细信息
+                  </h2>
 
                   <div>
-                    <h3 className="text-xs sm:text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">
+                    <h3 className='text-xs sm:text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1'>
                       时间
                     </h3>
-                    <p className="text-xs sm:text-sm font-mono">
+                    <p className='text-xs sm:text-sm font-mono'>
                       {new Date(selectedLog.timestamp).toLocaleString('zh-CN')}
                     </p>
                   </div>
 
                   <div>
-                    <h3 className="text-xs sm:text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">
+                    <h3 className='text-xs sm:text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1'>
                       错误信息
                     </h3>
-                    <p className="text-xs sm:text-sm font-mono text-red-600 dark:text-red-400 break-all">
+                    <p className='text-xs sm:text-sm font-mono text-red-600 dark:text-red-400 break-all'>
                       {selectedLog.message}
                     </p>
                   </div>
 
                   <div>
-                    <h3 className="text-xs sm:text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">
+                    <h3 className='text-xs sm:text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1'>
                       页面 URL
                     </h3>
-                    <p className="text-xs sm:text-sm font-mono break-all">{selectedLog.url}</p>
+                    <p className='text-xs sm:text-sm font-mono break-all'>
+                      {selectedLog.url}
+                    </p>
                   </div>
 
                   <div>
-                    <h3 className="text-xs sm:text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">
+                    <h3 className='text-xs sm:text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1'>
                       内存使用
                     </h3>
-                    <p className="text-xs sm:text-sm font-mono">
+                    <p className='text-xs sm:text-sm font-mono'>
                       {typeof selectedLog.memory === 'object'
                         ? `${selectedLog.memory.used} / ${selectedLog.memory.limit}`
                         : selectedLog.memory}
@@ -179,18 +193,20 @@ export default function CrashLogsPage() {
                   </div>
 
                   <div>
-                    <h3 className="text-xs sm:text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">
+                    <h3 className='text-xs sm:text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1'>
                       localStorage 使用
                     </h3>
-                    <p className="text-xs sm:text-sm font-mono">{selectedLog.localStorage}</p>
+                    <p className='text-xs sm:text-sm font-mono'>
+                      {selectedLog.localStorage}
+                    </p>
                   </div>
 
                   {selectedLog.stack && (
                     <div>
-                      <h3 className="text-xs sm:text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">
+                      <h3 className='text-xs sm:text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1'>
                         堆栈跟踪
                       </h3>
-                      <pre className="text-xs font-mono bg-gray-100 dark:bg-gray-900 p-2 sm:p-3 rounded overflow-x-auto max-h-48 sm:max-h-64 overflow-y-auto">
+                      <pre className='text-xs font-mono bg-gray-100 dark:bg-gray-900 p-2 sm:p-3 rounded overflow-x-auto max-h-48 sm:max-h-64 overflow-y-auto'>
                         {selectedLog.stack}
                       </pre>
                     </div>
@@ -198,15 +214,17 @@ export default function CrashLogsPage() {
 
                   {selectedLog.digest && (
                     <div>
-                      <h3 className="text-xs sm:text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">
+                      <h3 className='text-xs sm:text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1'>
                         Digest
                       </h3>
-                      <p className="text-xs sm:text-sm font-mono">{selectedLog.digest}</p>
+                      <p className='text-xs sm:text-sm font-mono'>
+                        {selectedLog.digest}
+                      </p>
                     </div>
                   )}
                 </div>
               ) : (
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 text-center text-sm sm:text-base text-gray-600 dark:text-gray-400">
+                <div className='bg-gray-50 dark:bg-gray-800 rounded-lg p-6 text-center text-sm sm:text-base text-gray-600 dark:text-gray-400'>
                   选择一条日志查看详情
                 </div>
               )}

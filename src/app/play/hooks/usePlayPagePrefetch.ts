@@ -1,5 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
+
 import type { SearchResult } from '@/lib/types';
 
 interface UsePrefetchNextEpisodeOptions {
@@ -63,7 +64,15 @@ export function usePrefetchNextEpisode({
         staleTime: 5 * 60 * 1000, // 5 minutes
       });
     }
-  }, [currentTime, duration, currentEpisodeIndex, detail, source, id, queryClient]);
+  }, [
+    currentTime,
+    duration,
+    currentEpisodeIndex,
+    detail,
+    source,
+    id,
+    queryClient,
+  ]);
 }
 
 interface UsePrefetchDoubanDataOptions {

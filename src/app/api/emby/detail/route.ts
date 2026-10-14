@@ -1,9 +1,7 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import { NextRequest, NextResponse } from 'next/server';
 
-import { embyManager } from '@/lib/emby-manager';
 import { getAuthInfoFromCookie } from '@/lib/auth';
+import { embyManager } from '@/lib/emby-manager';
 
 export const runtime = 'nodejs';
 
@@ -12,7 +10,10 @@ export async function GET(request: NextRequest) {
   const itemId = searchParams.get('id');
   const embyKey = searchParams.get('embyKey') || undefined;
 
-  console.log('========== EMBY DETAIL API CALLED ==========', { itemId, embyKey });
+  console.log('========== EMBY DETAIL API CALLED ==========', {
+    itemId,
+    embyKey,
+  });
 
   if (!itemId) {
     return NextResponse.json({ error: '缺少媒体ID' }, { status: 400 });
@@ -23,10 +24,7 @@ export async function GET(request: NextRequest) {
     const authCookie = getAuthInfoFromCookie(request);
 
     if (!authCookie?.username) {
-      return NextResponse.json(
-        { error: '未登录' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: '未登录' }, { status: 401 });
     }
 
     const username = authCookie.username;
@@ -44,7 +42,10 @@ export async function GET(request: NextRequest) {
       console.log('🎵 [API] 开始获取音轨，itemId:', itemId);
       audioStreams = await client.getAudioStreams(itemId);
       console.log('🎵 [API] 获取到音轨数据:', audioStreams);
-      console.log('========== AFTER getAudioStreams, length:', audioStreams.length);
+      console.log(
+        '========== AFTER getAudioStreams, length:',
+        audioStreams.length,
+      );
     } catch (error) {
       console.error('🎵 [API] 获取音轨失败（不影响播放）:', error);
       console.error('========== getAudioStreams ERROR ==========', error);
@@ -68,37 +69,39 @@ export async function GET(request: NextRequest) {
       });
 
       episodesUrls = await Promise.all(
-        sortedEpisodes.map(ep => client.getStreamUrl(ep.Id))
+        sortedEpisodes.map((ep) => client.getStreamUrl(ep.Id)),
       );
     }
 
     // 返回 SearchResult 格式
     const sourceKey = embyKey ? `emby_${embyKey}` : 'emby';
 
-    return NextResponse.json([{
-      id: item.Id,
-      title: item.Name,
-      source: sourceKey,
-      source_name: 'Emby',
-      poster: client.getImageUrl(item.Id, 'Primary'),
-      year: item.ProductionYear?.toString() || '',
-      rating: item.CommunityRating || 0,
-      overview: item.Overview || '',
-      episodes: episodesUrls,
-      // 添加音轨信息
-      private_audio_streams: audioStreams.map(stream => ({
-        index: stream.index,
-        display_title: stream.displayTitle,
-        language: stream.language,
-        codec: stream.codec,
-        is_default: stream.isDefault,
-      })),
-    }]);
+    return NextResponse.json([
+      {
+        id: item.Id,
+        title: item.Name,
+        source: sourceKey,
+        source_name: 'Emby',
+        poster: client.getImageUrl(item.Id, 'Primary'),
+        year: item.ProductionYear?.toString() || '',
+        rating: item.CommunityRating || 0,
+        overview: item.Overview || '',
+        episodes: episodesUrls,
+        // 添加音轨信息
+        private_audio_streams: audioStreams.map((stream) => ({
+          index: stream.index,
+          display_title: stream.displayTitle,
+          language: stream.language,
+          codec: stream.codec,
+          is_default: stream.isDefault,
+        })),
+      },
+    ]);
   } catch (error) {
     console.error('获取 Emby 详情失败:', error);
     return NextResponse.json(
       { error: '获取 Emby 详情失败: ' + (error as Error).message },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

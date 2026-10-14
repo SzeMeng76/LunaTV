@@ -1,17 +1,18 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import {
-  useState,
-  useRef,
-  useLayoutEffect,
-  useEffect,
-  useCallback,
-} from 'react';
 import { Heart } from 'lucide-react';
-import VideoCard from '@/components/VideoCard';
-import CommentSection from '@/components/play/CommentSection';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
+
 import { processImageUrl } from '@/lib/utils';
+
+import CommentSection from '@/components/play/CommentSection';
+import VideoCard from '@/components/VideoCard';
 
 type Tab = 'overview' | 'cast' | 'recommendations' | 'comments';
 
@@ -728,5 +729,12 @@ function CommentsTab({
   if (!movieComments.length) {
     return <p className='text-gray-500 dark:text-gray-400 text-sm'>暂无短评</p>;
   }
-  return <CommentSection comments={movieComments} loading={loadingComments} error={commentsError} videoDoubanId={videoDoubanId} />;
+  return (
+    <CommentSection
+      comments={movieComments}
+      loading={loadingComments}
+      error={commentsError}
+      videoDoubanId={videoDoubanId}
+    />
+  );
 }

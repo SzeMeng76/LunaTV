@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any,no-console */
+/* eslint-disable no-console */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { promisify } from 'util';
@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
     let decryptedData: string;
     try {
       decryptedData = SimpleCrypto.decrypt(encryptedData, password);
-    } catch (error) {
+    } catch {
       return NextResponse.json(
         { error: '解密失败，请检查密码是否正确' },
         { status: 400 },
@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
     let importData: any;
     try {
       importData = JSON.parse(decompressedData);
-    } catch (error) {
+    } catch {
       return NextResponse.json({ error: '备份文件格式错误' }, { status: 400 });
     }
 

@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, no-console */
+/* eslint-disable no-console */
 
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -32,7 +32,7 @@ async function getEmbyClient(embyKey?: string, username?: string) {
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ token: string; filename: string }> }
+  { params }: { params: Promise<{ token: string; filename: string }> },
 ) {
   try {
     const { token: requestToken, filename } = await params;
@@ -95,14 +95,12 @@ export async function GET(
         status: videoResponse.status,
         statusText: videoResponse.statusText,
       });
-      return NextResponse.json(
-        { error: '获取视频流失败' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: '获取视频流失败' }, { status: 500 });
     }
 
     // 获取 Content-Type
-    const contentType = videoResponse.headers.get('content-type') || 'video/mp4';
+    const contentType =
+      videoResponse.headers.get('content-type') || 'video/mp4';
 
     // 构建响应头
     const headers = new Headers();
@@ -136,7 +134,7 @@ export async function GET(
     console.error('[Emby Play] 错误:', error);
     return NextResponse.json(
       { error: '播放失败', details: (error as Error).message },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

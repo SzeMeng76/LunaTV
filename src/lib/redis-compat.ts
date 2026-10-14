@@ -21,7 +21,6 @@ function camelToLower(str: string): string {
   return str.replace(/[A-Z]/g, (c) => c.toLowerCase());
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function createCompatClient(rawClient: unknown): any {
   return new Proxy(rawClient as Record<string, unknown>, {
     get(target, prop: string | symbol) {
@@ -29,7 +28,8 @@ export function createCompatClient(rawClient: unknown): any {
 
       // 方法原样存在（node-redis / ioredis 驼峰风格）
       if (typeof target[prop] === 'function') {
-        return (...args: unknown[]) => (target[prop] as (...a: unknown[]) => unknown)(...args);
+        return (...args: unknown[]) =>
+          (target[prop] as (...a: unknown[]) => unknown)(...args);
       }
 
       // 转全小写后存在（@upstash/redis 全小写风格）
@@ -40,11 +40,19 @@ export function createCompatClient(rawClient: unknown): any {
         if (lower === 'hset') {
           return (key: string, ...rest: unknown[]) => {
             if (rest.length === 2 && typeof rest[0] === 'string') {
-              return (target.hset as (k: string, v: Record<string, unknown>) => unknown)(key, {
+              return (
+                target.hset as (
+                  k: string,
+                  v: Record<string, unknown>,
+                ) => unknown
+              )(key, {
                 [rest[0]]: rest[1],
               });
             }
-            return (target.hset as (k: string, ...a: unknown[]) => unknown)(key, ...rest);
+            return (target.hset as (k: string, ...a: unknown[]) => unknown)(
+              key,
+              ...rest,
+            );
           };
         }
 

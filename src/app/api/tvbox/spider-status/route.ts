@@ -1,4 +1,3 @@
-/* eslint-disable no-console, @typescript-eslint/no-explicit-any */
 import { NextResponse } from 'next/server';
 
 import { getSpiderJar, getSpiderStatus } from '@/lib/spiderJar';
@@ -35,18 +34,18 @@ export async function GET() {
     // 提供诊断建议
     if (!freshJar.success) {
       response.recommendations.push(
-        '所有远程 JAR 源均不可用，正在使用内置备用 JAR'
+        '所有远程 JAR 源均不可用，正在使用内置备用 JAR',
       );
       response.recommendations.push('请检查网络连接或尝试切换网络环境');
     } else if (freshJar.tried > 2) {
       response.recommendations.push(
-        '多个 JAR 源失败后才成功，建议检查网络稳定性'
+        '多个 JAR 源失败后才成功，建议检查网络稳定性',
       );
     }
 
     if (freshJar.source.includes('github') && freshJar.tried > 1) {
       response.recommendations.push(
-        'GitHub 源访问可能受限，建议配置代理或使用国内网络'
+        'GitHub 源访问可能受限，建议配置代理或使用国内网络',
       );
     }
 
@@ -62,7 +61,7 @@ export async function GET() {
         error: error instanceof Error ? error.message : 'Unknown error',
         timestamp: Date.now(),
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -93,7 +92,7 @@ export async function POST() {
         error: error instanceof Error ? error.message : 'Unknown error',
         timestamp: Date.now(),
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

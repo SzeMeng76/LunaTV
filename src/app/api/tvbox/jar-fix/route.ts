@@ -1,4 +1,4 @@
-/* eslint-disable no-console, @typescript-eslint/no-explicit-any */
+/* eslint-disable no-console */
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getUserRegion } from '@/lib/networkDetection';
@@ -69,9 +69,7 @@ async function testJarSource(source: any): Promise<{
     const timeoutId = setTimeout(() => controller.abort(), 15000);
 
     const userAgent =
-      source.region === 'domestic'
-        ? DEFAULT_USER_AGENT
-        : 'LunaTV-JarTest/1.0';
+      source.region === 'domestic' ? DEFAULT_USER_AGENT : 'LunaTV-JarTest/1.0';
 
     const response = await fetch(source.url, {
       method: 'HEAD',
@@ -124,7 +122,7 @@ async function testJarSource(source: any): Promise<{
 // 生成修复建议
 function generateFixRecommendations(
   testResults: any[],
-  userRegion: string
+  userRegion: string,
 ): {
   immediate: string[];
   configuration: string[];
@@ -144,7 +142,7 @@ function generateFixRecommendations(
     troubleshooting.push('检查设备网络连接是否正常');
     troubleshooting.push('尝试切换WiFi网络或使用移动数据');
     troubleshooting.push(
-      '检查路由器DNS设置，建议使用 8.8.8.8 或 114.114.114.114'
+      '检查路由器DNS设置，建议使用 8.8.8.8 或 114.114.114.114',
     );
     troubleshooting.push('如使用代理，请确认代理服务器正常工作');
   } else if (successful.length < 3) {
@@ -178,22 +176,22 @@ function generateFixRecommendations(
   const has403 = failed.some((f) => f.error?.includes('403'));
   const has404 = failed.some((f) => f.error?.includes('404'));
   const hasTimeout = failed.some(
-    (f) => f.error?.includes('timeout') || f.error?.includes('aborted')
+    (f) => f.error?.includes('timeout') || f.error?.includes('aborted'),
   );
 
   if (has403) {
     troubleshooting.push(
-      '403错误：服务器拒绝访问，可能是反爬虫机制，尝试使用代理源'
+      '403错误：服务器拒绝访问，可能是反爬虫机制，尝试使用代理源',
     );
   }
   if (has404) {
     troubleshooting.push(
-      '404错误：JAR文件不存在，该源可能已失效，请使用其他可用源'
+      '404错误：JAR文件不存在，该源可能已失效，请使用其他可用源',
     );
   }
   if (hasTimeout) {
     troubleshooting.push(
-      '超时错误：网络连接不稳定，建议检查网络质量或切换网络'
+      '超时错误：网络连接不稳定，建议检查网络质量或切换网络',
     );
   }
 
@@ -279,14 +277,14 @@ export async function GET(request: NextRequest) {
           testResults.filter((r) => r.success).length >= 3
             ? 'good'
             : testResults.filter((r) => r.success).length >= 1
-            ? 'fair'
-            : 'poor',
+              ? 'fair'
+              : 'poor',
         needs_troubleshooting: testResults.filter((r) => r.success).length < 2,
       },
     };
 
     console.log(
-      `[JAR-FIX] 测试完成，成功源：${bestSources.length}/${testResults.length}`
+      `[JAR-FIX] 测试完成，成功源：${bestSources.length}/${testResults.length}`,
     );
 
     return NextResponse.json(response);
@@ -309,7 +307,7 @@ export async function GET(request: NextRequest) {
           '- 联系技术支持获取最新配置',
         ],
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

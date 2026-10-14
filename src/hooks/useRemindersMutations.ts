@@ -10,13 +10,14 @@
  * 4. 自动缓存失效和数据同步
  */
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { UseMutationResult } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+
 import {
-  saveReminder,
-  deleteReminder,
   clearAllReminders,
+  deleteReminder,
   type Reminder,
+  saveReminder,
 } from '@/lib/db.client';
 
 // ============================================================================
@@ -67,15 +68,20 @@ export function useAddReminderMutation(): UseMutationResult<
     onMutate: async ({ source, id, reminder }: AddReminderParams) => {
       await queryClient.cancelQueries({ queryKey: ['reminders'] });
 
-      const previousReminders = queryClient.getQueryData<Record<string, Reminder>>(['reminders']);
+      const previousReminders = queryClient.getQueryData<
+        Record<string, Reminder>
+      >(['reminders']);
 
-      queryClient.setQueryData<Record<string, Reminder>>(['reminders'], (old = {}) => {
-        const key = `${source}+${id}`;
-        return {
-          ...old,
-          [key]: reminder,
-        };
-      });
+      queryClient.setQueryData<Record<string, Reminder>>(
+        ['reminders'],
+        (old = {}) => {
+          const key = `${source}+${id}`;
+          return {
+            ...old,
+            [key]: reminder,
+          };
+        },
+      );
 
       return { previousReminders };
     },
@@ -114,14 +120,19 @@ export function useRemoveReminderMutation(): UseMutationResult<
     onMutate: async ({ source, id }: RemoveReminderParams) => {
       await queryClient.cancelQueries({ queryKey: ['reminders'] });
 
-      const previousReminders = queryClient.getQueryData<Record<string, Reminder>>(['reminders']);
+      const previousReminders = queryClient.getQueryData<
+        Record<string, Reminder>
+      >(['reminders']);
 
-      queryClient.setQueryData<Record<string, Reminder>>(['reminders'], (old = {}) => {
-        const key = `${source}+${id}`;
-        const newReminders = { ...old };
-        delete newReminders[key];
-        return newReminders;
-      });
+      queryClient.setQueryData<Record<string, Reminder>>(
+        ['reminders'],
+        (old = {}) => {
+          const key = `${source}+${id}`;
+          const newReminders = { ...old };
+          delete newReminders[key];
+          return newReminders;
+        },
+      );
 
       return { previousReminders };
     },
@@ -160,7 +171,9 @@ export function useClearRemindersMutation(): UseMutationResult<
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey: ['reminders'] });
 
-      const previousReminders = queryClient.getQueryData<Record<string, Reminder>>(['reminders']);
+      const previousReminders = queryClient.getQueryData<
+        Record<string, Reminder>
+      >(['reminders']);
 
       queryClient.setQueryData(['reminders'], {});
 
@@ -205,22 +218,27 @@ export function useToggleReminderMutation(): UseMutationResult<
     onMutate: async ({ source, id, reminder, isReminded }) => {
       await queryClient.cancelQueries({ queryKey: ['reminders'] });
 
-      const previousReminders = queryClient.getQueryData<Record<string, Reminder>>(['reminders']);
+      const previousReminders = queryClient.getQueryData<
+        Record<string, Reminder>
+      >(['reminders']);
 
-      queryClient.setQueryData<Record<string, Reminder>>(['reminders'], (old = {}) => {
-        const key = `${source}+${id}`;
-        const newReminders = { ...old };
+      queryClient.setQueryData<Record<string, Reminder>>(
+        ['reminders'],
+        (old = {}) => {
+          const key = `${source}+${id}`;
+          const newReminders = { ...old };
 
-        if (isReminded) {
-          // 删除
-          delete newReminders[key];
-        } else {
-          // 添加
-          newReminders[key] = reminder;
-        }
+          if (isReminded) {
+            // 删除
+            delete newReminders[key];
+          } else {
+            // 添加
+            newReminders[key] = reminder;
+          }
 
-        return newReminders;
-      });
+          return newReminders;
+        },
+      );
 
       return { previousReminders };
     },

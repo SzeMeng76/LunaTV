@@ -3,7 +3,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getAvailableApiSites, getCacheTime } from '@/lib/config';
 import { getDetailFromApi, searchFromApi } from '@/lib/downstream';
-import { recordRequest, getDbQueryCount, resetDbQueryCount } from '@/lib/performance-monitor';
+import {
+  getDbQueryCount,
+  recordRequest,
+  resetDbQueryCount,
+} from '@/lib/performance-monitor';
 
 export const runtime = 'nodejs';
 
@@ -88,9 +92,14 @@ export async function GET(request: NextRequest) {
       }
 
       // 获取客户端 - 使用用户配置
-      const client = await embyManager.getClientForUser(authInfo.username, embyKey);
-      const sources = await embyManager.getEnabledSourcesForUser(authInfo.username);
-      const sourceConfig = sources.find(s => s.key === embyKey);
+      const client = await embyManager.getClientForUser(
+        authInfo.username,
+        embyKey,
+      );
+      const sources = await embyManager.getEnabledSourcesForUser(
+        authInfo.username,
+      );
+      const sourceConfig = sources.find((s) => s.key === embyKey);
       const sourceName = sourceConfig?.name || 'Emby';
 
       // 获取媒体详情
@@ -103,28 +112,36 @@ export async function GET(request: NextRequest) {
         audioStreams = await client.getAudioStreams(id);
         console.log('========== [/api/detail] 获取到音轨数据:', audioStreams);
       } catch (error) {
-        console.error('========== [/api/detail] 获取音轨失败（不影响播放）:', error);
+        console.error(
+          '========== [/api/detail] 获取音轨失败（不影响播放）:',
+          error,
+        );
       }
 
       // 🎵 自动选择浏览器兼容的音轨（AAC 优先）
       const findCompatibleAudioTrack = (streams: any[]): number | undefined => {
         // 优先选择 AAC stereo
-        const aacStereo = streams.find(s => s.codec === 'aac' && s.displayTitle?.includes('stereo'));
+        const aacStereo = streams.find(
+          (s) => s.codec === 'aac' && s.displayTitle?.includes('stereo'),
+        );
         if (aacStereo) return aacStereo.index;
 
         // 其次选择任意 AAC
-        const anyAac = streams.find(s => s.codec === 'aac');
+        const anyAac = streams.find((s) => s.codec === 'aac');
         if (anyAac) return anyAac.index;
 
         // 最后选择 MP3
-        const mp3 = streams.find(s => s.codec === 'mp3');
+        const mp3 = streams.find((s) => s.codec === 'mp3');
         if (mp3) return mp3.index;
 
         return undefined;
       };
 
       const compatibleAudioIndex = findCompatibleAudioTrack(audioStreams);
-      console.log('========== [/api/detail] 选择的兼容音轨索引:', compatibleAudioIndex);
+      console.log(
+        '========== [/api/detail] 选择的兼容音轨索引:',
+        compatibleAudioIndex,
+      );
 
       let result: any;
 
@@ -139,11 +156,18 @@ export async function GET(request: NextRequest) {
           year: item.ProductionYear?.toString() || '',
           douban_id: 0,
           desc: item.Overview || '',
-          episodes: [await client.getStreamUrl(item.Id, true, false, compatibleAudioIndex)],
+          episodes: [
+            await client.getStreamUrl(
+              item.Id,
+              true,
+              false,
+              compatibleAudioIndex,
+            ),
+          ],
           episodes_titles: [item.Name],
           proxyMode: false,
           // 添加音轨信息
-          private_audio_streams: audioStreams.map(stream => ({
+          private_audio_streams: audioStreams.map((stream) => ({
             index: stream.index,
             display_title: stream.displayTitle,
             language: stream.language,
@@ -175,16 +199,28 @@ export async function GET(request: NextRequest) {
             try {
               // 获取当前集的音轨
               const epAudioStreams = await client.getAudioStreams(ep.Id);
-              const epCompatibleAudioIndex = findCompatibleAudioTrack(epAudioStreams);
-              console.log(`========== [/api/detail] 剧集 ${ep.Id} 选择的音轨索引:`, epCompatibleAudioIndex);
+              const epCompatibleAudioIndex =
+                findCompatibleAudioTrack(epAudioStreams);
+              console.log(
+                `========== [/api/detail] 剧集 ${ep.Id} 选择的音轨索引:`,
+                epCompatibleAudioIndex,
+              );
 
-              return await client.getStreamUrl(ep.Id, true, false, epCompatibleAudioIndex);
+              return await client.getStreamUrl(
+                ep.Id,
+                true,
+                false,
+                epCompatibleAudioIndex,
+              );
             } catch (error) {
-              console.error(`========== [/api/detail] 获取剧集 ${ep.Id} 音轨失败:`, error);
+              console.error(
+                `========== [/api/detail] 获取剧集 ${ep.Id} 音轨失败:`,
+                error,
+              );
               // 失败时不指定音轨索引
               return await client.getStreamUrl(ep.Id);
             }
-          })
+          }),
         );
 
         result = {
@@ -204,7 +240,7 @@ export async function GET(request: NextRequest) {
           }),
           proxyMode: false,
           // 添加音轨信息（Series 级别的，仅供参考）
-          private_audio_streams: audioStreams.map(stream => ({
+          private_audio_streams: audioStreams.map((stream) => ({
             index: stream.index,
             display_title: stream.displayTitle,
             language: stream.language,
@@ -224,7 +260,8 @@ export async function GET(request: NextRequest) {
         path: '/api/detail',
         statusCode: 200,
         duration: Date.now() - startTime,
-        memoryUsed: (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
+        memoryUsed:
+          (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
         dbQueries: getDbQueryCount(),
         requestSize: 0,
         responseSize,
@@ -234,8 +271,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(result, {
         headers: {
           'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
+          Pragma: 'no-cache',
+          Expires: '0',
         },
       });
     }
@@ -246,7 +283,10 @@ export async function GET(request: NextRequest) {
 
     if (!apiSite) {
       const errorResponse = { error: '无效的API来源' };
-      const errorSize = Buffer.byteLength(JSON.stringify(errorResponse), 'utf8');
+      const errorSize = Buffer.byteLength(
+        JSON.stringify(errorResponse),
+        'utf8',
+      );
 
       recordRequest({
         timestamp: startTime,
@@ -254,7 +294,8 @@ export async function GET(request: NextRequest) {
         path: '/api/detail',
         statusCode: 400,
         duration: Date.now() - startTime,
-        memoryUsed: (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
+        memoryUsed:
+          (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
         dbQueries: getDbQueryCount(),
         requestSize: 0,
         responseSize: errorSize,
@@ -270,11 +311,12 @@ export async function GET(request: NextRequest) {
     if (title.trim()) {
       try {
         const searchResults = await searchFromApi(apiSite, title.trim());
-        result = searchResults.find(
-          (item: any) =>
-            item.source?.toString() === sourceCode.toString() &&
-            item.id?.toString() === id.toString()
-        ) || null;
+        result =
+          searchResults.find(
+            (item: any) =>
+              item.source?.toString() === sourceCode.toString() &&
+              item.id?.toString() === id.toString(),
+          ) || null;
       } catch {
         // 搜索失败，继续尝试直接获取详情
       }
@@ -291,7 +333,10 @@ export async function GET(request: NextRequest) {
 
     if (!result) {
       const errorResponse = { error: '未找到匹配的视频源' };
-      const errorSize = Buffer.byteLength(JSON.stringify(errorResponse), 'utf8');
+      const errorSize = Buffer.byteLength(
+        JSON.stringify(errorResponse),
+        'utf8',
+      );
 
       recordRequest({
         timestamp: startTime,
@@ -299,7 +344,8 @@ export async function GET(request: NextRequest) {
         path: '/api/detail',
         statusCode: 404,
         duration: Date.now() - startTime,
-        memoryUsed: (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
+        memoryUsed:
+          (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
         dbQueries: getDbQueryCount(),
         requestSize: 0,
         responseSize: errorSize,

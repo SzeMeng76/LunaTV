@@ -1,8 +1,8 @@
-/* eslint-disable @typescript-eslint/no-explicit-any,no-console,no-case-declarations */
+/* eslint-disable no-console */
 
 import { ClientCache } from './client-cache';
-import { DoubanItem, DoubanResult, DoubanCommentsResult } from './types';
-import { getRandomUserAgent, DEFAULT_USER_AGENT } from './user-agent';
+import { DoubanCommentsResult, DoubanItem, DoubanResult } from './types';
+import { DEFAULT_USER_AGENT, getRandomUserAgent } from './user-agent';
 
 // 🔍 调试工具：在浏览器控制台使用
 if (typeof window !== 'undefined') {
@@ -88,7 +88,7 @@ async function setCache(
           created: Date.now(),
         };
         localStorage.setItem(key, JSON.stringify(cacheData));
-      } catch (e) {
+      } catch {
         // localStorage可能满了，忽略错误
       }
     }
@@ -121,7 +121,7 @@ async function cleanExpiredCache(): Promise<void> {
               cleanedCount++;
             }
           }
-        } catch (e) {
+        } catch {
           // 清理损坏的缓存数据
           localStorage.removeItem(key);
           cleanedCount++;
@@ -924,7 +924,10 @@ async function fetchDoubanRecommends(
 
     const doubanData: DoubanRecommendApiResponse = await response.json();
     const list: DoubanItem[] = doubanData.items
-      .filter((item) => (item.type == 'movie' || item.type == 'tv') && item.id && item.title)
+      .filter(
+        (item) =>
+          (item.type == 'movie' || item.type == 'tv') && item.id && item.title,
+      )
       .map((item) => ({
         id: item.id,
         title: item.title,
@@ -1171,7 +1174,7 @@ export async function fetchDoubanQuickInfo(id: string): Promise<any> {
       await setCache(cacheKey, result, DOUBAN_CACHE_EXPIRE.details);
     }
     return result;
-  } catch (error) {
+  } catch {
     return null;
   }
 }
@@ -1192,7 +1195,7 @@ export async function fetchDoubanSuggest(q: string): Promise<any[]> {
       await setCache(cacheKey, results, DOUBAN_CACHE_EXPIRE.lists);
     }
     return results;
-  } catch (error) {
+  } catch {
     return [];
   }
 }

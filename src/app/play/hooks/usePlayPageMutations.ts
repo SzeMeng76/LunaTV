@@ -15,14 +15,15 @@
  * - Cache invalidation 策略
  */
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { UseMutationResult } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+
 import {
-  savePlayRecord,
-  saveFavorite,
   deleteFavorite,
-  type PlayRecord,
   type Favorite,
+  type PlayRecord,
+  saveFavorite,
+  savePlayRecord,
 } from '@/lib/db.client';
 
 // ============================================================================
@@ -104,16 +105,21 @@ export function useSavePlayRecordMutation(): UseMutationResult<
       await queryClient.cancelQueries({ queryKey: ['playRecords'] });
 
       // 2. 保存当前数据快照
-      const previousPlayRecords = queryClient.getQueryData<Record<string, PlayRecord>>(['playRecords']);
+      const previousPlayRecords = queryClient.getQueryData<
+        Record<string, PlayRecord>
+      >(['playRecords']);
 
       // 3. 乐观更新缓存
-      queryClient.setQueryData<Record<string, PlayRecord>>(['playRecords'], (old = {}) => {
-        const key = `${source}+${id}`;
-        return {
-          ...old,
-          [key]: record,
-        };
-      });
+      queryClient.setQueryData<Record<string, PlayRecord>>(
+        ['playRecords'],
+        (old = {}) => {
+          const key = `${source}+${id}`;
+          return {
+            ...old,
+            [key]: record,
+          };
+        },
+      );
 
       return { previousPlayRecords };
     },
@@ -168,15 +174,20 @@ export function useSaveFavoriteMutation(): UseMutationResult<
     onMutate: async ({ source, id, favorite }) => {
       await queryClient.cancelQueries({ queryKey: ['favorites'] });
 
-      const previousFavorites = queryClient.getQueryData<Record<string, Favorite>>(['favorites']);
+      const previousFavorites = queryClient.getQueryData<
+        Record<string, Favorite>
+      >(['favorites']);
 
-      queryClient.setQueryData<Record<string, Favorite>>(['favorites'], (old = {}) => {
-        const key = `${source}+${id}`;
-        return {
-          ...old,
-          [key]: favorite,
-        };
-      });
+      queryClient.setQueryData<Record<string, Favorite>>(
+        ['favorites'],
+        (old = {}) => {
+          const key = `${source}+${id}`;
+          return {
+            ...old,
+            [key]: favorite,
+          };
+        },
+      );
 
       return { previousFavorites };
     },
@@ -228,14 +239,19 @@ export function useDeleteFavoriteMutation(): UseMutationResult<
     onMutate: async ({ source, id }) => {
       await queryClient.cancelQueries({ queryKey: ['favorites'] });
 
-      const previousFavorites = queryClient.getQueryData<Record<string, Favorite>>(['favorites']);
+      const previousFavorites = queryClient.getQueryData<
+        Record<string, Favorite>
+      >(['favorites']);
 
-      queryClient.setQueryData<Record<string, Favorite>>(['favorites'], (old = {}) => {
-        const key = `${source}+${id}`;
-        const newFavorites = { ...old };
-        delete newFavorites[key];
-        return newFavorites;
-      });
+      queryClient.setQueryData<Record<string, Favorite>>(
+        ['favorites'],
+        (old = {}) => {
+          const key = `${source}+${id}`;
+          const newFavorites = { ...old };
+          delete newFavorites[key];
+          return newFavorites;
+        },
+      );
 
       return { previousFavorites };
     },

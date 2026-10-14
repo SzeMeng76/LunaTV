@@ -93,7 +93,7 @@ class UnifiedCache {
     if (typeof window !== 'undefined' && window.localStorage) {
       try {
         localStorage.setItem(key, JSON.stringify(entry));
-      } catch (error) {
+      } catch {
         // localStorage 可能已满，尝试清理后重试
         console.warn('[UnifiedCache] localStorage full, attempting cleanup');
         this.cleanupLocalStorage();
@@ -101,7 +101,10 @@ class UnifiedCache {
         try {
           localStorage.setItem(key, JSON.stringify(entry));
         } catch (retryError) {
-          console.error('[UnifiedCache] Failed to write to localStorage after cleanup:', retryError);
+          console.error(
+            '[UnifiedCache] Failed to write to localStorage after cleanup:',
+            retryError,
+          );
         }
       }
     }
@@ -118,7 +121,10 @@ class UnifiedCache {
       try {
         localStorage.removeItem(key);
       } catch (error) {
-        console.warn('[UnifiedCache] Failed to delete from localStorage:', error);
+        console.warn(
+          '[UnifiedCache] Failed to delete from localStorage:',
+          error,
+        );
       }
     }
   }
@@ -139,7 +145,7 @@ class UnifiedCache {
             keysToDelete.push(key);
           }
         }
-        keysToDelete.forEach(key => localStorage.removeItem(key));
+        keysToDelete.forEach((key) => localStorage.removeItem(key));
       } catch (error) {
         console.warn('[UnifiedCache] Failed to clear localStorage:', error);
       }
@@ -151,11 +157,13 @@ class UnifiedCache {
    */
   private isCacheKey(key: string): boolean {
     // 识别常见的缓存键前缀
-    return key.startsWith('douban-') ||
-           key.startsWith('shortdrama-') ||
-           key.startsWith('tmdb-') ||
-           key.startsWith('cache:') ||
-           key.startsWith('cached-');
+    return (
+      key.startsWith('douban-') ||
+      key.startsWith('shortdrama-') ||
+      key.startsWith('tmdb-') ||
+      key.startsWith('cache:') ||
+      key.startsWith('cached-')
+    );
   }
 
   /**
@@ -206,10 +214,12 @@ class UnifiedCache {
         }
       }
 
-      keysToDelete.forEach(key => localStorage.removeItem(key));
+      keysToDelete.forEach((key) => localStorage.removeItem(key));
 
       if (keysToDelete.length > 0) {
-        console.log(`[UnifiedCache] Cleaned up ${keysToDelete.length} expired entries from localStorage`);
+        console.log(
+          `[UnifiedCache] Cleaned up ${keysToDelete.length} expired entries from localStorage`,
+        );
       }
     } catch (error) {
       console.warn('[UnifiedCache] Failed to cleanup localStorage:', error);
@@ -223,17 +233,20 @@ class UnifiedCache {
     if (typeof window === 'undefined') return;
 
     // 每1小时清理一次
-    this.cleanupInterval = setInterval(() => {
-      this.cleanupLocalStorage();
+    this.cleanupInterval = setInterval(
+      () => {
+        this.cleanupLocalStorage();
 
-      // 清理内存中过期的条目
-      const now = Date.now();
-      for (const [key, entry] of this.memoryCache.entries()) {
-        if (now >= entry.expiresAt) {
-          this.memoryCache.delete(key);
+        // 清理内存中过期的条目
+        const now = Date.now();
+        for (const [key, entry] of this.memoryCache.entries()) {
+          if (now >= entry.expiresAt) {
+            this.memoryCache.delete(key);
+          }
         }
-      }
-    }, 60 * 60 * 1000);
+      },
+      60 * 60 * 1000,
+    );
 
     // 避免阻止 Node.js 进程退出
     if (this.cleanupInterval.unref) {

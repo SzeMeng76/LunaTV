@@ -2,8 +2,9 @@ import { ChevronDown, Radio, X } from 'lucide-react';
 import Image from 'next/image';
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { fetchDoubanQuickInfo, fetchDoubanSuggest } from '@/lib/douban.client';
+
 import { fetchBangumiSubject } from '@/lib/bangumi.client';
+import { fetchDoubanQuickInfo, fetchDoubanSuggest } from '@/lib/douban.client';
 
 interface ActionItem {
   id: string;
@@ -46,7 +47,6 @@ const MobileActionSheet: React.FC<MobileActionSheetProps> = ({
   origin = 'vod',
   doubanId,
   videoTitle,
-  videoYear,
   isBangumi = false,
 }) => {
   const [isVisible, setIsVisible] = useState(false);

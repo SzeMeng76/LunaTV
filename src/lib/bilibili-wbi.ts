@@ -3,14 +3,14 @@
  * 用于 B站 API 反爬虫验证
  */
 
-import md5 from 'md5';
+import { createHash } from 'node:crypto';
 
 // Wbi 签名映射表（固定）
 const MIXIN_KEY_ENC_TAB = [
   46, 47, 18, 2, 53, 8, 23, 32, 15, 50, 10, 31, 58, 3, 45, 35, 27, 43, 5, 49,
-  33, 9, 42, 19, 29, 28, 14, 39, 12, 38, 41, 13, 37, 48, 7, 16, 24, 55, 40,
-  61, 26, 17, 0, 1, 60, 51, 30, 4, 22, 25, 54, 21, 56, 59, 6, 63, 57, 62, 11,
-  36, 20, 34, 44, 52
+  33, 9, 42, 19, 29, 28, 14, 39, 12, 38, 41, 13, 37, 48, 7, 16, 24, 55, 40, 61,
+  26, 17, 0, 1, 60, 51, 30, 4, 22, 25, 54, 21, 56, 59, 6, 63, 57, 62, 11, 36,
+  20, 34, 44, 52,
 ];
 
 // Wbi Keys 缓存
@@ -26,7 +26,10 @@ let cachedWbiKeys: WbiKeysCache | null = null;
  * 获取 Wbi Keys（img_key 和 sub_key）
  * 每天更新一次，使用缓存机制
  */
-export async function getWbiKeys(): Promise<{ img_key: string; sub_key: string }> {
+export async function getWbiKeys(): Promise<{
+  img_key: string;
+  sub_key: string;
+}> {
   // 检查缓存（24小时内有效）
   const now = Date.now();
   if (cachedWbiKeys && now - cachedWbiKeys.timestamp < 24 * 60 * 60 * 1000) {
@@ -37,12 +40,16 @@ export async function getWbiKeys(): Promise<{ img_key: string; sub_key: string }
   console.log('🔄 获取新的 Wbi Keys...');
 
   try {
-    const response = await fetch('https://api.bilibili.com/x/web-interface/nav', {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Referer': 'https://www.bilibili.com/'
-      }
-    });
+    const response = await fetch(
+      'https://api.bilibili.com/x/web-interface/nav',
+      {
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          Referer: 'https://www.bilibili.com/',
+        },
+      },
+    );
 
     if (!response.ok) {
       throw new Error(`获取 Wbi Keys 失败: ${response.status}`);
@@ -93,7 +100,9 @@ export async function getWbiKeys(): Promise<{ img_key: string; sub_key: string }
  */
 function getMixinKey(img_key: string, sub_key: string): string {
   const raw = img_key + sub_key;
-  return MIXIN_KEY_ENC_TAB.map(n => raw[n]).join('').slice(0, 32);
+  return MIXIN_KEY_ENC_TAB.map((n) => raw[n])
+    .join('')
+    .slice(0, 32);
 }
 
 /**
@@ -113,7 +122,7 @@ export async function encWbi(params: Record<string, any>): Promise<string> {
 
   // 过滤特殊字符并 URL 编码
   const query = sortedKeys
-    .map(key => {
+    .map((key) => {
       // 过滤 value 中的 "!'()*" 字符
       const value = String(params[key]).replace(/[!'()*]/g, '');
       return `${encodeURIComponent(key)}=${encodeURIComponent(value)}`;
@@ -121,7 +130,9 @@ export async function encWbi(params: Record<string, any>): Promise<string> {
     .join('&');
 
   // 计算签名
-  const w_rid = md5(query + mixin_key);
+  const w_rid = createHash('md5')
+    .update(query + mixin_key)
+    .digest('hex');
 
   return `${query}&w_rid=${w_rid}`;
 }
@@ -132,7 +143,9 @@ export async function encWbi(params: Record<string, any>): Promise<string> {
  */
 export async function getBuvid3(): Promise<string> {
   try {
-    const response = await fetch('https://api.bilibili.com/x/frontend/finger/spi');
+    const response = await fetch(
+      'https://api.bilibili.com/x/frontend/finger/spi',
+    );
     const data = await response.json();
 
     if (data.code === 0 && data.data?.b_3) {
@@ -152,9 +165,10 @@ export async function getBuvid3(): Promise<string> {
  */
 export function getBilibiliHeaders(buvid3?: string): HeadersInit {
   const headers: HeadersInit = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    'Referer': 'https://www.bilibili.com/',
-    'Accept': 'application/json, text/plain, */*',
+    'User-Agent':
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    Referer: 'https://www.bilibili.com/',
+    Accept: 'application/json, text/plain, */*',
     'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
   };
 

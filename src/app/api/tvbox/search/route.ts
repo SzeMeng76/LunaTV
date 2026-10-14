@@ -187,7 +187,6 @@ export async function GET(request: NextRequest) {
       limit: results.length,
       total: results.length,
       list: results.map((r) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const raw = r as any;
         return {
           vod_id: r.id,

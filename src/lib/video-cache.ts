@@ -14,6 +14,7 @@
 import { createHash } from 'crypto';
 import { promises as fs } from 'fs';
 import path from 'path';
+
 import { KvrocksStorage } from './kvrocks.db';
 
 // Kvrocks 客户端单例
@@ -439,7 +440,7 @@ export async function deleteVideoCache(
       if (fileSize > 0) {
         await redis.decrBy(KEYS.VIDEO_SIZE, fileSize);
       }
-    } catch (error) {
+    } catch {
       // 文件可能已经不存在，忽略错误
       console.log(`[VideoCache] 缓存文件不存在或已删除: ${cacheKey}`);
     }
@@ -549,7 +550,7 @@ export async function cleanupLRU(
           console.log(
             `[VideoCache] LRU 删除文件: ${cacheKey} (${(fileSize / 1024 / 1024).toFixed(2)}MB)`,
           );
-        } catch (err) {
+        } catch {
           console.log(`[VideoCache] 文件不存在: ${cacheKey}`);
         }
 

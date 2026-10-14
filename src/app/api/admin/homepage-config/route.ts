@@ -1,10 +1,8 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import { NextRequest, NextResponse } from 'next/server';
 
-import { db } from '@/lib/db';
-import { clearConfigCache, getConfig } from '@/lib/config';
 import { getAuthInfoFromCookie } from '@/lib/auth';
+import { clearConfigCache, getConfig } from '@/lib/config';
+import { db } from '@/lib/db';
 
 export const runtime = 'nodejs';
 
@@ -13,7 +11,7 @@ export async function POST(request: NextRequest) {
   if (storageType === 'localstorage') {
     return NextResponse.json(
       { error: '不支持本地存储进行管理员配置' },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -58,10 +56,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('保存首页配置失败:', error);
-    return NextResponse.json(
-      { error: '保存失败，请重试' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: '保存失败，请重试' }, { status: 500 });
   }
 }
 
@@ -70,7 +65,7 @@ export async function GET(request: NextRequest) {
   if (storageType === 'localstorage') {
     return NextResponse.json(
       { error: '不支持本地存储进行管理员配置' },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -98,9 +93,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('获取首页配置失败:', error);
-    return NextResponse.json(
-      { error: '获取配置失败' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: '获取配置失败' }, { status: 500 });
   }
 }

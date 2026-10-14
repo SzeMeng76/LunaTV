@@ -1,4 +1,4 @@
-/* eslint-disable no-console,@typescript-eslint/no-explicit-any */
+/* eslint-disable no-console */
 
 import { NextResponse } from 'next/server';
 
@@ -15,11 +15,15 @@ export async function GET() {
     const stats = (global as any).currentCronStats || cachedStats;
 
     if (!stats) {
-      return NextResponse.json({
-        success: false,
-        message: 'No cron statistics available yet. Please run cron job first.',
-        timestamp: new Date().toISOString(),
-      }, { status: 404 });
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            'No cron statistics available yet. Please run cron job first.',
+          timestamp: new Date().toISOString(),
+        },
+        { status: 404 },
+      );
     }
 
     // 缓存统计数据
@@ -33,19 +37,26 @@ export async function GET() {
         startTime: stats.startTime,
         endTime: stats.endTime,
         duration: stats.duration,
-        durationSeconds: stats.duration ? (stats.duration / 1000).toFixed(2) : null,
-        memoryUsed: stats.memoryUsed ? `${stats.memoryUsed.toFixed(2)} MB` : null,
+        durationSeconds: stats.duration
+          ? (stats.duration / 1000).toFixed(2)
+          : null,
+        memoryUsed: stats.memoryUsed
+          ? `${stats.memoryUsed.toFixed(2)} MB`
+          : null,
         dbQueries: stats.dbQueries,
         tasks: stats.tasks,
       },
     });
   } catch (error) {
     console.error('Failed to retrieve cron stats:', error);
-    return NextResponse.json({
-      success: false,
-      message: 'Failed to retrieve cron statistics',
-      error: error instanceof Error ? error.message : 'Unknown error',
-      timestamp: new Date().toISOString(),
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: false,
+        message: 'Failed to retrieve cron statistics',
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString(),
+      },
+      { status: 500 },
+    );
   }
 }

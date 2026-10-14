@@ -5,7 +5,7 @@ import { CURRENT_VERSION } from '@/lib/version';
 
 export const runtime = 'nodejs';
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   const config = await getConfig();
 
   const result: any = {

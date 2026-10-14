@@ -1,8 +1,16 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 'use client';
 
-import { Box, Cat, Clover, Film, Globe, Home, PlaySquare, Radio, Star, Tv } from 'lucide-react';
+import {
+  Cat,
+  Clover,
+  Film,
+  Globe,
+  Home,
+  PlaySquare,
+  Radio,
+  Star,
+  Tv,
+} from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -147,7 +155,10 @@ const MobileBottomNav = ({ activePath }: MobileBottomNavProps) => {
       if (href === '/' && decodedActive === '/') return true;
 
       // 源浏览特殊处理
-      if (href === '/source-browser' && decodedActive.startsWith('/source-browser'))
+      if (
+        href === '/source-browser' &&
+        decodedActive.startsWith('/source-browser')
+      )
         return true;
 
       // 短剧特殊处理

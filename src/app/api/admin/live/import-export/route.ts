@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+
 import { getAuthInfoFromCookie } from '@/lib/auth';
 import { clearConfigCache, getConfig } from '@/lib/config';
 import { db } from '@/lib/db';
@@ -14,7 +15,7 @@ export async function GET(request: NextRequest) {
     const config = await getConfig();
 
     if (username !== process.env.USERNAME) {
-      const user = config.UserConfig.Users.find(u => u.username === username);
+      const user = config.UserConfig.Users.find((u) => u.username === username);
       if (!user || user.role !== 'admin' || user.banned) {
         return NextResponse.json({ error: '权限不足' }, { status: 401 });
       }
@@ -35,14 +36,16 @@ export async function GET(request: NextRequest) {
       const exportData = {
         version: '1.0',
         exportTime: new Date().toISOString(),
-        sources: liveSources.filter(s => s.from === 'custom').map(s => ({
-          key: s.key,
-          name: s.name,
-          url: s.url,
-          ua: s.ua,
-          epg: s.epg,
-          isTvBox: s.isTvBox,
-        })),
+        sources: liveSources
+          .filter((s) => s.from === 'custom')
+          .map((s) => ({
+            key: s.key,
+            name: s.name,
+            url: s.url,
+            ua: s.ua,
+            epg: s.epg,
+            isTvBox: s.isTvBox,
+          })),
       };
 
       return NextResponse.json(exportData, {
@@ -54,7 +57,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : '导出失败' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -67,7 +70,7 @@ export async function POST(request: NextRequest) {
     const config = await getConfig();
 
     if (username !== process.env.USERNAME) {
-      const user = config.UserConfig.Users.find(u => u.username === username);
+      const user = config.UserConfig.Users.find((u) => u.username === username);
       if (!user || user.role !== 'admin' || user.banned) {
         return NextResponse.json({ error: '权限不足' }, { status: 401 });
       }
@@ -88,22 +91,27 @@ export async function POST(request: NextRequest) {
       const data = JSON.parse(content);
       importedSources = data.sources || [];
     } else if (content.includes(',#genre#')) {
-      return NextResponse.json({
-        error: 'TVBox TXT 格式请直接添加为直播源 URL'
-      }, { status: 400 });
+      return NextResponse.json(
+        {
+          error: 'TVBox TXT 格式请直接添加为直播源 URL',
+        },
+        { status: 400 },
+      );
     } else {
       return NextResponse.json({ error: '不支持的格式' }, { status: 400 });
     }
 
     if (mode === 'replace') {
-      config.LiveConfig = config.LiveConfig.filter(s => s.from === 'config');
+      config.LiveConfig = config.LiveConfig.filter((s) => s.from === 'config');
     }
 
     let addedCount = 0;
     let skippedCount = 0;
 
     for (const source of importedSources) {
-      const exists = config.LiveConfig.some(s => s.key === source.key || s.url === source.url);
+      const exists = config.LiveConfig.some(
+        (s) => s.key === source.key || s.url === source.url,
+      );
       if (exists && mode === 'merge') {
         skippedCount++;
         continue;
@@ -144,7 +152,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : '导入失败' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -164,7 +172,10 @@ function generateM3U(sources: any[]): string {
 
 function parseM3UForImport(content: string): any[] {
   const sources: any[] = [];
-  const lines = content.split('\n').map(l => l.trim()).filter(l => l);
+  const lines = content
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l);
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -188,4 +199,3 @@ function parseM3UForImport(content: string): any[] {
 
   return sources;
 }
-

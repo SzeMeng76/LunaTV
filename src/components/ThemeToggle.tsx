@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any,react-hooks/exhaustive-deps */
-
 'use client';
 
 import { Moon, Sun } from 'lucide-react';

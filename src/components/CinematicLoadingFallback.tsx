@@ -1,7 +1,7 @@
 'use client';
 
 import { Film, Popcorn, Sparkles, Star } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 /**
  * Cinematic Loading Fallback - Movie-themed loading experience
@@ -29,6 +29,18 @@ export function CinematicLoadingFallback() {
   const [messageIndex, setMessageIndex] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
   const [bingWallpaper, setBingWallpaper] = useState<string>('');
+
+  // 固定随机位置：避免每次渲染重算导致星星跳动及 SSR/CSR 不一致
+  const stars = useMemo(
+    () =>
+      Array.from({ length: 8 }, () => ({
+        left: Math.random() * 100,
+        top: Math.random() * 100,
+        delay: Math.random() * 3,
+        duration: 3 + Math.random() * 2,
+      })),
+    [],
+  );
 
   // Fetch Bing wallpaper
   useEffect(() => {
@@ -79,15 +91,15 @@ export function CinematicLoadingFallback() {
 
       {/* Subtle animated background stars */}
       <div className='absolute inset-0 overflow-hidden'>
-        {[...Array(8)].map((_, i) => (
+        {stars.map((star, i) => (
           <div
             key={i}
             className='absolute w-1 h-1 bg-white rounded-full animate-twinkle'
             style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 3}s`,
-              animationDuration: `${3 + Math.random() * 2}s`,
+              left: `${star.left}%`,
+              top: `${star.top}%`,
+              animationDelay: `${star.delay}s`,
+              animationDuration: `${star.duration}s`,
             }}
           />
         ))}

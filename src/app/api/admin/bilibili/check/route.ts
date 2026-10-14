@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+
 import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getConfig } from '@/lib/config';
 import { db } from '@/lib/db';
@@ -21,12 +22,16 @@ export async function POST(request: NextRequest) {
     }
 
     // 检查登录状态
-    const response = await fetch('https://api.bilibili.com/x/web-interface/nav', {
-      headers: {
-        'Cookie': `SESSDATA=${config.BilibiliConfig.sessdata}; bili_jct=${config.BilibiliConfig.bili_jct}; buvid3=${config.BilibiliConfig.buvid3}`,
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    const response = await fetch(
+      'https://api.bilibili.com/x/web-interface/nav',
+      {
+        headers: {
+          Cookie: `SESSDATA=${config.BilibiliConfig.sessdata}; bili_jct=${config.BilibiliConfig.bili_jct}; buvid3=${config.BilibiliConfig.buvid3}`,
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        },
       },
-    });
+    );
 
     const data = await response.json();
 
@@ -62,9 +67,6 @@ export async function POST(request: NextRequest) {
     }
   } catch (error) {
     console.error('检查B站登录状态失败:', error);
-    return NextResponse.json(
-      { error: '检查失败' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: '检查失败' }, { status: 500 });
   }
 }

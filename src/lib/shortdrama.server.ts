@@ -1,8 +1,8 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, no-console */
+/* eslint-disable no-console */
 
 import { getConfig } from './config';
-import { DEFAULT_USER_AGENT } from './user-agent';
 import { ShortDramaItem } from './types';
+import { DEFAULT_USER_AGENT } from './user-agent';
 
 // 短剧相关分类关键词（父分类 + 子分类标签）
 const SHORT_DRAMA_KEYWORDS = [

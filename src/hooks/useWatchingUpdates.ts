@@ -524,7 +524,7 @@ export function useWatchingUpdatesQuery(options?: {
 
           // 筛选有releaseDate且已上映的想看内容
           const newReleases = Object.entries(reminders)
-            .filter(([key, reminder]) => {
+            .filter(([_key, reminder]) => {
               // 必须有上映日期
               if (!reminder.releaseDate) return false;
 

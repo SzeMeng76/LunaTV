@@ -6,5 +6,6 @@ overrides:
   typescript-eslint: 8.71.1
 
 patchedDependencies:
+  artplayer@5.4.0: patches/artplayer@5.4.0.patch
   mdast-util-gfm-autolink-literal@2.0.1: patches/mdast-util-gfm-autolink-literal@2.0.1.patch
   next@16.4.0: patches/next@16.4.0.patch

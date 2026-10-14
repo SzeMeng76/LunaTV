@@ -87,7 +87,7 @@ async function processBatch<T, R>(
     onProgress?: (processed: number, total: number) => void;
   } = {},
 ): Promise<{ results: R[]; errors: Error[] }> {
-  const { concurrency = 5, batchSize = 10, onProgress } = options;
+  const { batchSize = 10, onProgress } = options;
 
   const results: R[] = [];
   const errors: Error[] = [];
@@ -333,7 +333,7 @@ async function cronJob() {
   // 🚀 阶段4优化：并行执行互不依赖的任务组
   // 第一组：用户清理、配置刷新、视频缓存任务（并行执行）
   console.log('🔄 开始执行第一组并行任务...');
-  const [cleanupResult, , ,] = await Promise.allSettled([
+  await Promise.allSettled([
     // 用户清理任务
     (async () => {
       try {
@@ -408,7 +408,7 @@ async function cronJob() {
 
   // 第二组：直播频道刷新 + 播放记录和收藏刷新（并行执行）
   console.log('🔄 开始执行第二组并行任务...');
-  const [liveResult, recordsResult] = await Promise.allSettled([
+  await Promise.allSettled([
     // 直播频道刷新
     (async () => {
       try {
@@ -580,7 +580,7 @@ async function refreshConfig() {
 
       try {
         JSON.parse(decodedContent);
-      } catch (e) {
+      } catch {
         throw new Error('配置文件格式错误，请检查 JSON 语法');
       }
       config.ConfigFile = decodedContent;
@@ -1336,24 +1336,6 @@ async function optimizeActiveUserLevels() {
 
         // 为所有用户记录等级信息
         if (userStats.loginCount > 0) {
-          const optimizedStats = {
-            ...userStats,
-            userLevel: {
-              level: userLevel.level,
-              name: userLevel.name,
-              icon: userLevel.icon,
-              description: userLevel.description,
-              displayTitle: `${userLevel.icon} ${userLevel.name}`,
-            },
-            displayLoginCount:
-              userStats.loginCount > 10000
-                ? '10000+'
-                : userStats.loginCount > 1000
-                  ? `${Math.floor(userStats.loginCount / 1000)}k+`
-                  : userStats.loginCount.toString(),
-            lastLevelUpdate: new Date().toISOString(),
-          };
-
           // 注意：这里我们只计算等级信息用于日志显示，不保存到数据库
           // 等级信息会在前端动态计算，确保数据一致性
           optimizedCount++;

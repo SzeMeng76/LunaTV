@@ -171,7 +171,7 @@ function HomeClient({
   };
 }) {
   // 🎯 优化：使用 useTransition 让 tab 切换不阻塞 UI
-  const [isPending, startTransition] = useTransition();
+  const [isPending, _startTransition] = useTransition();
 
   // 🔥 所有 useState 必须在最前面，保证 Hook 调用顺序稳定
   const [favoriteFilter, setFavoriteFilter] = useState<
@@ -234,7 +234,6 @@ function HomeClient({
     data: homeData,
     isLoading: homeLoading,
     isFetching: homeFetching,
-    errors: homeErrors,
     refetch: refetchHomeData,
   } = useHomePageQueries(stableConfig);
 

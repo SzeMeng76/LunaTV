@@ -2,17 +2,18 @@
 
 'use client';
 
-import { ExternalLink, Layers, Server, Tv } from 'lucide-react';
-import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { ExternalLink, Layers, Server, Tv } from 'lucide-react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { ClientCache } from '@/lib/client-cache';
-import PageLayout from '@/components/PageLayout';
 import type {
   DoubanItem,
   SearchResult as GlobalSearchResult,
 } from '@/lib/types';
+
+import PageLayout from '@/components/PageLayout';
 
 type Source = { key: string; name: string; api: string };
 type Category = { type_id: string | number; type_name: string };
@@ -165,7 +166,6 @@ export default function SourceBrowserPage() {
   const [itemsError, setItemsError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [pageCount, setPageCount] = useState(1);
-  const hasMore = page < pageCount;
   const [jumpInput, setJumpInput] = useState('');
 
   // 搜索与排序
@@ -198,9 +198,7 @@ export default function SourceBrowserPage() {
   const [previewDoubanId, setPreviewDoubanId] = useState<number | null>(null);
   type BangumiTag = { name: string };
   type BangumiInfoboxValue =
-    | string
-    | { v: string }
-    | Array<string | { v: string }>;
+    string | { v: string } | Array<string | { v: string }>;
   type BangumiInfoboxEntry = { key: string; value: BangumiInfoboxValue };
   type BangumiSubject = {
     name?: string;
@@ -423,8 +421,7 @@ export default function SourceBrowserPage() {
       );
       if (fallback.ok) {
         const dbData = (await fallback.json()) as
-          | { code: number; message: string; data?: DoubanItem }
-          | DoubanItem;
+          { code: number; message: string; data?: DoubanItem } | DoubanItem;
         const normalized =
           (dbData as { data?: DoubanItem }).data || (dbData as DoubanItem);
         setPreviewDouban(normalized);
@@ -437,7 +434,7 @@ export default function SourceBrowserPage() {
       } else {
         setPreviewDouban(null);
       }
-    } catch (e) {
+    } catch {
       // ignore
     } finally {
       setPreviewDoubanLoading(false);
@@ -466,7 +463,7 @@ export default function SourceBrowserPage() {
         };
         setPreviewBangumi(data);
       }
-    } catch (e) {
+    } catch {
       // ignore
     } finally {
       setPreviewBangumiLoading(false);

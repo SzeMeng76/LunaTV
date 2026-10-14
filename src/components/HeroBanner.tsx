@@ -314,8 +314,6 @@ function HeroBanner({
   }
 
   const currentItem = items[currentIndex];
-  const backgroundImage =
-    getHDBackdrop(currentItem.backdrop) || currentItem.poster;
 
   // 🔍 调试日志
   console.log('[HeroBanner] 当前项目:', {

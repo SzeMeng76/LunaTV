@@ -5,7 +5,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getConfig } from '@/lib/config';
 import { db } from '@/lib/db';
-import { recordRequest, getDbQueryCount, resetDbQueryCount } from '@/lib/performance-monitor';
+import {
+  getDbQueryCount,
+  recordRequest,
+  resetDbQueryCount,
+} from '@/lib/performance-monitor';
 import { Favorite } from '@/lib/types';
 
 export const runtime = 'nodejs';
@@ -27,7 +31,10 @@ export async function GET(request: NextRequest) {
     const authInfo = getAuthInfoFromCookie(request);
     if (!authInfo || !authInfo.username) {
       const errorResponse = { error: 'Unauthorized' };
-      const errorSize = Buffer.byteLength(JSON.stringify(errorResponse), 'utf8');
+      const errorSize = Buffer.byteLength(
+        JSON.stringify(errorResponse),
+        'utf8',
+      );
 
       recordRequest({
         timestamp: startTime,
@@ -35,7 +42,8 @@ export async function GET(request: NextRequest) {
         path: '/api/favorites',
         statusCode: 401,
         duration: Date.now() - startTime,
-        memoryUsed: (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
+        memoryUsed:
+          (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
         dbQueries: getDbQueryCount(),
         requestSize: 0,
         responseSize: errorSize,
@@ -48,11 +56,14 @@ export async function GET(request: NextRequest) {
     if (authInfo.username !== process.env.USERNAME) {
       // 非站长，检查用户存在或被封禁
       const user = config.UserConfig.Users.find(
-        (u) => u.username === authInfo.username
+        (u) => u.username === authInfo.username,
       );
       if (!user) {
         const errorResponse = { error: '用户不存在' };
-        const errorSize = Buffer.byteLength(JSON.stringify(errorResponse), 'utf8');
+        const errorSize = Buffer.byteLength(
+          JSON.stringify(errorResponse),
+          'utf8',
+        );
 
         recordRequest({
           timestamp: startTime,
@@ -60,7 +71,8 @@ export async function GET(request: NextRequest) {
           path: '/api/favorites',
           statusCode: 401,
           duration: Date.now() - startTime,
-          memoryUsed: (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
+          memoryUsed:
+            (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
           dbQueries: getDbQueryCount(),
           requestSize: 0,
           responseSize: errorSize,
@@ -70,7 +82,10 @@ export async function GET(request: NextRequest) {
       }
       if (user.banned) {
         const errorResponse = { error: '用户已被封禁' };
-        const errorSize = Buffer.byteLength(JSON.stringify(errorResponse), 'utf8');
+        const errorSize = Buffer.byteLength(
+          JSON.stringify(errorResponse),
+          'utf8',
+        );
 
         recordRequest({
           timestamp: startTime,
@@ -78,7 +93,8 @@ export async function GET(request: NextRequest) {
           path: '/api/favorites',
           statusCode: 401,
           duration: Date.now() - startTime,
-          memoryUsed: (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
+          memoryUsed:
+            (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
           dbQueries: getDbQueryCount(),
           requestSize: 0,
           responseSize: errorSize,
@@ -96,7 +112,10 @@ export async function GET(request: NextRequest) {
       const [source, id] = key.split('+');
       if (!source || !id) {
         const errorResponse = { error: 'Invalid key format' };
-        const errorSize = Buffer.byteLength(JSON.stringify(errorResponse), 'utf8');
+        const errorSize = Buffer.byteLength(
+          JSON.stringify(errorResponse),
+          'utf8',
+        );
 
         recordRequest({
           timestamp: startTime,
@@ -104,7 +123,8 @@ export async function GET(request: NextRequest) {
           path: '/api/favorites',
           statusCode: 400,
           duration: Date.now() - startTime,
-          memoryUsed: (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
+          memoryUsed:
+            (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
           dbQueries: getDbQueryCount(),
           requestSize: 0,
           responseSize: errorSize,
@@ -121,7 +141,8 @@ export async function GET(request: NextRequest) {
         path: '/api/favorites',
         statusCode: 200,
         duration: Date.now() - startTime,
-        memoryUsed: (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
+        memoryUsed:
+          (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
         dbQueries: getDbQueryCount(),
         requestSize: 0,
         responseSize,
@@ -150,31 +171,34 @@ export async function GET(request: NextRequest) {
     }
 
     const count = Object.keys(upgradedFavorites).length;
-    const responseSize = Buffer.byteLength(JSON.stringify(upgradedFavorites), 'utf8');
+    const responseSize = Buffer.byteLength(
+      JSON.stringify(upgradedFavorites),
+      'utf8',
+    );
     const duration = Date.now() - startTime;
 
     // 性能监控日志
     const durationSeconds = (duration / 1000).toFixed(2);
     console.log(
-      `[收藏性能] 用户: ${authInfo.username} | 收藏数: ${count} | 耗时: ${durationSeconds}s (${duration}ms)`
+      `[收藏性能] 用户: ${authInfo.username} | 收藏数: ${count} | 耗时: ${durationSeconds}s (${duration}ms)`,
     );
 
     // 性能警告 - 根据不同耗时输出不同级别的日志
     if (duration > 25000) {
       console.error(
-        `❌ [严重慢查询] 用户 ${authInfo.username} 的收藏查询耗时 ${durationSeconds}s，接近超时阈值！收藏数: ${count}`
+        `❌ [严重慢查询] 用户 ${authInfo.username} 的收藏查询耗时 ${durationSeconds}s，接近超时阈值！收藏数: ${count}`,
       );
     } else if (duration > 15000) {
       console.warn(
-        `⚠️  [慢查询警告] 用户 ${authInfo.username} 的收藏查询耗时 ${durationSeconds}s，建议优化。收藏数: ${count}`
+        `⚠️  [慢查询警告] 用户 ${authInfo.username} 的收藏查询耗时 ${durationSeconds}s，建议优化。收藏数: ${count}`,
       );
     } else if (duration > 5000) {
       console.log(
-        `⏱️  [性能提示] 用户 ${authInfo.username} 的收藏查询耗时 ${durationSeconds}s，性能尚可。收藏数: ${count}`
+        `⏱️  [性能提示] 用户 ${authInfo.username} 的收藏查询耗时 ${durationSeconds}s，性能尚可。收藏数: ${count}`,
       );
     } else {
       console.log(
-        `✅ [性能良好] 用户 ${authInfo.username} 的收藏查询耗时 ${durationSeconds}s，性能优秀！收藏数: ${count}`
+        `✅ [性能良好] 用户 ${authInfo.username} 的收藏查询耗时 ${durationSeconds}s，性能优秀！收藏数: ${count}`,
       );
     }
 
@@ -226,7 +250,10 @@ export async function POST(request: NextRequest) {
     const authInfo = getAuthInfoFromCookie(request);
     if (!authInfo || !authInfo.username) {
       const errorResponse = { error: 'Unauthorized' };
-      const errorSize = Buffer.byteLength(JSON.stringify(errorResponse), 'utf8');
+      const errorSize = Buffer.byteLength(
+        JSON.stringify(errorResponse),
+        'utf8',
+      );
 
       recordRequest({
         timestamp: startTime,
@@ -234,7 +261,8 @@ export async function POST(request: NextRequest) {
         path: '/api/favorites',
         statusCode: 401,
         duration: Date.now() - startTime,
-        memoryUsed: (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
+        memoryUsed:
+          (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
         dbQueries: getDbQueryCount(),
         requestSize: 0,
         responseSize: errorSize,
@@ -247,11 +275,14 @@ export async function POST(request: NextRequest) {
     if (authInfo.username !== process.env.USERNAME) {
       // 非站长，检查用户存在或被封禁
       const user = config.UserConfig.Users.find(
-        (u) => u.username === authInfo.username
+        (u) => u.username === authInfo.username,
       );
       if (!user) {
         const errorResponse = { error: '用户不存在' };
-        const errorSize = Buffer.byteLength(JSON.stringify(errorResponse), 'utf8');
+        const errorSize = Buffer.byteLength(
+          JSON.stringify(errorResponse),
+          'utf8',
+        );
 
         recordRequest({
           timestamp: startTime,
@@ -259,7 +290,8 @@ export async function POST(request: NextRequest) {
           path: '/api/favorites',
           statusCode: 401,
           duration: Date.now() - startTime,
-          memoryUsed: (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
+          memoryUsed:
+            (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
           dbQueries: getDbQueryCount(),
           requestSize: 0,
           responseSize: errorSize,
@@ -269,7 +301,10 @@ export async function POST(request: NextRequest) {
       }
       if (user.banned) {
         const errorResponse = { error: '用户已被封禁' };
-        const errorSize = Buffer.byteLength(JSON.stringify(errorResponse), 'utf8');
+        const errorSize = Buffer.byteLength(
+          JSON.stringify(errorResponse),
+          'utf8',
+        );
 
         recordRequest({
           timestamp: startTime,
@@ -277,7 +312,8 @@ export async function POST(request: NextRequest) {
           path: '/api/favorites',
           statusCode: 401,
           duration: Date.now() - startTime,
-          memoryUsed: (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
+          memoryUsed:
+            (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
           dbQueries: getDbQueryCount(),
           requestSize: 0,
           responseSize: errorSize,
@@ -293,7 +329,10 @@ export async function POST(request: NextRequest) {
 
     if (!key || !favorite) {
       const errorResponse = { error: 'Missing key or favorite' };
-      const errorSize = Buffer.byteLength(JSON.stringify(errorResponse), 'utf8');
+      const errorSize = Buffer.byteLength(
+        JSON.stringify(errorResponse),
+        'utf8',
+      );
 
       recordRequest({
         timestamp: startTime,
@@ -301,7 +340,8 @@ export async function POST(request: NextRequest) {
         path: '/api/favorites',
         statusCode: 400,
         duration: Date.now() - startTime,
-        memoryUsed: (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
+        memoryUsed:
+          (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
         dbQueries: getDbQueryCount(),
         requestSize,
         responseSize: errorSize,
@@ -313,7 +353,10 @@ export async function POST(request: NextRequest) {
     // 验证必要字段
     if (!favorite.title || !favorite.source_name) {
       const errorResponse = { error: 'Invalid favorite data' };
-      const errorSize = Buffer.byteLength(JSON.stringify(errorResponse), 'utf8');
+      const errorSize = Buffer.byteLength(
+        JSON.stringify(errorResponse),
+        'utf8',
+      );
 
       recordRequest({
         timestamp: startTime,
@@ -321,7 +364,8 @@ export async function POST(request: NextRequest) {
         path: '/api/favorites',
         statusCode: 400,
         duration: Date.now() - startTime,
-        memoryUsed: (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
+        memoryUsed:
+          (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
         dbQueries: getDbQueryCount(),
         requestSize,
         responseSize: errorSize,
@@ -333,7 +377,10 @@ export async function POST(request: NextRequest) {
     const [source, id] = key.split('+');
     if (!source || !id) {
       const errorResponse = { error: 'Invalid key format' };
-      const errorSize = Buffer.byteLength(JSON.stringify(errorResponse), 'utf8');
+      const errorSize = Buffer.byteLength(
+        JSON.stringify(errorResponse),
+        'utf8',
+      );
 
       recordRequest({
         timestamp: startTime,
@@ -341,7 +388,8 @@ export async function POST(request: NextRequest) {
         path: '/api/favorites',
         statusCode: 400,
         duration: Date.now() - startTime,
-        memoryUsed: (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
+        memoryUsed:
+          (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
         dbQueries: getDbQueryCount(),
         requestSize,
         responseSize: errorSize,
@@ -358,7 +406,10 @@ export async function POST(request: NextRequest) {
     await db.saveFavorite(authInfo.username, source, id, finalFavorite);
 
     const successResponse = { success: true };
-    const responseSize = Buffer.byteLength(JSON.stringify(successResponse), 'utf8');
+    const responseSize = Buffer.byteLength(
+      JSON.stringify(successResponse),
+      'utf8',
+    );
 
     recordRequest({
       timestamp: startTime,
@@ -410,7 +461,10 @@ export async function DELETE(request: NextRequest) {
     const authInfo = getAuthInfoFromCookie(request);
     if (!authInfo || !authInfo.username) {
       const errorResponse = { error: 'Unauthorized' };
-      const errorSize = Buffer.byteLength(JSON.stringify(errorResponse), 'utf8');
+      const errorSize = Buffer.byteLength(
+        JSON.stringify(errorResponse),
+        'utf8',
+      );
 
       recordRequest({
         timestamp: startTime,
@@ -418,7 +472,8 @@ export async function DELETE(request: NextRequest) {
         path: '/api/favorites',
         statusCode: 401,
         duration: Date.now() - startTime,
-        memoryUsed: (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
+        memoryUsed:
+          (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
         dbQueries: getDbQueryCount(),
         requestSize: 0,
         responseSize: errorSize,
@@ -431,11 +486,14 @@ export async function DELETE(request: NextRequest) {
     if (authInfo.username !== process.env.USERNAME) {
       // 非站长，检查用户存在或被封禁
       const user = config.UserConfig.Users.find(
-        (u) => u.username === authInfo.username
+        (u) => u.username === authInfo.username,
       );
       if (!user) {
         const errorResponse = { error: '用户不存在' };
-        const errorSize = Buffer.byteLength(JSON.stringify(errorResponse), 'utf8');
+        const errorSize = Buffer.byteLength(
+          JSON.stringify(errorResponse),
+          'utf8',
+        );
 
         recordRequest({
           timestamp: startTime,
@@ -443,7 +501,8 @@ export async function DELETE(request: NextRequest) {
           path: '/api/favorites',
           statusCode: 401,
           duration: Date.now() - startTime,
-          memoryUsed: (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
+          memoryUsed:
+            (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
           dbQueries: getDbQueryCount(),
           requestSize: 0,
           responseSize: errorSize,
@@ -453,7 +512,10 @@ export async function DELETE(request: NextRequest) {
       }
       if (user.banned) {
         const errorResponse = { error: '用户已被封禁' };
-        const errorSize = Buffer.byteLength(JSON.stringify(errorResponse), 'utf8');
+        const errorSize = Buffer.byteLength(
+          JSON.stringify(errorResponse),
+          'utf8',
+        );
 
         recordRequest({
           timestamp: startTime,
@@ -461,7 +523,8 @@ export async function DELETE(request: NextRequest) {
           path: '/api/favorites',
           statusCode: 401,
           duration: Date.now() - startTime,
-          memoryUsed: (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
+          memoryUsed:
+            (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
           dbQueries: getDbQueryCount(),
           requestSize: 0,
           responseSize: errorSize,
@@ -480,7 +543,10 @@ export async function DELETE(request: NextRequest) {
       const [source, id] = key.split('+');
       if (!source || !id) {
         const errorResponse = { error: 'Invalid key format' };
-        const errorSize = Buffer.byteLength(JSON.stringify(errorResponse), 'utf8');
+        const errorSize = Buffer.byteLength(
+          JSON.stringify(errorResponse),
+          'utf8',
+        );
 
         recordRequest({
           timestamp: startTime,
@@ -488,7 +554,8 @@ export async function DELETE(request: NextRequest) {
           path: '/api/favorites',
           statusCode: 400,
           duration: Date.now() - startTime,
-          memoryUsed: (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
+          memoryUsed:
+            (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
           dbQueries: getDbQueryCount(),
           requestSize: 0,
           responseSize: errorSize,
@@ -502,20 +569,21 @@ export async function DELETE(request: NextRequest) {
       const all = await db.getAllFavorites(username);
       const count = Object.keys(all).length;
 
-      console.log(
-        `[收藏性能-删除] 用户: ${username} | 待删除收藏数: ${count}`
-      );
+      console.log(`[收藏性能-删除] 用户: ${username} | 待删除收藏数: ${count}`);
 
       await Promise.all(
         Object.keys(all).map(async (k) => {
           const [s, i] = k.split('+');
           if (s && i) await db.deleteFavorite(username, s, i);
-        })
+        }),
       );
     }
 
     const successResponse = { success: true };
-    const responseSize = Buffer.byteLength(JSON.stringify(successResponse), 'utf8');
+    const responseSize = Buffer.byteLength(
+      JSON.stringify(successResponse),
+      'utf8',
+    );
 
     recordRequest({
       timestamp: startTime,

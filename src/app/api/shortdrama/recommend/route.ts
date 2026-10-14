@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { getCacheTime, getConfig } from '@/lib/config';
 import {
-  recordRequest,
   getDbQueryCount,
+  recordRequest,
   resetDbQueryCount,
 } from '@/lib/performance-monitor';
 import { DEFAULT_USER_AGENT } from '@/lib/user-agent';

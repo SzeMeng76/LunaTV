@@ -1,7 +1,7 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, no-console */
+/* eslint-disable no-console */
 
-import { DoubanItem, DoubanResult } from './types';
 import { fetchDoubanData } from './douban';
+import { DoubanItem, DoubanResult } from './types';
 
 interface DoubanCategoryApiResponse {
   total: number;

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { memo } from 'react';
@@ -21,8 +20,8 @@ const LoadingProgressIndicator = memo(function LoadingProgressIndicator({
             loadingStage === 'searching' || loadingStage === 'fetching'
               ? 'bg-green-500 scale-125'
               : loadingStage === 'preferring' || loadingStage === 'ready'
-              ? 'bg-green-500'
-              : 'bg-gray-300'
+                ? 'bg-green-500'
+                : 'bg-gray-300'
           }`}
         ></div>
         <div
@@ -30,8 +29,8 @@ const LoadingProgressIndicator = memo(function LoadingProgressIndicator({
             loadingStage === 'preferring'
               ? 'bg-green-500 scale-125'
               : loadingStage === 'ready'
-              ? 'bg-green-500'
-              : 'bg-gray-300'
+                ? 'bg-green-500'
+                : 'bg-gray-300'
           }`}
         ></div>
         <div
@@ -50,8 +49,8 @@ const LoadingProgressIndicator = memo(function LoadingProgressIndicator({
               loadingStage === 'searching' || loadingStage === 'fetching'
                 ? '33%'
                 : loadingStage === 'preferring'
-                ? '66%'
-                : '100%',
+                  ? '66%'
+                  : '100%',
           }}
         ></div>
       </div>

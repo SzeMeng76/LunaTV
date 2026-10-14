@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { embyManager } from '@/lib/emby-manager';
 import { getAuthInfoFromCookie } from '@/lib/auth';
+import { embyManager } from '@/lib/emby-manager';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic'; // 禁用缓存
@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     if (!authCookie?.username) {
       return NextResponse.json(
         { error: '未登录', sources: [] },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     const sources = await embyManager.getEnabledSourcesForUser(username);
 
     return NextResponse.json({
-      sources: sources.map(s => ({
+      sources: sources.map((s) => ({
         key: s.key,
         name: s.name,
       })),
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
     console.error('[Emby Sources] 获取Emby源列表失败:', error);
     return NextResponse.json(
       { error: '获取Emby源列表失败', sources: [] },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

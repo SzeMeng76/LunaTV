@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 'use client';
 
 import { Plus } from 'lucide-react';
@@ -14,7 +12,10 @@ interface EmbyConfigProps {
 
 const EmbyConfig = ({ config, refreshConfig }: EmbyConfigProps) => {
   const [isLoading, setIsLoading] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [message, setMessage] = useState<{
+    type: 'success' | 'error';
+    text: string;
+  } | null>(null);
   const [sources, setSources] = useState<any[]>([]);
   const [editingSource, setEditingSource] = useState<any | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -114,7 +115,7 @@ const EmbyConfig = ({ config, refreshConfig }: EmbyConfigProps) => {
       }
     }
 
-    if (!editingSource && sources.some(s => s.key === formData.key)) {
+    if (!editingSource && sources.some((s) => s.key === formData.key)) {
       showMessage('error', '标识符已存在，请使用其他标识符');
       return;
     }
@@ -138,7 +139,10 @@ const EmbyConfig = ({ config, refreshConfig }: EmbyConfigProps) => {
 
         const testResult = await testResponse.json();
         if (!testResult.success) {
-          showMessage('error', '连接测试失败，请检查配置: ' + (testResult.message || ''));
+          showMessage(
+            'error',
+            '连接测试失败，请检查配置: ' + (testResult.message || ''),
+          );
           setIsLoading(false);
           return;
         }
@@ -150,8 +154,8 @@ const EmbyConfig = ({ config, refreshConfig }: EmbyConfigProps) => {
 
       let newSources;
       if (editingSource) {
-        newSources = sources.map(s =>
-          s.key === editingSource.key ? dataToSave : s
+        newSources = sources.map((s) =>
+          s.key === editingSource.key ? dataToSave : s,
         );
       } else {
         newSources = [...sources, dataToSave];
@@ -184,7 +188,7 @@ const EmbyConfig = ({ config, refreshConfig }: EmbyConfigProps) => {
 
     setIsLoading(true);
     try {
-      const newSources = sources.filter(s => s.key !== source.key);
+      const newSources = sources.filter((s) => s.key !== source.key);
 
       const response = await fetch('/api/admin/config', {
         method: 'POST',
@@ -210,8 +214,8 @@ const EmbyConfig = ({ config, refreshConfig }: EmbyConfigProps) => {
   const handleToggleEnabled = async (source: any) => {
     setIsLoading(true);
     try {
-      const newSources = sources.map(s =>
-        s.key === source.key ? { ...s, enabled: !s.enabled } : s
+      const newSources = sources.map((s) =>
+        s.key === source.key ? { ...s, enabled: !s.enabled } : s,
       );
 
       const response = await fetch('/api/admin/config', {
@@ -253,14 +257,18 @@ const EmbyConfig = ({ config, refreshConfig }: EmbyConfigProps) => {
       const result = await response.json();
       if (result.success) {
         // 如果测试成功且返回了 userId，更新 formData
-        if (result.userId && editingSource && editingSource.key === source.key) {
-          setFormData(prev => ({ ...prev, UserId: result.userId }));
+        if (
+          result.userId &&
+          editingSource &&
+          editingSource.key === source.key
+        ) {
+          setFormData((prev) => ({ ...prev, UserId: result.userId }));
         }
         showMessage('success', result.message || 'Emby 连接测试成功');
       } else {
         showMessage('error', result.message || 'Emby 连接测试失败');
       }
-    } catch (err) {
+    } catch {
       showMessage('error', '连接测试失败');
     } finally {
       setIsLoading(false);
@@ -271,11 +279,13 @@ const EmbyConfig = ({ config, refreshConfig }: EmbyConfigProps) => {
     <div className='space-y-6'>
       {/* 消息提示 */}
       {message && (
-        <div className={`flex items-center space-x-2 p-3 rounded-lg ${
-          message.type === 'success'
-            ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800'
-            : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800'
-        }`}>
+        <div
+          className={`flex items-center space-x-2 p-3 rounded-lg ${
+            message.type === 'success'
+              ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800'
+              : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800'
+          }`}
+        >
           <span>{message.text}</span>
         </div>
       )}
@@ -389,7 +399,9 @@ const EmbyConfig = ({ config, refreshConfig }: EmbyConfigProps) => {
               <input
                 type='text'
                 value={formData.key}
-                onChange={(e) => setFormData({ ...formData, key: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, key: e.target.value })
+                }
                 disabled={!!editingSource}
                 placeholder='home, office, etc.'
                 className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 disabled:bg-gray-100 dark:disabled:bg-gray-700'
@@ -407,7 +419,9 @@ const EmbyConfig = ({ config, refreshConfig }: EmbyConfigProps) => {
               <input
                 type='text'
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
                 placeholder='家庭Emby, 公司Emby, etc.'
                 className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
               />
@@ -421,7 +435,9 @@ const EmbyConfig = ({ config, refreshConfig }: EmbyConfigProps) => {
               <input
                 type='text'
                 value={formData.ServerURL}
-                onChange={(e) => setFormData({ ...formData, ServerURL: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, ServerURL: e.target.value })
+                }
                 placeholder='https://emby.example.com/emby'
                 className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
               />
@@ -477,7 +493,9 @@ const EmbyConfig = ({ config, refreshConfig }: EmbyConfigProps) => {
                   <input
                     type='password'
                     value={formData.ApiKey}
-                    onChange={(e) => setFormData({ ...formData, ApiKey: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, ApiKey: e.target.value })
+                    }
                     placeholder='在 Emby 控制台的 API 密钥页面生成'
                     className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
                   />
@@ -489,7 +507,9 @@ const EmbyConfig = ({ config, refreshConfig }: EmbyConfigProps) => {
                   <input
                     type='text'
                     value={formData.UserId}
-                    onChange={(e) => setFormData({ ...formData, UserId: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, UserId: e.target.value })
+                    }
                     placeholder='留空则自动获取'
                     className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
                   />
@@ -510,7 +530,9 @@ const EmbyConfig = ({ config, refreshConfig }: EmbyConfigProps) => {
                   <input
                     type='text'
                     value={formData.Username}
-                    onChange={(e) => setFormData({ ...formData, Username: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, Username: e.target.value })
+                    }
                     placeholder='Emby 用户名'
                     className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
                   />
@@ -522,7 +544,9 @@ const EmbyConfig = ({ config, refreshConfig }: EmbyConfigProps) => {
                   <input
                     type='password'
                     value={formData.Password}
-                    onChange={(e) => setFormData({ ...formData, Password: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, Password: e.target.value })
+                    }
                     placeholder='如果账号没有密码可留空'
                     className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
                   />
@@ -548,14 +572,23 @@ const EmbyConfig = ({ config, refreshConfig }: EmbyConfigProps) => {
                 </div>
                 <button
                   type='button'
-                  onClick={() => setFormData({ ...formData, removeEmbyPrefix: !formData.removeEmbyPrefix })}
+                  onClick={() =>
+                    setFormData({
+                      ...formData,
+                      removeEmbyPrefix: !formData.removeEmbyPrefix,
+                    })
+                  }
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    formData.removeEmbyPrefix ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'
+                    formData.removeEmbyPrefix
+                      ? 'bg-blue-600'
+                      : 'bg-gray-200 dark:bg-gray-700'
                   }`}
                 >
                   <span
                     className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      formData.removeEmbyPrefix ? 'translate-x-6' : 'translate-x-1'
+                      formData.removeEmbyPrefix
+                        ? 'translate-x-6'
+                        : 'translate-x-1'
                     }`}
                   />
                 </button>
@@ -568,19 +601,29 @@ const EmbyConfig = ({ config, refreshConfig }: EmbyConfigProps) => {
                     拼接MediaSourceId参数
                   </label>
                   <p className='text-xs text-gray-500 dark:text-gray-400 mt-1'>
-                    启用后将调用 PlaybackInfo API 获取 MediaSourceId 并添加到播放链接
+                    启用后将调用 PlaybackInfo API 获取 MediaSourceId
+                    并添加到播放链接
                   </p>
                 </div>
                 <button
                   type='button'
-                  onClick={() => setFormData({ ...formData, appendMediaSourceId: !formData.appendMediaSourceId })}
+                  onClick={() =>
+                    setFormData({
+                      ...formData,
+                      appendMediaSourceId: !formData.appendMediaSourceId,
+                    })
+                  }
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    formData.appendMediaSourceId ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'
+                    formData.appendMediaSourceId
+                      ? 'bg-blue-600'
+                      : 'bg-gray-200 dark:bg-gray-700'
                   }`}
                 >
                   <span
                     className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      formData.appendMediaSourceId ? 'translate-x-6' : 'translate-x-1'
+                      formData.appendMediaSourceId
+                        ? 'translate-x-6'
+                        : 'translate-x-1'
                     }`}
                   />
                 </button>
@@ -598,9 +641,16 @@ const EmbyConfig = ({ config, refreshConfig }: EmbyConfigProps) => {
                 </div>
                 <button
                   type='button'
-                  onClick={() => setFormData({ ...formData, transcodeMp4: !formData.transcodeMp4 })}
+                  onClick={() =>
+                    setFormData({
+                      ...formData,
+                      transcodeMp4: !formData.transcodeMp4,
+                    })
+                  }
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    formData.transcodeMp4 ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'
+                    formData.transcodeMp4
+                      ? 'bg-blue-600'
+                      : 'bg-gray-200 dark:bg-gray-700'
                   }`}
                 >
                   <span
@@ -623,9 +673,13 @@ const EmbyConfig = ({ config, refreshConfig }: EmbyConfigProps) => {
                 </div>
                 <button
                   type='button'
-                  onClick={() => setFormData({ ...formData, proxyPlay: !formData.proxyPlay })}
+                  onClick={() =>
+                    setFormData({ ...formData, proxyPlay: !formData.proxyPlay })
+                  }
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    formData.proxyPlay ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'
+                    formData.proxyPlay
+                      ? 'bg-blue-600'
+                      : 'bg-gray-200 dark:bg-gray-700'
                   }`}
                 >
                   <span
@@ -645,7 +699,12 @@ const EmbyConfig = ({ config, refreshConfig }: EmbyConfigProps) => {
               <input
                 type='text'
                 value={formData.embyAuthorizationHeader}
-                onChange={(e) => setFormData({ ...formData, embyAuthorizationHeader: e.target.value })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    embyAuthorizationHeader: e.target.value,
+                  })
+                }
                 placeholder='留空使用默认值，例：MediaBrowser Client="MyApp", Device="Web", DeviceId="xxx", Version="1.0.0"'
                 className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500'
               />
@@ -660,10 +719,15 @@ const EmbyConfig = ({ config, refreshConfig }: EmbyConfigProps) => {
                 type='checkbox'
                 id='enabled'
                 checked={formData.enabled}
-                onChange={(e) => setFormData({ ...formData, enabled: e.target.checked })}
+                onChange={(e) =>
+                  setFormData({ ...formData, enabled: e.target.checked })
+                }
                 className='w-4 h-4 text-blue-600 rounded border-gray-300 dark:border-gray-600'
               />
-              <label htmlFor='enabled' className='text-sm text-gray-700 dark:text-gray-300'>
+              <label
+                htmlFor='enabled'
+                className='text-sm text-gray-700 dark:text-gray-300'
+              >
                 启用此源
               </label>
             </div>
@@ -680,9 +744,13 @@ const EmbyConfig = ({ config, refreshConfig }: EmbyConfigProps) => {
               </div>
               <button
                 type='button'
-                onClick={() => setFormData({ ...formData, isPublic: !formData.isPublic })}
+                onClick={() =>
+                  setFormData({ ...formData, isPublic: !formData.isPublic })
+                }
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  formData.isPublic ? 'bg-purple-600' : 'bg-gray-200 dark:bg-gray-700'
+                  formData.isPublic
+                    ? 'bg-purple-600'
+                    : 'bg-gray-200 dark:bg-gray-700'
                 }`}
               >
                 <span

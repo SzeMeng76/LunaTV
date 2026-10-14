@@ -1,6 +1,5 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import { NextRequest, NextResponse } from 'next/server';
+
 import { EmbyClient } from '@/lib/emby.client';
 
 export const runtime = 'nodejs';
@@ -16,7 +15,7 @@ export async function POST(request: NextRequest) {
     if (!ServerURL) {
       return NextResponse.json(
         { success: false, error: '服务器地址不能为空' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -46,7 +45,7 @@ export async function POST(request: NextRequest) {
         success: false,
         error: error.message || '连接失败',
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { Copy, Key, Settings, X } from 'lucide-react';
@@ -25,9 +24,7 @@ export function TVBoxTokenCell({ tvboxToken }: { tvboxToken?: string }) {
 
   if (!tvboxToken) {
     return (
-      <span className='text-xs text-gray-400 dark:text-gray-500'>
-        未设置
-      </span>
+      <span className='text-xs text-gray-400 dark:text-gray-500'>未设置</span>
     );
   }
 
@@ -41,7 +38,9 @@ export function TVBoxTokenCell({ tvboxToken }: { tvboxToken?: string }) {
         className='p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded'
         title='复制完整Token'
       >
-        <Copy className={`w-3 h-3 ${copied ? 'text-green-600' : 'text-gray-400'}`} />
+        <Copy
+          className={`w-3 h-3 ${copied ? 'text-green-600' : 'text-gray-400'}`}
+        />
       </button>
     </div>
   );
@@ -55,9 +54,13 @@ export function TVBoxTokenModal({
   onClose,
   onUpdate,
 }: TVBoxTokenManagerProps & { onClose: () => void }) {
-  const [selectedSources, setSelectedSources] = useState<string[]>(tvboxEnabledSources);
+  const [selectedSources, setSelectedSources] =
+    useState<string[]>(tvboxEnabledSources);
   const [isSaving, setIsSaving] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [message, setMessage] = useState<{
+    type: 'success' | 'error';
+    text: string;
+  } | null>(null);
 
   const handleSave = async (regenerate = false) => {
     setIsSaving(true);
@@ -79,7 +82,10 @@ export function TVBoxTokenModal({
         throw new Error(data.error || '保存失败');
       }
 
-      setMessage({ type: 'success', text: regenerate ? 'Token已重新生成' : '配置已保存' });
+      setMessage({
+        type: 'success',
+        text: regenerate ? 'Token已重新生成' : '配置已保存',
+      });
       setTimeout(() => {
         onUpdate();
         onClose();
@@ -98,9 +104,12 @@ export function TVBoxTokenModal({
     setMessage(null);
 
     try {
-      const response = await fetch(`/api/admin/user-tvbox-token?username=${encodeURIComponent(username)}`, {
-        method: 'DELETE',
-      });
+      const response = await fetch(
+        `/api/admin/user-tvbox-token?username=${encodeURIComponent(username)}`,
+        {
+          method: 'DELETE',
+        },
+      );
 
       if (!response.ok) {
         const data = await response.json();
@@ -123,12 +132,16 @@ export function TVBoxTokenModal({
     setSelectedSources((prev) =>
       prev.includes(sourceKey)
         ? prev.filter((k) => k !== sourceKey)
-        : [...prev, sourceKey]
+        : [...prev, sourceKey],
     );
   };
 
   const toggleAll = () => {
-    setSelectedSources(selectedSources.length === allSources.length ? [] : allSources.map((s) => s.key));
+    setSelectedSources(
+      selectedSources.length === allSources.length
+        ? []
+        : allSources.map((s) => s.key),
+    );
   };
 
   return (
@@ -191,7 +204,9 @@ export function TVBoxTokenModal({
                 onClick={toggleAll}
                 className='text-xs text-blue-600 hover:text-blue-700'
               >
-                {selectedSources.length === allSources.length ? '取消全选' : '全选'}
+                {selectedSources.length === allSources.length
+                  ? '取消全选'
+                  : '全选'}
               </button>
             </div>
             <div className='text-xs text-gray-500 dark:text-gray-400'>

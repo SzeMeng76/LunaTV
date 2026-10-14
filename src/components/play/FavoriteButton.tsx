@@ -1,8 +1,7 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import { memo } from 'react';
 import { Heart } from 'lucide-react';
+import { memo } from 'react';
 
 interface FavoriteButtonProps {
   favorited: boolean;

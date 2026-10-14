@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import { getConfig } from '@/lib/config';
 import { SearchResult } from '@/lib/types';
 
@@ -8,7 +6,7 @@ import { SearchResult } from '@/lib/types';
  */
 export async function getEmbyDetail(
   source: string,
-  id: string
+  id: string,
 ): Promise<SearchResult> {
   const config = await getConfig();
 
@@ -37,8 +35,6 @@ export async function getEmbyDetail(
   // 根据类型处理
   if (item.Type === 'Movie') {
     // 电影
-    const subtitles = client.getSubtitles(item);
-
     return {
       source: source, // 保持与请求一致（emby 或 emby_key）
       source_name: sourceName,
@@ -79,7 +75,7 @@ export async function getEmbyDetail(
       douban_id: 0,
       desc: item.Overview || '',
       episodes: await Promise.all(
-        allEpisodes.map((ep) => client.getStreamUrl(ep.Id))
+        allEpisodes.map((ep) => client.getStreamUrl(ep.Id)),
       ),
       episodes_titles: allEpisodes.map((ep) => {
         const seasonNum = ep.ParentIndexNumber || 1;
@@ -98,7 +94,7 @@ export async function getEmbyDetail(
  */
 export async function getSpecialSourceDetail(
   source: string,
-  id: string
+  id: string,
 ): Promise<SearchResult | null> {
   try {
     // Emby 源（包括 emby 和 emby_xxx）
@@ -118,8 +114,5 @@ export async function getSpecialSourceDetail(
  * 检查是否是特殊源
  */
 export function isSpecialSource(source: string): boolean {
-  return (
-    source === 'emby' ||
-    source.startsWith('emby_')
-  );
+  return source === 'emby' || source.startsWith('emby_');
 }

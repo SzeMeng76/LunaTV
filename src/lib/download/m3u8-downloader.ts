@@ -393,7 +393,7 @@ function extractTitleFromUrl(url: string): string {
     const urlObj = new URL(url);
     const title = urlObj.searchParams.get('title');
     if (title) return title;
-  } catch (e) {
+  } catch {
     // ignore
   }
 
@@ -450,7 +450,7 @@ async function downloadByRanges(
   totalSize: number,
   headers: HeadersInit,
   signal: AbortSignal,
-  timeout: number
+  timeout: number,
 ): Promise<ArrayBuffer> {
   const chunkSize = Math.ceil(totalSize / RANGE_CHUNK_COUNT);
   const tasks: Promise<{ index: number; data: ArrayBuffer }>[] = [];
@@ -467,7 +467,10 @@ async function downloadByRanges(
         try {
           const resp = await fetch(url, {
             signal: chunkController.signal,
-            headers: { ...(headers as Record<string, string>), Range: `bytes=${start}-${end}` },
+            headers: {
+              ...(headers as Record<string, string>),
+              Range: `bytes=${start}-${end}`,
+            },
           });
           // 必须是 206，否则说明源站忽略了 Range（会返回完整文件，导致拼接错误）
           if (resp.status !== 206) throw new Error('Range not supported');
@@ -476,7 +479,7 @@ async function downloadByRanges(
           clearTimeout(timeoutId);
           signal.removeEventListener('abort', onAbort);
         }
-      })()
+      })(),
     );
   }
   const results = await Promise.all(tasks);
@@ -543,7 +546,10 @@ export async function downloadTsSegment(
       try {
         const probe = await fetch(url, {
           signal: combinedSignal,
-          headers: { ...(headers as Record<string, string>), Range: 'bytes=0-0' },
+          headers: {
+            ...(headers as Record<string, string>),
+            Range: 'bytes=0-0',
+          },
         });
         if (probe.status === 206) {
           const cr = probe.headers.get('Content-Range');
@@ -555,7 +561,11 @@ export async function downloadTsSegment(
           // 源站不支持 Range：这个响应就是完整片段，直接用，不再重复下载
           clearTimeout(timeoutId);
           const buffer = await probe.arrayBuffer();
-          console.log('[downloadTsSegment] 源站不支持 Range，直接使用完整响应，大小:', buffer.byteLength, 'bytes');
+          console.log(
+            '[downloadTsSegment] 源站不支持 Range，直接使用完整响应，大小:',
+            buffer.byteLength,
+            'bytes',
+          );
           return buffer;
         }
       } catch (probeError) {
@@ -566,9 +576,19 @@ export async function downloadTsSegment(
       // 2) 大片段分块下载；失败回退整段
       if (totalSize > RANGE_CHUNK_THRESHOLD) {
         try {
-          const buffer = await downloadByRanges(url, totalSize, headers, combinedSignal, timeout);
+          const buffer = await downloadByRanges(
+            url,
+            totalSize,
+            headers,
+            combinedSignal,
+            timeout,
+          );
           clearTimeout(timeoutId);
-          console.log('[downloadTsSegment] 分块下载成功，大小:', buffer.byteLength, 'bytes');
+          console.log(
+            '[downloadTsSegment] 分块下载成功，大小:',
+            buffer.byteLength,
+            'bytes',
+          );
           return buffer;
         } catch (rangeError) {
           if (combinedSignal.aborted) throw rangeError;

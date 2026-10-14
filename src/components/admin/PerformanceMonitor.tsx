@@ -1,8 +1,14 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Activity, Database, Zap, HardDrive, Trash2, RefreshCw } from 'lucide-react';
+import {
+  Activity,
+  Database,
+  HardDrive,
+  RefreshCw,
+  Trash2,
+  Zap,
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 interface PerformanceData {
   metrics: any[];
@@ -107,17 +113,23 @@ export default function PerformanceMonitor() {
 
     return requests.filter((req) => {
       if (apiFilter === 'douban') return req.path.startsWith('/api/douban');
-      if (apiFilter === 'shortdrama') return req.path.startsWith('/api/shortdrama');
+      if (apiFilter === 'shortdrama')
+        return req.path.startsWith('/api/shortdrama');
       if (apiFilter === 'cron') return req.path === '/api/cron';
       if (apiFilter === 'admin') return req.path.startsWith('/api/admin');
       if (apiFilter === 'series') return req.path.startsWith('/api/series');
-      if (apiFilter === 'favorites') return req.path.startsWith('/api/favorites');
-      if (apiFilter === 'playrecords') return req.path.startsWith('/api/playrecords');
-      if (apiFilter === 'skipconfigs') return req.path.startsWith('/api/skipconfigs');
+      if (apiFilter === 'favorites')
+        return req.path.startsWith('/api/favorites');
+      if (apiFilter === 'playrecords')
+        return req.path.startsWith('/api/playrecords');
+      if (apiFilter === 'skipconfigs')
+        return req.path.startsWith('/api/skipconfigs');
       if (apiFilter === 'search') return req.path.startsWith('/api/search');
-      if (apiFilter === 'list') return req.path.startsWith('/api/source-browser/list');
+      if (apiFilter === 'list')
+        return req.path.startsWith('/api/source-browser/list');
       if (apiFilter === 'detail') return req.path.startsWith('/api/detail');
-      if (apiFilter === 'danmu') return req.path.startsWith('/api/danmu-external');
+      if (apiFilter === 'danmu')
+        return req.path.startsWith('/api/danmu-external');
       return true;
     });
   };
@@ -150,21 +162,27 @@ export default function PerformanceMonitor() {
     const minutes = parseInt(timeRange) * 60;
 
     // 计算平均每分钟请求数（保留2位小数）
-    const requestsPerMinute = Number((filteredRequests.length / minutes).toFixed(2));
+    const requestsPerMinute = Number(
+      (filteredRequests.length / minutes).toFixed(2),
+    );
 
     // 计算平均响应时间（保留整数）
     const avgResponseTime = Math.round(
-      filteredRequests.reduce((sum: number, r: any) => sum + r.duration, 0) / filteredRequests.length
+      filteredRequests.reduce((sum: number, r: any) => sum + r.duration, 0) /
+        filteredRequests.length,
     );
 
     // 计算平均每分钟DB查询数（保留2位小数）
-    const totalDbQueries = filteredRequests.reduce((sum: number, r: any) => sum + r.dbQueries, 0);
+    const totalDbQueries = filteredRequests.reduce(
+      (sum: number, r: any) => sum + r.dbQueries,
+      0,
+    );
     const dbQueriesPerMinute = Number((totalDbQueries / minutes).toFixed(2));
 
     // 计算平均每分钟流量（保留2位小数，单位：字节）
     const totalTraffic = filteredRequests.reduce(
       (sum: number, r: any) => sum + r.requestSize + r.responseSize,
-      0
+      0,
     );
     const trafficPerMinute = Number((totalTraffic / minutes).toFixed(2));
 
@@ -189,32 +207,85 @@ export default function PerformanceMonitor() {
   const getResponseTimeRating = (avgResponseTime: number, path?: string) => {
     // Cron 任务使用宽松阈值
     if (path && isCronTask(path)) {
-      if (avgResponseTime < 30000) { // < 30秒
-        return { level: 'excellent', label: '优秀', color: 'text-green-600 dark:text-green-400', tip: '< 30s' };
-      } else if (avgResponseTime < 120000) { // < 2分钟
-        return { level: 'good', label: '良好', color: 'text-blue-600 dark:text-blue-400', tip: '30s-2min' };
-      } else if (avgResponseTime < 300000) { // < 5分钟
-        return { level: 'fair', label: '正常', color: 'text-yellow-600 dark:text-yellow-400', tip: '2-5min' };
+      if (avgResponseTime < 30000) {
+        // < 30秒
+        return {
+          level: 'excellent',
+          label: '优秀',
+          color: 'text-green-600 dark:text-green-400',
+          tip: '< 30s',
+        };
+      } else if (avgResponseTime < 120000) {
+        // < 2分钟
+        return {
+          level: 'good',
+          label: '良好',
+          color: 'text-blue-600 dark:text-blue-400',
+          tip: '30s-2min',
+        };
+      } else if (avgResponseTime < 300000) {
+        // < 5分钟
+        return {
+          level: 'fair',
+          label: '正常',
+          color: 'text-yellow-600 dark:text-yellow-400',
+          tip: '2-5min',
+        };
       } else {
-        return { level: 'poor', label: '需优化', color: 'text-red-600 dark:text-red-400', tip: '> 5min' };
+        return {
+          level: 'poor',
+          label: '需优化',
+          color: 'text-red-600 dark:text-red-400',
+          tip: '> 5min',
+        };
       }
     }
 
     // 普通 API 使用严格阈值
     if (avgResponseTime < 100) {
-      return { level: 'excellent', label: '优秀', color: 'text-green-600 dark:text-green-400', tip: '< 100ms' };
+      return {
+        level: 'excellent',
+        label: '优秀',
+        color: 'text-green-600 dark:text-green-400',
+        tip: '< 100ms',
+      };
     } else if (avgResponseTime < 200) {
-      return { level: 'good', label: '良好', color: 'text-blue-600 dark:text-blue-400', tip: '100-200ms' };
+      return {
+        level: 'good',
+        label: '良好',
+        color: 'text-blue-600 dark:text-blue-400',
+        tip: '100-200ms',
+      };
     } else if (avgResponseTime < 2000) {
-      return { level: 'fair', label: '可接受', color: 'text-yellow-600 dark:text-yellow-400', tip: '200-2000ms' };
+      return {
+        level: 'fair',
+        label: '可接受',
+        color: 'text-yellow-600 dark:text-yellow-400',
+        tip: '200-2000ms',
+      };
     } else {
-      return { level: 'poor', label: '需优化', color: 'text-red-600 dark:text-red-400', tip: '> 2000ms' };
+      return {
+        level: 'poor',
+        label: '需优化',
+        color: 'text-red-600 dark:text-red-400',
+        tip: '> 2000ms',
+      };
     }
   };
 
   // 性能评估函数 - 每请求DB查询数（区分 Cron 和普通 API）
-  const getDbQueriesRating = (requestsPerMinute: number, dbQueriesPerMinute: number, path?: string) => {
-    if (requestsPerMinute === 0) return { level: 'unknown', label: '无数据', color: 'text-gray-500', tip: '' };
+  const getDbQueriesRating = (
+    requestsPerMinute: number,
+    dbQueriesPerMinute: number,
+    path?: string,
+  ) => {
+    if (requestsPerMinute === 0)
+      return {
+        level: 'unknown',
+        label: '无数据',
+        color: 'text-gray-500',
+        tip: '',
+      };
 
     const queriesPerRequest = dbQueriesPerMinute / requestsPerMinute;
 
@@ -226,7 +297,12 @@ export default function PerformanceMonitor() {
 
       // 如果没有用户数据，无法计算准确阈值
       if (!userCount) {
-        return { level: 'unknown', label: '计算中', color: 'text-gray-500', tip: '等待用户数据...' };
+        return {
+          level: 'unknown',
+          label: '计算中',
+          color: 'text-gray-500',
+          tip: '等待用户数据...',
+        };
       }
 
       const baseQueries = 1 + userCount * 4 + 25; // 基础查询次数
@@ -236,25 +312,65 @@ export default function PerformanceMonitor() {
       // 需优化：超过基础的150%
 
       if (queriesPerRequest < threshold1) {
-        return { level: 'excellent', label: '优秀', color: 'text-green-600 dark:text-green-400', tip: `< ${Math.round(threshold1)}次/请求 (${userCount}用户)` };
+        return {
+          level: 'excellent',
+          label: '优秀',
+          color: 'text-green-600 dark:text-green-400',
+          tip: `< ${Math.round(threshold1)}次/请求 (${userCount}用户)`,
+        };
       } else if (queriesPerRequest < threshold2) {
-        return { level: 'good', label: '良好', color: 'text-blue-600 dark:text-blue-400', tip: `${Math.round(threshold1)}-${Math.round(threshold2)}次/请求 (${userCount}用户)` };
+        return {
+          level: 'good',
+          label: '良好',
+          color: 'text-blue-600 dark:text-blue-400',
+          tip: `${Math.round(threshold1)}-${Math.round(threshold2)}次/请求 (${userCount}用户)`,
+        };
       } else if (queriesPerRequest < threshold3) {
-        return { level: 'fair', label: '正常', color: 'text-yellow-600 dark:text-yellow-400', tip: `${Math.round(threshold2)}-${Math.round(threshold3)}次/请求 (${userCount}用户)` };
+        return {
+          level: 'fair',
+          label: '正常',
+          color: 'text-yellow-600 dark:text-yellow-400',
+          tip: `${Math.round(threshold2)}-${Math.round(threshold3)}次/请求 (${userCount}用户)`,
+        };
       } else {
-        return { level: 'poor', label: '需优化', color: 'text-red-600 dark:text-red-400', tip: `> ${Math.round(threshold3)}次/请求 (${userCount}用户)` };
+        return {
+          level: 'poor',
+          label: '需优化',
+          color: 'text-red-600 dark:text-red-400',
+          tip: `> ${Math.round(threshold3)}次/请求 (${userCount}用户)`,
+        };
       }
     }
 
     // 普通 API 使用严格阈值
     if (queriesPerRequest < 5) {
-      return { level: 'excellent', label: '优秀', color: 'text-green-600 dark:text-green-400', tip: '< 5次/请求' };
+      return {
+        level: 'excellent',
+        label: '优秀',
+        color: 'text-green-600 dark:text-green-400',
+        tip: '< 5次/请求',
+      };
     } else if (queriesPerRequest < 10) {
-      return { level: 'good', label: '良好', color: 'text-blue-600 dark:text-blue-400', tip: '5-10次/请求' };
+      return {
+        level: 'good',
+        label: '良好',
+        color: 'text-blue-600 dark:text-blue-400',
+        tip: '5-10次/请求',
+      };
     } else if (queriesPerRequest < 20) {
-      return { level: 'fair', label: '可接受', color: 'text-yellow-600 dark:text-yellow-400', tip: '10-20次/请求' };
+      return {
+        level: 'fair',
+        label: '可接受',
+        color: 'text-yellow-600 dark:text-yellow-400',
+        tip: '10-20次/请求',
+      };
     } else {
-      return { level: 'poor', label: '需优化', color: 'text-red-600 dark:text-red-400', tip: '> 20次/请求' };
+      return {
+        level: 'poor',
+        label: '需优化',
+        color: 'text-red-600 dark:text-red-400',
+        tip: '> 20次/请求',
+      };
     }
   };
 
@@ -262,13 +378,33 @@ export default function PerformanceMonitor() {
   const getTrafficRating = (trafficPerMinute: number) => {
     const trafficKB = trafficPerMinute / 1024; // 转换为 KB
     if (trafficKB < 10) {
-      return { level: 'excellent', label: '非常轻量', color: 'text-green-600 dark:text-green-400', tip: '< 10 KB/分钟' };
+      return {
+        level: 'excellent',
+        label: '非常轻量',
+        color: 'text-green-600 dark:text-green-400',
+        tip: '< 10 KB/分钟',
+      };
     } else if (trafficKB < 50) {
-      return { level: 'good', label: '轻量', color: 'text-blue-600 dark:text-blue-400', tip: '10-50 KB/分钟' };
+      return {
+        level: 'good',
+        label: '轻量',
+        color: 'text-blue-600 dark:text-blue-400',
+        tip: '10-50 KB/分钟',
+      };
     } else if (trafficKB < 200) {
-      return { level: 'fair', label: '中等', color: 'text-yellow-600 dark:text-yellow-400', tip: '50-200 KB/分钟' };
+      return {
+        level: 'fair',
+        label: '中等',
+        color: 'text-yellow-600 dark:text-yellow-400',
+        tip: '50-200 KB/分钟',
+      };
     } else {
-      return { level: 'poor', label: '较重', color: 'text-orange-600 dark:text-orange-400', tip: '> 200 KB/分钟' };
+      return {
+        level: 'poor',
+        label: '较重',
+        color: 'text-orange-600 dark:text-orange-400',
+        tip: '> 200 KB/分钟',
+      };
     }
   };
 
@@ -277,13 +413,33 @@ export default function PerformanceMonitor() {
   const getExternalTrafficRating = (trafficPerMinute: number) => {
     const trafficMB = trafficPerMinute / 1024 / 1024; // 转换为 MB
     if (trafficMB < 5) {
-      return { level: 'excellent', label: '正常', color: 'text-green-600 dark:text-green-400', tip: '< 5 MB/分钟' };
+      return {
+        level: 'excellent',
+        label: '正常',
+        color: 'text-green-600 dark:text-green-400',
+        tip: '< 5 MB/分钟',
+      };
     } else if (trafficMB < 15) {
-      return { level: 'good', label: '中等', color: 'text-blue-600 dark:text-blue-400', tip: '5-15 MB/分钟' };
+      return {
+        level: 'good',
+        label: '中等',
+        color: 'text-blue-600 dark:text-blue-400',
+        tip: '5-15 MB/分钟',
+      };
     } else if (trafficMB < 30) {
-      return { level: 'fair', label: '较高', color: 'text-yellow-600 dark:text-yellow-400', tip: '15-30 MB/分钟' };
+      return {
+        level: 'fair',
+        label: '较高',
+        color: 'text-yellow-600 dark:text-yellow-400',
+        tip: '15-30 MB/分钟',
+      };
     } else {
-      return { level: 'poor', label: '异常高', color: 'text-red-600 dark:text-red-400', tip: '> 30 MB/分钟' };
+      return {
+        level: 'poor',
+        label: '异常高',
+        color: 'text-red-600 dark:text-red-400',
+        tip: '> 30 MB/分钟',
+      };
     }
   };
 
@@ -341,11 +497,7 @@ export default function PerformanceMonitor() {
   }
 
   if (!data) {
-    return (
-      <div className='text-center py-8 text-gray-500'>
-        暂无性能数据
-      </div>
-    );
+    return <div className='text-center py-8 text-gray-500'>暂无性能数据</div>;
   }
 
   // 获取过滤后的统计数据
@@ -399,7 +551,9 @@ export default function PerformanceMonitor() {
                 : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
             }`}
           >
-            <RefreshCw className={`w-4 h-4 ${autoRefresh ? 'animate-spin' : ''}`} />
+            <RefreshCw
+              className={`w-4 h-4 ${autoRefresh ? 'animate-spin' : ''}`}
+            />
             自动刷新
           </button>
 
@@ -428,30 +582,46 @@ export default function PerformanceMonitor() {
         {/* 进程 CPU 使用率 */}
         <div className='bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700'>
           <div className='flex items-center justify-between mb-2'>
-            <span className='text-sm text-gray-600 dark:text-gray-400'>进程 CPU</span>
+            <span className='text-sm text-gray-600 dark:text-gray-400'>
+              进程 CPU
+            </span>
             <Zap className='w-5 h-5 text-yellow-500' />
           </div>
           <div className='text-2xl font-bold text-gray-800 dark:text-gray-200'>
             {data.currentStatus.system.cpuUsage.toFixed(2)}%
           </div>
-          <div className='text-xs text-gray-500 dark:text-gray-400 mt-1 truncate' title={data.currentStatus.system.cpuModel}>
-            {data.currentStatus.system.cpuCores} 核 · {data.currentStatus.system.cpuModel.split('@')[0].trim()}
+          <div
+            className='text-xs text-gray-500 dark:text-gray-400 mt-1 truncate'
+            title={data.currentStatus.system.cpuModel}
+          >
+            {data.currentStatus.system.cpuCores} 核 ·{' '}
+            {data.currentStatus.system.cpuModel.split('@')[0].trim()}
           </div>
         </div>
 
         {/* 进程内存（LunaTV 专属） */}
         <div className='bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700'>
           <div className='flex items-center justify-between mb-2'>
-            <span className='text-sm text-gray-600 dark:text-gray-400'>进程内存</span>
+            <span className='text-sm text-gray-600 dark:text-gray-400'>
+              进程内存
+            </span>
             <HardDrive className='w-5 h-5 text-blue-500' />
           </div>
           <div className='text-2xl font-bold text-gray-800 dark:text-gray-200'>
-            {formatTraffic(data.currentStatus.system.memoryUsage.rss * 1024 * 1024)}
+            {formatTraffic(
+              data.currentStatus.system.memoryUsage.rss * 1024 * 1024,
+            )}
           </div>
           <div className='text-xs text-gray-500 dark:text-gray-400 mt-1'>
-            堆内存: {formatTraffic(data.currentStatus.system.memoryUsage.heapUsed * 1024 * 1024)}
+            堆内存:{' '}
+            {formatTraffic(
+              data.currentStatus.system.memoryUsage.heapUsed * 1024 * 1024,
+            )}
             <span className='ml-2 text-blue-600 dark:text-blue-400'>
-              / {formatTraffic(data.currentStatus.system.memoryUsage.heapTotal * 1024 * 1024)}
+              /{' '}
+              {formatTraffic(
+                data.currentStatus.system.memoryUsage.heapTotal * 1024 * 1024,
+              )}
             </span>
           </div>
         </div>
@@ -459,16 +629,29 @@ export default function PerformanceMonitor() {
         {/* 系统内存 */}
         <div className='bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700'>
           <div className='flex items-center justify-between mb-2'>
-            <span className='text-sm text-gray-600 dark:text-gray-400'>系统内存</span>
+            <span className='text-sm text-gray-600 dark:text-gray-400'>
+              系统内存
+            </span>
             <HardDrive className='w-5 h-5 text-green-500' />
           </div>
           <div className='text-2xl font-bold text-gray-800 dark:text-gray-200'>
-            {formatTraffic(data.currentStatus.system.memoryUsage.systemUsed * 1024 * 1024)}
+            {formatTraffic(
+              data.currentStatus.system.memoryUsage.systemUsed * 1024 * 1024,
+            )}
           </div>
           <div className='text-xs text-gray-500 dark:text-gray-400 mt-1'>
-            总共 {formatTraffic(data.currentStatus.system.memoryUsage.systemTotal * 1024 * 1024)}
+            总共{' '}
+            {formatTraffic(
+              data.currentStatus.system.memoryUsage.systemTotal * 1024 * 1024,
+            )}
             <span className='ml-2 text-blue-600 dark:text-blue-400'>
-              ({((data.currentStatus.system.memoryUsage.systemUsed / data.currentStatus.system.memoryUsage.systemTotal) * 100).toFixed(1)}%)
+              (
+              {(
+                (data.currentStatus.system.memoryUsage.systemUsed /
+                  data.currentStatus.system.memoryUsage.systemTotal) *
+                100
+              ).toFixed(1)}
+              %)
             </span>
           </div>
         </div>
@@ -476,7 +659,9 @@ export default function PerformanceMonitor() {
         {/* 每分钟请求数 */}
         <div className='bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700'>
           <div className='flex items-center justify-between mb-2'>
-            <span className='text-sm text-gray-600 dark:text-gray-400'>请求/分钟</span>
+            <span className='text-sm text-gray-600 dark:text-gray-400'>
+              请求/分钟
+            </span>
             <Activity className='w-5 h-5 text-green-500' />
           </div>
           <div className='text-2xl font-bold text-gray-800 dark:text-gray-200'>
@@ -485,8 +670,17 @@ export default function PerformanceMonitor() {
           <div className='text-xs text-gray-500 dark:text-gray-400 mt-1'>
             平均响应: {filteredStats?.avgResponseTime ?? 0}ms
             {filteredStats && (
-              <span className={`ml-2 font-semibold ${getResponseTimeRating(filteredStats.avgResponseTime, filteredStats.isCron ? '/api/cron' : undefined).color}`}>
-                ({getResponseTimeRating(filteredStats.avgResponseTime, filteredStats.isCron ? '/api/cron' : undefined).label})
+              <span
+                className={`ml-2 font-semibold ${getResponseTimeRating(filteredStats.avgResponseTime, filteredStats.isCron ? '/api/cron' : undefined).color}`}
+              >
+                (
+                {
+                  getResponseTimeRating(
+                    filteredStats.avgResponseTime,
+                    filteredStats.isCron ? '/api/cron' : undefined,
+                  ).label
+                }
+                )
               </span>
             )}
           </div>
@@ -495,7 +689,9 @@ export default function PerformanceMonitor() {
         {/* 数据库查询 */}
         <div className='bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700'>
           <div className='flex items-center justify-between mb-2'>
-            <span className='text-sm text-gray-600 dark:text-gray-400'>DB 查询/分钟</span>
+            <span className='text-sm text-gray-600 dark:text-gray-400'>
+              DB 查询/分钟
+            </span>
             <Database className='w-5 h-5 text-purple-500' />
           </div>
           <div className='text-2xl font-bold text-gray-800 dark:text-gray-200'>
@@ -504,9 +700,24 @@ export default function PerformanceMonitor() {
           <div className='text-xs text-gray-500 dark:text-gray-400 mt-1'>
             {filteredStats && filteredStats.requestsPerMinute > 0 && (
               <>
-                平均: {(filteredStats.dbQueriesPerMinute / filteredStats.requestsPerMinute).toFixed(1)} 次/请求
-                <span className={`ml-2 font-semibold ${getDbQueriesRating(filteredStats.requestsPerMinute, filteredStats.dbQueriesPerMinute, filteredStats.isCron ? '/api/cron' : undefined).color}`}>
-                  ({getDbQueriesRating(filteredStats.requestsPerMinute, filteredStats.dbQueriesPerMinute, filteredStats.isCron ? '/api/cron' : undefined).label})
+                平均:{' '}
+                {(
+                  filteredStats.dbQueriesPerMinute /
+                  filteredStats.requestsPerMinute
+                ).toFixed(1)}{' '}
+                次/请求
+                <span
+                  className={`ml-2 font-semibold ${getDbQueriesRating(filteredStats.requestsPerMinute, filteredStats.dbQueriesPerMinute, filteredStats.isCron ? '/api/cron' : undefined).color}`}
+                >
+                  (
+                  {
+                    getDbQueriesRating(
+                      filteredStats.requestsPerMinute,
+                      filteredStats.dbQueriesPerMinute,
+                      filteredStats.isCron ? '/api/cron' : undefined,
+                    ).label
+                  }
+                  )
                 </span>
               </>
             )}
@@ -516,7 +727,9 @@ export default function PerformanceMonitor() {
         {/* 流量/分钟 */}
         <div className='bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700'>
           <div className='flex items-center justify-between mb-2'>
-            <span className='text-sm text-gray-600 dark:text-gray-400'>API 流量/分钟</span>
+            <span className='text-sm text-gray-600 dark:text-gray-400'>
+              API 流量/分钟
+            </span>
             <Activity className='w-5 h-5 text-orange-500' />
           </div>
           <div className='text-2xl font-bold text-gray-800 dark:text-gray-200'>
@@ -524,7 +737,9 @@ export default function PerformanceMonitor() {
           </div>
           <div className='text-xs text-gray-500 dark:text-gray-400 mt-1'>
             {filteredStats && (
-              <span className={`font-semibold ${getTrafficRating(filteredStats.trafficPerMinute).color}`}>
+              <span
+                className={`font-semibold ${getTrafficRating(filteredStats.trafficPerMinute).color}`}
+              >
                 ({getTrafficRating(filteredStats.trafficPerMinute).label})
               </span>
             )}
@@ -534,21 +749,34 @@ export default function PerformanceMonitor() {
         {/* 外部流量/分钟 */}
         <div className='bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700'>
           <div className='flex items-center justify-between mb-2'>
-            <span className='text-sm text-gray-600 dark:text-gray-400'>外部流量/分钟</span>
+            <span className='text-sm text-gray-600 dark:text-gray-400'>
+              外部流量/分钟
+            </span>
             <Zap className='w-5 h-5 text-purple-500' />
           </div>
           <div className='text-2xl font-bold text-gray-800 dark:text-gray-200'>
-            {data?.externalTraffic ?
-              formatTraffic(data.externalTraffic.totalTraffic / parseInt(timeRange) / 60) :
-              '0.00 B'
-            }
+            {data?.externalTraffic
+              ? formatTraffic(
+                  data.externalTraffic.totalTraffic / parseInt(timeRange) / 60,
+                )
+              : '0.00 B'}
           </div>
           <div className='text-xs text-gray-500 dark:text-gray-400 mt-1'>
             {data?.externalTraffic && data.externalTraffic.totalRequests > 0 ? (
               <>
                 {data.externalTraffic.totalRequests} 次外部请求
-                <span className={`ml-2 font-semibold ${getExternalTrafficRating(data.externalTraffic.totalTraffic / parseInt(timeRange) / 60).color}`}>
-                  ({getExternalTrafficRating(data.externalTraffic.totalTraffic / parseInt(timeRange) / 60).label})
+                <span
+                  className={`ml-2 font-semibold ${getExternalTrafficRating(data.externalTraffic.totalTraffic / parseInt(timeRange) / 60).color}`}
+                >
+                  (
+                  {
+                    getExternalTrafficRating(
+                      data.externalTraffic.totalTraffic /
+                        parseInt(timeRange) /
+                        60,
+                    ).label
+                  }
+                  )
                 </span>
               </>
             ) : (
@@ -568,44 +796,44 @@ export default function PerformanceMonitor() {
           </summary>
           <div className='border-t border-gray-200 dark:border-gray-700'>
             <div className='overflow-x-auto'>
-            <table className='min-w-full divide-y divide-gray-200 dark:divide-gray-700'>
-              <thead className='bg-gray-50 dark:bg-gray-700'>
-                <tr>
-                  <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase'>
-                    域名
-                  </th>
-                  <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase'>
-                    请求次数
-                  </th>
-                  <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase'>
-                    总流量
-                  </th>
-                  <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase'>
-                    平均流量/请求
-                  </th>
-                </tr>
-              </thead>
-              <tbody className='bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700'>
-                {Object.entries(data.externalTraffic.byDomain)
-                  .sort((a, b) => b[1].traffic - a[1].traffic)
-                  .map(([domain, stats]) => (
-                    <tr key={domain}>
-                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100'>
-                        {domain}
-                      </td>
-                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100'>
-                        {stats.requests}
-                      </td>
-                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100'>
-                        {formatTraffic(stats.traffic)}
-                      </td>
-                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100'>
-                        {formatTraffic(stats.traffic / stats.requests)}
-                      </td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
+              <table className='min-w-full divide-y divide-gray-200 dark:divide-gray-700'>
+                <thead className='bg-gray-50 dark:bg-gray-700'>
+                  <tr>
+                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase'>
+                      域名
+                    </th>
+                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase'>
+                      请求次数
+                    </th>
+                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase'>
+                      总流量
+                    </th>
+                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase'>
+                      平均流量/请求
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className='bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700'>
+                  {Object.entries(data.externalTraffic.byDomain)
+                    .sort((a, b) => b[1].traffic - a[1].traffic)
+                    .map(([domain, stats]) => (
+                      <tr key={domain}>
+                        <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100'>
+                          {domain}
+                        </td>
+                        <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100'>
+                          {stats.requests}
+                        </td>
+                        <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100'>
+                          {formatTraffic(stats.traffic)}
+                        </td>
+                        <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100'>
+                          {formatTraffic(stats.traffic / stats.requests)}
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </details>
@@ -619,84 +847,94 @@ export default function PerformanceMonitor() {
           </h3>
         </summary>
         <div className='border-t border-gray-200 dark:border-gray-700'>
-        <div className='overflow-x-auto -mx-4 sm:mx-0'>
-          <div className='inline-block min-w-full align-middle'>
-            <table className='min-w-full divide-y divide-gray-200 dark:divide-gray-700'>
-            <thead className='bg-gray-50 dark:bg-gray-700'>
-              <tr>
-                <th className='px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap'>
-                  时间
-                </th>
-                <th className='px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap'>
-                  API 名称
-                </th>
-                <th className='px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap'>
-                  状态码
-                </th>
-                <th className='px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap'>
-                  响应时间
-                </th>
-                <th className='px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap'>
-                  内存
-                </th>
-                <th className='px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap'>
-                  DB 查询
-                </th>
-                <th className='px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap'>
-                  响应大小
-                </th>
-              </tr>
-            </thead>
-            <tbody className='bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700'>
-              {filterRequestsForDisplay(data.recentRequests).map((request: any, index: number) => {
-                const responseSizeKB = (request.responseSize / 1024).toFixed(2);
-                const isSuccess = request.statusCode >= 200 && request.statusCode < 300;
-                const isError = request.statusCode >= 400;
-
-                return (
-                  <tr key={index}>
-                    <td className='px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100'>
-                      {new Date(request.timestamp).toLocaleString('zh-CN', {
-                        month: '2-digit',
-                        day: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        second: '2-digit',
-                      })}
-                    </td>
-                    <td className='px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100'>
-                      {getApiName(request.path)}
-                    </td>
-                    <td className='px-4 sm:px-6 py-4 whitespace-nowrap text-sm'>
-                      <span className={`${
-                        isSuccess
-                          ? 'text-green-600 dark:text-green-400'
-                          : isError
-                          ? 'text-red-600 dark:text-red-400'
-                          : 'text-yellow-600 dark:text-yellow-400'
-                      }`}>
-                        {request.statusCode}
-                      </span>
-                    </td>
-                    <td className='px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100'>
-                      {request.duration}ms
-                    </td>
-                    <td className='px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100'>
-                      {request.memoryUsed.toFixed(2)} MB
-                    </td>
-                    <td className='px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100'>
-                      {request.dbQueries > 0 ? request.dbQueries : '-'}
-                    </td>
-                    <td className='px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100'>
-                      {responseSizeKB} KB
-                    </td>
+          <div className='overflow-x-auto -mx-4 sm:mx-0'>
+            <div className='inline-block min-w-full align-middle'>
+              <table className='min-w-full divide-y divide-gray-200 dark:divide-gray-700'>
+                <thead className='bg-gray-50 dark:bg-gray-700'>
+                  <tr>
+                    <th className='px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap'>
+                      时间
+                    </th>
+                    <th className='px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap'>
+                      API 名称
+                    </th>
+                    <th className='px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap'>
+                      状态码
+                    </th>
+                    <th className='px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap'>
+                      响应时间
+                    </th>
+                    <th className='px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap'>
+                      内存
+                    </th>
+                    <th className='px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap'>
+                      DB 查询
+                    </th>
+                    <th className='px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap'>
+                      响应大小
+                    </th>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                </thead>
+                <tbody className='bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700'>
+                  {filterRequestsForDisplay(data.recentRequests).map(
+                    (request: any, index: number) => {
+                      const responseSizeKB = (
+                        request.responseSize / 1024
+                      ).toFixed(2);
+                      const isSuccess =
+                        request.statusCode >= 200 && request.statusCode < 300;
+                      const isError = request.statusCode >= 400;
+
+                      return (
+                        <tr key={index}>
+                          <td className='px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100'>
+                            {new Date(request.timestamp).toLocaleString(
+                              'zh-CN',
+                              {
+                                month: '2-digit',
+                                day: '2-digit',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                second: '2-digit',
+                              },
+                            )}
+                          </td>
+                          <td className='px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100'>
+                            {getApiName(request.path)}
+                          </td>
+                          <td className='px-4 sm:px-6 py-4 whitespace-nowrap text-sm'>
+                            <span
+                              className={`${
+                                isSuccess
+                                  ? 'text-green-600 dark:text-green-400'
+                                  : isError
+                                    ? 'text-red-600 dark:text-red-400'
+                                    : 'text-yellow-600 dark:text-yellow-400'
+                              }`}
+                            >
+                              {request.statusCode}
+                            </span>
+                          </td>
+                          <td className='px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100'>
+                            {request.duration}ms
+                          </td>
+                          <td className='px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100'>
+                            {request.memoryUsed.toFixed(2)} MB
+                          </td>
+                          <td className='px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100'>
+                            {request.dbQueries > 0 ? request.dbQueries : '-'}
+                          </td>
+                          <td className='px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100'>
+                            {responseSizeKB} KB
+                          </td>
+                        </tr>
+                      );
+                    },
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
         </div>
       </details>
     </div>

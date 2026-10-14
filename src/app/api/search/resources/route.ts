@@ -2,8 +2,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
-import { getAvailableApiSites } from '@/lib/config';
 import { getAuthInfoFromCookie } from '@/lib/auth';
+import { getAvailableApiSites } from '@/lib/config';
 
 export const runtime = 'nodejs';
 
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     const apiSites = await getAvailableApiSites(authInfo.username);
 
     return NextResponse.json(apiSites);
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: '获取资源失败' }, { status: 500 });
   }
 }

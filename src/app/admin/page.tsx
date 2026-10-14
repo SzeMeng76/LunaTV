@@ -30,7 +30,6 @@ import {
   Check,
   CheckCircle,
   ChevronDown,
-  ChevronUp,
   Database,
   Download,
   ExternalLink,
@@ -481,44 +480,6 @@ interface CustomCategory {
   from: 'config' | 'custom';
 }
 
-// 可折叠标签组件
-interface CollapsibleTabProps {
-  title: string;
-  icon?: React.ReactNode;
-  isExpanded: boolean;
-  onToggle: () => void;
-  children: React.ReactNode;
-}
-
-const CollapsibleTab = ({
-  title,
-  icon,
-  isExpanded,
-  onToggle,
-  children,
-}: CollapsibleTabProps) => {
-  return (
-    <div className='rounded-xl shadow-sm mb-4 overflow-hidden bg-white/80 backdrop-blur-md dark:bg-gray-800/50 dark:ring-1 dark:ring-gray-700'>
-      <button
-        onClick={onToggle}
-        className='w-full px-6 py-4 flex items-center justify-between bg-gray-50/70 dark:bg-gray-800/60 hover:bg-gray-100/80 dark:hover:bg-gray-700/60 transition-colors'
-      >
-        <div className='flex items-center gap-3'>
-          {icon}
-          <h3 className='text-lg font-medium text-gray-900 dark:text-gray-100'>
-            {title}
-          </h3>
-        </div>
-        <div className='text-gray-500 dark:text-gray-400'>
-          {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-        </div>
-      </button>
-
-      {isExpanded && <div className='px-6 py-4'>{children}</div>}
-    </div>
-  );
-};
-
 // 用户配置组件
 interface UserConfigProps {
   config: AdminConfig | null;
@@ -719,7 +680,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
       await handleUserGroupAction('delete', deletingUserGroup.name);
       setShowDeleteUserGroupModal(false);
       setDeletingUserGroup(null);
-    } catch (err) {
+    } catch {
       // 错误处理已在 handleUserGroupAction 中处理
     }
   };
@@ -882,7 +843,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
           setShowConfigureUserGroupModal(false);
           setSelectedUserForGroup(null);
           setSelectedUserGroups([]);
-        } catch (err) {
+        } catch {
           // 错误处理已在 handleAssignUserGroup 中处理
         }
       },
@@ -1100,7 +1061,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
               { skipToast: true },
             );
             showSuccess(`用户 ${usernameToDelete} 已删除`, showAlert);
-          } catch (err) {
+          } catch {
             // 错误处理已在 handleUserAction 中处理
           }
         });
@@ -9254,33 +9215,6 @@ function AdminPageClient() {
   const [error, setError] = useState<string | null>(null);
   const [role, setRole] = useState<'owner' | 'admin' | null>(null);
   const [showResetConfigModal, setShowResetConfigModal] = useState(false);
-  const [expandedTabs, setExpandedTabs] = useState<{ [key: string]: boolean }>({
-    userConfig: false,
-    videoSource: false,
-    sourceTest: false,
-    liveSource: false,
-    siteConfig: false,
-    homePageConfig: false,
-    categoryConfig: false,
-    netdiskConfig: false,
-    aiRecommendConfig: false,
-    youtubeConfig: false,
-    shortDramaConfig: false,
-    embyConfig: false,
-    downloadConfig: false,
-    customAdFilter: false,
-    watchRoomConfig: false,
-    tvboxSecurityConfig: false,
-    trustedNetworkConfig: false,
-    danmuApiConfig: false,
-    telegramAuthConfig: false,
-    oidcAuthConfig: false,
-    inviteCodeManager: false,
-    configFile: false,
-    cacheManager: false,
-    dataMigration: false,
-    performanceMonitor: false,
-  });
 
   const [activeAdminTab, setActiveAdminTab] = useState('siteConfig');
 
@@ -9317,14 +9251,6 @@ function AdminPageClient() {
     // 首次加载时显示骨架
     fetchConfig(true);
   }, [fetchConfig]);
-
-  // 切换标签展开状态
-  const toggleTab = (tabKey: string) => {
-    setExpandedTabs((prev) => ({
-      ...prev,
-      [tabKey]: !prev[tabKey],
-    }));
-  };
 
   // 新增: 重置配置处理函数
   const handleResetConfig = () => {

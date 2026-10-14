@@ -8,8 +8,8 @@ import { DEFAULT_USER_AGENT } from '@/lib/user-agent';
 export const runtime = 'nodejs';
 
 // 连接池管理
-import * as https from 'https';
 import * as http from 'http';
+import * as https from 'https';
 
 const httpsAgent = new https.Agent({
   keepAlive: true,
@@ -90,7 +90,7 @@ export async function GET(request: Request) {
         'Cache-Control': 'no-cache',
         Connection: 'keep-alive',
       },
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+
       // @ts-ignore - Node.js specific option
       agent: typeof window === 'undefined' ? agent : undefined,
     });
@@ -252,7 +252,7 @@ export async function GET(request: Request) {
             if (reader) {
               try {
                 reader.releaseLock();
-              } catch (e) {
+              } catch {
                 // reader 可能已经被释放，忽略错误
               }
               reader = null;
@@ -271,7 +271,7 @@ export async function GET(request: Request) {
           if (reader) {
             try {
               reader.releaseLock();
-            } catch (e) {
+            } catch {
               // reader 可能已经被释放，忽略错误
             }
             reader = null;
@@ -280,7 +280,7 @@ export async function GET(request: Request) {
           if (response?.body) {
             try {
               response.body.cancel();
-            } catch (e) {
+            } catch {
               // 忽略取消时的错误
             }
           }
@@ -307,7 +307,7 @@ export async function GET(request: Request) {
     if (reader) {
       try {
         (reader as ReadableStreamDefaultReader<Uint8Array>).releaseLock();
-      } catch (e) {
+      } catch {
         // 忽略错误
       }
     }
@@ -315,7 +315,7 @@ export async function GET(request: Request) {
     if (response?.body) {
       try {
         response.body.cancel();
-      } catch (e) {
+      } catch {
         // 忽略错误
       }
     }

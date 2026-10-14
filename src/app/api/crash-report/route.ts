@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+
 import { db } from '@/lib/db';
 import { CrashLog } from '@/lib/types';
 
@@ -31,7 +32,7 @@ export async function POST(request: NextRequest) {
     console.error('保存崩溃报告失败:', error);
     return NextResponse.json(
       { error: 'Failed to save crash report' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -49,7 +50,7 @@ export async function GET(request: NextRequest) {
     console.error('获取崩溃日志失败:', error);
     return NextResponse.json(
       { error: 'Failed to get crash logs' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -64,7 +65,7 @@ export async function DELETE() {
     console.error('清除崩溃日志失败:', error);
     return NextResponse.json(
       { error: 'Failed to clear crash logs' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

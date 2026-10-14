@@ -70,7 +70,7 @@ export function refineConfig(adminConfig: AdminConfig): AdminConfig {
   let fileConfig: ConfigFileStruct;
   try {
     fileConfig = JSON.parse(adminConfig.ConfigFile) as ConfigFileStruct;
-  } catch (e) {
+  } catch {
     fileConfig = {} as ConfigFileStruct;
   }
 
@@ -226,7 +226,7 @@ async function getInitConfig(
   let cfgFile: ConfigFileStruct;
   try {
     cfgFile = JSON.parse(configFile) as ConfigFileStruct;
-  } catch (e) {
+  } catch {
     cfgFile = {} as ConfigFileStruct;
   }
   const adminConfig: AdminConfig = {

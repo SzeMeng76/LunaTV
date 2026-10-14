@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { startTransition, type MouseEvent, type ReactNode } from 'react';
+import { type MouseEvent, type ReactNode, startTransition } from 'react';
 
 interface FastLinkProps {
   href: string;

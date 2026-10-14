@@ -2,10 +2,11 @@
 
 import { QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { useEffect } from 'react';
-import { getQueryClient } from '@/lib/get-query-client';
-import { subscribeToDataUpdates } from '@/lib/db.client';
 import type * as React from 'react';
+import { useEffect } from 'react';
+
+import { subscribeToDataUpdates } from '@/lib/db.client';
+import { getQueryClient } from '@/lib/get-query-client';
 
 /**
  * 全局事件订阅：统一监听数据更新事件并 invalidate 相关 query 缓存
@@ -24,21 +25,21 @@ function GlobalCacheInvalidator() {
       'playRecordsUpdated',
       () => {
         queryClient.invalidateQueries({ queryKey: ['playRecords'] });
-      }
+      },
     );
 
     const unsubscribeFavorites = subscribeToDataUpdates(
       'favoritesUpdated',
       () => {
         queryClient.invalidateQueries({ queryKey: ['favorites'] });
-      }
+      },
     );
 
     const unsubscribeReminders = subscribeToDataUpdates(
       'remindersUpdated',
       () => {
         queryClient.invalidateQueries({ queryKey: ['reminders'] });
-      }
+      },
     );
 
     return () => {
@@ -64,7 +65,11 @@ function GlobalCacheInvalidator() {
  * - 在 layout.tsx 中包裹 children
  * - 所有子组件都可以使用 useQuery/useMutation hooks
  */
-export default function QueryProvider({ children }: { children: React.ReactNode }) {
+export default function QueryProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   // 获取 QueryClient 实例（浏览器端单例，服务端每次新建）
   const queryClient = getQueryClient();
 

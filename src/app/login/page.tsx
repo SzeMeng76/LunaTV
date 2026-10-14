@@ -35,7 +35,7 @@ function VersionDisplay() {
       try {
         const status = await checkForUpdates();
         setUpdateStatus(status);
-      } catch (_) {
+      } catch {
         // do nothing
       } finally {
         setIsChecking(false);
@@ -227,7 +227,7 @@ function LoginPageClient() {
         const data = await res.json().catch(() => ({}));
         setError(data.error ?? '服务器错误');
       }
-    } catch (error) {
+    } catch {
       setError('网络错误，请稍后重试');
     } finally {
       setLoading(false);

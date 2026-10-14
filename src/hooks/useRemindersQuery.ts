@@ -9,7 +9,8 @@
  * - 替代 db.client.ts 的 getAllReminders() 直接 fetch
  */
 
-import { useQuery, queryOptions } from '@tanstack/react-query';
+import { queryOptions, useQuery } from '@tanstack/react-query';
+
 import type { Reminder } from '@/lib/db.client';
 
 // ============================================================================

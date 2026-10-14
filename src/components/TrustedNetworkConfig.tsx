@@ -3,7 +3,10 @@
 import { AlertCircle, CheckCircle, Shield } from 'lucide-react';
 import { useState } from 'react';
 
-import { useTrustedNetworkQuery, useSaveTrustedNetworkMutation } from '@/hooks/useTrustedNetworkQueries';
+import {
+  useSaveTrustedNetworkMutation,
+  useTrustedNetworkQuery,
+} from '@/hooks/useTrustedNetworkQueries';
 
 /**
  * 信任网络配置组件
@@ -14,11 +17,18 @@ import { useTrustedNetworkQuery, useSaveTrustedNetworkMutation } from '@/hooks/u
  * - 自动错误处理和回滚
  */
 const TrustedNetworkConfig = () => {
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [message, setMessage] = useState<{
+    type: 'success' | 'error';
+    text: string;
+  } | null>(null);
   const [newIP, setNewIP] = useState('');
 
   // 使用 TanStack Query 获取配置
-  const { data, isLoading: isQueryLoading, error: queryError } = useTrustedNetworkQuery();
+  const {
+    data,
+    isLoading: isQueryLoading,
+    error: queryError,
+  } = useTrustedNetworkQuery();
 
   // 使用 TanStack Query Mutation 保存配置
   const saveMutation = useSaveTrustedNetworkMutation();
@@ -42,7 +52,8 @@ const TrustedNetworkConfig = () => {
     const [ipPart, maskPart] = trimmed.split('/');
 
     const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/;
-    const ipv6Regex = /^([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}$|^::([0-9a-fA-F]{1,4}:){0,5}[0-9a-fA-F]{0,4}$|^([0-9a-fA-F]{1,4}:){1,6}:$|^::$/;
+    const ipv6Regex =
+      /^([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}$|^::([0-9a-fA-F]{1,4}:){0,5}[0-9a-fA-F]{0,4}$|^([0-9a-fA-F]{1,4}:){1,6}:$|^::$/;
 
     const isIPv4 = ipv4Regex.test(ipPart);
     const isIPv6 = ipv6Regex.test(ipPart);
@@ -72,7 +83,10 @@ const TrustedNetworkConfig = () => {
     if (!newIP.trim()) return;
 
     if (!isValidIPOrCIDR(newIP.trim())) {
-      showMessage('error', '请输入有效的IP地址或CIDR格式 (例如: 192.168.0.0/16, 10.0.0.0/8, 2001:db8::/32)');
+      showMessage(
+        'error',
+        '请输入有效的IP地址或CIDR格式 (例如: 192.168.0.0/16, 10.0.0.0/8, 2001:db8::/32)',
+      );
       return;
     }
 
@@ -82,33 +96,39 @@ const TrustedNetworkConfig = () => {
     }
 
     // 乐观更新：立即保存
-    saveMutation.mutate({
-      ...settings,
-      trustedIPs: [...settings.trustedIPs, newIP.trim()],
-    }, {
-      onSuccess: () => {
-        setNewIP('');
-        showMessage('success', 'IP地址添加成功！');
+    saveMutation.mutate(
+      {
+        ...settings,
+        trustedIPs: [...settings.trustedIPs, newIP.trim()],
       },
-      onError: (error) => {
-        showMessage('error', error.message);
+      {
+        onSuccess: () => {
+          setNewIP('');
+          showMessage('success', 'IP地址添加成功！');
+        },
+        onError: (error) => {
+          showMessage('error', error.message);
+        },
       },
-    });
+    );
   };
 
   // 删除 IP
   const removeIP = (index: number) => {
-    saveMutation.mutate({
-      ...settings,
-      trustedIPs: settings.trustedIPs.filter((_, i) => i !== index),
-    }, {
-      onSuccess: () => {
-        showMessage('success', 'IP地址删除成功！');
+    saveMutation.mutate(
+      {
+        ...settings,
+        trustedIPs: settings.trustedIPs.filter((_, i) => i !== index),
       },
-      onError: (error) => {
-        showMessage('error', error.message);
+      {
+        onSuccess: () => {
+          showMessage('success', 'IP地址删除成功！');
+        },
+        onError: (error) => {
+          showMessage('error', error.message);
+        },
       },
-    });
+    );
   };
 
   // 快捷添加常见内网段
@@ -118,50 +138,59 @@ const TrustedNetworkConfig = () => {
       return;
     }
 
-    saveMutation.mutate({
-      ...settings,
-      trustedIPs: [...settings.trustedIPs, cidr],
-    }, {
-      onSuccess: () => {
-        showMessage('success', `网段 ${cidr} 添加成功！`);
+    saveMutation.mutate(
+      {
+        ...settings,
+        trustedIPs: [...settings.trustedIPs, cidr],
       },
-      onError: (error) => {
-        showMessage('error', error.message);
+      {
+        onSuccess: () => {
+          showMessage('success', `网段 ${cidr} 添加成功！`);
+        },
+        onError: (error) => {
+          showMessage('error', error.message);
+        },
       },
-    });
+    );
   };
 
   // 切换启用状态
   const toggleEnabled = (enabled: boolean) => {
-    saveMutation.mutate({
-      ...settings,
-      enabled,
-    }, {
-      onSuccess: () => {
-        showMessage('success', `信任网络已${enabled ? '启用' : '禁用'}！`);
+    saveMutation.mutate(
+      {
+        ...settings,
+        enabled,
       },
-      onError: (error) => {
-        showMessage('error', error.message);
+      {
+        onSuccess: () => {
+          showMessage('success', `信任网络已${enabled ? '启用' : '禁用'}！`);
+        },
+        onError: (error) => {
+          showMessage('error', error.message);
+        },
       },
-    });
+    );
   };
 
   // 切换"禁止访客访问后台"开关
   const toggleBlockAdmin = (blockAdminAccess: boolean) => {
-    saveMutation.mutate({
-      ...settings,
-      blockAdminAccess,
-    }, {
-      onSuccess: () => {
-        showMessage(
-          'success',
-          `信任网络访客访问后台已${blockAdminAccess ? '禁止' : '允许'}！`,
-        );
+    saveMutation.mutate(
+      {
+        ...settings,
+        blockAdminAccess,
       },
-      onError: (error) => {
-        showMessage('error', error.message);
+      {
+        onSuccess: () => {
+          showMessage(
+            'success',
+            `信任网络访客访问后台已${blockAdminAccess ? '禁止' : '允许'}！`,
+          );
+        },
+        onError: (error) => {
+          showMessage('error', error.message);
+        },
       },
-    });
+    );
   };
 
   // 加载状态
@@ -235,7 +264,8 @@ const TrustedNetworkConfig = () => {
               环境变量配置已检测
             </h4>
             <p className='text-xs text-blue-800 dark:text-blue-300 mb-2'>
-              当前通过环境变量 <code>TRUSTED_NETWORK_IPS</code> 配置了信任网络，优先级高于数据库配置。
+              当前通过环境变量 <code>TRUSTED_NETWORK_IPS</code>{' '}
+              配置了信任网络，优先级高于数据库配置。
             </p>
             <div className='space-y-1'>
               {envConfig.trustedIPs.map((ip, index) => (
@@ -359,7 +389,8 @@ const TrustedNetworkConfig = () => {
               )}
 
               <p className='text-xs text-gray-500 dark:text-gray-400'>
-                支持 IPv4 (192.168.1.100)、IPv6 (2001:db8::1) 和 CIDR 格式 (192.168.0.0/16, 10.0.0.0/8)
+                支持 IPv4 (192.168.1.100)、IPv6 (2001:db8::1) 和 CIDR 格式
+                (192.168.0.0/16, 10.0.0.0/8)
               </p>
 
               {/* 使用说明 */}
@@ -369,7 +400,8 @@ const TrustedNetworkConfig = () => {
                 </h4>
                 <ul className='text-xs text-gray-600 dark:text-gray-400 space-y-1'>
                   <li>
-                    &bull; <strong>数据库配置：</strong>在上方添加信任IP段后保存，立即生效
+                    &bull; <strong>数据库配置：</strong>
+                    在上方添加信任IP段后保存，立即生效
                   </li>
                   <li>
                     &bull; <strong>环境变量配置：</strong>设置{' '}
@@ -378,12 +410,8 @@ const TrustedNetworkConfig = () => {
                     </code>{' '}
                     （优先级更高）
                   </li>
-                  <li>
-                    &bull; 信任IP段内的设备访问时将自动获得站长权限
-                  </li>
-                  <li>
-                    &bull; 非信任IP段的设备仍需正常登录
-                  </li>
+                  <li>&bull; 信任IP段内的设备访问时将自动获得站长权限</li>
+                  <li>&bull; 非信任IP段的设备仍需正常登录</li>
                 </ul>
               </div>
             </div>

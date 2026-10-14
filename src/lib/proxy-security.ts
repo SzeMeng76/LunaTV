@@ -1,5 +1,5 @@
-import { isIP } from 'net';
 import CacheableLookup from 'cacheable-lookup';
+import { isIP } from 'net';
 
 // 创建全局 DNS 缓存实例（带 TTL 支持）
 const cacheable = new CacheableLookup({
@@ -15,7 +15,7 @@ async function lookupWithRetry(
   hostname: string,
   options: any,
   maxRetries = 3,
-  initialDelay = 500
+  initialDelay = 500,
 ): Promise<any[]> {
   let lastError: Error | null = null;
 
@@ -41,8 +41,10 @@ async function lookupWithRetry(
       if (isRetryable && i < maxRetries - 1) {
         // 指数退避：500ms, 1000ms, 2000ms
         const delay = initialDelay * Math.pow(2, i);
-        console.warn(`[DNS] Retry ${i + 1}/${maxRetries} for ${hostname} after ${delay}ms (error: ${error.code})`);
-        await new Promise(resolve => setTimeout(resolve, delay));
+        console.warn(
+          `[DNS] Retry ${i + 1}/${maxRetries} for ${hostname} after ${delay}ms (error: ${error.code})`,
+        );
+        await new Promise((resolve) => setTimeout(resolve, delay));
         continue;
       }
 
@@ -178,7 +180,10 @@ export async function validateProxyTargetUrl(rawUrl: string): Promise<string> {
   }
 
   // 使用带重试机制的 DNS 查询（cacheable-lookup + 指数退避）
-  const records = await lookupWithRetry(hostname, { all: true, verbatim: true });
+  const records = await lookupWithRetry(hostname, {
+    all: true,
+    verbatim: true,
+  });
   if (!records.length) throw new Error('Host did not resolve');
 
   if (records.some((record) => isBlockedAddress(record.address))) {

@@ -1,8 +1,7 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import { AlertCircle, Copy, ExternalLink, Loader2, Check } from 'lucide-react';
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { AlertCircle, Check, Copy, ExternalLink, Loader2 } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface AcgSearchItem {
   title: string;
@@ -84,14 +83,18 @@ export default function AcgSearch({
 
       if (isLoadMore) {
         // 追加新数据
-        setAllItems(prev => [...prev, ...data.items]);
+        setAllItems((prev) => [...prev, ...data.items]);
         // 如果当前页没有结果，说明没有更多了
-        setHasMore(source !== 'mikan' && source !== 'dmhy' && data.items.length > 0);
+        setHasMore(
+          source !== 'mikan' && source !== 'dmhy' && data.items.length > 0,
+        );
       } else {
         // 新搜索，重置数据
         setAllItems(data.items);
         // 如果第一页有结果，假设可能还有更多
-        setHasMore(source !== 'mikan' && source !== 'dmhy' && data.items.length > 0);
+        setHasMore(
+          source !== 'mikan' && source !== 'dmhy' && data.items.length > 0,
+        );
       }
 
       setCurrentPage(page);
@@ -165,7 +168,7 @@ export default function AcgSearch({
         root: null,
         rootMargin: '100px',
         threshold: 0.1,
-      }
+      },
     );
 
     observer.observe(element);
@@ -214,7 +217,9 @@ export default function AcgSearch({
     <div className='space-y-6'>
       {/* 源切换器 */}
       <div className='flex items-center justify-center gap-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700'>
-        <span className='text-sm text-gray-600 dark:text-gray-400'>搜索源：</span>
+        <span className='text-sm text-gray-600 dark:text-gray-400'>
+          搜索源：
+        </span>
         <div className='flex gap-2'>
           <button
             onClick={() => setSource('acgrip')}
@@ -336,7 +341,10 @@ export default function AcgSearch({
 
       {/* 加载更多指示器 */}
       {source !== 'mikan' && source !== 'dmhy' && hasMore && (
-        <div ref={loadMoreRef} className='flex items-center justify-center py-8'>
+        <div
+          ref={loadMoreRef}
+          className='flex items-center justify-center py-8'
+        >
           <div className='text-center'>
             <Loader2 className='mx-auto h-6 w-6 animate-spin text-green-600 dark:text-green-400' />
             <p className='mt-2 text-sm text-gray-600 dark:text-gray-400'>

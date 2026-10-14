@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { getCacheTime, getConfig } from '@/lib/config';
 import {
-  recordRequest,
   getDbQueryCount,
+  recordRequest,
   resetDbQueryCount,
 } from '@/lib/performance-monitor';
 import { DEFAULT_USER_AGENT } from '@/lib/user-agent';
@@ -172,7 +172,7 @@ async function searchShortDramasInternal(query: string, page = 1, size = 20) {
         page,
         size,
       );
-    } catch (fallbackError) {
+    } catch {
       return { list: [], hasMore: false };
     }
   }

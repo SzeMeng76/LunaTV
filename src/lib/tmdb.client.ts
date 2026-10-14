@@ -1,8 +1,11 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
-import { getConfig } from '@/lib/config';
 import type { AdminConfig } from '@/lib/admin.types';
-import { TMDB_CACHE_EXPIRE, getCacheKey, getCache, setCache } from '@/lib/tmdb-cache';
+import { getConfig } from '@/lib/config';
+import {
+  getCache,
+  getCacheKey,
+  setCache,
+  TMDB_CACHE_EXPIRE,
+} from '@/lib/tmdb-cache';
 import { DEFAULT_USER_AGENT } from '@/lib/user-agent';
 
 // TMDB API 配置
@@ -119,7 +122,8 @@ export interface TMDBFilterOptions {
   onlyRated?: boolean;
 
   // 排序方式
-  sortBy?: 'rating' | 'date' | 'popularity' | 'vote_count' | 'title' | 'episode_count';
+  sortBy?:
+    'rating' | 'date' | 'popularity' | 'vote_count' | 'title' | 'episode_count';
   sortOrder?: 'asc' | 'desc';
 
   // 结果限制
@@ -131,7 +135,9 @@ export interface TMDBFilterOptions {
  */
 export async function isTMDBEnabled(): Promise<boolean> {
   const config = await getConfig();
-  return !!(config.SiteConfig.EnableTMDBActorSearch && config.SiteConfig.TMDBApiKey);
+  return !!(
+    config.SiteConfig.EnableTMDBActorSearch && config.SiteConfig.TMDBApiKey
+  );
 }
 
 /**
@@ -139,11 +145,19 @@ export async function isTMDBEnabled(): Promise<boolean> {
  */
 export async function searchTMDBMovie(
   title: string,
-  year?: string
-): Promise<{ id: number; title: string; release_date: string; vote_average: number } | null> {
+  year?: string,
+): Promise<{
+  id: number;
+  title: string;
+  release_date: string;
+  vote_average: number;
+} | null> {
   try {
     // 检查缓存
-    const cacheKey = getCacheKey('movie_search', { title: title.trim(), year: year || '' });
+    const cacheKey = getCacheKey('movie_search', {
+      title: title.trim(),
+      year: year || '',
+    });
     const cached = await getCache(cacheKey);
     if (cached) {
       console.log(`TMDB电影搜索缓存命中: ${title}`);
@@ -188,11 +202,19 @@ export async function searchTMDBMovie(
  */
 export async function searchTMDBTV(
   title: string,
-  year?: string
-): Promise<{ id: number; name: string; first_air_date: string; vote_average: number } | null> {
+  year?: string,
+): Promise<{
+  id: number;
+  name: string;
+  first_air_date: string;
+  vote_average: number;
+} | null> {
   try {
     // 检查缓存
-    const cacheKey = getCacheKey('tv_search', { title: title.trim(), year: year || '' });
+    const cacheKey = getCacheKey('tv_search', {
+      title: title.trim(),
+      year: year || '',
+    });
     const cached = await getCache(cacheKey);
     if (cached) {
       console.log(`TMDB电视剧搜索缓存命中: ${title}`);
@@ -235,7 +257,10 @@ export async function searchTMDBTV(
 /**
  * 调用TMDB API的通用函数
  */
-async function fetchTMDB<T>(endpoint: string, params: Record<string, string> = {}): Promise<T> {
+async function fetchTMDB<T>(
+  endpoint: string,
+  params: Record<string, string> = {},
+): Promise<T> {
   const config = await getConfig();
 
   if (!config.SiteConfig.TMDBApiKey) {
@@ -244,7 +269,10 @@ async function fetchTMDB<T>(endpoint: string, params: Record<string, string> = {
 
   const url = new URL(`${TMDB_BASE_URL}${endpoint}`);
   url.searchParams.append('api_key', config.SiteConfig.TMDBApiKey);
-  url.searchParams.append('language', config.SiteConfig.TMDBLanguage || 'zh-CN');
+  url.searchParams.append(
+    'language',
+    config.SiteConfig.TMDBLanguage || 'zh-CN',
+  );
 
   // 添加其他参数
   Object.entries(params).forEach(([key, value]) => {
@@ -256,9 +284,9 @@ async function fetchTMDB<T>(endpoint: string, params: Record<string, string> = {
 
   const response = await fetch(requestUrl, {
     headers: {
-      'Accept': 'application/json',
+      Accept: 'application/json',
       'User-Agent': DEFAULT_USER_AGENT,
-    }
+    },
   });
 
   if (!response.ok) {
@@ -271,7 +299,10 @@ async function fetchTMDB<T>(endpoint: string, params: Record<string, string> = {
 /**
  * 搜索演员
  */
-export async function searchTMDBPerson(query: string, page = 1): Promise<TMDBPersonSearchResponse> {
+export async function searchTMDBPerson(
+  query: string,
+  page = 1,
+): Promise<TMDBPersonSearchResponse> {
   // 检查缓存
   const cacheKey = getCacheKey('person_search', { query: query.trim(), page });
   const cached = await getCache(cacheKey);
@@ -282,7 +313,7 @@ export async function searchTMDBPerson(query: string, page = 1): Promise<TMDBPer
 
   const result = await fetchTMDB<TMDBPersonSearchResponse>('/search/person', {
     query: query.trim(),
-    page: page.toString()
+    page: page.toString(),
   });
 
   // 保存到缓存
@@ -295,7 +326,9 @@ export async function searchTMDBPerson(query: string, page = 1): Promise<TMDBPer
 /**
  * 获取演员的电影作品
  */
-export async function getTMDBPersonMovies(personId: number): Promise<TMDBMovieCreditsResponse> {
+export async function getTMDBPersonMovies(
+  personId: number,
+): Promise<TMDBMovieCreditsResponse> {
   // 检查缓存
   const cacheKey = getCacheKey('movie_credits', { personId });
   const cached = await getCache(cacheKey);
@@ -304,7 +337,9 @@ export async function getTMDBPersonMovies(personId: number): Promise<TMDBMovieCr
     return cached;
   }
 
-  const result = await fetchTMDB<TMDBMovieCreditsResponse>(`/person/${personId}/movie_credits`);
+  const result = await fetchTMDB<TMDBMovieCreditsResponse>(
+    `/person/${personId}/movie_credits`,
+  );
 
   // 保存到缓存
   await setCache(cacheKey, result, TMDB_CACHE_EXPIRE.movie_credits);
@@ -316,7 +351,9 @@ export async function getTMDBPersonMovies(personId: number): Promise<TMDBMovieCr
 /**
  * 获取演员的电视剧作品
  */
-export async function getTMDBPersonTVShows(personId: number): Promise<TMDBTVCreditsResponse> {
+export async function getTMDBPersonTVShows(
+  personId: number,
+): Promise<TMDBTVCreditsResponse> {
   // 检查缓存
   const cacheKey = getCacheKey('tv_credits', { personId });
   const cached = await getCache(cacheKey);
@@ -325,7 +362,9 @@ export async function getTMDBPersonTVShows(personId: number): Promise<TMDBTVCred
     return cached;
   }
 
-  const result = await fetchTMDB<TMDBTVCreditsResponse>(`/person/${personId}/tv_credits`);
+  const result = await fetchTMDB<TMDBTVCreditsResponse>(
+    `/person/${personId}/tv_credits`,
+  );
 
   // 保存到缓存
   await setCache(cacheKey, result, TMDB_CACHE_EXPIRE.tv_credits);
@@ -366,13 +405,13 @@ export async function getTMDBMovieDetails(movieId: number): Promise<{
     const [details, keywordsData, similarData] = await Promise.all([
       fetchTMDB(`/movie/${movieId}`, {}),
       fetchTMDB(`/movie/${movieId}/keywords`, {}),
-      fetchTMDB(`/movie/${movieId}/similar`, {})
+      fetchTMDB(`/movie/${movieId}/similar`, {}),
     ]);
 
     const result = {
       ...(details as any),
       keywords: (keywordsData as any).keywords || [],
-      similar: ((similarData as any).results || []).slice(0, 5) // 只取前5个相似影片
+      similar: ((similarData as any).results || []).slice(0, 5), // 只取前5个相似影片
     };
 
     // 保存到缓存
@@ -418,13 +457,13 @@ export async function getTMDBTVDetails(tvId: number): Promise<{
     const [details, keywordsData, similarData] = await Promise.all([
       fetchTMDB(`/tv/${tvId}`, {}),
       fetchTMDB(`/tv/${tvId}/keywords`, {}),
-      fetchTMDB(`/tv/${tvId}/similar`, {})
+      fetchTMDB(`/tv/${tvId}/similar`, {}),
     ]);
 
     const result = {
       ...(details as any),
-      keywords: ((keywordsData as any).results || []),
-      similar: ((similarData as any).results || []).slice(0, 5) // 只取前5个相似影片
+      keywords: (keywordsData as any).results || [],
+      similar: ((similarData as any).results || []).slice(0, 5), // 只取前5个相似影片
     };
 
     // 保存到缓存
@@ -444,9 +483,11 @@ export async function getTMDBTVDetails(tvId: number): Promise<{
 export async function searchTMDBActorWorks(
   actorName: string,
   type: 'movie' | 'tv' = 'movie',
-  filterOptions: TMDBFilterOptions = {}
+  filterOptions: TMDBFilterOptions = {},
 ): Promise<TMDBResult> {
-  console.log(`🚀 [TMDB] searchTMDBActorWorks 开始执行: ${actorName}, type=${type}`);
+  console.log(
+    `🚀 [TMDB] searchTMDBActorWorks 开始执行: ${actorName}, type=${type}`,
+  );
 
   try {
     console.log(`🔍 [TMDB] 检查是否启用...`);
@@ -457,14 +498,18 @@ export async function searchTMDBActorWorks(
         code: 500,
         message: 'TMDB演员搜索功能未启用或API Key未配置',
         list: [],
-        source: 'tmdb'
+        source: 'tmdb',
       } as TMDBResult;
     }
 
     console.log(`✅ [TMDB] TMDB功能已启用`);
     const config = await getConfig();
     // 检查缓存 - 为整个搜索结果缓存
-    const cacheKey = getCacheKey('actor_works', { actorName, type, ...filterOptions });
+    const cacheKey = getCacheKey('actor_works', {
+      actorName,
+      type,
+      ...filterOptions,
+    });
     console.log(`🔑 [TMDB] 缓存Key: ${cacheKey}`);
 
     const cached = await getCache(cacheKey);
@@ -485,7 +530,7 @@ export async function searchTMDBActorWorks(
         message: '未找到相关演员',
         list: [],
         total: 0,
-        source: 'tmdb'
+        source: 'tmdb',
       };
       // 缓存空结果，避免重复请求
       await setCache(cacheKey, result, TMDB_CACHE_EXPIRE.actor_search);
@@ -493,7 +538,9 @@ export async function searchTMDBActorWorks(
     }
 
     // 2. 取最知名的演员（按人气排序）
-    const person = personSearch.results.sort((a, b) => (b.popularity || 0) - (a.popularity || 0))[0];
+    const person = personSearch.results.sort(
+      (a, b) => (b.popularity || 0) - (a.popularity || 0),
+    )[0];
     console.log(`[TMDB演员搜索] 找到演员: ${person.name} (ID: ${person.id})`);
 
     // 3. 获取该演员的作品
@@ -518,29 +565,49 @@ export async function searchTMDBActorWorks(
       const genreIds = work.genre_ids || [];
 
       // 时间筛选
-      if (filterOptions.startYear && year && year < filterOptions.startYear) return false;
-      if (filterOptions.endYear && year && year > filterOptions.endYear) return false;
+      if (filterOptions.startYear && year && year < filterOptions.startYear)
+        return false;
+      if (filterOptions.endYear && year && year > filterOptions.endYear)
+        return false;
 
       // 评分筛选
-      if (filterOptions.minRating && rating < filterOptions.minRating) return false;
-      if (filterOptions.maxRating && rating > filterOptions.maxRating) return false;
+      if (filterOptions.minRating && rating < filterOptions.minRating)
+        return false;
+      if (filterOptions.maxRating && rating > filterOptions.maxRating)
+        return false;
 
       // 人气筛选
-      if (filterOptions.minPopularity && popularity < filterOptions.minPopularity) return false;
-      if (filterOptions.maxPopularity && popularity > filterOptions.maxPopularity) return false;
+      if (
+        filterOptions.minPopularity &&
+        popularity < filterOptions.minPopularity
+      )
+        return false;
+      if (
+        filterOptions.maxPopularity &&
+        popularity > filterOptions.maxPopularity
+      )
+        return false;
 
       // 投票数筛选
-      if (filterOptions.minVoteCount && voteCount < filterOptions.minVoteCount) return false;
+      if (filterOptions.minVoteCount && voteCount < filterOptions.minVoteCount)
+        return false;
 
       // 参演集数筛选（TV剧）
-      if (filterOptions.minEpisodeCount && type === 'tv' && episodeCount < filterOptions.minEpisodeCount) return false;
+      if (
+        filterOptions.minEpisodeCount &&
+        type === 'tv' &&
+        episodeCount < filterOptions.minEpisodeCount
+      )
+        return false;
 
       // 只显示有评分的
       if (filterOptions.onlyRated && rating === 0) return false;
 
       // 类型筛选
       if (filterOptions.genreIds && filterOptions.genreIds.length > 0) {
-        const hasMatchingGenre = filterOptions.genreIds.some(id => genreIds.includes(id));
+        const hasMatchingGenre = filterOptions.genreIds.some((id) =>
+          genreIds.includes(id),
+        );
         if (!hasMatchingGenre) return false;
       }
 
@@ -562,19 +629,26 @@ export async function searchTMDBActorWorks(
 
       switch (sortBy) {
         case 'rating':
-          compareValue = ((b.vote_average || 0) - (a.vote_average || 0)) * orderMultiplier;
+          compareValue =
+            ((b.vote_average || 0) - (a.vote_average || 0)) * orderMultiplier;
           break;
         case 'date': {
-          const dateA = new Date(a.release_date || a.first_air_date || '1900-01-01');
-          const dateB = new Date(b.release_date || b.first_air_date || '1900-01-01');
+          const dateA = new Date(
+            a.release_date || a.first_air_date || '1900-01-01',
+          );
+          const dateB = new Date(
+            b.release_date || b.first_air_date || '1900-01-01',
+          );
           compareValue = (dateB.getTime() - dateA.getTime()) * orderMultiplier;
           break;
         }
         case 'popularity':
-          compareValue = ((b.popularity || 0) - (a.popularity || 0)) * orderMultiplier;
+          compareValue =
+            ((b.popularity || 0) - (a.popularity || 0)) * orderMultiplier;
           break;
         case 'vote_count':
-          compareValue = ((b.vote_count || 0) - (a.vote_count || 0)) * orderMultiplier;
+          compareValue =
+            ((b.vote_count || 0) - (a.vote_count || 0)) * orderMultiplier;
           break;
         case 'title': {
           const titleA = (a.title || a.name || '').toLowerCase();
@@ -584,7 +658,9 @@ export async function searchTMDBActorWorks(
         }
         case 'episode_count':
           if (type === 'tv') {
-            compareValue = ((b.episode_count || 0) - (a.episode_count || 0)) * orderMultiplier;
+            compareValue =
+              ((b.episode_count || 0) - (a.episode_count || 0)) *
+              orderMultiplier;
           }
           break;
       }
@@ -594,8 +670,12 @@ export async function searchTMDBActorWorks(
         const ratingDiff = (b.vote_average || 0) - (a.vote_average || 0);
         if (ratingDiff !== 0) return ratingDiff;
 
-        const dateA = new Date(a.release_date || a.first_air_date || '1900-01-01');
-        const dateB = new Date(b.release_date || b.first_air_date || '1900-01-01');
+        const dateA = new Date(
+          a.release_date || a.first_air_date || '1900-01-01',
+        );
+        const dateB = new Date(
+          b.release_date || b.first_air_date || '1900-01-01',
+        );
         compareValue = dateB.getTime() - dateA.getTime();
       }
 
@@ -611,12 +691,19 @@ export async function searchTMDBActorWorks(
     const list = filteredWorks
       .map((work: any) => {
         const releaseDate = work.release_date || work.first_air_date || '';
-        const year = releaseDate ? new Date(releaseDate).getFullYear().toString() : '';
+        const year = releaseDate
+          ? new Date(releaseDate).getFullYear().toString()
+          : '';
 
         return {
           id: work.id.toString(),
           title: work.title || work.name || '',
-          poster: work.poster_path ? applyCorsProxy(`${TMDB_IMAGE_BASE_URL}${work.poster_path}`, config) : '',
+          poster: work.poster_path
+            ? applyCorsProxy(
+                `${TMDB_IMAGE_BASE_URL}${work.poster_path}`,
+                config,
+              )
+            : '',
           rate: work.vote_average ? work.vote_average.toFixed(1) : '',
           year: year,
           popularity: work.popularity,
@@ -624,19 +711,21 @@ export async function searchTMDBActorWorks(
           genre_ids: work.genre_ids,
           character: work.character,
           episode_count: work.episode_count,
-          original_language: work.original_language
+          original_language: work.original_language,
         };
       })
-      .filter(work => work.title); // 过滤掉没有标题的
+      .filter((work) => work.title); // 过滤掉没有标题的
 
-    console.log(`[TMDB演员搜索] 筛选后找到 ${list.length} 个${type === 'movie' ? '电影' : '电视剧'}作品（原始: ${works.length}）`);
+    console.log(
+      `[TMDB演员搜索] 筛选后找到 ${list.length} 个${type === 'movie' ? '电影' : '电视剧'}作品（原始: ${works.length}）`,
+    );
 
     const result: TMDBResult = {
       code: 200,
       message: '获取成功',
       list: list,
       total: list.length,
-      source: 'tmdb'
+      source: 'tmdb',
     };
 
     // 保存到缓存
@@ -644,14 +733,13 @@ export async function searchTMDBActorWorks(
     console.log(`TMDB演员作品搜索已缓存: ${actorName}/${type}`);
 
     return result;
-
   } catch (error) {
     console.error(`[TMDB演员搜索] 搜索失败:`, error);
     return {
       code: 500,
       message: `搜索失败: ${(error as Error).message}`,
       list: [],
-      source: 'tmdb'
+      source: 'tmdb',
     } as TMDBResult;
   }
 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+
 import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getConfig } from '@/lib/config';
 import { db } from '@/lib/db';
@@ -29,9 +30,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('保存 Bilibili 配置失败:', error);
-    return NextResponse.json(
-      { error: '保存失败' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: '保存失败' }, { status: 500 });
   }
 }

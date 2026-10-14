@@ -1,7 +1,8 @@
-import { NextResponse } from 'next/server';
-import { DEFAULT_USER_AGENT } from '@/lib/user-agent';
-import { validateProxyTargetUrl } from '@/lib/proxy-security';
 import * as https from 'https';
+import { NextResponse } from 'next/server';
+
+import { validateProxyTargetUrl } from '@/lib/proxy-security';
+import { DEFAULT_USER_AGENT } from '@/lib/user-agent';
 
 export const runtime = 'nodejs';
 

@@ -1,10 +1,19 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, no-console */
+/* eslint-disable no-console */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getRandomUserAgent, DEFAULT_USER_AGENT, getRandomUserAgentWithInfo, getSecChUaHeaders } from '@/lib/user-agent';
-import { recordRequest, getDbQueryCount, resetDbQueryCount } from '@/lib/performance-monitor';
+
 import { getConfig } from '@/lib/config';
 import { fetchDoubanWithVerification } from '@/lib/douban-anti-crawler';
+import {
+  getDbQueryCount,
+  recordRequest,
+  resetDbQueryCount,
+} from '@/lib/performance-monitor';
+import {
+  DEFAULT_USER_AGENT,
+  getRandomUserAgentWithInfo,
+  getSecChUaHeaders,
+} from '@/lib/user-agent';
 
 // 默认弹幕API配置
 const DEFAULT_DANMU_API_URL = 'https://smonedanmu.vercel.app';
@@ -78,7 +87,7 @@ async function getDanmuApiConfig(): Promise<DanmuApiConfig> {
 async function fetchDanmuFromCustomAPI(
   title: string,
   episode?: string | null,
-  year?: string | null
+  year?: string | null,
 ): Promise<{ danmu: DanmuItem[]; source: string } | null> {
   const config = await getDanmuApiConfig();
 
@@ -108,7 +117,11 @@ async function fetchDanmuFromCustomAPI(
 
     const searchData = await searchResponse.json();
 
-    if (!searchData.success || !searchData.animes || searchData.animes.length === 0) {
+    if (
+      !searchData.success ||
+      !searchData.animes ||
+      searchData.animes.length === 0
+    ) {
       console.log(`📭 [弹幕API] 未找到匹配: "${title}"`);
       clearTimeout(timeoutId);
       return null;
@@ -121,7 +134,9 @@ async function fetchDanmuFromCustomAPI(
     for (const anime of searchData.animes) {
       const animeTitle = anime.animeTitle?.toLowerCase() || '';
       const searchTitle = title.toLowerCase();
-      const titleMatches = animeTitle.includes(searchTitle) || searchTitle.includes(animeTitle.split('(')[0].trim());
+      const titleMatches =
+        animeTitle.includes(searchTitle) ||
+        searchTitle.includes(animeTitle.split('(')[0].trim());
 
       // 如果有年份参数，优先选择年份匹配的结果
       if (year && animeTitle.includes(year) && titleMatches) {
@@ -134,7 +149,9 @@ async function fetchDanmuFromCustomAPI(
       }
     }
 
-    console.log(`✅ [弹幕API] 选择: "${bestMatch.animeTitle}" (ID: ${bestMatch.animeId})`);
+    console.log(
+      `✅ [弹幕API] 选择: "${bestMatch.animeTitle}" (ID: ${bestMatch.animeId})`,
+    );
 
     // 第二步：获取剧集列表
     const bangumiUrl = `${config.apiUrl}/${config.token}/api/v2/bangumi/${bestMatch.animeId}`;
@@ -153,7 +170,10 @@ async function fetchDanmuFromCustomAPI(
 
     const bangumiData = await bangumiResponse.json();
 
-    if (!bangumiData.bangumi?.episodes || bangumiData.bangumi.episodes.length === 0) {
+    if (
+      !bangumiData.bangumi?.episodes ||
+      bangumiData.bangumi.episodes.length === 0
+    ) {
       console.log(`📭 [弹幕API] 无剧集数据`);
       clearTimeout(timeoutId);
       return null;
@@ -168,7 +188,9 @@ async function fetchDanmuFromCustomAPI(
       const episodeNum = parseInt(episode);
       if (episodeNum > 0 && episodeNum <= episodes.length) {
         targetEpisode = episodes[episodeNum - 1];
-        console.log(`🎯 [弹幕API] 选择第${episode}集: ${targetEpisode.episodeTitle}`);
+        console.log(
+          `🎯 [弹幕API] 选择第${episode}集: ${targetEpisode.episodeTitle}`,
+        );
       }
     }
 
@@ -194,7 +216,11 @@ async function fetchDanmuFromCustomAPI(
     // 1. 搜索/详情: { success: true, ... } 或 { errorCode: 0, ... }
     // 2. 弹幕数据: { count: 31217, comments: [...] } - 没有 errorCode 字段
     // 检测有效弹幕的逻辑：有 comments 数组且不为空
-    if (!commentData.comments || !Array.isArray(commentData.comments) || commentData.comments.length === 0) {
+    if (
+      !commentData.comments ||
+      !Array.isArray(commentData.comments) ||
+      commentData.comments.length === 0
+    ) {
       console.log(`📭 [弹幕API] 无弹幕数据 (count: ${commentData.count || 0})`);
       return null;
     }
@@ -225,16 +251,19 @@ async function fetchDanmuFromCustomAPI(
         const text = (item.m || '').trim();
 
         // 🔥 激进预过滤: 更严格的质量控制
-        if (text.length === 0 ||
-            text.length > 50 || // 更严格的长度限制
-            text.length < 2 ||  // 过短弹幕通常是无意义的
-            /^[^\u4e00-\u9fa5a-zA-Z0-9]+$/.test(text) || // 纯符号弹幕
-            text.includes('弹幕正在赶来') ||
-            text.includes('观影愉快') ||
-            text.includes('视频不错') ||
-            text.includes('666') ||
-            /^\d+$/.test(text) || // 纯数字弹幕
-            /^[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]+$/.test(text)) { // 纯标点符号
+        if (
+          text.length === 0 ||
+          text.length > 50 || // 更严格的长度限制
+          text.length < 2 || // 过短弹幕通常是无意义的
+          /^[^\u4e00-\u9fa5a-zA-Z0-9]+$/.test(text) || // 纯符号弹幕
+          text.includes('弹幕正在赶来') ||
+          text.includes('观影愉快') ||
+          text.includes('视频不错') ||
+          text.includes('666') ||
+          /^\d+$/.test(text) || // 纯数字弹幕
+          /^[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]+$/.test(text)
+        ) {
+          // 纯标点符号
           continue;
         }
 
@@ -250,8 +279,11 @@ async function fetchDanmuFromCustomAPI(
         // 🎯 密度控制: 每段限制弹幕数量，优先保留质量高的
         if (timeSegments[segmentIndex].length >= MAX_DANMU_PER_SEGMENT) {
           // 如果当前段已满，随机替换（保持弹幕多样性）
-          if (Math.random() < 0.1) { // 10%概率替换
-            const randomIndex = Math.floor(Math.random() * timeSegments[segmentIndex].length);
+          if (Math.random() < 0.1) {
+            // 10%概率替换
+            const randomIndex = Math.floor(
+              Math.random() * timeSegments[segmentIndex].length,
+            );
             timeSegments[segmentIndex][randomIndex] = {
               text,
               time,
@@ -274,12 +306,14 @@ async function fetchDanmuFromCustomAPI(
 
         // 🔄 更频繁的批量处理控制
         if (batchCount >= BATCH_SIZE) {
-          await new Promise(resolve => setTimeout(resolve, 0));
+          await new Promise((resolve) => setTimeout(resolve, 0));
           batchCount = 0;
 
           // 进度反馈
           if (totalProcessed % 1000 === 0) {
-            console.log(`📊 [弹幕API] 已处理 ${totalProcessed} 条弹幕，分段数: ${Object.keys(timeSegments).length}`);
+            console.log(
+              `📊 [弹幕API] 已处理 ${totalProcessed} 条弹幕，分段数: ${Object.keys(timeSegments).length}`,
+            );
           }
         }
       } catch {
@@ -288,10 +322,14 @@ async function fetchDanmuFromCustomAPI(
     }
 
     // 🎯 将分段数据重新整合为时间排序的数组
-    console.log(`📈 [弹幕API] 分段统计: 共 ${Object.keys(timeSegments).length} 个时间段`);
+    console.log(
+      `📈 [弹幕API] 分段统计: 共 ${Object.keys(timeSegments).length} 个时间段`,
+    );
 
     const danmuList: DanmuItem[] = [];
-    for (const segmentIndex of Object.keys(timeSegments).sort((a, b) => parseInt(a) - parseInt(b))) {
+    for (const segmentIndex of Object.keys(timeSegments).sort(
+      (a, b) => parseInt(a) - parseInt(b),
+    )) {
       const segment = timeSegments[parseInt(segmentIndex)];
       // 段内按时间排序
       segment.sort((a, b) => a.time - b.time);
@@ -301,22 +339,30 @@ async function fetchDanmuFromCustomAPI(
     // 🚀 智能采样：如果弹幕数量过多，采用均匀采样
     let finalDanmu = danmuList;
     if (danmuList.length > maxAllowedDanmu) {
-      console.warn(`⚠️ [弹幕API] 弹幕数量过多 (${danmuList.length})，采用智能采样至 ${maxAllowedDanmu} 条`);
+      console.warn(
+        `⚠️ [弹幕API] 弹幕数量过多 (${danmuList.length})，采用智能采样至 ${maxAllowedDanmu} 条`,
+      );
 
       const sampleRate = maxAllowedDanmu / danmuList.length;
-      finalDanmu = danmuList.filter((_, index) => {
-        return index === 0 || // 保留第一条
-               index === danmuList.length - 1 || // 保留最后一条
-               Math.random() < sampleRate || // 随机采样
-               index % Math.ceil(1 / sampleRate) === 0; // 均匀采样
-      }).slice(0, maxAllowedDanmu);
+      finalDanmu = danmuList
+        .filter((_, index) => {
+          return (
+            index === 0 || // 保留第一条
+            index === danmuList.length - 1 || // 保留最后一条
+            Math.random() < sampleRate || // 随机采样
+            index % Math.ceil(1 / sampleRate) === 0
+          ); // 均匀采样
+        })
+        .slice(0, maxAllowedDanmu);
     }
 
     console.log(`✅ [弹幕API] 处理后 ${finalDanmu.length} 条优质弹幕`);
 
     // 如果弹幕太少（少于10条），可能是聚合源没有实际弹幕，返回null让备用方案接管
     if (finalDanmu.length < 10) {
-      console.log(`⚠️ [弹幕API] 弹幕数量过少 (${finalDanmu.length}条)，尝试备用方案`);
+      console.log(
+        `⚠️ [弹幕API] 弹幕数量过少 (${finalDanmu.length}条)，尝试备用方案`,
+      );
       return null;
     }
 
@@ -360,10 +406,15 @@ function deduplicateDanmu(danmuList: DanmuItem[]): DanmuItem[] {
 }
 
 // 从caiji.cyou API搜索视频链接
-async function searchFromCaijiAPI(title: string, episode?: string | null): Promise<PlatformUrl[]> {
+async function searchFromCaijiAPI(
+  title: string,
+  episode?: string | null,
+): Promise<PlatformUrl[]> {
   try {
-    console.log(`🔎 在caiji.cyou搜索: "${title}", 集数: ${episode || '未指定'}`);
-    
+    console.log(
+      `🔎 在caiji.cyou搜索: "${title}", 集数: ${episode || '未指定'}`,
+    );
+
     // 尝试多种标题格式进行搜索
     const searchTitles = [
       title, // 原始标题
@@ -371,11 +422,13 @@ async function searchFromCaijiAPI(title: string, episode?: string | null): Promi
       title.replace(/·/g, ' '), // 中间点替换为空格
       title.replace(/·/g, '-'), // 中间点替换为连字符
     ];
-    
+
     // 去重
     const uniqueTitles = Array.from(new Set(searchTitles));
-    console.log(`🔍 尝试搜索标题变体: ${uniqueTitles.map(t => `"${t}"`).join(', ')}`);
-    
+    console.log(
+      `🔍 尝试搜索标题变体: ${uniqueTitles.map((t) => `"${t}"`).join(', ')}`,
+    );
+
     for (const searchTitle of uniqueTitles) {
       console.log(`🔎 搜索标题: "${searchTitle}"`);
       const searchUrl = `https://www.caiji.cyou/api.php/provide/vod/?wd=${encodeURIComponent(searchTitle)}`;
@@ -384,66 +437,70 @@ async function searchFromCaijiAPI(title: string, episode?: string | null): Promi
           'User-Agent': DEFAULT_USER_AGENT,
         },
       });
-    
+
       if (!response.ok) {
         console.log(`❌ 搜索"${searchTitle}"失败:`, response.status);
         continue; // 尝试下一个标题
       }
-      
+
       const data: any = await response.json();
       if (!data.list || data.list.length === 0) {
         console.log(`📭 搜索"${searchTitle}"未找到内容`);
         continue; // 尝试下一个标题
       }
-      
+
       console.log(`🎬 搜索"${searchTitle}"找到 ${data.list.length} 个匹配结果`);
-      
+
       // 智能选择最佳匹配结果
       let bestMatch: any = null;
       let exactMatch: any = null;
-      
+
       for (const result of data.list) {
-        console.log(`📋 候选: "${result.vod_name}" (类型: ${result.type_name})`);
-        
+        console.log(
+          `📋 候选: "${result.vod_name}" (类型: ${result.type_name})`,
+        );
+
         // 标题完全匹配（优先级最高）
         if (result.vod_name === searchTitle || result.vod_name === title) {
           console.log(`🎯 找到完全匹配: "${result.vod_name}"`);
           exactMatch = result;
           break;
         }
-        
+
         // 跳过明显不合适的内容
-        const isUnwanted = result.vod_name.includes('解说') || 
-                          result.vod_name.includes('预告') ||
-                          result.vod_name.includes('花絮') ||
-                          result.vod_name.includes('动态漫') ||
-                          result.vod_name.includes('之精彩');
-        
+        const isUnwanted =
+          result.vod_name.includes('解说') ||
+          result.vod_name.includes('预告') ||
+          result.vod_name.includes('花絮') ||
+          result.vod_name.includes('动态漫') ||
+          result.vod_name.includes('之精彩');
+
         if (isUnwanted) {
           console.log(`❌ 跳过不合适内容: "${result.vod_name}"`);
           continue;
         }
-        
+
         // 选择第一个合适的结果
         if (!bestMatch) {
           bestMatch = result;
           console.log(`✅ 选择为候选: "${result.vod_name}"`);
         }
       }
-      
+
       // 优先使用完全匹配，否则使用最佳匹配
       const selectedResult = exactMatch || bestMatch;
-      
+
       if (selectedResult) {
-        console.log(`✅ 使用搜索结果"${searchTitle}": "${selectedResult.vod_name}"`);
+        console.log(
+          `✅ 使用搜索结果"${searchTitle}": "${selectedResult.vod_name}"`,
+        );
         // 找到结果就处理并返回，不再尝试其他标题变体
         return await processSelectedResult(selectedResult, episode);
       }
     }
-    
+
     console.log('📭 所有标题变体都未找到匹配内容');
     return [];
-    
   } catch (error) {
     console.error('❌ Caiji API搜索失败:', error);
     return [];
@@ -451,43 +508,48 @@ async function searchFromCaijiAPI(title: string, episode?: string | null): Promi
 }
 
 // 处理选中的结果
-async function processSelectedResult(selectedResult: any, episode?: string | null): Promise<PlatformUrl[]> {
+async function processSelectedResult(
+  selectedResult: any,
+  episode?: string | null,
+): Promise<PlatformUrl[]> {
   try {
     console.log(`🔄 处理选中的结果: "${selectedResult.vod_name}"`);
     const firstResult: any = selectedResult;
     const detailUrl = `https://www.caiji.cyou/api.php/provide/vod/?ac=detail&ids=${firstResult.vod_id}`;
-    
+
     const detailResponse = await fetch(detailUrl, {
       headers: {
         'User-Agent': DEFAULT_USER_AGENT,
       },
     });
-    
+
     if (!detailResponse.ok) return [];
-    
+
     const detailData: any = await detailResponse.json();
     if (!detailData.list || detailData.list.length === 0) return [];
-    
+
     const videoInfo: any = detailData.list[0];
     console.log(`🎭 视频详情: "${videoInfo.vod_name}" (${videoInfo.vod_year})`);
-    
+
     const urls: PlatformUrl[] = [];
-    
+
     // 解析播放链接
     if (videoInfo.vod_play_url) {
       const playUrls = videoInfo.vod_play_url.split('#');
       console.log(`📺 找到 ${playUrls.length} 集`);
-      
+
       // 如果指定了集数，尝试找到对应集数的链接
       let targetUrl = '';
       if (episode && parseInt(episode) > 0) {
         const episodeNum = parseInt(episode);
         // 支持多种集数格式: "20$", "第20集$", "E20$", "EP20$" 等
         const targetEpisode = playUrls.find((url: string) => {
-          return url.startsWith(`${episodeNum}$`) || 
-                 url.startsWith(`第${episodeNum}集$`) ||
-                 url.startsWith(`E${episodeNum}$`) ||
-                 url.startsWith(`EP${episodeNum}$`);
+          return (
+            url.startsWith(`${episodeNum}$`) ||
+            url.startsWith(`第${episodeNum}集$`) ||
+            url.startsWith(`E${episodeNum}$`) ||
+            url.startsWith(`EP${episodeNum}$`)
+          );
         });
         if (targetEpisode) {
           targetUrl = targetEpisode.split('$')[1];
@@ -496,46 +558,54 @@ async function processSelectedResult(selectedResult: any, episode?: string | nul
           console.log(`❌ 未找到第${episode}集的链接`);
         }
       }
-      
+
       // 如果没有指定集数或找不到指定集数，使用第一集
       if (!targetUrl && playUrls.length > 0) {
         targetUrl = playUrls[0].split('$')[1];
         console.log(`📺 使用第1集: ${targetUrl}`);
       }
-      
+
       if (targetUrl) {
         // 根据URL判断平台
         let platform = 'unknown';
         if (targetUrl.includes('bilibili.com')) {
           platform = 'bilibili_caiji';
-        } else if (targetUrl.includes('v.qq.com') || targetUrl.includes('qq.com')) {
+        } else if (
+          targetUrl.includes('v.qq.com') ||
+          targetUrl.includes('qq.com')
+        ) {
           platform = 'tencent_caiji';
         } else if (targetUrl.includes('iqiyi.com')) {
           platform = 'iqiyi_caiji';
-        } else if (targetUrl.includes('youku.com') || targetUrl.includes('v.youku.com')) {
+        } else if (
+          targetUrl.includes('youku.com') ||
+          targetUrl.includes('v.youku.com')
+        ) {
           platform = 'youku_caiji';
-        } else if (targetUrl.includes('mgtv.com') || targetUrl.includes('w.mgtv.com')) {
+        } else if (
+          targetUrl.includes('mgtv.com') ||
+          targetUrl.includes('w.mgtv.com')
+        ) {
           platform = 'mgtv_caiji';
         }
-        
+
         // 统一修复所有平台的链接格式：将.htm转换为.html
         if (targetUrl.endsWith('.htm')) {
           targetUrl = targetUrl.replace(/\.htm$/, '.html');
           console.log(`🔧 修复${platform}链接格式: ${targetUrl}`);
         }
-        
+
         console.log(`🎯 识别平台: ${platform}, URL: ${targetUrl}`);
-        
+
         urls.push({
           platform: platform,
           url: targetUrl,
         });
       }
     }
-    
+
     console.log(`✅ Caiji API返回 ${urls.length} 个播放链接`);
     return urls;
-    
   } catch (error) {
     console.error('❌ Caiji API搜索失败:', error);
     return [];
@@ -549,11 +619,14 @@ const MIN_DOUBAN_REQUEST_INTERVAL = 1000; // 1秒最小间隔
 
 function randomDelay(min = 500, max = 1500): Promise<void> {
   const delay = Math.floor(Math.random() * (max - min + 1)) + min;
-  return new Promise(resolve => setTimeout(resolve, delay));
+  return new Promise((resolve) => setTimeout(resolve, delay));
 }
 
 // 从豆瓣页面提取平台视频链接（使用反爬虫验证，与 douban/details 保持一致）
-async function extractPlatformUrls(doubanId: string, episode?: string | null): Promise<PlatformUrl[]> {
+async function extractPlatformUrls(
+  doubanId: string,
+  episode?: string | null,
+): Promise<PlatformUrl[]> {
   if (!doubanId) return [];
 
   try {
@@ -561,8 +634,8 @@ async function extractPlatformUrls(doubanId: string, episode?: string | null): P
     const now = Date.now();
     const timeSinceLastRequest = now - lastDoubanRequestTime;
     if (timeSinceLastRequest < MIN_DOUBAN_REQUEST_INTERVAL) {
-      await new Promise(resolve =>
-        setTimeout(resolve, MIN_DOUBAN_REQUEST_INTERVAL - timeSinceLastRequest)
+      await new Promise((resolve) =>
+        setTimeout(resolve, MIN_DOUBAN_REQUEST_INTERVAL - timeSinceLastRequest),
       );
     }
     lastDoubanRequestTime = Date.now();
@@ -571,7 +644,9 @@ async function extractPlatformUrls(doubanId: string, episode?: string | null): P
     await randomDelay(300, 1000);
 
     const target = `https://movie.douban.com/subject/${doubanId}/`;
-    console.log(`🔍 [弹幕] 从豆瓣提取视频链接 (ID: ${doubanId})，使用反爬虫验证...`);
+    console.log(
+      `🔍 [弹幕] 从豆瓣提取视频链接 (ID: ${doubanId})，使用反爬虫验证...`,
+    );
 
     let html: string | null = null;
 
@@ -581,7 +656,10 @@ async function extractPlatformUrls(doubanId: string, episode?: string | null): P
       if (antiCrawlerResponse.ok) {
         const responseHtml = await antiCrawlerResponse.text();
         // 检查是否为 challenge 页面
-        if (!responseHtml.includes('sha512') || !responseHtml.includes('process(cha)')) {
+        if (
+          !responseHtml.includes('sha512') ||
+          !responseHtml.includes('process(cha)')
+        ) {
           html = responseHtml;
           console.log(`✅ [弹幕] 反爬验证成功，页面长度: ${html.length}`);
         } else {
@@ -604,11 +682,12 @@ async function extractPlatformUrls(doubanId: string, episode?: string | null): P
       const response = await fetch(target, {
         signal: controller.signal,
         headers: {
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+          Accept:
+            'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
           'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
           'Accept-Encoding': 'gzip, deflate, br, zstd',
           'Cache-Control': 'max-age=0',
-          'DNT': '1',
+          DNT: '1',
           ...secChHeaders,
           'Sec-Fetch-Dest': 'document',
           'Sec-Fetch-Mode': 'navigate',
@@ -616,7 +695,9 @@ async function extractPlatformUrls(doubanId: string, episode?: string | null): P
           'Sec-Fetch-User': '?1',
           'Upgrade-Insecure-Requests': '1',
           'User-Agent': ua,
-          ...(Math.random() > 0.5 ? { 'Referer': 'https://www.douban.com/' } : {}),
+          ...(Math.random() > 0.5
+            ? { Referer: 'https://www.douban.com/' }
+            : {}),
         },
       });
 
@@ -639,12 +720,14 @@ async function extractPlatformUrls(doubanId: string, episode?: string | null): P
     const urls: PlatformUrl[] = [];
 
     // 提取豆瓣跳转链接中的各种视频平台URL
-    
+
     // 腾讯视频
-    const doubanLinkMatches = html.match(/play_link:\s*"[^"]*v\.qq\.com[^"]*"/g);
+    const doubanLinkMatches = html.match(
+      /play_link:\s*"[^"]*v\.qq\.com[^"]*"/g,
+    );
     if (doubanLinkMatches && doubanLinkMatches.length > 0) {
       console.log(`🎬 找到 ${doubanLinkMatches.length} 个腾讯视频链接`);
-      
+
       // 如果指定了集数，尝试找到对应集数的链接
       let selectedMatch = doubanLinkMatches[0]; // 默认使用第一个
       if (episode && doubanLinkMatches.length > 1) {
@@ -654,7 +737,7 @@ async function extractPlatformUrls(doubanId: string, episode?: string | null): P
           console.log(`🎯 选择第${episode}集腾讯视频链接`);
         }
       }
-      
+
       const urlMatch = selectedMatch.match(/https%3A%2F%2Fv\.qq\.com[^"&]*/);
       if (urlMatch) {
         const decodedUrl = decodeURIComponent(urlMatch[0]).split('?')[0];
@@ -667,7 +750,7 @@ async function extractPlatformUrls(doubanId: string, episode?: string | null): P
     const iqiyiMatches = html.match(/play_link:\s*"[^"]*iqiyi\.com[^"]*"/g);
     if (iqiyiMatches && iqiyiMatches.length > 0) {
       console.log(`📺 找到 ${iqiyiMatches.length} 个爱奇艺链接`);
-      
+
       // 如果指定了集数，尝试找到对应集数的链接
       let selectedMatch = iqiyiMatches[0]; // 默认使用第一个
       if (episode && iqiyiMatches.length > 1) {
@@ -677,8 +760,10 @@ async function extractPlatformUrls(doubanId: string, episode?: string | null): P
           console.log(`🎯 选择第${episode}集爱奇艺链接`);
         }
       }
-      
-      const urlMatch = selectedMatch.match(/https?%3A%2F%2F[^"&]*iqiyi\.com[^"&]*/);
+
+      const urlMatch = selectedMatch.match(
+        /https?%3A%2F%2F[^"&]*iqiyi\.com[^"&]*/,
+      );
       if (urlMatch) {
         const decodedUrl = decodeURIComponent(urlMatch[0]).split('?')[0];
         console.log(`🔗 爱奇艺链接: ${decodedUrl}`);
@@ -690,7 +775,7 @@ async function extractPlatformUrls(doubanId: string, episode?: string | null): P
     const youkuMatches = html.match(/play_link:\s*"[^"]*youku\.com[^"]*"/g);
     if (youkuMatches && youkuMatches.length > 0) {
       console.log(`🎞️ 找到 ${youkuMatches.length} 个优酷链接`);
-      
+
       // 如果指定了集数，尝试找到对应集数的链接
       let selectedMatch = youkuMatches[0]; // 默认使用第一个
       if (episode && youkuMatches.length > 1) {
@@ -700,8 +785,10 @@ async function extractPlatformUrls(doubanId: string, episode?: string | null): P
           console.log(`🎯 选择第${episode}集优酷链接`);
         }
       }
-      
-      const urlMatch = selectedMatch.match(/https?%3A%2F%2F[^"&]*youku\.com[^"&]*/);
+
+      const urlMatch = selectedMatch.match(
+        /https?%3A%2F%2F[^"&]*youku\.com[^"&]*/,
+      );
       if (urlMatch) {
         const decodedUrl = decodeURIComponent(urlMatch[0]).split('?')[0];
         console.log(`🔗 优酷链接: ${decodedUrl}`);
@@ -720,20 +807,24 @@ async function extractPlatformUrls(doubanId: string, episode?: string | null): P
     }
 
     // B站链接提取（直接链接）
-    const biliMatches = html.match(/https:\/\/www\.bilibili\.com\/video\/[^"'\s]+/g);
+    const biliMatches = html.match(
+      /https:\/\/www\.bilibili\.com\/video\/[^"'\s]+/g,
+    );
     if (biliMatches && biliMatches.length > 0) {
       console.log(`📺 找到B站直接链接: ${biliMatches[0]}`);
       urls.push({
-        platform: 'bilibili', 
+        platform: 'bilibili',
         url: biliMatches[0].split('?')[0],
       });
     }
 
     // B站链接提取（豆瓣跳转链接）
-    const biliDoubanMatches = html.match(/play_link:\s*"[^"]*bilibili\.com[^"]*"/g);
+    const biliDoubanMatches = html.match(
+      /play_link:\s*"[^"]*bilibili\.com[^"]*"/g,
+    );
     if (biliDoubanMatches && biliDoubanMatches.length > 0) {
       console.log(`📱 找到 ${biliDoubanMatches.length} 个B站豆瓣链接`);
-      
+
       // 如果指定了集数，尝试找到对应集数的链接
       let selectedMatch = biliDoubanMatches[0]; // 默认使用第一个
       if (episode && biliDoubanMatches.length > 1) {
@@ -743,8 +834,10 @@ async function extractPlatformUrls(doubanId: string, episode?: string | null): P
           console.log(`🎯 选择第${episode}集B站豆瓣链接`);
         }
       }
-      
-      const urlMatch = selectedMatch.match(/https?%3A%2F%2F[^"&]*bilibili\.com[^"&]*/);
+
+      const urlMatch = selectedMatch.match(
+        /https?%3A%2F%2F[^"&]*bilibili\.com[^"&]*/,
+      );
       if (urlMatch) {
         const decodedUrl = decodeURIComponent(urlMatch[0]).split('?')[0];
         console.log(`🔗 B站豆瓣链接: ${decodedUrl}`);
@@ -753,38 +846,41 @@ async function extractPlatformUrls(doubanId: string, episode?: string | null): P
     }
 
     // 转换移动版链接为PC版链接（弹幕库API需要PC版）
-    const convertedUrls = urls.map(urlObj => {
+    const convertedUrls = urls.map((urlObj) => {
       let convertedUrl = urlObj.url;
-      
+
       // 优酷移动版转PC版
       if (convertedUrl.includes('m.youku.com/alipay_video/id_')) {
         convertedUrl = convertedUrl.replace(
           /https:\/\/m\.youku\.com\/alipay_video\/id_([^.]+)\.html/,
-          'https://v.youku.com/v_show/id_$1.html'
+          'https://v.youku.com/v_show/id_$1.html',
         );
         console.log(`🔄 优酷移动版转PC版: ${convertedUrl}`);
       }
-      
+
       // 爱奇艺移动版转PC版
       if (convertedUrl.includes('m.iqiyi.com/')) {
         convertedUrl = convertedUrl.replace('m.iqiyi.com', 'www.iqiyi.com');
         console.log(`🔄 爱奇艺移动版转PC版: ${convertedUrl}`);
       }
-      
+
       // 腾讯视频移动版转PC版
       if (convertedUrl.includes('m.v.qq.com/')) {
         convertedUrl = convertedUrl.replace('m.v.qq.com', 'v.qq.com');
         console.log(`🔄 腾讯移动版转PC版: ${convertedUrl}`);
       }
-      
+
       // B站移动版转PC版
       if (convertedUrl.includes('m.bilibili.com/')) {
-        convertedUrl = convertedUrl.replace('m.bilibili.com', 'www.bilibili.com');
+        convertedUrl = convertedUrl.replace(
+          'm.bilibili.com',
+          'www.bilibili.com',
+        );
         // 移除豆瓣来源参数
         convertedUrl = convertedUrl.split('?')[0];
         console.log(`🔄 B站移动版转PC版: ${convertedUrl}`);
       }
-      
+
       return { ...urlObj, url: convertedUrl };
     });
 
@@ -798,11 +894,8 @@ async function extractPlatformUrls(doubanId: string, episode?: string | null): P
 
 // 从XML API获取弹幕数据（支持多个备用URL）
 async function fetchDanmuFromXMLAPI(videoUrl: string): Promise<DanmuItem[]> {
-  const xmlApiUrls = [
-    'https://fc.lyz05.cn',
-    'https://danmu.smone.us'
-  ];
-  
+  const xmlApiUrls = ['https://fc.lyz05.cn', 'https://danmu.smone.us'];
+
   // 尝试每个API URL
   for (let i = 0; i < xmlApiUrls.length; i++) {
     const baseUrl = xmlApiUrls[i];
@@ -810,22 +903,26 @@ async function fetchDanmuFromXMLAPI(videoUrl: string): Promise<DanmuItem[]> {
     const controller = new AbortController();
     const timeout = 15000; // 15秒超时
     const timeoutId = setTimeout(() => controller.abort(), timeout);
-    
+
     try {
       const apiUrl = `${baseUrl}/?url=${encodeURIComponent(videoUrl)}`;
       console.log(`🌐 正在请求${apiName}:`, apiUrl);
-      
+
       const response = await fetch(apiUrl, {
         signal: controller.signal,
         headers: {
           'User-Agent': DEFAULT_USER_AGENT,
-          'Accept': 'application/xml, text/xml, */*',
+          Accept: 'application/xml, text/xml, */*',
           'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
         },
       });
-      
+
       clearTimeout(timeoutId);
-      console.log(`📡 ${apiName}响应状态:`, response.status, response.statusText);
+      console.log(
+        `📡 ${apiName}响应状态:`,
+        response.status,
+        response.statusText,
+      );
 
       if (!response.ok) {
         console.log(`❌ ${apiName}响应失败:`, response.status);
@@ -834,13 +931,12 @@ async function fetchDanmuFromXMLAPI(videoUrl: string): Promise<DanmuItem[]> {
 
       const responseText = await response.text();
       console.log(`📄 ${apiName}原始响应长度:`, responseText.length);
-      
+
       // 使用正则表达式解析XML（Node.js兼容）
       const danmakuRegex = /<d p="([^"]*)"[^>]*>([^<]*)<\/d>/g;
       const danmuList: DanmuItem[] = [];
       let match;
-      const count = 0;
-      
+
       // 🚀 激进性能优化策略 - 基于ArtPlayer源码深度分析
       // 核心问题: 大量弹幕导致内存占用和计算密集
       // 解决方案: 智能分段加载 + 动态密度控制 + 预计算优化
@@ -863,15 +959,18 @@ async function fetchDanmuFromXMLAPI(videoUrl: string): Promise<DanmuItem[]> {
 
           // 🔥 激进预过滤: 更严格的质量控制
           const trimmedText = text.trim();
-          if (trimmedText.length === 0 ||
-              trimmedText.length > 50 || // 更严格的长度限制
-              trimmedText.length < 2 ||  // 过短弹幕通常是无意义的
-              /^[^\u4e00-\u9fa5a-zA-Z0-9]+$/.test(trimmedText) || // 纯符号弹幕
-              trimmedText.includes('弹幕正在赶来') ||
-              trimmedText.includes('视频不错') ||
-              trimmedText.includes('666') ||
-              /^\d+$/.test(trimmedText) || // 纯数字弹幕
-              /^[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]+$/.test(trimmedText)) { // 纯标点符号
+          if (
+            trimmedText.length === 0 ||
+            trimmedText.length > 50 || // 更严格的长度限制
+            trimmedText.length < 2 || // 过短弹幕通常是无意义的
+            /^[^\u4e00-\u9fa5a-zA-Z0-9]+$/.test(trimmedText) || // 纯符号弹幕
+            trimmedText.includes('弹幕正在赶来') ||
+            trimmedText.includes('视频不错') ||
+            trimmedText.includes('666') ||
+            /^\d+$/.test(trimmedText) || // 纯数字弹幕
+            /^[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]+$/.test(trimmedText)
+          ) {
+            // 纯标点符号
             continue;
           }
 
@@ -895,12 +994,16 @@ async function fetchDanmuFromXMLAPI(videoUrl: string): Promise<DanmuItem[]> {
           // 🎯 密度控制: 每段限制弹幕数量，优先保留质量高的
           if (timeSegments[segmentIndex].length >= MAX_DANMU_PER_SEGMENT) {
             // 如果当前段已满，随机替换（保持弹幕多样性）
-            if (Math.random() < 0.1) { // 10%概率替换
-              const randomIndex = Math.floor(Math.random() * timeSegments[segmentIndex].length);
+            if (Math.random() < 0.1) {
+              // 10%概率替换
+              const randomIndex = Math.floor(
+                Math.random() * timeSegments[segmentIndex].length,
+              );
               timeSegments[segmentIndex][randomIndex] = {
                 text: trimmedText,
                 time: time,
-                color: '#' + colorInt.toString(16).padStart(6, '0').toUpperCase(),
+                color:
+                  '#' + colorInt.toString(16).padStart(6, '0').toUpperCase(),
                 mode: mode === 4 ? 1 : mode === 5 ? 2 : 0,
               };
             }
@@ -919,12 +1022,14 @@ async function fetchDanmuFromXMLAPI(videoUrl: string): Promise<DanmuItem[]> {
 
           // 🔄 更频繁的批量处理控制
           if (batchCount >= BATCH_SIZE) {
-            await new Promise(resolve => setTimeout(resolve, 0));
+            await new Promise((resolve) => setTimeout(resolve, 0));
             batchCount = 0;
 
             // 进度反馈，避免用户以为卡死
             if (totalProcessed % 1000 === 0) {
-              console.log(`📊 已处理 ${totalProcessed} 条弹幕，分段数: ${Object.keys(timeSegments).length}`);
+              console.log(
+                `📊 已处理 ${totalProcessed} 条弹幕，分段数: ${Object.keys(timeSegments).length}`,
+              );
             }
           }
         } catch (error) {
@@ -933,28 +1038,35 @@ async function fetchDanmuFromXMLAPI(videoUrl: string): Promise<DanmuItem[]> {
       }
 
       // 🎯 将分段数据重新整合为时间排序的数组
-      console.log(`📈 分段统计: 共 ${Object.keys(timeSegments).length} 个时间段`);
+      console.log(
+        `📈 分段统计: 共 ${Object.keys(timeSegments).length} 个时间段`,
+      );
 
-      for (const segmentIndex of Object.keys(timeSegments).sort((a, b) => parseInt(a) - parseInt(b))) {
+      for (const segmentIndex of Object.keys(timeSegments).sort(
+        (a, b) => parseInt(a) - parseInt(b),
+      )) {
         const segment = timeSegments[parseInt(segmentIndex)];
         // 段内按时间排序，提高播放时的查找效率
         segment.sort((a, b) => a.time - b.time);
         danmuList.push(...segment);
       }
-      
+
       console.log(`📊 ${apiName}找到 ${danmuList.length} 条弹幕数据`);
-      
+
       if (danmuList.length === 0) {
         console.log(`📭 ${apiName}未返回弹幕数据`);
-        console.log(`🔍 ${apiName}响应前500字符:`, responseText.substring(0, 500));
+        console.log(
+          `🔍 ${apiName}响应前500字符:`,
+          responseText.substring(0, 500),
+        );
         continue; // 尝试下一个API
       }
-      
+
       // 🎯 优化后的最终处理，避免重复操作
       // 由于上面已经分段排序，这里只需要简单去重和最终验证
-      const filteredDanmu = danmuList.filter(item =>
-        !item.text.includes('官方弹幕库') &&
-        !item.text.includes('哔哩哔哩') // 额外过滤平台相关内容
+      const filteredDanmu = danmuList.filter(
+        (item) =>
+          !item.text.includes('官方弹幕库') && !item.text.includes('哔哩哔哩'), // 额外过滤平台相关内容
       );
 
       // 🚀 性能统计和限制
@@ -962,18 +1074,24 @@ async function fetchDanmuFromXMLAPI(videoUrl: string): Promise<DanmuItem[]> {
       let finalDanmu = filteredDanmu;
 
       if (filteredDanmu.length > maxAllowedDanmu) {
-        console.warn(`⚠️ 弹幕数量过多 (${filteredDanmu.length})，采用智能采样至 ${maxAllowedDanmu} 条`);
+        console.warn(
+          `⚠️ 弹幕数量过多 (${filteredDanmu.length})，采用智能采样至 ${maxAllowedDanmu} 条`,
+        );
 
         // 🎯 智能采样：保持时间分布均匀
         const sampleRate = maxAllowedDanmu / filteredDanmu.length;
-        finalDanmu = filteredDanmu.filter((_, index) => {
-          return index === 0 || // 保留第一条
-                 index === filteredDanmu.length - 1 || // 保留最后一条
-                 Math.random() < sampleRate || // 随机采样
-                 index % Math.ceil(1 / sampleRate) === 0; // 均匀采样
-        }).slice(0, maxAllowedDanmu);
+        finalDanmu = filteredDanmu
+          .filter((_, index) => {
+            return (
+              index === 0 || // 保留第一条
+              index === filteredDanmu.length - 1 || // 保留最后一条
+              Math.random() < sampleRate || // 随机采样
+              index % Math.ceil(1 / sampleRate) === 0
+            ); // 均匀采样
+          })
+          .slice(0, maxAllowedDanmu);
       }
-      
+
       console.log(`✅ ${apiName}优化处理完成: ${finalDanmu.length} 条优质弹幕`);
 
       // 🎯 优化统计信息，减少不必要的计算
@@ -982,29 +1100,37 @@ async function fetchDanmuFromXMLAPI(videoUrl: string): Promise<DanmuItem[]> {
         const lastTime = finalDanmu[finalDanmu.length - 1].time;
         const duration = lastTime - firstTime;
 
-        console.log(`📊 ${apiName}弹幕概览: ${Math.floor(firstTime/60)}:${String(Math.floor(firstTime%60)).padStart(2,'0')} - ${Math.floor(lastTime/60)}:${String(Math.floor(lastTime%60)).padStart(2,'0')} (${Math.floor(duration/60)}分钟)`);
+        console.log(
+          `📊 ${apiName}弹幕概览: ${Math.floor(firstTime / 60)}:${String(Math.floor(firstTime % 60)).padStart(2, '0')} - ${Math.floor(lastTime / 60)}:${String(Math.floor(lastTime % 60)).padStart(2, '0')} (${Math.floor(duration / 60)}分钟)`,
+        );
 
         // 只在弹幕较少时显示详细统计
         if (finalDanmu.length <= 1000) {
-          console.log(`📋 ${apiName}弹幕样例:`, finalDanmu.slice(0, 5).map(item =>
-            `${Math.floor(item.time/60)}:${String(Math.floor(item.time%60)).padStart(2,'0')} "${item.text.substring(0, 15)}"`
-          ).join(', '));
+          console.log(
+            `📋 ${apiName}弹幕样例:`,
+            finalDanmu
+              .slice(0, 5)
+              .map(
+                (item) =>
+                  `${Math.floor(item.time / 60)}:${String(Math.floor(item.time % 60)).padStart(2, '0')} "${item.text.substring(0, 15)}"`,
+              )
+              .join(', '),
+          );
         }
       }
 
       return finalDanmu; // 成功获取优化后的弹幕
-
     } catch (error) {
       clearTimeout(timeoutId);
       if (error instanceof DOMException && error.name === 'AbortError') {
-        console.error(`❌ ${apiName}请求超时 (${timeout/1000}秒):`, videoUrl);
+        console.error(`❌ ${apiName}请求超时 (${timeout / 1000}秒):`, videoUrl);
       } else {
         console.error(`❌ ${apiName}请求失败:`, error);
       }
       // 继续尝试下一个API
     }
   }
-  
+
   // 所有API都失败了
   console.log('❌ 所有XML API都无法获取弹幕数据');
   return [];
@@ -1013,7 +1139,7 @@ async function fetchDanmuFromXMLAPI(videoUrl: string): Promise<DanmuItem[]> {
 // 从danmu.icu获取弹幕数据
 async function fetchDanmuFromAPI(videoUrl: string): Promise<DanmuItem[]> {
   const controller = new AbortController();
-  
+
   // 根据平台设置不同的超时时间
   let timeout = 20000; // 默认20秒
   if (videoUrl.includes('iqiyi.com')) {
@@ -1023,24 +1149,24 @@ async function fetchDanmuFromAPI(videoUrl: string): Promise<DanmuItem[]> {
   } else if (videoUrl.includes('mgtv.com') || videoUrl.includes('w.mgtv.com')) {
     timeout = 25000; // 芒果TV25秒
   }
-  
+
   const timeoutId = setTimeout(() => controller.abort(), timeout);
-  console.log(`⏰ 设置超时时间: ${timeout/1000}秒`);
-  
+  console.log(`⏰ 设置超时时间: ${timeout / 1000}秒`);
+
   try {
     const apiUrl = `https://api.danmu.icu/?url=${encodeURIComponent(videoUrl)}`;
     console.log('🌐 正在请求弹幕API:', apiUrl);
-    
+
     const response = await fetch(apiUrl, {
       signal: controller.signal,
       headers: {
         'User-Agent': DEFAULT_USER_AGENT,
-        'Accept': 'application/json, text/plain, */*',
+        Accept: 'application/json, text/plain, */*',
         'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
-        'Referer': 'https://danmu.icu/',
+        Referer: 'https://danmu.icu/',
       },
     });
-    
+
     clearTimeout(timeoutId);
     console.log('📡 API响应状态:', response.status, response.statusText);
 
@@ -1051,7 +1177,7 @@ async function fetchDanmuFromAPI(videoUrl: string): Promise<DanmuItem[]> {
 
     const responseText = await response.text();
     console.log('📄 API原始响应:', responseText.substring(0, 500) + '...');
-    
+
     let data: DanmuApiResponse;
     try {
       data = JSON.parse(responseText);
@@ -1060,57 +1186,66 @@ async function fetchDanmuFromAPI(videoUrl: string): Promise<DanmuItem[]> {
       console.log('响应内容:', responseText.substring(0, 200));
       return [];
     }
-    
+
     if (!data.danmuku || !Array.isArray(data.danmuku)) return [];
 
     // 转换为Artplayer格式
     // API返回格式: [时间, 位置, 颜色, "", 文本, "", "", "字号"]
     console.log(`获取到 ${data.danmuku.length} 条原始弹幕数据`);
-    
-    const danmuList = data.danmuku.map((item: any[]) => {
-      // 正确解析时间 - 第一个元素就是时间(秒)
-      const time = parseFloat(item[0]) || 0;
-      const text = (item[4] || '').toString().trim();
-      const color = item[2] || '#FFFFFF';
-      
-      // 转换位置: top=1顶部, bottom=2底部, right=0滚动
-      let mode = 0;
-      if (item[1] === 'top') mode = 1;
-      else if (item[1] === 'bottom') mode = 2;
-      else mode = 0; // right 或其他都是滚动
 
-      return {
-        text: text,
-        time: time,
-        color: color,
-        mode: mode,
-      };
-    }).filter(item => {
-      const valid = item.text.length > 0 && 
-                   !item.text.includes('弹幕正在赶来') && 
-                   !item.text.includes('官方弹幕库') &&
-                   item.time >= 0;
-      return valid;
-    }).sort((a, b) => a.time - b.time); // 按时间排序
+    const danmuList = data.danmuku
+      .map((item: any[]) => {
+        // 正确解析时间 - 第一个元素就是时间(秒)
+        const time = parseFloat(item[0]) || 0;
+        const text = (item[4] || '').toString().trim();
+        const color = item[2] || '#FFFFFF';
+
+        // 转换位置: top=1顶部, bottom=2底部, right=0滚动
+        let mode = 0;
+        if (item[1] === 'top') mode = 1;
+        else if (item[1] === 'bottom') mode = 2;
+        else mode = 0; // right 或其他都是滚动
+
+        return {
+          text: text,
+          time: time,
+          color: color,
+          mode: mode,
+        };
+      })
+      .filter((item) => {
+        const valid =
+          item.text.length > 0 &&
+          !item.text.includes('弹幕正在赶来') &&
+          !item.text.includes('官方弹幕库') &&
+          item.time >= 0;
+        return valid;
+      })
+      .sort((a, b) => a.time - b.time); // 按时间排序
 
     // 显示时间分布统计
-    const timeStats = danmuList.reduce((acc, item) => {
-      const timeRange = Math.floor(item.time / 60); // 按分钟分组
-      acc[timeRange] = (acc[timeRange] || 0) + 1;
-      return acc;
-    }, {} as Record<number, number>);
-    
-    console.log('📊 弹幕时间分布(按分钟):', timeStats);
-    console.log('📋 前10条弹幕:', danmuList.slice(0, 10).map(item => 
-      `${item.time}s: "${item.text.substring(0, 20)}"`
-    ));
-    
-    return danmuList;
+    const timeStats = danmuList.reduce(
+      (acc, item) => {
+        const timeRange = Math.floor(item.time / 60); // 按分钟分组
+        acc[timeRange] = (acc[timeRange] || 0) + 1;
+        return acc;
+      },
+      {} as Record<number, number>,
+    );
 
+    console.log('📊 弹幕时间分布(按分钟):', timeStats);
+    console.log(
+      '📋 前10条弹幕:',
+      danmuList
+        .slice(0, 10)
+        .map((item) => `${item.time}s: "${item.text.substring(0, 20)}"`),
+    );
+
+    return danmuList;
   } catch (error) {
     clearTimeout(timeoutId);
     if (error instanceof DOMException && error.name === 'AbortError') {
-      console.error(`❌ 弹幕API请求超时 (${timeout/1000}秒):`, videoUrl);
+      console.error(`❌ 弹幕API请求超时 (${timeout / 1000}秒):`, videoUrl);
       console.log('💡 建议: 爱奇艺、优酷和芒果TV的弹幕API响应较慢，请稍等片刻');
     } else {
       console.error('❌ 获取弹幕失败:', error);
@@ -1151,7 +1286,11 @@ async function fetchDanmuByEpisodeId(
 
     const commentData = await response.json();
 
-    if (!commentData.comments || !Array.isArray(commentData.comments) || commentData.comments.length === 0) {
+    if (
+      !commentData.comments ||
+      !Array.isArray(commentData.comments) ||
+      commentData.comments.length === 0
+    ) {
       console.log(`[手动匹配] 无弹幕数据`);
       return { danmu: [], source: '手动匹配' };
     }
@@ -1165,7 +1304,6 @@ async function fetchDanmuByEpisodeId(
     const maxAllowedDanmu = 20000;
 
     const timeSegments: { [key: number]: DanmuItem[] } = {};
-    let totalProcessed = 0;
     let batchCount = 0;
 
     for (const item of commentData.comments) {
@@ -1176,16 +1314,18 @@ async function fetchDanmuByEpisodeId(
         const colorInt = parseInt(pParts[2]) || 16777215;
         const text = (item.m || '').trim();
 
-        if (text.length === 0 ||
-            text.length > 50 ||
-            text.length < 2 ||
-            /^[^\u4e00-\u9fa5a-zA-Z0-9]+$/.test(text) ||
-            text.includes('弹幕正在赶来') ||
-            text.includes('观影愉快') ||
-            text.includes('视频不错') ||
-            text.includes('666') ||
-            /^\d+$/.test(text) ||
-            /^[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]+$/.test(text)) {
+        if (
+          text.length === 0 ||
+          text.length > 50 ||
+          text.length < 2 ||
+          /^[^\u4e00-\u9fa5a-zA-Z0-9]+$/.test(text) ||
+          text.includes('弹幕正在赶来') ||
+          text.includes('观影愉快') ||
+          text.includes('视频不错') ||
+          text.includes('666') ||
+          /^\d+$/.test(text) ||
+          /^[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]+$/.test(text)
+        ) {
           continue;
         }
 
@@ -1198,7 +1338,9 @@ async function fetchDanmuByEpisodeId(
 
         if (timeSegments[segmentIndex].length >= MAX_DANMU_PER_SEGMENT) {
           if (Math.random() < 0.1) {
-            const randomIndex = Math.floor(Math.random() * timeSegments[segmentIndex].length);
+            const randomIndex = Math.floor(
+              Math.random() * timeSegments[segmentIndex].length,
+            );
             timeSegments[segmentIndex][randomIndex] = {
               text,
               time,
@@ -1216,11 +1358,10 @@ async function fetchDanmuByEpisodeId(
           mode: mode === 4 ? 1 : mode === 5 ? 2 : 0,
         });
 
-        totalProcessed++;
         batchCount++;
 
         if (batchCount >= BATCH_SIZE) {
-          await new Promise(resolve => setTimeout(resolve, 0));
+          await new Promise((resolve) => setTimeout(resolve, 0));
           batchCount = 0;
         }
       } catch {
@@ -1229,7 +1370,9 @@ async function fetchDanmuByEpisodeId(
     }
 
     const danmuList: DanmuItem[] = [];
-    for (const segmentIndex of Object.keys(timeSegments).sort((a, b) => parseInt(a) - parseInt(b))) {
+    for (const segmentIndex of Object.keys(timeSegments).sort(
+      (a, b) => parseInt(a) - parseInt(b),
+    )) {
       const segment = timeSegments[parseInt(segmentIndex)];
       segment.sort((a, b) => a.time - b.time);
       danmuList.push(...segment);
@@ -1238,12 +1381,16 @@ async function fetchDanmuByEpisodeId(
     let finalDanmu = danmuList;
     if (danmuList.length > maxAllowedDanmu) {
       const sampleRate = maxAllowedDanmu / danmuList.length;
-      finalDanmu = danmuList.filter((_, index) => {
-        return index === 0 ||
-               index === danmuList.length - 1 ||
-               Math.random() < sampleRate ||
-               index % Math.ceil(1 / sampleRate) === 0;
-      }).slice(0, maxAllowedDanmu);
+      finalDanmu = danmuList
+        .filter((_, index) => {
+          return (
+            index === 0 ||
+            index === danmuList.length - 1 ||
+            Math.random() < sampleRate ||
+            index % Math.ceil(1 / sampleRate) === 0
+          );
+        })
+        .slice(0, maxAllowedDanmu);
     }
 
     console.log(`[手动匹配] 处理后 ${finalDanmu.length} 条弹幕`);
@@ -1295,10 +1442,19 @@ export async function GET(request: NextRequest) {
 
       const successResponse = {
         danmu: uniqueDanmu,
-        platforms: [{ platform: 'manual_match', source: result?.source || '手动匹配', count: uniqueDanmu.length }],
+        platforms: [
+          {
+            platform: 'manual_match',
+            source: result?.source || '手动匹配',
+            count: uniqueDanmu.length,
+          },
+        ],
         total: uniqueDanmu.length,
       };
-      const responseSize = Buffer.byteLength(JSON.stringify(successResponse), 'utf8');
+      const responseSize = Buffer.byteLength(
+        JSON.stringify(successResponse),
+        'utf8',
+      );
 
       recordRequest({
         timestamp: startTime,
@@ -1306,7 +1462,8 @@ export async function GET(request: NextRequest) {
         path: '/api/danmu-external',
         statusCode: 200,
         duration: Date.now() - startTime,
-        memoryUsed: (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
+        memoryUsed:
+          (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
         dbQueries: getDbQueryCount(),
         requestSize: 0,
         responseSize,
@@ -1325,7 +1482,7 @@ export async function GET(request: NextRequest) {
 
   if (!doubanId && !title) {
     const errorResponse = {
-      error: 'Missing required parameters: douban_id or title'
+      error: 'Missing required parameters: douban_id or title',
     };
     const errorSize = Buffer.byteLength(JSON.stringify(errorResponse), 'utf8');
 
@@ -1351,17 +1508,28 @@ export async function GET(request: NextRequest) {
       const customResult = await fetchDanmuFromCustomAPI(title, episode, year);
 
       if (customResult && customResult.danmu.length > 0) {
-        console.log(`✅ [主用] 弹幕API成功获取 ${customResult.danmu.length} 条弹幕`);
+        console.log(
+          `✅ [主用] 弹幕API成功获取 ${customResult.danmu.length} 条弹幕`,
+        );
 
         // 去重处理
         const uniqueDanmu = deduplicateDanmu(customResult.danmu);
 
         const successResponse = {
           danmu: uniqueDanmu,
-          platforms: [{ platform: 'danmu_api', source: customResult.source, count: uniqueDanmu.length }],
+          platforms: [
+            {
+              platform: 'danmu_api',
+              source: customResult.source,
+              count: uniqueDanmu.length,
+            },
+          ],
           total: uniqueDanmu.length,
         };
-        const responseSize = Buffer.byteLength(JSON.stringify(successResponse), 'utf8');
+        const responseSize = Buffer.byteLength(
+          JSON.stringify(successResponse),
+          'utf8',
+        );
 
         recordRequest({
           timestamp: startTime,
@@ -1369,7 +1537,8 @@ export async function GET(request: NextRequest) {
           path: '/api/danmu-external',
           statusCode: 200,
           duration: Date.now() - startTime,
-          memoryUsed: (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
+          memoryUsed:
+            (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
           dbQueries: getDbQueryCount(),
           requestSize: 0,
           responseSize,
@@ -1413,9 +1582,12 @@ export async function GET(request: NextRequest) {
         danmu: [],
         platforms: [],
         total: 0,
-        message: `未找到"${title}"的视频平台链接，无法获取弹幕数据`
+        message: `未找到"${title}"的视频平台链接，无法获取弹幕数据`,
       };
-      const responseSize = Buffer.byteLength(JSON.stringify(emptyResponse), 'utf8');
+      const responseSize = Buffer.byteLength(
+        JSON.stringify(emptyResponse),
+        'utf8',
+      );
 
       recordRequest({
         timestamp: startTime,
@@ -1423,7 +1595,8 @@ export async function GET(request: NextRequest) {
         path: '/api/danmu-external',
         statusCode: 200,
         duration: Date.now() - startTime,
-        memoryUsed: (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
+        memoryUsed:
+          (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
         dbQueries: getDbQueryCount(),
         requestSize: 0,
         responseSize,
@@ -1436,30 +1609,32 @@ export async function GET(request: NextRequest) {
     // 并发获取多个平台的弹幕（使用XML API + JSON API备用）
     const danmuPromises = platformUrls.map(async ({ platform, url }) => {
       console.log(`🔄 处理平台: ${platform}, URL: ${url}`);
-      
+
       // 首先尝试XML API (主用)
       let danmu = await fetchDanmuFromXMLAPI(url);
       console.log(`📊 ${platform} XML API获取到 ${danmu.length} 条弹幕`);
-      
+
       // 如果XML API失败或结果很少，尝试JSON API作为备用
       if (danmu.length === 0) {
         console.log(`🔄 ${platform} XML API无结果，尝试JSON API备用...`);
         const jsonDanmu = await fetchDanmuFromAPI(url);
         console.log(`📊 ${platform} JSON API获取到 ${jsonDanmu.length} 条弹幕`);
-        
+
         if (jsonDanmu.length > 0) {
           danmu = jsonDanmu;
-          console.log(`✅ ${platform} 使用JSON API备用数据: ${danmu.length} 条弹幕`);
+          console.log(
+            `✅ ${platform} 使用JSON API备用数据: ${danmu.length} 条弹幕`,
+          );
         }
       } else {
         console.log(`✅ ${platform} 使用XML API数据: ${danmu.length} 条弹幕`);
       }
-      
+
       return { platform, danmu, url };
     });
 
     const results = await Promise.allSettled(danmuPromises);
-    
+
     // 合并所有成功的弹幕数据
     let allDanmu: DanmuItem[] = [];
     const platformInfo: any[] = [];
@@ -1487,7 +1662,7 @@ export async function GET(request: NextRequest) {
     for (let i = 0; i < allDanmu.length; i += DEDUP_BATCH_SIZE) {
       const batch = allDanmu.slice(i, i + DEDUP_BATCH_SIZE);
 
-      batch.forEach(danmu => {
+      batch.forEach((danmu) => {
         // 创建更精确的唯一标识：时间(保留2位小数) + 文本内容 + 颜色
         const normalizedText = danmu.text.trim().toLowerCase();
         const timeKey = Math.round(danmu.time * 100) / 100; // 精确到0.01秒
@@ -1501,18 +1676,23 @@ export async function GET(request: NextRequest) {
 
       // 让出执行权，避免阻塞
       if (i % (DEDUP_BATCH_SIZE * 5) === 0) {
-        await new Promise(resolve => setTimeout(resolve, 0));
+        await new Promise((resolve) => setTimeout(resolve, 0));
       }
     }
 
-    console.log(`🎯 弹幕去重优化: ${allDanmu.length} -> ${uniqueDanmu.length} 条`);
+    console.log(
+      `🎯 弹幕去重优化: ${allDanmu.length} -> ${uniqueDanmu.length} 条`,
+    );
 
     const successResponse = {
       danmu: uniqueDanmu,
       platforms: platformInfo,
       total: uniqueDanmu.length,
     };
-    const responseSize = Buffer.byteLength(JSON.stringify(successResponse), 'utf8');
+    const responseSize = Buffer.byteLength(
+      JSON.stringify(successResponse),
+      'utf8',
+    );
 
     recordRequest({
       timestamp: startTime,
@@ -1528,13 +1708,12 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json(successResponse);
-
   } catch (error) {
     console.error('外部弹幕获取失败:', error);
 
     const errorResponse = {
       error: '获取外部弹幕失败',
-      danmu: []
+      danmu: [],
     };
     const errorSize = Buffer.byteLength(JSON.stringify(errorResponse), 'utf8');
 

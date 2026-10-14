@@ -941,7 +941,7 @@ function rewriteDateRangeUri(
           fullMatch,
           fullMatch.replace(originalUri, proxyUrl),
         );
-      } catch (error) {
+      } catch {
         // 保持原始 URI 如果解析失败
       }
     }
@@ -1026,7 +1026,7 @@ function rewriteServerControlUri(
   baseUrl: string,
   proxyBase: string,
   variables?: Map<string, string>,
-  sourceParam: string = '',
+  _sourceParam: string = '',
 ): string {
   // EXT-X-SERVER-CONTROL 通常不包含 URI，但为了完整性保留此函数
   // 如果将来有包含 URI 的扩展，可以在此处理
@@ -1039,7 +1039,7 @@ function rewriteSkipUri(
   baseUrl: string,
   proxyBase: string,
   variables?: Map<string, string>,
-  sourceParam: string = '',
+  _sourceParam: string = '',
 ): string {
   // EXT-X-SKIP 不包含 URI，只包含 SKIPPED-SEGMENTS 等属性
   // 保持原样返回

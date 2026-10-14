@@ -1,7 +1,7 @@
 import {
-  QueryClient,
   defaultShouldDehydrateQuery,
   environmentManager,
+  QueryClient,
 } from '@tanstack/react-query';
 
 /**

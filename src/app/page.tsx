@@ -1,9 +1,10 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/exhaustive-deps, no-console */
-
 import { Suspense } from 'react';
+
 import { getConfig } from '@/lib/config';
-import HomeClient from './HomeClient';
+
 import { CinematicLoadingFallback } from '@/components/CinematicLoadingFallback';
+
+import HomeClient from './HomeClient';
 
 // 🔥 Server Component - 获取配置并传递给客户端
 export default async function Home() {

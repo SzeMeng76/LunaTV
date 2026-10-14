@@ -1,9 +1,10 @@
-/* eslint-disable no-console, @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion */
+/* eslint-disable no-console */
 
 import { AdminConfig } from './admin.types';
 import { KvrocksStorage } from './kvrocks.db';
-import { SqliteStorage } from './sqlite.db';
+import { incrementDbQuery } from './performance-monitor';
 import { RedisStorage } from './redis.db';
+import { SqliteStorage } from './sqlite.db';
 import {
   ContentStat,
   EpisodeSkipConfig,
@@ -15,7 +16,6 @@ import {
   UserPlayStat,
 } from './types';
 import { UpstashRedisStorage } from './upstash.db';
-import { incrementDbQuery } from './performance-monitor';
 
 // storage type 常量: 'localstorage' | 'redis' | 'upstash'，默认 'localstorage'
 const STORAGE_TYPE =

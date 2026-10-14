@@ -1,10 +1,8 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import { NextRequest, NextResponse } from 'next/server';
 
-import { embyManager } from '@/lib/emby-manager';
 import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getCachedMediaIndex, setCachedMediaIndex } from '@/lib/emby-cache';
+import { embyManager } from '@/lib/emby-manager';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,17 +14,17 @@ export async function GET(request: NextRequest) {
     const parentId = searchParams.get('parentId') || undefined;
 
     if (!keyword || !keyword.trim()) {
-      return NextResponse.json({ error: '搜索关键词不能为空' }, { status: 400 });
+      return NextResponse.json(
+        { error: '搜索关键词不能为空' },
+        { status: 400 },
+      );
     }
 
     // 从 cookie 获取用户信息
     const authCookie = getAuthInfoFromCookie(request);
 
     if (!authCookie?.username) {
-      return NextResponse.json(
-        { error: '未登录' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: '未登录' }, { status: 401 });
     }
 
     const username = authCookie.username;
@@ -49,7 +47,8 @@ export async function GET(request: NextRequest) {
         ParentId: parentId,
         IncludeItemTypes: 'Movie,Series',
         Recursive: true,
-        Fields: 'PrimaryImageAspectRatio,PremiereDate,ProductionYear,Overview,CommunityRating',
+        Fields:
+          'PrimaryImageAspectRatio,PremiereDate,ProductionYear,Overview,CommunityRating',
         StartIndex: 0,
         Limit: PAGE_SIZE,
       });
@@ -60,16 +59,21 @@ export async function GET(request: NextRequest) {
       // 并发拉取剩余分页
       if (total > PAGE_SIZE) {
         const remainingRequests = [];
-        for (let startIndex = PAGE_SIZE; startIndex < total; startIndex += PAGE_SIZE) {
+        for (
+          let startIndex = PAGE_SIZE;
+          startIndex < total;
+          startIndex += PAGE_SIZE
+        ) {
           remainingRequests.push(
             client.getItems({
               ParentId: parentId,
               IncludeItemTypes: 'Movie,Series',
               Recursive: true,
-              Fields: 'PrimaryImageAspectRatio,PremiereDate,ProductionYear,Overview,CommunityRating',
+              Fields:
+                'PrimaryImageAspectRatio,PremiereDate,ProductionYear,Overview,CommunityRating',
               StartIndex: startIndex,
               Limit: PAGE_SIZE,
-            })
+            }),
           );
         }
         const pages = await Promise.all(remainingRequests);
@@ -95,8 +99,8 @@ export async function GET(request: NextRequest) {
 
     // 本地模糊搜索（包含匹配，不区分大小写）
     const lowerKeyword = keyword.trim().toLowerCase();
-    const videos = index.filter(item =>
-      item.title.toLowerCase().includes(lowerKeyword)
+    const videos = index.filter((item) =>
+      item.title.toLowerCase().includes(lowerKeyword),
     );
 
     return NextResponse.json({ videos });
@@ -104,7 +108,7 @@ export async function GET(request: NextRequest) {
     console.error('Emby 搜索失败:', error);
     return NextResponse.json(
       { error: error.message || '搜索失败' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

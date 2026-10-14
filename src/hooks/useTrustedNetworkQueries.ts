@@ -14,8 +14,13 @@
  * - TanStack Query useMutation 源码
  */
 
-import { useQuery, useMutation, useQueryClient, queryOptions } from '@tanstack/react-query';
 import type { UseMutationResult, UseQueryResult } from '@tanstack/react-query';
+import {
+  queryOptions,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 
 // ============================================================================
 // 类型定义
@@ -51,7 +56,9 @@ const trustedNetworkOptions = queryOptions({
     const response = await fetch('/api/admin/trusted-network');
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch trusted network config: ${response.status}`);
+      throw new Error(
+        `Failed to fetch trusted network config: ${response.status}`,
+      );
     }
 
     return response.json();
@@ -68,7 +75,10 @@ const trustedNetworkOptions = queryOptions({
 /**
  * 查询 Trusted Network 配置
  */
-export function useTrustedNetworkQuery(): UseQueryResult<TrustedNetworkResponse, Error> {
+export function useTrustedNetworkQuery(): UseQueryResult<
+  TrustedNetworkResponse,
+  Error
+> {
   return useQuery(trustedNetworkOptions);
 }
 
@@ -114,22 +124,19 @@ export function useSaveTrustedNetworkMutation(): UseMutationResult<
       await queryClient.cancelQueries({ queryKey: ['trustedNetwork'] });
 
       // 保存之前的配置（用于回滚）
-      const previousConfig = queryClient.getQueryData<TrustedNetworkResponse>(
-        ['trustedNetwork']
-      );
+      const previousConfig = queryClient.getQueryData<TrustedNetworkResponse>([
+        'trustedNetwork',
+      ]);
 
       // 乐观更新：立即更新缓存
       if (previousConfig) {
-        queryClient.setQueryData<TrustedNetworkResponse>(
-          ['trustedNetwork'],
-          {
-            ...previousConfig,
-            data: {
-              ...previousConfig.data,
-              config: newConfig,
-            },
-          }
-        );
+        queryClient.setQueryData<TrustedNetworkResponse>(['trustedNetwork'], {
+          ...previousConfig,
+          data: {
+            ...previousConfig.data,
+            config: newConfig,
+          },
+        });
       }
 
       // 返回上下文（用于回滚）
@@ -141,7 +148,7 @@ export function useSaveTrustedNetworkMutation(): UseMutationResult<
       if (context?.previousConfig) {
         queryClient.setQueryData<TrustedNetworkResponse>(
           ['trustedNetwork'],
-          context.previousConfig
+          context.previousConfig,
         );
       }
     },
@@ -155,4 +162,3 @@ export function useSaveTrustedNetworkMutation(): UseMutationResult<
     },
   });
 }
-

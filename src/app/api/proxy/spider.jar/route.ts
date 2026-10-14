@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+
 import { getSpiderJar, getSpiderJarByMd5 } from '@/lib/spiderJar';
 
 export const runtime = 'nodejs';
@@ -18,11 +19,15 @@ export async function GET(req: NextRequest) {
 
     // 🔑 若请求指定了 md5（config 生成时锁定的版本），优先返回同一份 jar 字节，
     // 避免 config 与代理响应之间的 jar 轮换导致 TVBox 校验 md5 不一致。
-    let jarInfo = !customUrl && requestedMd5 ? getSpiderJarByMd5(requestedMd5) : null;
+    let jarInfo =
+      !customUrl && requestedMd5 ? getSpiderJarByMd5(requestedMd5) : null;
 
     if (!jarInfo) {
       // 使用管理模块获取 jar（优先使用缓存）
-      const currentJar = await getSpiderJar(forceRefresh, customUrl || undefined);
+      const currentJar = await getSpiderJar(
+        forceRefresh,
+        customUrl || undefined,
+      );
       if (!customUrl && requestedMd5 && currentJar.md5 !== requestedMd5) {
         return NextResponse.json(
           {
@@ -30,13 +35,15 @@ export async function GET(req: NextRequest) {
             requestedMd5,
             currentMd5: currentJar.md5,
           },
-          { status: 409 }
+          { status: 409 },
         );
       }
       jarInfo = currentJar;
     }
 
-    console.log(`[Spider Proxy] 提供 ${jarInfo.success ? '真实' : '降级'} jar: ${jarInfo.source}, 大小: ${jarInfo.size} bytes, 缓存: ${jarInfo.cached}`);
+    console.log(
+      `[Spider Proxy] 提供 ${jarInfo.success ? '真实' : '降级'} jar: ${jarInfo.source}, 大小: ${jarInfo.size} bytes, 缓存: ${jarInfo.cached}`,
+    );
 
     return new NextResponse(new Uint8Array(jarInfo.buffer), {
       headers: {
@@ -56,7 +63,7 @@ export async function GET(req: NextRequest) {
         error: 'Proxy error',
         message: error instanceof Error ? error.message : 'Unknown error',
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

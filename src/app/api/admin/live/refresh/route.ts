@@ -17,9 +17,7 @@ export async function POST(request: NextRequest) {
     const config = await getConfig();
     if (username !== process.env.USERNAME) {
       // 管理员
-      const user = config.UserConfig.Users.find(
-        (u) => u.username === username
-      );
+      const user = config.UserConfig.Users.find((u) => u.username === username);
       if (!user || user.role !== 'admin' || user.banned) {
         return NextResponse.json({ error: '权限不足' }, { status: 401 });
       }
@@ -27,12 +25,12 @@ export async function POST(request: NextRequest) {
 
     // 并发刷新所有启用的直播源
     const refreshPromises = (config.LiveConfig || [])
-      .filter(liveInfo => !liveInfo.disabled)
+      .filter((liveInfo) => !liveInfo.disabled)
       .map(async (liveInfo) => {
         try {
           const nums = await refreshLiveChannels(liveInfo);
           liveInfo.channelNumber = nums;
-        } catch (error) {
+        } catch {
           liveInfo.channelNumber = 0;
         }
       });
@@ -51,7 +49,7 @@ export async function POST(request: NextRequest) {
     console.error('直播源刷新失败:', error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : '刷新失败' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

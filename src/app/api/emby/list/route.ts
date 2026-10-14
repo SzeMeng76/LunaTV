@@ -1,10 +1,8 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import { NextRequest, NextResponse } from 'next/server';
 
+import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getCachedEmbyList, setCachedEmbyList } from '@/lib/emby-cache';
 import { embyManager } from '@/lib/emby-manager';
-import { getAuthInfoFromCookie } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 
@@ -22,10 +20,7 @@ export async function GET(request: NextRequest) {
     const authCookie = getAuthInfoFromCookie(request);
 
     if (!authCookie?.username) {
-      return NextResponse.json(
-        { error: '未登录' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: '未登录' }, { status: 401 });
     }
 
     const username = authCookie.username;

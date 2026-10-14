@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+
 import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getConfig } from '@/lib/config';
 import { db } from '@/lib/db';
@@ -19,13 +20,17 @@ export async function POST(request: NextRequest) {
     }
 
     // 轮询二维码登录状态
-    const response = await fetch(`https://passport.bilibili.com/x/passport-login/web/qrcode/poll?qrcode_key=${qrcodeKey}`, {
-      method: 'GET',
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Referer': 'https://www.bilibili.com/',
+    const response = await fetch(
+      `https://passport.bilibili.com/x/passport-login/web/qrcode/poll?qrcode_key=${qrcodeKey}`,
+      {
+        method: 'GET',
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          Referer: 'https://www.bilibili.com/',
+        },
       },
-    });
+    );
 
     const data = await response.json();
 
@@ -60,7 +65,8 @@ export async function POST(request: NextRequest) {
         // 保存登录信息到配置
         const config = await getConfig();
         const loginTime = Date.now();
-        const expireTime = cookies.SESSDATA?.expires || (loginTime + 180 * 24 * 60 * 60 * 1000); // 默认180天
+        const expireTime =
+          cookies.SESSDATA?.expires || loginTime + 180 * 24 * 60 * 60 * 1000; // 默认180天
 
         config.BilibiliConfig = {
           ...config.BilibiliConfig,
@@ -76,12 +82,16 @@ export async function POST(request: NextRequest) {
 
         // 获取用户信息
         try {
-          const userInfoResponse = await fetch('https://api.bilibili.com/x/web-interface/nav', {
-            headers: {
-              'Cookie': `SESSDATA=${config.BilibiliConfig.sessdata}; bili_jct=${config.BilibiliConfig.bili_jct}; buvid3=${config.BilibiliConfig.buvid3}`,
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          const userInfoResponse = await fetch(
+            'https://api.bilibili.com/x/web-interface/nav',
+            {
+              headers: {
+                Cookie: `SESSDATA=${config.BilibiliConfig.sessdata}; bili_jct=${config.BilibiliConfig.bili_jct}; buvid3=${config.BilibiliConfig.buvid3}`,
+                'User-Agent':
+                  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+              },
             },
-          });
+          );
           const userInfo = await userInfoResponse.json();
 
           if (userInfo.code === 0) {
@@ -131,16 +141,10 @@ export async function POST(request: NextRequest) {
         });
       }
     } else {
-      return NextResponse.json(
-        { error: '轮询登录状态失败' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: '轮询登录状态失败' }, { status: 500 });
     }
   } catch (error) {
     console.error('轮询B站登录状态失败:', error);
-    return NextResponse.json(
-      { error: '轮询失败' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: '轮询失败' }, { status: 500 });
   }
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 
 interface AnimatedCardGridProps {
   children: React.ReactNode;
@@ -14,7 +14,7 @@ const containerVariants = {
     opacity: 1,
     transition: {
       staggerChildren: 0.03, // 减少延迟从 80ms 到 30ms
-      delayChildren: 0,      // 移除首个元素延迟
+      delayChildren: 0, // 移除首个元素延迟
     },
   },
 };
@@ -53,7 +53,7 @@ export default function AnimatedCardGrid({
     return (
       <div className={className}>
         {React.Children.map(children, (child, index) => (
-          <div key={index} className="inline-block">
+          <div key={index} className='inline-block'>
             {child}
           </div>
         ))}
@@ -65,14 +65,14 @@ export default function AnimatedCardGrid({
     <Motion.div
       className={className}
       variants={containerVariants}
-      initial="hidden"
-      animate="visible"
+      initial='hidden'
+      animate='visible'
     >
       {React.Children.map(children, (child, index) => (
         <Motion.div
           key={index}
           variants={itemVariants}
-          className="inline-block"
+          className='inline-block'
         >
           {child}
         </Motion.div>

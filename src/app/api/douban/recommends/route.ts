@@ -1,11 +1,11 @@
-/* eslint-disable @typescript-eslint/no-explicit-any,no-console */
+/* eslint-disable no-console */
 
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getCacheTime } from '@/lib/config';
 import { fetchDoubanData } from '@/lib/douban';
-import { DoubanResult } from '@/lib/types';
 import { recordRequest } from '@/lib/performance-monitor';
+import { DoubanResult } from '@/lib/types';
 
 interface DoubanRecommendApiResponse {
   total: number;
@@ -113,11 +113,13 @@ export async function GET(request: NextRequest) {
   const target = `${baseUrl}?${params.toString()}`;
   console.log(target);
   try {
-    const doubanData = await fetchDoubanData<DoubanRecommendApiResponse>(
-      target
-    );
+    const doubanData =
+      await fetchDoubanData<DoubanRecommendApiResponse>(target);
     const list = doubanData.items
-      .filter((item) => (item.type == 'movie' || item.type == 'tv') && item.id && item.title)
+      .filter(
+        (item) =>
+          (item.type == 'movie' || item.type == 'tv') && item.id && item.title,
+      )
       .map((item) => ({
         id: item.id,
         title: item.title,
@@ -155,7 +157,10 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    const errorResponse = { error: '获取豆瓣数据失败', details: (error as Error).message };
+    const errorResponse = {
+      error: '获取豆瓣数据失败',
+      details: (error as Error).message,
+    };
     const errorSize = Buffer.byteLength(JSON.stringify(errorResponse), 'utf8');
 
     recordRequest({

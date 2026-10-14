@@ -6,7 +6,7 @@ export const runtime = 'nodejs';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { level, message, data, timestamp } = body;
+    const { level, message, data } = body;
 
     // 根据日志级别输出到服务端
     const logPrefix = `[ClientLog]`;

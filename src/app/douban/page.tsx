@@ -1,12 +1,12 @@
-/* eslint-disable no-console,react-hooks/exhaustive-deps,@typescript-eslint/no-explicit-any */
+/* eslint-disable no-console */
 
 'use client';
 
+import { infiniteQueryOptions, useInfiniteQuery } from '@tanstack/react-query';
 import { ChevronUp } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useInfiniteQuery, infiniteQueryOptions } from '@tanstack/react-query';
 
 import { isAIRecommendFeatureDisabled } from '@/lib/ai-recommend.client';
 import { GetBangumiCalendarData } from '@/lib/bangumi.client';
@@ -15,7 +15,7 @@ import {
   getDoubanList,
   getDoubanRecommends,
 } from '@/lib/douban.client';
-import { DoubanItem, DoubanResult } from '@/lib/types';
+import { DoubanItem } from '@/lib/types';
 
 import DoubanCardSkeleton from '@/components/DoubanCardSkeleton';
 import DoubanCustomSelector from '@/components/DoubanCustomSelector';
@@ -154,7 +154,7 @@ const doubanListOptions = (
 function DoubanPageClient() {
   const searchParams = useSearchParams();
   const [selectorsReady, setSelectorsReady] = useState(false);
-  const observerRef = useRef<IntersectionObserver | null>(null);
+  useRef<IntersectionObserver | null>(null);
   const loadingRef = useRef<HTMLDivElement>(null);
   const [showBackToTop, setShowBackToTop] = useState(false);
   // 虚拟化偏好两段式初始化：SSR 与客户端首渲染必须用同一默认值（true），
@@ -455,7 +455,7 @@ function DoubanPageClient() {
         top: 0,
         behavior: 'smooth',
       });
-    } catch (error) {
+    } catch {
       document.body.scrollTop = 0;
     }
   };

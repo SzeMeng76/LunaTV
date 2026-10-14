@@ -9,6 +9,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
+
 import { DOMErrorBoundary } from './DOMErrorBoundary';
 
 interface VirtualGridProps<T> {

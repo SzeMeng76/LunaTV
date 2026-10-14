@@ -6,6 +6,9 @@
 @import '../styles/artplayer-range-slider.css';
 @import '../styles/artplayer-fullscreen-title.css';
 
+/* markdown 排版样式（AIRecommendModal 的 prose 类依赖此插件，此前未声明导致样式失效） */
+@plugin '@tailwindcss/typography';
+
 /* Tailwind 4 Dark Mode Configuration - 使用 class 选择器而非媒体查询 */
 @custom-variant dark (&:where(.dark, .dark *));
 

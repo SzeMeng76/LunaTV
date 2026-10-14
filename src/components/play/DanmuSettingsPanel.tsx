@@ -3,6 +3,7 @@
 import {
   Eye,
   Gauge,
+  Info,
   Layers,
   MessageSquare,
   RefreshCw,
@@ -10,7 +11,6 @@ import {
   Shield,
   Type,
   X,
-  Info,
 } from 'lucide-react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 
@@ -74,7 +74,11 @@ interface DanmuSettingsPanelProps {
 // Animated Number Component - 数字滚动动画
 // ============================================================================
 
-const AnimatedNumber = memo(function AnimatedNumber({ value }: { value: number }) {
+const AnimatedNumber = memo(function AnimatedNumber({
+  value,
+}: {
+  value: number;
+}) {
   const [displayValue, setDisplayValue] = useState(value);
   const prevValueRef = useRef(value);
 
@@ -133,8 +137,16 @@ export const DanmuSettingsPanel = memo(function DanmuSettingsPanel({
   const [sliderFontSize, setSliderFontSize] = useState(settings.fontSize);
   const [sliderSpeed, setSliderSpeed] = useState(settings.speed);
   const [sliderOpacity, setSliderOpacity] = useState(settings.opacity);
-  const [sliderMarginTop, setSliderMarginTop] = useState(() => typeof settings.margin[0] === 'string' ? parseFloat(settings.margin[0]) : settings.margin[0]);
-  const [sliderMarginBottom, setSliderMarginBottom] = useState(() => typeof settings.margin[1] === 'string' ? parseFloat(settings.margin[1]) : settings.margin[1]);
+  const [sliderMarginTop, setSliderMarginTop] = useState(() =>
+    typeof settings.margin[0] === 'string'
+      ? parseFloat(settings.margin[0])
+      : settings.margin[0],
+  );
+  const [sliderMarginBottom, setSliderMarginBottom] = useState(() =>
+    typeof settings.margin[1] === 'string'
+      ? parseFloat(settings.margin[1])
+      : settings.margin[1],
+  );
   const [showLoadMeta, setShowLoadMeta] = useState(false);
   const [isReloading, setIsReloading] = useState(false);
 
@@ -145,7 +157,8 @@ export const DanmuSettingsPanel = memo(function DanmuSettingsPanel({
     const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
     setPrefersReducedMotion(mediaQuery.matches);
 
-    const handler = (e: MediaQueryListEvent) => setPrefersReducedMotion(e.matches);
+    const handler = (e: MediaQueryListEvent) =>
+      setPrefersReducedMotion(e.matches);
     mediaQuery.addEventListener('change', handler);
     return () => mediaQuery.removeEventListener('change', handler);
   }, []);
@@ -178,9 +191,21 @@ export const DanmuSettingsPanel = memo(function DanmuSettingsPanel({
     setSliderFontSize(settings.fontSize);
     setSliderSpeed(settings.speed);
     setSliderOpacity(settings.opacity);
-    setSliderMarginTop(typeof marginTop === 'string' ? parseFloat(marginTop) : marginTop);
-    setSliderMarginBottom(typeof marginBottom === 'string' ? parseFloat(marginBottom) : marginBottom);
-  }, [settings.fontSize, settings.speed, settings.opacity, marginTop, marginBottom]);
+    setSliderMarginTop(
+      typeof marginTop === 'string' ? parseFloat(marginTop) : marginTop,
+    );
+    setSliderMarginBottom(
+      typeof marginBottom === 'string'
+        ? parseFloat(marginBottom)
+        : marginBottom,
+    );
+  }, [
+    settings.fontSize,
+    settings.speed,
+    settings.opacity,
+    marginTop,
+    marginBottom,
+  ]);
 
   const commitFontSize = useCallback(() => {
     if (sliderFontSize !== settings.fontSize) {
@@ -257,7 +282,9 @@ export const DanmuSettingsPanel = memo(function DanmuSettingsPanel({
           ? 'duration-0' // 无动画模式
           : 'duration-500' // Spring模拟动画
       } ${
-        isVisible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2'
+        isVisible
+          ? 'opacity-100 scale-100 translate-y-0'
+          : 'opacity-0 scale-95 translate-y-2'
       }`}
       style={{
         // 🎨 多层深度阴影（Apple风格）
@@ -272,7 +299,8 @@ export const DanmuSettingsPanel = memo(function DanmuSettingsPanel({
           ? 'linear'
           : 'cubic-bezier(0.34, 1.56, 0.64, 1)',
         // 🔥 背景毛玻璃 + 渐变
-        background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.85) 0%, rgba(20, 20, 20, 0.9) 100%)',
+        background:
+          'linear-gradient(135deg, rgba(0, 0, 0, 0.85) 0%, rgba(20, 20, 20, 0.9) 100%)',
         backdropFilter: 'blur(24px) saturate(180%)',
         WebkitBackdropFilter: 'blur(24px) saturate(180%)',
         borderRadius: '20px',
@@ -282,9 +310,10 @@ export const DanmuSettingsPanel = memo(function DanmuSettingsPanel({
     >
       {/* 💎 边缘光晕效果 */}
       <div
-        className="absolute inset-0 rounded-[20px] pointer-events-none"
+        className='absolute inset-0 rounded-[20px] pointer-events-none'
         style={{
-          background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, transparent 50%)',
+          background:
+            'linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, transparent 50%)',
           boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.1)',
         }}
       />
@@ -292,20 +321,21 @@ export const DanmuSettingsPanel = memo(function DanmuSettingsPanel({
       {/* 头部 - 精致设计 */}
       <div className='relative flex items-center justify-between px-5 py-4 border-b border-white/10'>
         <div
-          className="absolute inset-0 opacity-50"
+          className='absolute inset-0 opacity-50'
           style={{
-            background: 'linear-gradient(90deg, rgba(16, 185, 129, 0.05) 0%, transparent 100%)',
+            background:
+              'linear-gradient(90deg, rgba(16, 185, 129, 0.05) 0%, transparent 100%)',
           }}
         />
         <div className='relative flex items-center gap-3'>
-          <div className="p-2 rounded-xl bg-gradient-to-br from-green-500/20 to-emerald-600/20 backdrop-blur-sm">
+          <div className='p-2 rounded-xl bg-gradient-to-br from-green-500/20 to-emerald-600/20 backdrop-blur-sm'>
             <MessageSquare className='w-4 h-4 text-green-400' />
           </div>
-          <div className="flex flex-col">
+          <div className='flex flex-col'>
             <span className='font-semibold text-white text-sm tracking-wide'>
               弹幕设置
             </span>
-            <span className="text-[10px] text-gray-400">Danmaku Settings</span>
+            <span className='text-[10px] text-gray-400'>Danmaku Settings</span>
           </div>
           <span
             className='px-2.5 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-green-500/20 to-emerald-600/20 text-green-300 border border-green-500/30 backdrop-blur-sm'
@@ -331,7 +361,9 @@ export const DanmuSettingsPanel = memo(function DanmuSettingsPanel({
             >
               <Info
                 className={`w-4 h-4 transition-colors ${
-                  showLoadMeta ? 'text-green-400' : 'text-gray-400 group-hover:text-gray-200'
+                  showLoadMeta
+                    ? 'text-green-400'
+                    : 'text-gray-400 group-hover:text-gray-200'
                 }`}
               />
             </button>
@@ -407,13 +439,19 @@ export const DanmuSettingsPanel = memo(function DanmuSettingsPanel({
           <div className='space-y-2 text-xs'>
             <div className='flex items-center justify-between'>
               <span className='text-gray-400'>数据来源</span>
-              <span className={`font-medium ${
-                loadMeta.source === 'cache' ? 'text-blue-400' :
-                loadMeta.source === 'network' ? 'text-green-400' :
-                loadMeta.source === 'network-retry' ? 'text-yellow-400' :
-                loadMeta.source === 'error' ? 'text-red-400' :
-                'text-gray-300'
-              }`}>
+              <span
+                className={`font-medium ${
+                  loadMeta.source === 'cache'
+                    ? 'text-blue-400'
+                    : loadMeta.source === 'network'
+                      ? 'text-green-400'
+                      : loadMeta.source === 'network-retry'
+                        ? 'text-yellow-400'
+                        : loadMeta.source === 'error'
+                          ? 'text-red-400'
+                          : 'text-gray-300'
+                }`}
+              >
                 {loadMeta.source === 'cache' && '📦 会话缓存'}
                 {loadMeta.source === 'network' && '🌐 网络请求'}
                 {loadMeta.source === 'network-retry' && '🔄 网络重试'}
@@ -424,13 +462,17 @@ export const DanmuSettingsPanel = memo(function DanmuSettingsPanel({
             </div>
             <div className='flex items-center justify-between'>
               <span className='text-gray-400'>弹幕数量</span>
-              <span className='text-white font-medium'>{loadMeta.count} 条</span>
+              <span className='text-white font-medium'>
+                {loadMeta.count} 条
+              </span>
             </div>
             <div className='flex items-center justify-between'>
               <span className='text-gray-400'>加载时间</span>
               <span className='text-gray-300'>
                 {loadMeta.loadedAt
-                  ? new Date(loadMeta.loadedAt).toLocaleTimeString('zh-CN', { hour12: false })
+                  ? new Date(loadMeta.loadedAt).toLocaleTimeString('zh-CN', {
+                      hour12: false,
+                    })
                   : '尚未加载'}
               </span>
             </div>
@@ -445,14 +487,16 @@ export const DanmuSettingsPanel = memo(function DanmuSettingsPanel({
           <div
             className='px-3 py-2 rounded-xl backdrop-blur-sm'
             style={{
-              background: 'linear-gradient(90deg, rgba(239, 68, 68, 0.15) 0%, rgba(185, 28, 28, 0.1) 100%)',
+              background:
+                'linear-gradient(90deg, rgba(239, 68, 68, 0.15) 0%, rgba(185, 28, 28, 0.1) 100%)',
               border: '1px solid rgba(239, 68, 68, 0.3)',
             }}
           >
-            <p className='text-xs text-red-300 font-medium'>
-              ❌ 加载失败
-            </p>
-            <p className='text-[11px] text-red-400/70 mt-0.5 truncate' title={error.message}>
+            <p className='text-xs text-red-300 font-medium'>❌ 加载失败</p>
+            <p
+              className='text-[11px] text-red-400/70 mt-0.5 truncate'
+              title={error.message}
+            >
               {error.message}
             </p>
           </div>
@@ -463,7 +507,8 @@ export const DanmuSettingsPanel = memo(function DanmuSettingsPanel({
           <div
             className='px-3 py-2 rounded-xl backdrop-blur-sm'
             style={{
-              background: 'linear-gradient(90deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.1) 100%)',
+              background:
+                'linear-gradient(90deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.1) 100%)',
               border: '1px solid rgba(16, 185, 129, 0.3)',
             }}
           >
@@ -484,14 +529,13 @@ export const DanmuSettingsPanel = memo(function DanmuSettingsPanel({
           <div
             className='px-3 py-2 rounded-xl backdrop-blur-sm flex items-center justify-between gap-2'
             style={{
-              background: 'linear-gradient(90deg, rgba(245, 158, 11, 0.15) 0%, rgba(217, 119, 6, 0.1) 100%)',
+              background:
+                'linear-gradient(90deg, rgba(245, 158, 11, 0.15) 0%, rgba(217, 119, 6, 0.1) 100%)',
               border: '1px solid rgba(245, 158, 11, 0.3)',
             }}
           >
             <div className='min-w-0'>
-              <p className='text-xs text-amber-300 font-medium'>
-                手动覆盖模式
-              </p>
+              <p className='text-xs text-amber-300 font-medium'>手动覆盖模式</p>
               <p className='text-[11px] text-amber-400/70 mt-0.5'>
                 当前弹幕源为手动指定
               </p>
@@ -512,7 +556,7 @@ export const DanmuSettingsPanel = memo(function DanmuSettingsPanel({
           <span className='text-sm font-medium text-gray-200'>启用弹幕</span>
           <button
             onClick={() => handleUpdate('enabled', !settings.enabled)}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300 active:scale-90`}
+            className='relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300 active:scale-90'
             style={{
               background: settings.enabled
                 ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
@@ -526,7 +570,9 @@ export const DanmuSettingsPanel = memo(function DanmuSettingsPanel({
             <span
               className='inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition-all duration-300'
               style={{
-                transform: settings.enabled ? 'translateX(22px)' : 'translateX(2px)',
+                transform: settings.enabled
+                  ? 'translateX(22px)'
+                  : 'translateX(2px)',
                 transitionTimingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
               }}
             />
@@ -538,300 +584,361 @@ export const DanmuSettingsPanel = memo(function DanmuSettingsPanel({
           <>
             {/* 快捷开关行 - 并排紧凑设计 */}
             <div className='grid grid-cols-2 gap-3'>
-          {/* 显示开关 */}
-          <div
-            className='flex items-center gap-2 px-3 py-2.5 rounded-xl transition-all duration-200 group cursor-pointer'
-            style={{
-              background: 'rgba(255, 255, 255, 0.03)',
-              border: '1px solid rgba(255, 255, 255, 0.05)',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
-              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
-              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.05)';
-            }}
-          >
-            <Eye className='w-3.5 h-3.5 text-gray-400 shrink-0 transition-colors group-hover:text-gray-300' />
-            <span className='text-xs text-gray-300 font-medium'>显示</span>
-            <button
-              onClick={() => handleUpdate('visible', !settings.visible)}
-              className={`ml-auto relative inline-flex h-5 w-9 items-center rounded-full transition-all duration-300 active:scale-90`}
-              style={{
-                background: settings.visible
-                  ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
-                  : '#4b5563',
-                boxShadow: settings.visible
-                  ? '0 0 16px rgba(16, 185, 129, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.2)'
-                  : 'inset 0 2px 4px rgba(0, 0, 0, 0.3)',
-                transitionTimingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
-              }}
-            >
-              <span
-                className='inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition-all duration-300'
+              {/* 显示开关 */}
+              <div
+                className='flex items-center gap-2 px-3 py-2.5 rounded-xl transition-all duration-200 group cursor-pointer'
                 style={{
-                  transform: settings.visible ? 'translateX(18px)' : 'translateX(2px)',
-                  transitionTimingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+                  background: 'rgba(255, 255, 255, 0.03)',
+                  border: '1px solid rgba(255, 255, 255, 0.05)',
                 }}
-              />
-            </button>
-          </div>
-
-          {/* 防重叠开关 */}
-          <div
-            className='flex items-center gap-2 px-3 py-2.5 rounded-xl transition-all duration-200 group cursor-pointer'
-            style={{
-              background: 'rgba(255, 255, 255, 0.03)',
-              border: '1px solid rgba(255, 255, 255, 0.05)',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
-              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
-              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.05)';
-            }}
-          >
-            <Shield className='w-3.5 h-3.5 text-gray-400 shrink-0 transition-colors group-hover:text-gray-300' />
-            <span className='text-xs text-gray-300 font-medium'>防重叠</span>
-            <button
-              onClick={() => handleUpdate('antiOverlap', !settings.antiOverlap)}
-              className={`ml-auto relative inline-flex h-5 w-9 items-center rounded-full transition-all duration-300 active:scale-90`}
-              style={{
-                background: settings.antiOverlap
-                  ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
-                  : '#4b5563',
-                boxShadow: settings.antiOverlap
-                  ? '0 0 16px rgba(16, 185, 129, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.2)'
-                  : 'inset 0 2px 4px rgba(0, 0, 0, 0.3)',
-                transitionTimingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
-              }}
-            >
-              <span
-                className='inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition-all duration-300'
-                style={{
-                  transform: settings.antiOverlap ? 'translateX(18px)' : 'translateX(2px)',
-                  transitionTimingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background =
+                    'rgba(255, 255, 255, 0.08)';
+                  e.currentTarget.style.borderColor =
+                    'rgba(255, 255, 255, 0.1)';
                 }}
-              />
-            </button>
-          </div>
-        </div>
-
-        {/* 滑块设置 - 渐变轨道 */}
-        <div className='space-y-3.5'>
-          {/* 字号 */}
-          <div className='flex items-center gap-3'>
-            <div className='flex items-center gap-1.5 text-xs text-gray-300 w-16 shrink-0'>
-              <Type className='w-3.5 h-3.5 text-gray-400' />
-              <span className="font-medium">字号</span>
-            </div>
-            <div className="relative flex-1">
-              <input
-                type='range'
-                min={12}
-                max={48}
-                step={1}
-                value={sliderFontSize}
-                onChange={(e) => setSliderFontSize(parseFloat(e.target.value))}
-                onMouseUp={commitFontSize}
-                onTouchEnd={commitFontSize}
-                onBlur={commitFontSize}
-                className='w-full h-2 rounded-full appearance-none cursor-pointer transition-all'
-                style={{
-                  background: `linear-gradient(to right, #10b981 0%, #10b981 ${((sliderFontSize - 12) / (48 - 12)) * 100}%, rgba(75, 85, 99, 0.5) ${((sliderFontSize - 12) / (48 - 12)) * 100}%, rgba(75, 85, 99, 0.5) 100%)`,
-                }}
-              />
-            </div>
-            <span className='text-xs text-green-400 w-12 text-right font-mono font-semibold tabular-nums'>
-              <AnimatedNumber value={sliderFontSize} />
-            </span>
-          </div>
-
-          {/* 速度 */}
-          <div className='flex items-center gap-3'>
-            <div className='flex items-center gap-1.5 text-xs text-gray-300 w-16 shrink-0'>
-              <Gauge className='w-3.5 h-3.5 text-gray-400' />
-              <span className="font-medium">速度</span>
-            </div>
-            <div className="relative flex-1">
-              <input
-                type='range'
-                min={1}
-                max={10}
-                step={1}
-                value={sliderSpeed}
-                onChange={(e) => setSliderSpeed(parseFloat(e.target.value))}
-                onMouseUp={commitSpeed}
-                onTouchEnd={commitSpeed}
-                onBlur={commitSpeed}
-                className='w-full h-2 rounded-full appearance-none cursor-pointer transition-all'
-                style={{
-                  background: `linear-gradient(to right, #10b981 0%, #10b981 ${((sliderSpeed - 1) / (10 - 1)) * 100}%, rgba(75, 85, 99, 0.5) ${((sliderSpeed - 1) / (10 - 1)) * 100}%, rgba(75, 85, 99, 0.5) 100%)`,
-                }}
-              />
-            </div>
-            <span className='text-xs text-green-400 w-12 text-right font-mono font-semibold tabular-nums'>
-              <AnimatedNumber value={sliderSpeed} />
-            </span>
-          </div>
-
-          {/* 透明度 */}
-          <div className='flex items-center gap-3'>
-            <div className='flex items-center gap-1.5 text-xs text-gray-300 w-16 shrink-0'>
-              <Eye className='w-3.5 h-3.5 text-gray-400' />
-              <span className="font-medium">透明</span>
-            </div>
-            <div className="relative flex-1">
-              <input
-                type='range'
-                min={0.1}
-                max={1}
-                step={0.1}
-                value={sliderOpacity}
-                onChange={(e) => setSliderOpacity(parseFloat(e.target.value))}
-                onMouseUp={commitOpacity}
-                onTouchEnd={commitOpacity}
-                onBlur={commitOpacity}
-                className='w-full h-2 rounded-full appearance-none cursor-pointer transition-all'
-                style={{
-                  background: `linear-gradient(to right, #10b981 0%, #10b981 ${((sliderOpacity - 0.1) / (1 - 0.1)) * 100}%, rgba(75, 85, 99, 0.5) ${((sliderOpacity - 0.1) / (1 - 0.1)) * 100}%, rgba(75, 85, 99, 0.5) 100%)`,
-                }}
-              />
-            </div>
-            <span className='text-xs text-green-400 w-12 text-right font-mono font-semibold tabular-nums'>
-              {(sliderOpacity * 100).toFixed(0)}%
-            </span>
-          </div>
-
-          {/* 上边距 - LunaTV独有功能！ */}
-          <div className='flex items-center gap-3'>
-            <div className='flex items-center gap-1.5 text-xs text-gray-300 w-16 shrink-0'>
-              <svg className='w-3.5 h-3.5 text-gray-400' viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path d="M4 4h16M4 8h16" strokeWidth="2" strokeLinecap="round"/>
-                <path d="M12 12v8" strokeWidth="2" strokeLinecap="round" strokeDasharray="2 2"/>
-              </svg>
-              <span className="font-medium">上距</span>
-            </div>
-            <div className="relative flex-1">
-              <input
-                type='range'
-                min={0}
-                max={100}
-                step={5}
-                value={sliderMarginTop}
-                onChange={(e) => setSliderMarginTop(parseFloat(e.target.value))}
-                onMouseUp={commitMarginTop}
-                onTouchEnd={commitMarginTop}
-                onBlur={commitMarginTop}
-                className='w-full h-2 rounded-full appearance-none cursor-pointer transition-all'
-                style={{
-                  background: `linear-gradient(to right, #10b981 0%, #10b981 ${sliderMarginTop}%, rgba(75, 85, 99, 0.5) ${sliderMarginTop}%, rgba(75, 85, 99, 0.5) 100%)`,
-                }}
-              />
-            </div>
-            <span className='text-xs text-green-400 w-12 text-right font-mono font-semibold tabular-nums'>
-              {sliderMarginTop === 0 ? '无' : `${sliderMarginTop}%`}
-            </span>
-          </div>
-
-          {/* 下边距 - LunaTV独有功能！ */}
-          <div className='flex items-center gap-3'>
-            <div className='flex items-center gap-1.5 text-xs text-gray-300 w-16 shrink-0'>
-              <svg className='w-3.5 h-3.5 text-gray-400' viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path d="M4 20h16M4 16h16" strokeWidth="2" strokeLinecap="round"/>
-                <path d="M12 4v8" strokeWidth="2" strokeLinecap="round" strokeDasharray="2 2"/>
-              </svg>
-              <span className="font-medium">下距</span>
-            </div>
-            <div className="relative flex-1">
-              <input
-                type='range'
-                min={0}
-                max={100}
-                step={5}
-                value={sliderMarginBottom}
-                onChange={(e) => setSliderMarginBottom(parseFloat(e.target.value))}
-                onMouseUp={commitMarginBottom}
-                onTouchEnd={commitMarginBottom}
-                onBlur={commitMarginBottom}
-                className='w-full h-2 rounded-full appearance-none cursor-pointer transition-all'
-                style={{
-                  background: `linear-gradient(to right, #10b981 0%, #10b981 ${sliderMarginBottom}%, rgba(75, 85, 99, 0.5) ${sliderMarginBottom}%, rgba(75, 85, 99, 0.5) 100%)`,
-                }}
-              />
-            </div>
-            <span className='text-xs text-green-400 w-12 text-right font-mono font-semibold tabular-nums'>
-              {sliderMarginBottom === 0 ? '无' : `${sliderMarginBottom}%`}
-            </span>
-          </div>
-        </div>
-
-        {/* 弹幕类型 - 3D卡片效果 */}
-        <div>
-          <div className='flex items-center gap-1.5 text-xs text-gray-300 mb-3'>
-            <Layers className='w-3.5 h-3.5 text-gray-400' />
-            <span className="font-medium">弹幕类型</span>
-          </div>
-          <div className='grid grid-cols-3 gap-2'>
-            {[
-              { value: 0 as const, label: '滚动', icon: '→' },
-              { value: 1 as const, label: '顶部', icon: '↑' },
-              { value: 2 as const, label: '底部', icon: '↓' },
-            ].map((option) => (
-              <button
-                key={option.value}
-                onClick={() => {
-                  const modes = settings.modes.includes(option.value)
-                    ? settings.modes.length > 1
-                      ? settings.modes.filter((m) => m !== option.value)
-                      : settings.modes
-                    : [...settings.modes, option.value];
-                  handleUpdate('modes', modes as Array<0 | 1 | 2>);
-                }}
-                className={`relative py-2 px-2 rounded-xl text-xs font-semibold transition-all duration-300 active:scale-95 overflow-hidden group`}
-                style={{
-                  background: settings.modes.includes(option.value)
-                    ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
-                    : 'rgba(255, 255, 255, 0.03)',
-                  border: settings.modes.includes(option.value)
-                    ? '1px solid rgba(16, 185, 129, 0.5)'
-                    : '1px solid rgba(255, 255, 255, 0.05)',
-                  boxShadow: settings.modes.includes(option.value)
-                    ? '0 4px 16px rgba(16, 185, 129, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
-                    : 'none',
-                  color: settings.modes.includes(option.value) ? '#fff' : '#9ca3af',
-                  transitionTimingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background =
+                    'rgba(255, 255, 255, 0.03)';
+                  e.currentTarget.style.borderColor =
+                    'rgba(255, 255, 255, 0.05)';
                 }}
               >
-                <div className="flex flex-col items-center gap-0.5">
-                  <span className="text-base">{option.icon}</span>
-                  <span>{option.label}</span>
-                </div>
-                {settings.modes.includes(option.value) && (
-                  <div
-                    className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                <Eye className='w-3.5 h-3.5 text-gray-400 shrink-0 transition-colors group-hover:text-gray-300' />
+                <span className='text-xs text-gray-300 font-medium'>显示</span>
+                <button
+                  onClick={() => handleUpdate('visible', !settings.visible)}
+                  className='ml-auto relative inline-flex h-5 w-9 items-center rounded-full transition-all duration-300 active:scale-90'
+                  style={{
+                    background: settings.visible
+                      ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+                      : '#4b5563',
+                    boxShadow: settings.visible
+                      ? '0 0 16px rgba(16, 185, 129, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.2)'
+                      : 'inset 0 2px 4px rgba(0, 0, 0, 0.3)',
+                    transitionTimingFunction:
+                      'cubic-bezier(0.34, 1.56, 0.64, 1)',
+                  }}
+                >
+                  <span
+                    className='inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition-all duration-300'
                     style={{
-                      background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, transparent 100%)',
+                      transform: settings.visible
+                        ? 'translateX(18px)'
+                        : 'translateX(2px)',
+                      transitionTimingFunction:
+                        'cubic-bezier(0.34, 1.56, 0.64, 1)',
                     }}
                   />
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
+                </button>
+              </div>
+
+              {/* 防重叠开关 */}
+              <div
+                className='flex items-center gap-2 px-3 py-2.5 rounded-xl transition-all duration-200 group cursor-pointer'
+                style={{
+                  background: 'rgba(255, 255, 255, 0.03)',
+                  border: '1px solid rgba(255, 255, 255, 0.05)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background =
+                    'rgba(255, 255, 255, 0.08)';
+                  e.currentTarget.style.borderColor =
+                    'rgba(255, 255, 255, 0.1)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background =
+                    'rgba(255, 255, 255, 0.03)';
+                  e.currentTarget.style.borderColor =
+                    'rgba(255, 255, 255, 0.05)';
+                }}
+              >
+                <Shield className='w-3.5 h-3.5 text-gray-400 shrink-0 transition-colors group-hover:text-gray-300' />
+                <span className='text-xs text-gray-300 font-medium'>
+                  防重叠
+                </span>
+                <button
+                  onClick={() =>
+                    handleUpdate('antiOverlap', !settings.antiOverlap)
+                  }
+                  className='ml-auto relative inline-flex h-5 w-9 items-center rounded-full transition-all duration-300 active:scale-90'
+                  style={{
+                    background: settings.antiOverlap
+                      ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+                      : '#4b5563',
+                    boxShadow: settings.antiOverlap
+                      ? '0 0 16px rgba(16, 185, 129, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.2)'
+                      : 'inset 0 2px 4px rgba(0, 0, 0, 0.3)',
+                    transitionTimingFunction:
+                      'cubic-bezier(0.34, 1.56, 0.64, 1)',
+                  }}
+                >
+                  <span
+                    className='inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition-all duration-300'
+                    style={{
+                      transform: settings.antiOverlap
+                        ? 'translateX(18px)'
+                        : 'translateX(2px)',
+                      transitionTimingFunction:
+                        'cubic-bezier(0.34, 1.56, 0.64, 1)',
+                    }}
+                  />
+                </button>
+              </div>
+            </div>
+
+            {/* 滑块设置 - 渐变轨道 */}
+            <div className='space-y-3.5'>
+              {/* 字号 */}
+              <div className='flex items-center gap-3'>
+                <div className='flex items-center gap-1.5 text-xs text-gray-300 w-16 shrink-0'>
+                  <Type className='w-3.5 h-3.5 text-gray-400' />
+                  <span className='font-medium'>字号</span>
+                </div>
+                <div className='relative flex-1'>
+                  <input
+                    type='range'
+                    min={12}
+                    max={48}
+                    step={1}
+                    value={sliderFontSize}
+                    onChange={(e) =>
+                      setSliderFontSize(parseFloat(e.target.value))
+                    }
+                    onMouseUp={commitFontSize}
+                    onTouchEnd={commitFontSize}
+                    onBlur={commitFontSize}
+                    className='w-full h-2 rounded-full appearance-none cursor-pointer transition-all'
+                    style={{
+                      background: `linear-gradient(to right, #10b981 0%, #10b981 ${((sliderFontSize - 12) / (48 - 12)) * 100}%, rgba(75, 85, 99, 0.5) ${((sliderFontSize - 12) / (48 - 12)) * 100}%, rgba(75, 85, 99, 0.5) 100%)`,
+                    }}
+                  />
+                </div>
+                <span className='text-xs text-green-400 w-12 text-right font-mono font-semibold tabular-nums'>
+                  <AnimatedNumber value={sliderFontSize} />
+                </span>
+              </div>
+
+              {/* 速度 */}
+              <div className='flex items-center gap-3'>
+                <div className='flex items-center gap-1.5 text-xs text-gray-300 w-16 shrink-0'>
+                  <Gauge className='w-3.5 h-3.5 text-gray-400' />
+                  <span className='font-medium'>速度</span>
+                </div>
+                <div className='relative flex-1'>
+                  <input
+                    type='range'
+                    min={1}
+                    max={10}
+                    step={1}
+                    value={sliderSpeed}
+                    onChange={(e) => setSliderSpeed(parseFloat(e.target.value))}
+                    onMouseUp={commitSpeed}
+                    onTouchEnd={commitSpeed}
+                    onBlur={commitSpeed}
+                    className='w-full h-2 rounded-full appearance-none cursor-pointer transition-all'
+                    style={{
+                      background: `linear-gradient(to right, #10b981 0%, #10b981 ${((sliderSpeed - 1) / (10 - 1)) * 100}%, rgba(75, 85, 99, 0.5) ${((sliderSpeed - 1) / (10 - 1)) * 100}%, rgba(75, 85, 99, 0.5) 100%)`,
+                    }}
+                  />
+                </div>
+                <span className='text-xs text-green-400 w-12 text-right font-mono font-semibold tabular-nums'>
+                  <AnimatedNumber value={sliderSpeed} />
+                </span>
+              </div>
+
+              {/* 透明度 */}
+              <div className='flex items-center gap-3'>
+                <div className='flex items-center gap-1.5 text-xs text-gray-300 w-16 shrink-0'>
+                  <Eye className='w-3.5 h-3.5 text-gray-400' />
+                  <span className='font-medium'>透明</span>
+                </div>
+                <div className='relative flex-1'>
+                  <input
+                    type='range'
+                    min={0.1}
+                    max={1}
+                    step={0.1}
+                    value={sliderOpacity}
+                    onChange={(e) =>
+                      setSliderOpacity(parseFloat(e.target.value))
+                    }
+                    onMouseUp={commitOpacity}
+                    onTouchEnd={commitOpacity}
+                    onBlur={commitOpacity}
+                    className='w-full h-2 rounded-full appearance-none cursor-pointer transition-all'
+                    style={{
+                      background: `linear-gradient(to right, #10b981 0%, #10b981 ${((sliderOpacity - 0.1) / (1 - 0.1)) * 100}%, rgba(75, 85, 99, 0.5) ${((sliderOpacity - 0.1) / (1 - 0.1)) * 100}%, rgba(75, 85, 99, 0.5) 100%)`,
+                    }}
+                  />
+                </div>
+                <span className='text-xs text-green-400 w-12 text-right font-mono font-semibold tabular-nums'>
+                  {(sliderOpacity * 100).toFixed(0)}%
+                </span>
+              </div>
+
+              {/* 上边距 - LunaTV独有功能！ */}
+              <div className='flex items-center gap-3'>
+                <div className='flex items-center gap-1.5 text-xs text-gray-300 w-16 shrink-0'>
+                  <svg
+                    className='w-3.5 h-3.5 text-gray-400'
+                    viewBox='0 0 24 24'
+                    fill='none'
+                    stroke='currentColor'
+                  >
+                    <path
+                      d='M4 4h16M4 8h16'
+                      strokeWidth='2'
+                      strokeLinecap='round'
+                    />
+                    <path
+                      d='M12 12v8'
+                      strokeWidth='2'
+                      strokeLinecap='round'
+                      strokeDasharray='2 2'
+                    />
+                  </svg>
+                  <span className='font-medium'>上距</span>
+                </div>
+                <div className='relative flex-1'>
+                  <input
+                    type='range'
+                    min={0}
+                    max={100}
+                    step={5}
+                    value={sliderMarginTop}
+                    onChange={(e) =>
+                      setSliderMarginTop(parseFloat(e.target.value))
+                    }
+                    onMouseUp={commitMarginTop}
+                    onTouchEnd={commitMarginTop}
+                    onBlur={commitMarginTop}
+                    className='w-full h-2 rounded-full appearance-none cursor-pointer transition-all'
+                    style={{
+                      background: `linear-gradient(to right, #10b981 0%, #10b981 ${sliderMarginTop}%, rgba(75, 85, 99, 0.5) ${sliderMarginTop}%, rgba(75, 85, 99, 0.5) 100%)`,
+                    }}
+                  />
+                </div>
+                <span className='text-xs text-green-400 w-12 text-right font-mono font-semibold tabular-nums'>
+                  {sliderMarginTop === 0 ? '无' : `${sliderMarginTop}%`}
+                </span>
+              </div>
+
+              {/* 下边距 - LunaTV独有功能！ */}
+              <div className='flex items-center gap-3'>
+                <div className='flex items-center gap-1.5 text-xs text-gray-300 w-16 shrink-0'>
+                  <svg
+                    className='w-3.5 h-3.5 text-gray-400'
+                    viewBox='0 0 24 24'
+                    fill='none'
+                    stroke='currentColor'
+                  >
+                    <path
+                      d='M4 20h16M4 16h16'
+                      strokeWidth='2'
+                      strokeLinecap='round'
+                    />
+                    <path
+                      d='M12 4v8'
+                      strokeWidth='2'
+                      strokeLinecap='round'
+                      strokeDasharray='2 2'
+                    />
+                  </svg>
+                  <span className='font-medium'>下距</span>
+                </div>
+                <div className='relative flex-1'>
+                  <input
+                    type='range'
+                    min={0}
+                    max={100}
+                    step={5}
+                    value={sliderMarginBottom}
+                    onChange={(e) =>
+                      setSliderMarginBottom(parseFloat(e.target.value))
+                    }
+                    onMouseUp={commitMarginBottom}
+                    onTouchEnd={commitMarginBottom}
+                    onBlur={commitMarginBottom}
+                    className='w-full h-2 rounded-full appearance-none cursor-pointer transition-all'
+                    style={{
+                      background: `linear-gradient(to right, #10b981 0%, #10b981 ${sliderMarginBottom}%, rgba(75, 85, 99, 0.5) ${sliderMarginBottom}%, rgba(75, 85, 99, 0.5) 100%)`,
+                    }}
+                  />
+                </div>
+                <span className='text-xs text-green-400 w-12 text-right font-mono font-semibold tabular-nums'>
+                  {sliderMarginBottom === 0 ? '无' : `${sliderMarginBottom}%`}
+                </span>
+              </div>
+            </div>
+
+            {/* 弹幕类型 - 3D卡片效果 */}
+            <div>
+              <div className='flex items-center gap-1.5 text-xs text-gray-300 mb-3'>
+                <Layers className='w-3.5 h-3.5 text-gray-400' />
+                <span className='font-medium'>弹幕类型</span>
+              </div>
+              <div className='grid grid-cols-3 gap-2'>
+                {[
+                  { value: 0 as const, label: '滚动', icon: '→' },
+                  { value: 1 as const, label: '顶部', icon: '↑' },
+                  { value: 2 as const, label: '底部', icon: '↓' },
+                ].map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => {
+                      const modes = settings.modes.includes(option.value)
+                        ? settings.modes.length > 1
+                          ? settings.modes.filter((m) => m !== option.value)
+                          : settings.modes
+                        : [...settings.modes, option.value];
+                      handleUpdate('modes', modes as Array<0 | 1 | 2>);
+                    }}
+                    className='relative py-2 px-2 rounded-xl text-xs font-semibold transition-all duration-300 active:scale-95 overflow-hidden group'
+                    style={{
+                      background: settings.modes.includes(option.value)
+                        ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+                        : 'rgba(255, 255, 255, 0.03)',
+                      border: settings.modes.includes(option.value)
+                        ? '1px solid rgba(16, 185, 129, 0.5)'
+                        : '1px solid rgba(255, 255, 255, 0.05)',
+                      boxShadow: settings.modes.includes(option.value)
+                        ? '0 4px 16px rgba(16, 185, 129, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
+                        : 'none',
+                      color: settings.modes.includes(option.value)
+                        ? '#fff'
+                        : '#9ca3af',
+                      transitionTimingFunction:
+                        'cubic-bezier(0.34, 1.56, 0.64, 1)',
+                    }}
+                  >
+                    <div className='flex flex-col items-center gap-0.5'>
+                      <span className='text-base'>{option.icon}</span>
+                      <span>{option.label}</span>
+                    </div>
+                    {settings.modes.includes(option.value) && (
+                      <div
+                        className='absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300'
+                        style={{
+                          background:
+                            'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, transparent 100%)',
+                        }}
+                      />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
           </>
         )}
       </div>
 
       {/* 底部装饰条 */}
       <div
-        className="h-1"
+        className='h-1'
         style={{
-          background: 'linear-gradient(90deg, transparent 0%, #10b981 50%, transparent 100%)',
+          background:
+            'linear-gradient(90deg, transparent 0%, #10b981 50%, transparent 100%)',
           opacity: 0.3,
         }}
       />
@@ -845,13 +952,17 @@ export const DanmuSettingsPanel = memo(function DanmuSettingsPanel({
           border-radius: 50%;
           background: linear-gradient(135deg, #10b981 0%, #059669 100%);
           cursor: pointer;
-          box-shadow: 0 2px 8px rgba(16, 185, 129, 0.5), 0 0 0 2px rgba(255, 255, 255, 0.1);
+          box-shadow:
+            0 2px 8px rgba(16, 185, 129, 0.5),
+            0 0 0 2px rgba(255, 255, 255, 0.1);
           transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
 
         input[type='range']::-webkit-slider-thumb:hover {
           transform: scale(1.2);
-          box-shadow: 0 4px 16px rgba(16, 185, 129, 0.6), 0 0 0 3px rgba(255, 255, 255, 0.15);
+          box-shadow:
+            0 4px 16px rgba(16, 185, 129, 0.6),
+            0 0 0 3px rgba(255, 255, 255, 0.15);
         }
 
         input[type='range']::-webkit-slider-thumb:active {
@@ -865,13 +976,17 @@ export const DanmuSettingsPanel = memo(function DanmuSettingsPanel({
           background: linear-gradient(135deg, #10b981 0%, #059669 100%);
           cursor: pointer;
           border: none;
-          box-shadow: 0 2px 8px rgba(16, 185, 129, 0.5), 0 0 0 2px rgba(255, 255, 255, 0.1);
+          box-shadow:
+            0 2px 8px rgba(16, 185, 129, 0.5),
+            0 0 0 2px rgba(255, 255, 255, 0.1);
           transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
 
         input[type='range']::-moz-range-thumb:hover {
           transform: scale(1.2);
-          box-shadow: 0 4px 16px rgba(16, 185, 129, 0.6), 0 0 0 3px rgba(255, 255, 255, 0.15);
+          box-shadow:
+            0 4px 16px rgba(16, 185, 129, 0.6),
+            0 0 0 3px rgba(255, 255, 255, 0.15);
         }
 
         /* 尊重用户的减少动画偏好 */

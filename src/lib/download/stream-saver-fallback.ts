@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, no-console */
+/* eslint-disable no-console */
 /**
  * StreamSaver 降级方案
  * 在不支持 Service Worker 的环境中使用
@@ -21,7 +21,7 @@ export function supportsFileSystemAccess(): boolean {
  */
 export async function createFileSystemWriteStream(
   filename: string,
-  _fileSize?: number
+  _fileSize?: number,
 ): Promise<WritableStream<Uint8Array> | null> {
   if (!supportsFileSystemAccess()) {
     return null;
@@ -75,7 +75,7 @@ export async function createFileSystemWriteStream(
  */
 export function createBlobWriteStream(
   filename: string,
-  maxSize: number = 500 * 1024 * 1024 // 默认最大 500MB
+  maxSize: number = 500 * 1024 * 1024, // 默认最大 500MB
 ): WritableStream<Uint8Array> {
   const chunks: Uint8Array[] = [];
   let totalSize = 0;
@@ -83,34 +83,36 @@ export function createBlobWriteStream(
   return new WritableStream({
     write(chunk: Uint8Array) {
       totalSize += chunk.length;
-      
+
       if (totalSize > maxSize) {
         throw new Error(
           `文件大小超过限制 (${Math.round(maxSize / 1024 / 1024)}MB)，` +
-          '请使用支持 Service Worker 或 File System Access API 的浏览器'
+            '请使用支持 Service Worker 或 File System Access API 的浏览器',
         );
       }
-      
+
       chunks.push(chunk);
     },
     close() {
       // 创建 Blob 并触发下载
-      const blob = new Blob(chunks as BlobPart[], { type: 'application/octet-stream' });
+      const blob = new Blob(chunks as BlobPart[], {
+        type: 'application/octet-stream',
+      });
       const url = URL.createObjectURL(blob);
-      
+
       const a = document.createElement('a');
       a.href = url;
       a.download = filename;
       a.style.display = 'none';
       document.body.appendChild(a);
       a.click();
-      
+
       // 清理
       setTimeout(() => {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
       }, 100);
-      
+
       // 清空内存
       chunks.length = 0;
     },
@@ -126,7 +128,7 @@ export function createBlobWriteStream(
  */
 export async function createAdaptiveWriteStream(
   filename: string,
-  estimatedSize?: number
+  estimatedSize?: number,
 ): Promise<WritableStream<Uint8Array>> {
   // 1. 优先尝试 File System Access API（Chrome/Edge）
   if (supportsFileSystemAccess()) {
@@ -147,21 +149,19 @@ export async function createAdaptiveWriteStream(
   }
 
   // 3. 降级到 Blob 方案（有大小限制）
-  console.warn(
-    '当前环境不支持流式下载，使用 Blob 降级方案（可能有内存限制）'
-  );
-  
+  console.warn('当前环境不支持流式下载，使用 Blob 降级方案（可能有内存限制）');
+
   // 如果文件太大，警告用户
   if (estimatedSize && estimatedSize > 500 * 1024 * 1024) {
     const confirmDownload = confirm(
-      '文件较大，可能导致内存不足。建议使用 Chrome/Edge 浏览器或本地部署版本。\n\n是否继续下载？'
+      '文件较大，可能导致内存不足。建议使用 Chrome/Edge 浏览器或本地部署版本。\n\n是否继续下载？',
     );
-    
+
     if (!confirmDownload) {
       throw new Error('用户取消下载');
     }
   }
-  
+
   return createBlobWriteStream(filename);
 }
 

@@ -1,13 +1,12 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 'use client';
 
 import { Check, ChevronDown, ExternalLink, X } from 'lucide-react';
 import { memo, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 
-import { UserEmbyConfig } from './UserEmbyConfig';
 import { useEmbyConfigQuery } from '@/hooks/useUserMenuQueries';
+
+import { UserEmbyConfig } from './UserEmbyConfig';
 
 interface SettingsPanelProps {
   isOpen: boolean;

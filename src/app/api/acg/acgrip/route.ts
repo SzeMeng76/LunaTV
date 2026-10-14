@@ -1,12 +1,29 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+import { XMLParser } from 'fast-xml-parser';
 import { NextRequest, NextResponse } from 'next/server';
-import { parseStringPromise } from 'xml2js';
 
 import { getAuthInfoFromCookie } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { DEFAULT_USER_AGENT } from '@/lib/user-agent';
 
 export const runtime = 'nodejs';
+
+const parser = new XMLParser({
+  ignoreAttributes: false,
+  attributeNamePrefix: '@_',
+  textNodeName: '_',
+});
+
+const asArray = (value: any): any[] =>
+  Array.isArray(value) ? value : value == null ? [] : [value];
+
+const pickText = (value: any): string => {
+  if (value === undefined || value === null) return '';
+  const first = Array.isArray(value) ? value[0] : value;
+  if (first === undefined || first === null) return '';
+  if (typeof first === 'object')
+    return String(first._ ?? first['@_url'] ?? first['@_href'] ?? '');
+  return String(first);
+};
 
 /**
  * POST /api/acg/acgrip
@@ -25,7 +42,7 @@ export async function POST(req: NextRequest) {
     if (!keyword || typeof keyword !== 'string') {
       return NextResponse.json(
         { error: '搜索关键词不能为空' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -33,7 +50,7 @@ export async function POST(req: NextRequest) {
     if (!trimmedKeyword) {
       return NextResponse.json(
         { error: '搜索关键词不能为空' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -42,7 +59,7 @@ export async function POST(req: NextRequest) {
     if (isNaN(pageNum) || pageNum < 1) {
       return NextResponse.json(
         { error: '页码必须是大于0的整数' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -56,16 +73,20 @@ export async function POST(req: NextRequest) {
     try {
       const cached = await db.getCache(cacheKey);
       if (cached) {
-        console.log(`✅ ACG.RIP 搜索缓存命中: "${trimmedKeyword}" 第${pageNum}页`);
+        console.log(
+          `✅ ACG.RIP 搜索缓存命中: "${trimmedKeyword}" 第${pageNum}页`,
+        );
         return NextResponse.json({
           ...cached,
           fromCache: true,
           cacheSource: 'database',
-          cacheTimestamp: new Date().toISOString()
+          cacheTimestamp: new Date().toISOString(),
         });
       }
 
-      console.log(`❌ ACG.RIP 搜索缓存未命中: "${trimmedKeyword}" 第${pageNum}页`);
+      console.log(
+        `❌ ACG.RIP 搜索缓存未命中: "${trimmedKeyword}" 第${pageNum}页`,
+      );
     } catch (cacheError) {
       console.warn('ACG.RIP 搜索缓存读取失败:', cacheError);
       // 缓存失败不影响主流程，继续执行
@@ -87,9 +108,9 @@ export async function POST(req: NextRequest) {
     const xmlData = await response.text();
 
     // 解析 XML
-    const parsed = await parseStringPromise(xmlData);
+    const parsed = parser.parse(xmlData);
 
-    if (!parsed?.rss?.channel?.[0]?.item) {
+    if (!parsed?.rss?.channel?.item) {
       return NextResponse.json({
         keyword: trimmedKeyword,
         page: pageNum,
@@ -98,29 +119,32 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const items = parsed.rss.channel[0].item;
+    const items = asArray(parsed.rss.channel.item);
 
     // 转换为标准格式
     const results = items.map((item: any) => {
-      const description = item.description?.[0] || '';
+      const description = pickText(item.description);
 
       // 提取描述中的图片（如果有）
       let images: string[] = [];
       if (description) {
         const imgMatches = description.match(/src="([^"]+)"/g);
         if (imgMatches) {
-          images = imgMatches.map((match: string) => {
-            const urlMatch = match.match(/src="([^"]+)"/);
-            return urlMatch ? urlMatch[1] : '';
-          }).filter(Boolean);
+          images = imgMatches
+            .map((match: string) => {
+              const urlMatch = match.match(/src="([^"]+)"/);
+              return urlMatch ? urlMatch[1] : '';
+            })
+            .filter(Boolean);
         }
       }
 
-      const title = item.title?.[0] || '';
-      const link = item.link?.[0] || '';
-      const guid = item.guid?.[0] || link || `${title}-${item.pubDate?.[0] || ''}`;
-      const pubDate = item.pubDate?.[0] || '';
-      const torrentUrl = item.enclosure?.[0]?.$?.url || '';
+      const title = pickText(item.title);
+      const link = pickText(item.link);
+      const guid =
+        pickText(item.guid) || link || `${title}-${pickText(item.pubDate)}`;
+      const pubDate = pickText(item.pubDate);
+      const torrentUrl = pickText(asArray(item.enclosure)[0]?.['@_url']);
 
       return {
         title,
@@ -143,7 +167,9 @@ export async function POST(req: NextRequest) {
     // 保存到缓存
     try {
       await db.setCache(cacheKey, responseData, ACG_CACHE_TIME);
-      console.log(`💾 ACG.RIP 搜索结果已缓存: "${trimmedKeyword}" 第${pageNum}页 - ${results.length} 个结果, TTL: ${ACG_CACHE_TIME}s`);
+      console.log(
+        `💾 ACG.RIP 搜索结果已缓存: "${trimmedKeyword}" 第${pageNum}页 - ${results.length} 个结果, TTL: ${ACG_CACHE_TIME}s`,
+      );
     } catch (cacheError) {
       console.warn('ACG.RIP 搜索缓存保存失败:', cacheError);
     }
@@ -153,7 +179,7 @@ export async function POST(req: NextRequest) {
     console.error('ACG.RIP 搜索失败:', error);
     return NextResponse.json(
       { error: error.message || '搜索失败' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

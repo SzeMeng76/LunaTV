@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, no-console */
+/* eslint-disable no-console */
 
 export interface BangumiCalendarData {
   weekday: {
@@ -42,7 +42,7 @@ export async function GetBangumiCalendarData(): Promise<BangumiCalendarData[]> {
     const response = await fetch(apiUrl, {
       headers: {
         'User-Agent': 'LunaTV/1.0 (https://github.com/yourusername/LunaTV)',
-        'Accept': 'application/json',
+        Accept: 'application/json',
       },
       next: {
         revalidate: 300,

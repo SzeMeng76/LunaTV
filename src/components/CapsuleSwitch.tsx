@@ -17,7 +17,7 @@ const CapsuleSwitch: React.FC<CapsuleSwitchProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const buttonRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const [indicatorStyle, setIndicatorStyle] = useState<{
+  const [, setIndicatorStyle] = useState<{
     left: number;
     width: number;
   }>({ left: 0, width: 0 });
@@ -66,26 +66,26 @@ const CapsuleSwitch: React.FC<CapsuleSwitchProps> = ({
         className || ''
       }`}
     >
-        {options.map((opt, index) => {
-          const isActive = active === opt.value;
-          return (
-            <button
-              key={opt.value}
-              ref={(el) => {
-                buttonRefs.current[index] = el;
-              }}
-              onClick={() => onChange(opt.value)}
-              className={`relative z-10 w-16 px-3 py-1 text-xs sm:w-20 sm:py-2 sm:text-sm rounded-full font-bold transition-all duration-200 cursor-pointer ${
-                isActive
-                  ? 'bg-emerald-600 text-white dark:bg-emerald-500 shadow-md'
-                  : 'text-emerald-700 hover:text-emerald-900 hover:bg-emerald-200/50 dark:text-emerald-300 dark:hover:text-emerald-100 dark:hover:bg-emerald-700/30'
-              }`}
-            >
-              {opt.label}
-            </button>
-          );
-        })}
-      </div>
+      {options.map((opt, index) => {
+        const isActive = active === opt.value;
+        return (
+          <button
+            key={opt.value}
+            ref={(el) => {
+              buttonRefs.current[index] = el;
+            }}
+            onClick={() => onChange(opt.value)}
+            className={`relative z-10 w-16 px-3 py-1 text-xs sm:w-20 sm:py-2 sm:text-sm rounded-full font-bold transition-all duration-200 cursor-pointer ${
+              isActive
+                ? 'bg-emerald-600 text-white dark:bg-emerald-500 shadow-md'
+                : 'text-emerald-700 hover:text-emerald-900 hover:bg-emerald-200/50 dark:text-emerald-300 dark:hover:text-emerald-100 dark:hover:bg-emerald-700/30'
+            }`}
+          >
+            {opt.label}
+          </button>
+        );
+      })}
+    </div>
   );
 };
 

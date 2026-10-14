@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
       .map((s) => ({ key: s.key, name: s.name, api: s.api }));
 
     return NextResponse.json({ sources });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: '获取源列表失败' }, { status: 500 });
   }
 }

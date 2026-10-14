@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+
 import { loadedImageUrls } from '@/lib/imageCache';
 
 /**
@@ -39,7 +40,7 @@ export function useImagePreload(imageUrls: string[], enabled = true) {
 
       // Check if already exists in DOM using safe CSS.escape
       const existing = document.head.querySelector(
-        `link[rel="preload"][href="${CSS.escape(cleanUrl)}"]`
+        `link[rel="preload"][href="${CSS.escape(cleanUrl)}"]`,
       );
       if (existing) {
         preloadedUrls.add(cleanUrl);
@@ -53,7 +54,9 @@ export function useImagePreload(imageUrls: string[], enabled = true) {
       // Set fetch priority to low (not blocking visible content)
       (link as any).fetchPriority = 'low';
       // Write into shared cache when preload completes so VideoCard skips skeleton
-      link.onload = () => { loadedImageUrls.add(cleanUrl); };
+      link.onload = () => {
+        loadedImageUrls.add(cleanUrl);
+      };
 
       document.head.appendChild(link);
       addedLinksRef.current.push(link);

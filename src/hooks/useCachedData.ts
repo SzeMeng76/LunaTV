@@ -21,7 +21,8 @@
 
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+
 import { globalCache } from '@/lib/unified-cache';
 
 interface UseCachedDataOptions<T> {
@@ -143,7 +144,9 @@ export function useCachedData<T>({
       const thisRequestId = ++requestIdRef.current;
       currentRequestId.current = thisRequestId;
 
-      console.log(`[useCachedData] Fetching: ${cacheKey} (requestId: ${thisRequestId})`);
+      console.log(
+        `[useCachedData] Fetching: ${cacheKey} (requestId: ${thisRequestId})`,
+      );
 
       if (isMountedRef.current) {
         setLoading(true);
@@ -157,7 +160,9 @@ export function useCachedData<T>({
 
         // 4. 竞态检测：只有最新的请求结果才生效
         if (currentRequestId.current !== thisRequestId) {
-          console.log(`[useCachedData] Stale request detected, ignoring (requestId: ${thisRequestId})`);
+          console.log(
+            `[useCachedData] Stale request detected, ignoring (requestId: ${thisRequestId})`,
+          );
           return;
         }
 
@@ -188,7 +193,7 @@ export function useCachedData<T>({
         }
       }
     },
-    [cacheKey, fetchFn, ttl, enableCache]
+    [cacheKey, fetchFn, ttl, enableCache],
   );
 
   /**
@@ -212,7 +217,7 @@ export function useCachedData<T>({
         fetchData(ignoreCache);
       }, debounceMs);
     },
-    [fetchData, debounceMs]
+    [fetchData, debounceMs],
   );
 
   /**

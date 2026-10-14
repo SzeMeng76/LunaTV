@@ -1,8 +1,12 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 'use client';
 
-import { AlertCircle, CheckCircle, ExternalLink, Info, Users } from 'lucide-react';
+import {
+  AlertCircle,
+  CheckCircle,
+  ExternalLink,
+  Info,
+  Users,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { AdminConfig } from '@/lib/admin.types';
@@ -28,8 +32,14 @@ interface ServerStats {
 const WatchRoomConfig = ({ config, refreshConfig }: WatchRoomConfigProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [message, setMessage] = useState<{
+    type: 'success' | 'error';
+    text: string;
+  } | null>(null);
+  const [testResult, setTestResult] = useState<{
+    success: boolean;
+    message: string;
+  } | null>(null);
   const [stats, setStats] = useState<ServerStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
   const [statsError, setStatsError] = useState<string | null>(null);
@@ -129,13 +139,13 @@ const WatchRoomConfig = ({ config, refreshConfig }: WatchRoomConfigProps) => {
           enabled: settings.enabled,
           serverUrl: settings.serverUrl.trim(),
           authKey: settings.authKey.trim(),
-        }
+        },
       };
 
       const response = await fetch('/api/admin/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatedConfig)
+        body: JSON.stringify(updatedConfig),
       });
 
       // 检查响应是否有内容
@@ -234,8 +244,16 @@ const WatchRoomConfig = ({ config, refreshConfig }: WatchRoomConfigProps) => {
             <ul className='space-y-1 list-disc list-inside'>
               <li>观影室需要独立的 WebSocket 服务器支持，必须单独部署</li>
               <li>推荐部署平台：Fly.io（免费）或 Railway（简单）</li>
-              <li>服务器地址格式：<code className='px-1 py-0.5 bg-blue-100 dark:bg-blue-800 rounded'>https://your-server.com</code></li>
-              <li><strong>认证密钥</strong>：部署服务器时会要求设置 AUTH_KEY（强制），这里填写相同的密钥即可连接</li>
+              <li>
+                服务器地址格式：
+                <code className='px-1 py-0.5 bg-blue-100 dark:bg-blue-800 rounded'>
+                  https://your-server.com
+                </code>
+              </li>
+              <li>
+                <strong>认证密钥</strong>：部署服务器时会要求设置
+                AUTH_KEY（强制），这里填写相同的密钥即可连接
+              </li>
               <li>建议使用随机生成的强密码作为 AUTH_KEY</li>
             </ul>
             <a
@@ -257,10 +275,17 @@ const WatchRoomConfig = ({ config, refreshConfig }: WatchRoomConfigProps) => {
           <div className='text-sm text-yellow-800 dark:text-yellow-200'>
             <p className='font-medium mb-2'>⚠️ 重要提示：多站点共享</p>
             <ul className='space-y-1 list-disc list-inside'>
-              <li><strong>如果多个 LunaTV 站点使用同一个观影室服务器，所有站点将共享房间列表</strong></li>
+              <li>
+                <strong>
+                  如果多个 LunaTV
+                  站点使用同一个观影室服务器，所有站点将共享房间列表
+                </strong>
+              </li>
               <li>站点A创建的房间，站点B的用户也能看到和加入</li>
               <li>这可能导致用户困惑，建议每个站点使用独立的观影室服务器</li>
-              <li>如果需要跨站点观影，可以有意共用服务器（但需在房间名称中注明站点）</li>
+              <li>
+                如果需要跨站点观影，可以有意共用服务器（但需在房间名称中注明站点）
+              </li>
             </ul>
           </div>
         </div>
@@ -272,7 +297,9 @@ const WatchRoomConfig = ({ config, refreshConfig }: WatchRoomConfigProps) => {
           <input
             type='checkbox'
             checked={settings.enabled}
-            onChange={(e) => setSettings({ ...settings, enabled: e.target.checked })}
+            onChange={(e) =>
+              setSettings({ ...settings, enabled: e.target.checked })
+            }
             className='sr-only peer'
           />
           <div className="w-11 h-6 bg-gray-300 dark:bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
@@ -290,7 +317,9 @@ const WatchRoomConfig = ({ config, refreshConfig }: WatchRoomConfigProps) => {
         <input
           type='url'
           value={settings.serverUrl}
-          onChange={(e) => setSettings({ ...settings, serverUrl: e.target.value })}
+          onChange={(e) =>
+            setSettings({ ...settings, serverUrl: e.target.value })
+          }
           className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:border-transparent'
           placeholder='https://your-watch-room-server.fly.dev'
           disabled={!settings.enabled}
@@ -308,7 +337,9 @@ const WatchRoomConfig = ({ config, refreshConfig }: WatchRoomConfigProps) => {
         <input
           type='password'
           value={settings.authKey}
-          onChange={(e) => setSettings({ ...settings, authKey: e.target.value })}
+          onChange={(e) =>
+            setSettings({ ...settings, authKey: e.target.value })
+          }
           className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:border-transparent'
           placeholder='your-secret-auth-key'
           disabled={!settings.enabled}
@@ -329,11 +360,13 @@ const WatchRoomConfig = ({ config, refreshConfig }: WatchRoomConfigProps) => {
             {isTesting ? '测试中...' : '测试连接'}
           </button>
           {testResult && (
-            <div className={`mt-3 p-3 rounded-lg flex items-start gap-2 ${
-              testResult.success
-                ? 'bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-800'
-                : 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200 border border-red-200 dark:border-red-800'
-            }`}>
+            <div
+              className={`mt-3 p-3 rounded-lg flex items-start gap-2 ${
+                testResult.success
+                  ? 'bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-800'
+                  : 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200 border border-red-200 dark:border-red-800'
+              }`}
+            >
               {testResult.success ? (
                 <CheckCircle className='w-5 h-5 shrink-0' />
               ) : (
@@ -347,11 +380,13 @@ const WatchRoomConfig = ({ config, refreshConfig }: WatchRoomConfigProps) => {
 
       {/* 消息提示 */}
       {message && (
-        <div className={`flex items-center gap-2 p-4 rounded-lg ${
-          message.type === 'success'
-            ? 'bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-800'
-            : 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200 border border-red-200 dark:border-red-800'
-        }`}>
+        <div
+          className={`flex items-center gap-2 p-4 rounded-lg ${
+            message.type === 'success'
+              ? 'bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-800'
+              : 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200 border border-red-200 dark:border-red-800'
+          }`}
+        >
           {message.type === 'success' ? (
             <CheckCircle className='w-5 h-5 shrink-0' />
           ) : (
@@ -387,12 +422,16 @@ const WatchRoomConfig = ({ config, refreshConfig }: WatchRoomConfigProps) => {
           <h4 className='text-md font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2'>
             <Users className='w-5 h-5 text-indigo-500' />
             服务器统计信息
-            <span className='text-xs font-normal text-gray-500 dark:text-gray-400'>(每30秒自动刷新)</span>
+            <span className='text-xs font-normal text-gray-500 dark:text-gray-400'>
+              (每30秒自动刷新)
+            </span>
           </h4>
 
           {statsLoading && !stats && (
             <div className='flex items-center justify-center py-8'>
-              <div className='text-sm text-gray-500 dark:text-gray-400'>加载统计信息...</div>
+              <div className='text-sm text-gray-500 dark:text-gray-400'>
+                加载统计信息...
+              </div>
             </div>
           )}
 
@@ -440,12 +479,15 @@ const WatchRoomConfig = ({ config, refreshConfig }: WatchRoomConfigProps) => {
                     {stats.rooms.map((room) => {
                       const createdTime = new Date(room.createdAt);
                       const now = new Date();
-                      const diffMinutes = Math.floor((now.getTime() - createdTime.getTime()) / 60000);
-                      const timeText = diffMinutes < 60
-                        ? `${diffMinutes}分钟前`
-                        : diffMinutes < 1440
-                        ? `${Math.floor(diffMinutes / 60)}小时前`
-                        : `${Math.floor(diffMinutes / 1440)}天前`;
+                      const diffMinutes = Math.floor(
+                        (now.getTime() - createdTime.getTime()) / 60000,
+                      );
+                      const timeText =
+                        diffMinutes < 60
+                          ? `${diffMinutes}分钟前`
+                          : diffMinutes < 1440
+                            ? `${Math.floor(diffMinutes / 60)}小时前`
+                            : `${Math.floor(diffMinutes / 1440)}天前`;
 
                       return (
                         <div

@@ -10,7 +10,7 @@
  * - 替代 watching-updates.ts 的手动缓存实现
  */
 
-import { useQuery, queryOptions } from '@tanstack/react-query';
+import { queryOptions, useQuery } from '@tanstack/react-query';
 
 // ============================================================================
 // Types
@@ -109,7 +109,7 @@ export function useSourceMapQuery(options?: { enabled?: boolean }) {
         throw new Error(`Failed to fetch sources: ${response.status}`);
       }
 
-      const sources = await response.json() as Source[];
+      const sources = (await response.json()) as Source[];
 
       // 构建 Map：name -> key, key -> key
       const sourceMap = new Map<string, string>();
@@ -152,7 +152,7 @@ export function useSourceMapQuery(options?: { enabled?: boolean }) {
  */
 export function useSourceByKeyQuery(
   sourceKey: string,
-  options?: { enabled?: boolean }
+  options?: { enabled?: boolean },
 ) {
   return useQuery({
     queryKey: ['sources', 'byKey', sourceKey] as const,
@@ -163,7 +163,7 @@ export function useSourceByKeyQuery(
         throw new Error(`Failed to fetch sources: ${response.status}`);
       }
 
-      const sources = await response.json() as Source[];
+      const sources = (await response.json()) as Source[];
 
       return sources.find((source) => source.key === sourceKey) || null;
     },

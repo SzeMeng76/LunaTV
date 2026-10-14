@@ -1,18 +1,37 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import { toast } from 'sonner';
-import { M3U8DownloadTask, parseM3U8, downloadM3U8Video, PauseResumeController, StreamSaverMode } from '@/lib/download';
+
 import type { DownloadProgress } from '@/lib/download';
-import { getBestStreamMode, detectStreamModeSupport, estimateServiceWorkerRisk, type StreamModeSupport } from '@/lib/download/stream-mode-detector';
 import {
-  getAllTasks,
-  saveTask,
+  downloadM3U8Video,
+  M3U8DownloadTask,
+  parseM3U8,
+  PauseResumeController,
+  StreamSaverMode,
+} from '@/lib/download';
+import {
   deleteTask as deleteTaskFromIDB,
-  updateTaskStatus,
+  getAllTasks,
   getTaskSegments,
   isStorageBucketsSupported,
+  saveTask,
+  updateTaskStatus,
 } from '@/lib/download/download-idb';
+import {
+  detectStreamModeSupport,
+  estimateServiceWorkerRisk,
+  getBestStreamMode,
+  type StreamModeSupport,
+} from '@/lib/download/stream-mode-detector';
 
 export interface DownloadSettings {
   concurrency: number; // 并发线程数
@@ -32,7 +51,7 @@ interface DownloadContextType {
     url: string,
     title: string,
     type?: 'TS' | 'MP4',
-    requestHeaders?: { referer?: string; origin?: string; userAgent?: string }
+    requestHeaders?: { referer?: string; origin?: string; userAgent?: string },
   ) => Promise<void>;
   startTask: (taskId: string, taskSnapshot?: M3U8DownloadTask) => Promise<void>;
   pauseTask: (taskId: string) => void;
@@ -41,17 +60,21 @@ interface DownloadContextType {
   getProgress: (taskId: string) => number;
 }
 
-const DownloadContext = createContext<DownloadContextType | undefined>(undefined);
+const DownloadContext = createContext<DownloadContextType | undefined>(
+  undefined,
+);
 
 export function DownloadProvider({ children }: { children: React.ReactNode }) {
   const [tasks, setTasks] = useState<M3U8DownloadTask[]>([]);
   const [showDownloadPanel, setShowDownloadPanel] = useState(false);
-  const [isRestoring, setIsRestoring] = useState(true);
-  const [streamModeSupport, setStreamModeSupport] = useState<StreamModeSupport>({
-    fileSystem: false,
-    serviceWorker: false,
-    blob: true,
-  });
+  const [, setIsRestoring] = useState(true);
+  const [streamModeSupport, setStreamModeSupport] = useState<StreamModeSupport>(
+    {
+      fileSystem: false,
+      serviceWorker: false,
+      blob: true,
+    },
+  );
 
   // 下载设置（从 localStorage 恢复或使用默认值）
   const [settings, setSettings] = useState<DownloadSettings>(() => {
@@ -91,7 +114,9 @@ export function DownloadProvider({ children }: { children: React.ReactNode }) {
 
       // 输出 Storage Buckets 支持情况
       if (isStorageBucketsSupported()) {
-        console.log('✅ Storage Buckets API enabled for optimized segment storage');
+        console.log(
+          '✅ Storage Buckets API enabled for optimized segment storage',
+        );
       }
     }
   }, []);
@@ -112,7 +137,9 @@ export function DownloadProvider({ children }: { children: React.ReactNode }) {
 
             // 状态标准化：未完成的任务统一设为 pause（参考 DecoTV 实现）
             const normalizedStatus =
-              stored.status === 'done' || stored.status === 'error' || stored.status === 'pause'
+              stored.status === 'done' ||
+              stored.status === 'error' ||
+              stored.status === 'pause'
                 ? stored.status
                 : 'pause';
 
@@ -125,13 +152,15 @@ export function DownloadProvider({ children }: { children: React.ReactNode }) {
               finishNum: downloadedSegments.size,
               downloadIndex: downloadedSegments.size,
             };
-          })
+          }),
         );
 
         if (restoredTasks.length > 0) {
           setTasks(restoredTasks);
           // 不自动显示面板，保持用户上次的状态
-          console.log(`✅ 恢复了 ${restoredTasks.length} 个下载任务（面板状态已保留）`);
+          console.log(
+            `✅ 恢复了 ${restoredTasks.length} 个下载任务（面板状态已保留）`,
+          );
         }
       } catch (error) {
         console.error('恢复任务失败:', error);
@@ -151,10 +180,15 @@ export function DownloadProvider({ children }: { children: React.ReactNode }) {
   }, [settings]);
 
   // 存储每个任务的控制器和 AbortController
-  const taskControllers = useRef<Map<string, {
-    pauseController: PauseResumeController;
-    abortController: AbortController;
-  }>>(new Map());
+  const taskControllers = useRef<
+    Map<
+      string,
+      {
+        pauseController: PauseResumeController;
+        abortController: AbortController;
+      }
+    >
+  >(new Map());
 
   // 使用 ref 保存最新的 tasks，避免 stale closure 问题
   const tasksRef = useRef<M3U8DownloadTask[]>(tasks);
@@ -162,74 +196,22 @@ export function DownloadProvider({ children }: { children: React.ReactNode }) {
     tasksRef.current = tasks;
   }, [tasks]);
 
-  const updateTask = useCallback((taskId: string, updates: Partial<M3U8DownloadTask>) => {
-    setTasks(prev => prev.map(task =>
-      task.id === taskId ? { ...task, ...updates } : task
-    ));
-  }, []);
-
-  const createTask = useCallback(
-    async (
-      url: string,
-      title: string,
-      type: 'TS' | 'MP4' = 'TS',
-      requestHeaders?: { referer?: string; origin?: string; userAgent?: string }
-    ) => {
-      console.log('[DownloadContext] 创建下载任务:', title, url);
-      try {
-        // 解析 M3U8，传递请求头
-        console.log('[DownloadContext] 开始解析 M3U8...');
-        const m3u8Task = await parseM3U8(url, requestHeaders);
-        console.log('[DownloadContext] M3U8 解析成功，片段数:', m3u8Task.rangeDownload.targetSegment);
-
-        // Service Worker 模式在长视频/慢网络下有被浏览器终止导致下载不完整的风险
-        // 主动提醒用户，避免"进度显示100%但文件不完整"的静默失败
-        if (
-          settings.streamMode === 'service-worker' &&
-          estimateServiceWorkerRisk(m3u8Task.durationSecond, settings.concurrency)
-        ) {
-          toast.warning('当前下载模式可能导致长视频下载不完整', {
-            description: streamModeSupport.fileSystem
-              ? '浏览器会在约5分钟无活动后关闭下载通道，建议前往下载设置切换为"文件系统直写"模式'
-              : '浏览器会在约5分钟无活动后关闭下载通道，建议使用 Chrome/Edge 浏览器以获得更稳定的下载',
-            duration: 8000,
-          });
-        }
-
-        // 创建任务对象
-        const taskId = `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        const newTask: M3U8DownloadTask = {
-          ...m3u8Task,
-          id: taskId,
-          title,
-          type,
-          status: 'ready',
-        };
-
-        setTasks(prev => [...prev, newTask]);
-
-        // 保存到 IndexedDB
-        await saveTask(taskId, m3u8Task, 'ready');
-        console.log('[DownloadContext] 任务已保存到 IndexedDB');
-
-        // 自动开始下载（传递 task snapshot 避免 stale closure）
-        console.log('[DownloadContext] 开始自动下载...');
-        await startTask(taskId, newTask);
-        console.log('[DownloadContext] startTask 调用完成');
-
-        // 注意：不在这里自动打开下载面板，由调用方控制
-      } catch (error) {
-        console.error('[DownloadContext] 创建下载任务失败:', error);
-        throw error;
-      }
+  const updateTask = useCallback(
+    (taskId: string, updates: Partial<M3U8DownloadTask>) => {
+      setTasks((prev) =>
+        prev.map((task) =>
+          task.id === taskId ? { ...task, ...updates } : task,
+        ),
+      );
     },
-    [settings.streamMode, settings.concurrency, streamModeSupport.fileSystem]
+    [],
   );
 
   const startTask = useCallback(
     async (taskId: string, taskSnapshot?: M3U8DownloadTask) => {
       console.log('[DownloadContext] startTask 被调用, taskId:', taskId);
-      const task = taskSnapshot || tasksRef.current.find(t => t.id === taskId);
+      const task =
+        taskSnapshot || tasksRef.current.find((t) => t.id === taskId);
       if (!task) {
         console.error('[DownloadContext] 找不到任务:', taskId);
         return;
@@ -271,7 +253,7 @@ export function DownloadProvider({ children }: { children: React.ReactNode }) {
           settings.streamMode, // 使用设置的下载模式
           settings.maxRetries, // 使用设置的重试次数
           undefined, // completeStreamRef（暂不使用）
-          taskId // 传递 taskId 用于保存片段到 IndexedDB
+          taskId, // 传递 taskId 用于保存片段到 IndexedDB
         );
 
         // 下载完成
@@ -294,7 +276,75 @@ export function DownloadProvider({ children }: { children: React.ReactNode }) {
         console.log('[DownloadContext] 控制器已清理');
       }
     },
-    [updateTask, settings]
+    [updateTask, settings],
+  );
+
+  const createTask = useCallback(
+    async (
+      url: string,
+      title: string,
+      type: 'TS' | 'MP4' = 'TS',
+      requestHeaders?: {
+        referer?: string;
+        origin?: string;
+        userAgent?: string;
+      },
+    ) => {
+      console.log('[DownloadContext] 创建下载任务:', title, url);
+      try {
+        // 解析 M3U8，传递请求头
+        console.log('[DownloadContext] 开始解析 M3U8...');
+        const m3u8Task = await parseM3U8(url, requestHeaders);
+        console.log(
+          '[DownloadContext] M3U8 解析成功，片段数:',
+          m3u8Task.rangeDownload.targetSegment,
+        );
+
+        // Service Worker 模式在长视频/慢网络下有被浏览器终止导致下载不完整的风险
+        // 主动提醒用户，避免"进度显示100%但文件不完整"的静默失败
+        if (
+          settings.streamMode === 'service-worker' &&
+          estimateServiceWorkerRisk(
+            m3u8Task.durationSecond,
+            settings.concurrency,
+          )
+        ) {
+          toast.warning('当前下载模式可能导致长视频下载不完整', {
+            description: streamModeSupport.fileSystem
+              ? '浏览器会在约5分钟无活动后关闭下载通道，建议前往下载设置切换为"文件系统直写"模式'
+              : '浏览器会在约5分钟无活动后关闭下载通道，建议使用 Chrome/Edge 浏览器以获得更稳定的下载',
+            duration: 8000,
+          });
+        }
+
+        // 创建任务对象
+        const taskId = `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const newTask: M3U8DownloadTask = {
+          ...m3u8Task,
+          id: taskId,
+          title,
+          type,
+          status: 'ready',
+        };
+
+        setTasks((prev) => [...prev, newTask]);
+
+        // 保存到 IndexedDB
+        await saveTask(taskId, m3u8Task, 'ready');
+        console.log('[DownloadContext] 任务已保存到 IndexedDB');
+
+        // 自动开始下载（传递 task snapshot 避免 stale closure）
+        console.log('[DownloadContext] 开始自动下载...');
+        await startTask(taskId, newTask);
+        console.log('[DownloadContext] startTask 调用完成');
+
+        // 注意：不在这里自动打开下载面板，由调用方控制
+      } catch (error) {
+        console.error('[DownloadContext] 创建下载任务失败:', error);
+        throw error;
+      }
+    },
+    [settings.streamMode, settings.concurrency, streamModeSupport.fileSystem],
   );
 
   const pauseTask = useCallback(
@@ -306,29 +356,26 @@ export function DownloadProvider({ children }: { children: React.ReactNode }) {
         await updateTaskStatus(taskId, 'pause');
       }
     },
-    [updateTask]
+    [updateTask],
   );
 
-  const cancelTask = useCallback(
-    async (taskId: string) => {
-      const controllers = taskControllers.current.get(taskId);
-      if (controllers) {
-        controllers.abortController.abort();
-        taskControllers.current.delete(taskId);
-      }
+  const cancelTask = useCallback(async (taskId: string) => {
+    const controllers = taskControllers.current.get(taskId);
+    if (controllers) {
+      controllers.abortController.abort();
+      taskControllers.current.delete(taskId);
+    }
 
-      // 从任务列表中移除
-      setTasks(prev => prev.filter(task => task.id !== taskId));
+    // 从任务列表中移除
+    setTasks((prev) => prev.filter((task) => task.id !== taskId));
 
-      // 从 IndexedDB 中删除
-      await deleteTaskFromIDB(taskId);
-    },
-    []
-  );
+    // 从 IndexedDB 中删除
+    await deleteTaskFromIDB(taskId);
+  }, []);
 
   const retryFailedSegments = useCallback(
     async (taskId: string) => {
-      const task = tasksRef.current.find(t => t.id === taskId);
+      const task = tasksRef.current.find((t) => t.id === taskId);
       if (!task) return;
 
       // 重置错误计数
@@ -337,18 +384,21 @@ export function DownloadProvider({ children }: { children: React.ReactNode }) {
       // 重新开始下载
       await startTask(taskId);
     },
-    [updateTask, startTask]
+    [updateTask, startTask],
   );
 
-  const getProgress = useCallback((taskId: string): number => {
-    const task = tasks.find(t => t.id === taskId);
-    if (!task) return 0;
+  const getProgress = useCallback(
+    (taskId: string): number => {
+      const task = tasks.find((t) => t.id === taskId);
+      if (!task) return 0;
 
-    const total = task.rangeDownload.targetSegment;
-    if (total === 0) return 0;
+      const total = task.rangeDownload.targetSegment;
+      if (total === 0) return 0;
 
-    return (task.finishNum / total) * 100;
-  }, [tasks]);
+      return (task.finishNum / total) * 100;
+    },
+    [tasks],
+  );
 
   return (
     <DownloadContext.Provider

@@ -10,7 +10,7 @@ export const runtime = 'nodejs';
  * 用于检查 Cloudflare Worker 代理是否正常工作
  * 返回当前代理配置状态和健康状况
  */
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const config = await getConfig();
 
@@ -18,10 +18,12 @@ export async function GET(request: NextRequest) {
     const videoProxyConfig = config.VideoProxyConfig;
 
     // 测试 Worker 连通性
-    const testWorkerHealth = async (proxyUrl: string): Promise<{
+    const testWorkerHealth = async (
+      proxyUrl: string,
+    ): Promise<{
       healthy: boolean;
       responseTime?: number;
-      error?: string
+      error?: string;
     }> => {
       try {
         const startTime = Date.now();
@@ -39,7 +41,7 @@ export async function GET(request: NextRequest) {
       } catch (error: any) {
         return {
           healthy: false,
-          error: error.message || 'Connection failed'
+          error: error.message || 'Connection failed',
         };
       }
     };
@@ -54,30 +56,35 @@ export async function GET(request: NextRequest) {
         : Promise.resolve({ healthy: false, error: 'Not enabled' }),
     ]);
 
-    return NextResponse.json({
-      timestamp: new Date().toISOString(),
-      tvboxProxy: {
-        enabled: tvboxProxyConfig?.enabled ?? false,
-        proxyUrl: tvboxProxyConfig?.proxyUrl || null,
-        health: tvboxHealth,
+    return NextResponse.json(
+      {
+        timestamp: new Date().toISOString(),
+        tvboxProxy: {
+          enabled: tvboxProxyConfig?.enabled ?? false,
+          proxyUrl: tvboxProxyConfig?.proxyUrl || null,
+          health: tvboxHealth,
+        },
+        videoProxy: {
+          enabled: videoProxyConfig?.enabled ?? false,
+          proxyUrl: videoProxyConfig?.proxyUrl || null,
+          health: videoHealth,
+        },
       },
-      videoProxy: {
-        enabled: videoProxyConfig?.enabled ?? false,
-        proxyUrl: videoProxyConfig?.proxyUrl || null,
-        health: videoHealth,
+      {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-store', // 不缓存状态
+        },
       },
-    }, {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-store', // 不缓存状态
-      },
-    });
-
+    );
   } catch (error) {
-    return NextResponse.json({
-      error: 'Failed to check proxy status',
-      details: error instanceof Error ? error.message : String(error),
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: 'Failed to check proxy status',
+        details: error instanceof Error ? error.message : String(error),
+      },
+      { status: 500 },
+    );
   }
 }

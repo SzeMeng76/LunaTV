@@ -1,4 +1,4 @@
-/* eslint-disable no-console, @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion */
+/* eslint-disable no-console */
 
 import { createClient, RedisClientType } from 'redis';
 
@@ -8,10 +8,10 @@ import {
   ContentStat,
   EpisodeSkipConfig,
   Favorite,
-  Reminder,
   IStorage,
   PlayRecord,
   PlayStatsResult,
+  Reminder,
   UserPlayStat,
 } from './types';
 
@@ -427,7 +427,7 @@ export abstract class BaseRedisStorage implements IStorage {
           this.client.del(this.oidcSubKey(userInfo.oidcSub!)),
         );
       }
-    } catch (e) {
+    } catch {
       // 忽略错误，用户信息可能已被删除
     }
 
@@ -620,7 +620,7 @@ export abstract class BaseRedisStorage implements IStorage {
           const parsed = JSON.parse(userInfo.tags);
           parsedTags = Array.isArray(parsed) ? parsed : [parsed];
         }
-      } catch (e) {
+      } catch {
         // JSON 解析失败，可能是单个字符串值
         console.warn(`用户 ${userName} tags 解析失败，原始值:`, userInfo.tags);
         // 如果是逗号分隔的字符串
@@ -642,7 +642,7 @@ export abstract class BaseRedisStorage implements IStorage {
           const parsed = JSON.parse(userInfo.enabledApis);
           parsedApis = Array.isArray(parsed) ? parsed : [parsed];
         }
-      } catch (e) {
+      } catch {
         console.warn(`用户 ${userName} enabledApis 解析失败`);
         if (
           typeof userInfo.enabledApis === 'string' &&

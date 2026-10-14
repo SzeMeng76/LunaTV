@@ -15,13 +15,14 @@
  * - 乐观更新模式：立即更新 UI，失败时回滚
  */
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { UseMutationResult } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+
 import {
-  savePlayRecord,
-  deletePlayRecord,
   clearAllPlayRecords,
+  deletePlayRecord,
   type PlayRecord,
+  savePlayRecord,
 } from '@/lib/db.client';
 
 // ============================================================================
@@ -104,16 +105,21 @@ export function useSavePlayRecordMutation(): UseMutationResult<
       await queryClient.cancelQueries({ queryKey: ['playRecords'] });
 
       // 2. 保存旧数据用于回滚
-      const previousPlayRecords = queryClient.getQueryData<Record<string, PlayRecord>>(['playRecords']);
+      const previousPlayRecords = queryClient.getQueryData<
+        Record<string, PlayRecord>
+      >(['playRecords']);
 
       // 3. 立即更新缓存（乐观更新）
-      queryClient.setQueryData<Record<string, PlayRecord>>(['playRecords'], (old = {}) => {
-        const key = `${source}+${id}`;
-        return {
-          ...old,
-          [key]: record,
-        };
-      });
+      queryClient.setQueryData<Record<string, PlayRecord>>(
+        ['playRecords'],
+        (old = {}) => {
+          const key = `${source}+${id}`;
+          return {
+            ...old,
+            [key]: record,
+          };
+        },
+      );
 
       // 4. 返回上下文，用于 onError 回滚
       return { previousPlayRecords };
@@ -179,20 +185,25 @@ export function useDeletePlayRecordMutation(): UseMutationResult<
       await queryClient.cancelQueries({ queryKey: ['playRecords'] });
 
       // 2. 保存旧数据
-      const previousPlayRecords = queryClient.getQueryData<Record<string, PlayRecord>>(['playRecords']);
+      const previousPlayRecords = queryClient.getQueryData<
+        Record<string, PlayRecord>
+      >(['playRecords']);
 
       // 3. 立即从缓存中删除
       const key = `${source}+${id}`;
-      queryClient.setQueryData<Record<string, PlayRecord>>(['playRecords'], (old = {}) => {
-        const newRecords = { ...old };
-        delete newRecords[key];
-        return newRecords;
-      });
+      queryClient.setQueryData<Record<string, PlayRecord>>(
+        ['playRecords'],
+        (old = {}) => {
+          const newRecords = { ...old };
+          delete newRecords[key];
+          return newRecords;
+        },
+      );
 
       // 同时更新 continueWatching 缓存，避免事件驱动的 invalidate 覆盖乐观更新
       queryClient.setQueryData<(PlayRecord & { key: string })[]>(
         ['playRecords', 'continueWatching'],
-        (old = []) => old.filter(record => record.key !== key)
+        (old = []) => old.filter((record) => record.key !== key),
       );
 
       return { previousPlayRecords };
@@ -254,7 +265,9 @@ export function useClearPlayRecordsMutation(): UseMutationResult<
       await queryClient.cancelQueries({ queryKey: ['playRecords'] });
 
       // 2. 保存旧数据
-      const previousPlayRecords = queryClient.getQueryData<Record<string, PlayRecord>>(['playRecords']);
+      const previousPlayRecords = queryClient.getQueryData<
+        Record<string, PlayRecord>
+      >(['playRecords']);
 
       // 3. 立即清空所有 playRecords 相关缓存（乐观更新）
       //    必须同时更新 ['playRecords'] 和 ['playRecords', 'continueWatching']
@@ -272,13 +285,15 @@ export function useClearPlayRecordsMutation(): UseMutationResult<
       if (context?.previousPlayRecords) {
         queryClient.setQueryData(['playRecords'], context.previousPlayRecords);
         // 回滚 continueWatching 缓存
-        const recordsArray = Object.entries(context.previousPlayRecords).map(([key, record]) => ({
-          ...record,
-          key,
-        }));
+        const recordsArray = Object.entries(context.previousPlayRecords).map(
+          ([key, record]) => ({
+            ...record,
+            key,
+          }),
+        );
         queryClient.setQueryData(
           ['playRecords', 'continueWatching'],
-          recordsArray.sort((a, b) => b.save_time - a.save_time)
+          recordsArray.sort((a, b) => b.save_time - a.save_time),
         );
       }
     },

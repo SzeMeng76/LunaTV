@@ -1,5 +1,5 @@
-import { NextResponse } from 'next/server';
 import crypto from 'crypto';
+import { NextResponse } from 'next/server';
 
 import { db } from '@/lib/db';
 import { setTelegramToken } from '@/lib/telegram-tokens';
@@ -10,35 +10,38 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: Request) {
   try {
     const { telegramUsername } = await request.json();
-    console.log('[Magic Link] Received request for username:', telegramUsername);
+    console.log(
+      '[Magic Link] Received request for username:',
+      telegramUsername,
+    );
 
     if (!telegramUsername || typeof telegramUsername !== 'string') {
       console.log('[Magic Link] Invalid username');
       return NextResponse.json(
         { error: '请提供有效的 Telegram 用户名' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // 获取管理员配置
     const config = await db.getAdminConfig();
     const telegramConfig = config?.TelegramAuthConfig;
-    console.log('[Magic Link] Config loaded, enabled:', telegramConfig?.enabled);
+    console.log(
+      '[Magic Link] Config loaded, enabled:',
+      telegramConfig?.enabled,
+    );
 
     if (!telegramConfig?.enabled) {
       console.log('[Magic Link] Telegram login not enabled');
       return NextResponse.json(
         { error: 'Telegram 登录未启用' },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
     if (!telegramConfig.botToken) {
       console.log('[Magic Link] Bot token not configured');
-      return NextResponse.json(
-        { error: 'Bot Token 未配置' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Bot Token 未配置' }, { status: 500 });
     }
 
     // 生成随机 token
@@ -47,7 +50,8 @@ export async function POST(request: Request) {
 
     // 获取当前请求的域名
     const protocol = request.headers.get('x-forwarded-proto') || 'https';
-    const host = request.headers.get('host') || request.headers.get('x-forwarded-host');
+    const host =
+      request.headers.get('host') || request.headers.get('x-forwarded-host');
     const baseUrl = `${protocol}://${host}`;
 
     // 存储 token 到数据库
@@ -65,7 +69,7 @@ export async function POST(request: Request) {
     try {
       const webhookUrl = `${baseUrl}/api/telegram/webhook`;
       const infoResponse = await fetch(
-        `https://api.telegram.org/bot${telegramConfig.botToken}/getWebhookInfo`
+        `https://api.telegram.org/bot${telegramConfig.botToken}/getWebhookInfo`,
       );
       const info = await infoResponse.json();
 
@@ -80,7 +84,7 @@ export async function POST(request: Request) {
               url: webhookUrl,
               allowed_updates: ['message'],
             }),
-          }
+          },
         );
         console.log('[Magic Link] Webhook set successfully');
       }
@@ -105,7 +109,7 @@ export async function POST(request: Request) {
     console.error('Magic link send error:', error);
     return NextResponse.json(
       { error: '服务器错误，请稍后重试' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

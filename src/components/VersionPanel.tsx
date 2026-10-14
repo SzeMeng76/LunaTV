@@ -1,4 +1,4 @@
-/* eslint-disable no-console,react-hooks/exhaustive-deps */
+/* eslint-disable no-console */
 
 'use client';
 
@@ -70,47 +70,6 @@ export const VersionPanel: React.FC<VersionPanelProps> = ({
     }
   }, [isOpen]);
 
-  // 获取远程变更日志
-  useEffect(() => {
-    if (isOpen) {
-      fetchRemoteChangelog();
-    }
-  }, [isOpen]);
-
-  // 获取远程变更日志
-  const fetchRemoteChangelog = async () => {
-    try {
-      // 添加时间戳参数避免浏览器缓存
-      const timestamp = Date.now();
-      const response = await fetch(
-        `https://raw.githubusercontent.com/SzeMeng76/LunaTV/refs/heads/main/CHANGELOG?_t=${timestamp}`
-      );
-      if (response.ok) {
-        const content = await response.text();
-        const parsed = parseChangelog(content);
-        setRemoteChangelog(parsed);
-
-        // 检查是否有更新
-        if (parsed.length > 0) {
-          const latest = parsed[0];
-          setLatestVersion(latest.version);
-          setIsHasUpdate(
-            compareVersions(latest.version) === UpdateStatus.HAS_UPDATE
-          );
-        }
-      } else {
-        console.error(
-          '获取远程变更日志失败:',
-          response.status,
-          response.statusText
-        );
-      }
-    } catch (error) {
-      console.error('获取远程变更日志失败:', error);
-    }
-  };
-
-  // 解析变更日志格式
   const parseChangelog = (content: string): RemoteChangelogEntry[] => {
     const lines = content.split('\n');
     const versions: RemoteChangelogEntry[] = [];
@@ -123,7 +82,7 @@ export const VersionPanel: React.FC<VersionPanelProps> = ({
 
       // 匹配版本行: ## [X.Y.Z] - YYYY-MM-DD
       const versionMatch = trimmedLine.match(
-        /^## \[([\d.]+)\] - (\d{4}-\d{2}-\d{2})$/
+        /^## \[([\d.]+)\] - (\d{4}-\d{2}-\d{2})$/,
       );
       if (versionMatch) {
         if (currentVersion) {
@@ -178,23 +137,64 @@ export const VersionPanel: React.FC<VersionPanelProps> = ({
     return versions;
   };
 
+  // 获取远程变更日志
+  useEffect(() => {
+    const fetchRemoteChangelog = async () => {
+      try {
+        // 添加时间戳参数避免浏览器缓存
+        const timestamp = Date.now();
+        const response = await fetch(
+          `https://raw.githubusercontent.com/SzeMeng76/LunaTV/refs/heads/main/CHANGELOG?_t=${timestamp}`,
+        );
+        if (response.ok) {
+          const content = await response.text();
+          const parsed = parseChangelog(content);
+          setRemoteChangelog(parsed);
+
+          // 检查是否有更新
+          if (parsed.length > 0) {
+            const latest = parsed[0];
+            setLatestVersion(latest.version);
+            setIsHasUpdate(
+              compareVersions(latest.version) === UpdateStatus.HAS_UPDATE,
+            );
+          }
+        } else {
+          console.error(
+            '获取远程变更日志失败:',
+            response.status,
+            response.statusText,
+          );
+        }
+      } catch (error) {
+        console.error('获取远程变更日志失败:', error);
+      }
+    };
+    if (isOpen) {
+      fetchRemoteChangelog();
+    }
+  }, [isOpen]);
+
+  // 解析变更日志格式
+
   // 渲染变更日志条目
   const renderChangelogEntry = (
     entry: ChangelogEntry | RemoteChangelogEntry,
     isCurrentVersion = false,
-    isRemote = false
+    isRemote = false,
   ) => {
     const isUpdate = isRemote && hasUpdate && entry.version === latestVersion;
 
     return (
       <div
         key={entry.version}
-        className={`p-4 rounded-lg border ${isCurrentVersion
-          ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
-          : isUpdate
-            ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
-            : 'bg-gray-50 dark:bg-gray-800/60 border-gray-200 dark:border-gray-700'
-          }`}
+        className={`p-4 rounded-lg border ${
+          isCurrentVersion
+            ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
+            : isUpdate
+              ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
+              : 'bg-gray-50 dark:bg-gray-800/60 border-gray-200 dark:border-gray-700'
+        }`}
       >
         {/* 版本标题 */}
         <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3'>
@@ -439,17 +439,18 @@ export const VersionPanel: React.FC<VersionPanelProps> = ({
                       .filter((entry) => {
                         // 找到第一个本地版本，过滤掉本地已有的版本
                         const localVersions = changelog.map(
-                          (local) => local.version
+                          (local) => local.version,
                         );
                         return !localVersions.includes(entry.version);
                       })
                       .map((entry, index) => (
                         <div
                           key={index}
-                          className={`p-4 rounded-lg border ${entry.version === latestVersion
-                            ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
-                            : 'bg-gray-50 dark:bg-gray-800/60 border-gray-200 dark:border-gray-700'
-                            }`}
+                          className={`p-4 rounded-lg border ${
+                            entry.version === latestVersion
+                              ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
+                              : 'bg-gray-50 dark:bg-gray-800/60 border-gray-200 dark:border-gray-700'
+                          }`}
                         >
                           <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3'>
                             <div className='flex flex-wrap items-center gap-2'>
@@ -545,8 +546,8 @@ export const VersionPanel: React.FC<VersionPanelProps> = ({
                   renderChangelogEntry(
                     entry,
                     entry.version === CURRENT_VERSION,
-                    false
-                  )
+                    false,
+                  ),
                 )}
               </div>
             </div>

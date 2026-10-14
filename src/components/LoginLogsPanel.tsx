@@ -1,18 +1,17 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
 import {
-  LogIn,
-  Trash2,
-  RefreshCw,
-  Monitor,
-  Globe,
-  User,
-  Clock,
-  MapPin,
   AlertTriangle,
+  Clock,
+  Globe,
+  LogIn,
+  MapPin,
+  Monitor,
+  RefreshCw,
+  Trash2,
+  User,
 } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
 
 interface LoginLog {
   id: string;

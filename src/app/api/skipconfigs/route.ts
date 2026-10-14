@@ -3,8 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthInfoFromCookie } from '@/lib/auth';
 import { db } from '@/lib/db';
 import {
-  recordRequest,
   getDbQueryCount,
+  recordRequest,
   resetDbQueryCount,
 } from '@/lib/performance-monitor';
 import { EpisodeSkipConfig } from '@/lib/types';

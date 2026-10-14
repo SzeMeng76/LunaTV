@@ -1,15 +1,13 @@
- 
-
 'use client';
 
 import {
   AlertCircle,
   CheckCircle,
-  User,
   Lock,
-  Sparkles,
-  UserPlus,
   Shield,
+  Sparkles,
+  User,
+  UserPlus,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -105,7 +103,7 @@ function RegisterForm({ requireInviteCode }: RegisterPageClientProps) {
         const data = await res.json();
         setError(data.error ?? '注册失败');
       }
-    } catch (error) {
+    } catch {
       setError('网络错误，请稍后重试');
     } finally {
       setLoading(false);

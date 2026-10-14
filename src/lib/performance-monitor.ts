@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * 性能监控模块
  * 收集和聚合应用性能数据
@@ -7,8 +6,12 @@
  * 不再持久化到 Kvrocks，以防止 WAL 爆满
  */
 
-import { RequestMetrics, HourlyMetrics, SystemMetrics } from './performance.types';
 import { db } from './db';
+import {
+  HourlyMetrics,
+  RequestMetrics,
+  SystemMetrics,
+} from './performance.types';
 
 // 内存中的请求数据缓存（最近48小时）
 const requestCache: RequestMetrics[] = [];
@@ -24,7 +27,6 @@ const MAX_SYSTEM_METRICS = 1000;
 
 // 数据库查询计数器
 let dbQueryCount = 0;
-let lastDbQueryReset = Date.now();
 
 // CPU 使用率跟踪（用于计算百分比）
 let lastCpuUsage: NodeJS.CpuUsage | null = null;
@@ -33,11 +35,15 @@ let lastCpuTime: bigint | null = null;
 // 在服务端环境下立即初始化基线（仅在 Node.js 环境）
 if (typeof process !== 'undefined' && process.versions?.node) {
   try {
-    if (typeof process.cpuUsage === 'function' && process.hrtime && typeof process.hrtime.bigint === 'function') {
+    if (
+      typeof process.cpuUsage === 'function' &&
+      process.hrtime &&
+      typeof process.hrtime.bigint === 'function'
+    ) {
       lastCpuUsage = process.cpuUsage();
       lastCpuTime = process.hrtime.bigint();
     }
-  } catch (e) {
+  } catch {
     // 静默失败，稍后在函数调用时再尝试初始化
   }
 }
@@ -64,24 +70,6 @@ export function getDbQueryCount(): number {
  */
 export function resetDbQueryCount(): void {
   dbQueryCount = 0;
-  lastDbQueryReset = Date.now();
-}
-
-/**
- * 从 Kvrocks 加载历史数据到内存（已禁用持久化）
- */
-async function loadFromKvrocks(): Promise<void> {
-  if (dataLoaded) return;
-  // 持久化已禁用，直接标记为已加载
-  dataLoaded = true;
-}
-
-/**
- * 保存数据到 Kvrocks（已禁用持久化）
- */
-async function saveToKvrocks(snapshot: RequestMetrics[]): Promise<void> {
-  // 持久化已禁用，不再保存到 Kvrocks
-  return;
 }
 
 /**
@@ -117,7 +105,6 @@ export function recordRequest(metrics: RequestMetrics): void {
 export function getAndResetDbQueryCount(): number {
   const count = dbQueryCount;
   dbQueryCount = 0;
-  lastDbQueryReset = Date.now();
   return count;
 }
 
@@ -127,7 +114,9 @@ export function getAndResetDbQueryCount(): number {
 export function collectSystemMetrics(): SystemMetrics {
   // 环境检测：确保在 Node.js 环境中运行
   if (typeof process === 'undefined' || !process.versions?.node) {
-    throw new Error('collectSystemMetrics() can only be called in Node.js environment');
+    throw new Error(
+      'collectSystemMetrics() can only be called in Node.js environment',
+    );
   }
 
   const memUsage = process.memoryUsage();
@@ -135,7 +124,11 @@ export function collectSystemMetrics(): SystemMetrics {
 
   // 如果基线未初始化（模块加载时初始化失败），现在初始化
   if (lastCpuUsage === null || lastCpuTime === null) {
-    if (typeof process.cpuUsage === 'function' && process.hrtime && typeof process.hrtime.bigint === 'function') {
+    if (
+      typeof process.cpuUsage === 'function' &&
+      process.hrtime &&
+      typeof process.hrtime.bigint === 'function'
+    ) {
       lastCpuUsage = process.cpuUsage();
       lastCpuTime = process.hrtime.bigint();
     } else {
@@ -158,12 +151,14 @@ export function collectSystemMetrics(): SystemMetrics {
   const numberOfCores = os.cpus().length;
 
   // 计算总可用 CPU 时间
-  const totalAvailableCpuTimeMicroseconds = elapsedTimeMicroseconds * numberOfCores;
+  const totalAvailableCpuTimeMicroseconds =
+    elapsedTimeMicroseconds * numberOfCores;
 
   // 计算 CPU 使用率百分比
   let cpuPercent = 0;
   if (totalAvailableCpuTimeMicroseconds > 0) {
-    cpuPercent = (cpuTimeUsedMicroseconds / totalAvailableCpuTimeMicroseconds) * 100;
+    cpuPercent =
+      (cpuTimeUsedMicroseconds / totalAvailableCpuTimeMicroseconds) * 100;
   }
 
   // 更新上次记录的值
@@ -181,13 +176,13 @@ export function collectSystemMetrics(): SystemMetrics {
     cpuCores: numberOfCores,
     cpuModel: os.cpus()[0]?.model || 'Unknown',
     memoryUsage: {
-      heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024 * 100) / 100, // MB
-      heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024 * 100) / 100,
-      rss: Math.round(memUsage.rss / 1024 / 1024 * 100) / 100,
-      external: Math.round(memUsage.external / 1024 / 1024 * 100) / 100,
-      systemTotal: Math.round(totalSystemMemory / 1024 / 1024 * 100) / 100,
-      systemUsed: Math.round(usedSystemMemory / 1024 / 1024 * 100) / 100,
-      systemFree: Math.round(freeSystemMemory / 1024 / 1024 * 100) / 100,
+      heapUsed: Math.round((memUsage.heapUsed / 1024 / 1024) * 100) / 100, // MB
+      heapTotal: Math.round((memUsage.heapTotal / 1024 / 1024) * 100) / 100,
+      rss: Math.round((memUsage.rss / 1024 / 1024) * 100) / 100,
+      external: Math.round((memUsage.external / 1024 / 1024) * 100) / 100,
+      systemTotal: Math.round((totalSystemMemory / 1024 / 1024) * 100) / 100,
+      systemUsed: Math.round((usedSystemMemory / 1024 / 1024) * 100) / 100,
+      systemFree: Math.round((freeSystemMemory / 1024 / 1024) * 100) / 100,
     },
     eventLoopDelay: 0, // 暂时设为 0，后续可以用 perf_hooks 实现
   };
@@ -209,10 +204,13 @@ export function recordSystemMetrics(): void {
 /**
  * 聚合指定时间范围内的请求数据
  */
-export function aggregateMetrics(startTime: number, endTime: number): HourlyMetrics {
+export function aggregateMetrics(
+  startTime: number,
+  endTime: number,
+): HourlyMetrics {
   // 过滤时间范围内的请求
   const requests = requestCache.filter(
-    (r) => r.timestamp >= startTime && r.timestamp < endTime
+    (r) => r.timestamp >= startTime && r.timestamp < endTime,
   );
 
   if (requests.length === 0) {
@@ -234,19 +232,28 @@ export function aggregateMetrics(startTime: number, endTime: number): HourlyMetr
 
   // 计算基础指标
   const totalRequests = requests.length;
-  const successRequests = requests.filter((r) => r.statusCode >= 200 && r.statusCode < 300).length;
+  const successRequests = requests.filter(
+    (r) => r.statusCode >= 200 && r.statusCode < 300,
+  ).length;
   const errorRequests = requests.filter((r) => r.statusCode >= 400).length;
 
   const durations = requests.map((r) => r.duration);
-  const avgDuration = Math.round(durations.reduce((a, b) => a + b, 0) / durations.length);
+  const avgDuration = Math.round(
+    durations.reduce((a, b) => a + b, 0) / durations.length,
+  );
   const maxDuration = Math.max(...durations);
 
   const memories = requests.map((r) => r.memoryUsed);
-  const avgMemory = Math.round((memories.reduce((a, b) => a + b, 0) / memories.length) * 100) / 100;
+  const avgMemory =
+    Math.round((memories.reduce((a, b) => a + b, 0) / memories.length) * 100) /
+    100;
   const maxMemory = Math.round(Math.max(...memories) * 100) / 100;
 
   const totalDbQueries = requests.reduce((sum, r) => sum + r.dbQueries, 0);
-  const totalTraffic = requests.reduce((sum, r) => sum + r.requestSize + r.responseSize, 0);
+  const totalTraffic = requests.reduce(
+    (sum, r) => sum + r.requestSize + r.responseSize,
+    0,
+  );
 
   return {
     hour: new Date(startTime).toISOString(),
@@ -283,7 +290,10 @@ export function getRecentMetrics(hours: number): HourlyMetrics[] {
 /**
  * 获取最近的请求列表
  */
-export async function getRecentRequests(limit: number = 100, hours?: number): Promise<RequestMetrics[]> {
+export async function getRecentRequests(
+  limit: number = 100,
+  hours?: number,
+): Promise<RequestMetrics[]> {
   // 持久化已禁用，直接使用内存缓存
 
   // 如果指定了时间范围，按时间过滤
@@ -310,22 +320,26 @@ export async function getCurrentStatus() {
 
   const systemMetrics = collectSystemMetrics();
   const recentRequests = requestCache.filter(
-    (r) => r.timestamp > Date.now() - 60000 // 最近1分钟
+    (r) => r.timestamp > Date.now() - 60000, // 最近1分钟
   );
 
   // 计算流量/分钟（请求大小 + 响应大小）
   const trafficPerMinute = recentRequests.reduce(
     (sum, r) => sum + r.requestSize + r.responseSize,
-    0
+    0,
   );
 
   return {
     system: systemMetrics,
     requestsPerMinute: recentRequests.length,
     dbQueriesPerMinute: recentRequests.reduce((sum, r) => sum + r.dbQueries, 0),
-    avgResponseTime: recentRequests.length > 0
-      ? Math.round(recentRequests.reduce((sum, r) => sum + r.duration, 0) / recentRequests.length)
-      : 0,
+    avgResponseTime:
+      recentRequests.length > 0
+        ? Math.round(
+            recentRequests.reduce((sum, r) => sum + r.duration, 0) /
+              recentRequests.length,
+          )
+        : 0,
     trafficPerMinute, // 字节数
   };
 }
@@ -359,9 +373,12 @@ export function startAutoCollection(): void {
   console.log('🚀 启动性能监控自动数据收集...');
 
   // 每 1 小时收集一次系统指标
-  collectionInterval = setInterval(() => {
-    recordSystemMetrics();
-  }, 60 * 60 * 1000); // 1小时
+  collectionInterval = setInterval(
+    () => {
+      recordSystemMetrics();
+    },
+    60 * 60 * 1000,
+  ); // 1小时
 }
 
 /**

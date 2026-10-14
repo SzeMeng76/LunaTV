@@ -1,20 +1,18 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import {
-  TrashIcon,
-  ArrowPathIcon,
-  ChartBarIcon,
-  ClockIcon,
-  ServerIcon,
-  DocumentTextIcon,
-  FilmIcon,
-  MagnifyingGlassIcon,
-  FolderIcon,
-  VideoCameraIcon,
-  PlayIcon,
-  ExclamationTriangleIcon,
-} from '@heroicons/react/24/outline';
+  RefreshCw as ArrowPathIcon,
+  ChartBar as ChartBarIcon,
+  Clock as ClockIcon,
+  FileText as DocumentTextIcon,
+  AlertTriangle as ExclamationTriangleIcon,
+  Film as FilmIcon,
+  Folder as FolderIcon,
+  Play as PlayIcon,
+  Trash2 as TrashIcon,
+  Video as VideoCameraIcon,
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 interface CacheStats {
   douban: { count: number; size: number; types: Record<string, number> };

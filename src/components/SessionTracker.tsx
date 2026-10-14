@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
+import { useEffect } from 'react';
 
 /**
  * 会话追踪组件
@@ -19,9 +19,11 @@ export function SessionTracker() {
         }
 
         // 检查用户是否已登录（兼容 user_auth 和 auth cookie）
-        const authCookie = document.cookie.split(';').find(cookie => {
+        const authCookie = document.cookie.split(';').find((cookie) => {
           const trimmed = cookie.trim();
-          return trimmed.startsWith('user_auth=') || trimmed.startsWith('auth=');
+          return (
+            trimmed.startsWith('user_auth=') || trimmed.startsWith('auth=')
+          );
         });
 
         if (!authCookie) {
@@ -34,8 +36,9 @@ export function SessionTracker() {
         const now = Date.now();
         const sessionTimeout = 4 * 60 * 60 * 1000; // 4小时
 
-        const shouldRecordLogin = !lastRecordedLogin ||
-          (now - parseInt(lastRecordedLogin)) > sessionTimeout;
+        const shouldRecordLogin =
+          !lastRecordedLogin ||
+          now - parseInt(lastRecordedLogin) > sessionTimeout;
 
         if (shouldRecordLogin) {
           console.log('检测到新会话，记录登入时间');
@@ -44,7 +47,7 @@ export function SessionTracker() {
           const response = await fetch('/api/user/my-stats', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ loginTime: now })
+            body: JSON.stringify({ loginTime: now }),
           });
 
           if (response.ok) {

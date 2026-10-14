@@ -2,7 +2,6 @@
 
 'use client';
 
-import { Box,Tab, Tabs } from '@mui/material';
 import Hls from 'hls.js';
 import {
   ChevronDown,
@@ -27,7 +26,7 @@ import {
   subscribeToDataUpdates,
 } from '@/lib/db.client';
 import { parseCustomTimeFormat } from '@/lib/time';
-import { devicePerformance,isMobile, isSafari } from '@/lib/utils';
+import { devicePerformance, isMobile, isSafari } from '@/lib/utils';
 import { useInView } from '@/hooks/useInView';
 import { useLiveSync } from '@/hooks/useLiveSync';
 import { useTabsDragScroll } from '@/hooks/useTabsDragScroll';
@@ -70,11 +69,7 @@ type LiveStreamType = 'm3u8' | 'mp4' | 'flv' | 'unknown';
 
 // 新增：频道健康状态
 type ChannelHealthStatus =
-  | 'unknown'
-  | 'checking'
-  | 'healthy'
-  | 'slow'
-  | 'unreachable';
+  'unknown' | 'checking' | 'healthy' | 'slow' | 'unreachable';
 
 // 新增：频道健康信息
 interface ChannelHealthInfo {
@@ -88,19 +83,11 @@ interface ChannelHealthInfo {
 // 新增：分组排序模式
 type GroupSortMode = 'default' | 'count' | 'name';
 
-// 新增：分组摘要
-interface GroupSummary {
-  name: string;
-  count: number;
-  order: number;
-}
-
 // 常量定义
 const RECENT_GROUPS_STORAGE_KEY = 'liveRecentGroups';
 const PINNED_GROUPS_STORAGE_KEY = 'livePinnedGroups';
 const MAX_RECENT_GROUPS = 8;
 const HEALTH_CHECK_CACHE_MS = 3 * 60 * 1000; // 3分钟缓存
-const HEALTH_CHECK_BATCH_SIZE = 12; // 每次检测12个频道
 
 // 工具函数：解析存储的字符串数组
 function parseStoredStringArray(raw: string | null): string[] {
@@ -240,14 +227,12 @@ function LivePageClient() {
     }
     return false;
   });
-  const [corsSupport, setCorsSupport] = useState<Map<string, boolean>>(
-    new Map(),
-  );
+  const [, setCorsSupport] = useState<Map<string, boolean>>(new Map());
   const corsSupportRef = useRef<Map<string, boolean>>(new Map());
   const [playbackMode, setPlaybackMode] = useState<'direct' | 'proxy'>('proxy');
 
   // 📊 CORS 检测统计（管理员用）
-  const [corsStats, setCorsStats] = useState(() => {
+  const [_corsStats, setCorsStats] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('live-cors-stats');
       if (saved) {
@@ -863,7 +848,7 @@ function LivePageClient() {
             return supports;
           }
         }
-      } catch (error) {
+      } catch {
         // 缓存读取失败，继续检测
       }
     }
@@ -899,7 +884,7 @@ function LivePageClient() {
               url: url.substring(0, 100), // 保存URL前缀便于调试
             }),
           );
-        } catch (error) {
+        } catch {
           // localStorage 满了或其他错误，忽略
         }
       }
@@ -1783,7 +1768,7 @@ function LivePageClient() {
             currentSourceRef.current?.key || '',
           );
           context.url = url.toString();
-        } catch (error) {
+        } catch {
           // ignore
         }
         // 拦截manifest和level请求
@@ -1801,7 +1786,7 @@ function LivePageClient() {
               const url = new URL(context.url);
               url.searchParams.set('allowCORS', 'true');
               context.url = url.toString();
-            } catch (error) {
+            } catch {
               // 如果 URL 解析失败，回退到字符串拼接
               context.url = context.url + '&allowCORS=true';
             }
@@ -2051,6 +2036,24 @@ function LivePageClient() {
                   console.error('Failed to reload source:', e);
                 }
               }, 2000 * hlsNetworkRetryCount);
+            } else if (
+              url.includes('/api/proxy/m3u8') &&
+              !url.includes('proxySeg=1') &&
+              (data.details === Hls.ErrorDetails.FRAG_LOAD_ERROR ||
+                data.details === Hls.ErrorDetails.FRAG_LOAD_TIMEOUT ||
+                data.details === Hls.ErrorDetails.KEY_LOAD_ERROR ||
+                data.details === Hls.ErrorDetails.LEVEL_LOAD_ERROR ||
+                data.details === Hls.ErrorDetails.LEVEL_LOAD_TIMEOUT)
+            ) {
+              // 直连模式下分片加载失败（IPTV 源无 CORS 头 / 防盗链）：
+              // 一次性降级为分片全代理重载（proxySeg=1 由服务端把分片改写为本站 segment 代理）
+              console.warn('分片直连失败，降级为分片全代理重载:', data.details);
+              hls.destroy();
+              m3u8Loader(
+                video,
+                url + (url.includes('?') ? '&' : '?') + 'proxySeg=1',
+              );
+              return;
             } else {
               try {
                 hls.startLoad();
@@ -2291,7 +2294,10 @@ function LivePageClient() {
         const proxyEndpoint = isFlvUrl
           ? '/api/proxy/stream'
           : '/api/proxy/m3u8';
-        targetUrl = `${proxyEndpoint}?url=${encodeURIComponent(videoUrl)}&moontv-source=${currentSourceRef.current?.key || ''}`;
+        // proxySeg=1：分片全代理。IPTV 直播源普遍不返回 CORS 头，
+        // 分片直连会被浏览器拦截（net::ERR_FAILED），必须经本站 segment 代理
+        const segParam = isFlvUrl ? '' : '&proxySeg=1';
+        targetUrl = `${proxyEndpoint}?url=${encodeURIComponent(videoUrl)}&moontv-source=${currentSourceRef.current?.key || ''}${segParam}`;
         console.log(
           `🎬 播放模式: 🔄 代理 (${isFlvUrl ? 'FLV' : 'M3U8'}) | URL: ${targetUrl.substring(0, 100)}...`,
         );
@@ -2460,8 +2466,8 @@ function LivePageClient() {
       try {
         const { default: Artplayer } = await import('artplayer');
 
-        // 动态导入 flv.js（避免 SSR 问题）
-        const flvjs = await import('flv.js');
+        // 动态导入 mpegts.js（flv.js 的活跃维护继任者，API 兼容，避免 SSR 问题）
+        const flvjs = await import('mpegts.js');
 
         // 将导入的模块设置为全局变量供 initPlayer 使用
         (window as any).DynamicArtplayer = Artplayer;
@@ -3085,70 +3091,38 @@ function LivePageClient() {
                               </span>
                             </button>
 
-                            {/* Material UI Tabs 滚动容器 */}
+                            {/* 原生 Tabs 滚动容器（替代 MUI，视觉与交互对齐） */}
                             <div className='flex-1 min-w-0'>
-                              <Box
-                                sx={{ borderBottom: 1, borderColor: 'divider' }}
+                              <div
+                                className='border-b border-gray-200 dark:border-gray-700'
                                 {...dragHandlers}
                               >
-                                <Tabs
-                                  value={selectedGroup}
-                                  onChange={(_event, newValue) =>
-                                    handleGroupChange(newValue)
-                                  }
-                                  variant='scrollable'
-                                  scrollButtons='auto'
-                                  allowScrollButtonsMobile
-                                  sx={{
-                                    '& .MuiTabs-scroller': {
-                                      cursor: isDragging ? 'grabbing' : 'grab',
-                                      userSelect: 'none',
-                                    },
-                                    '& .MuiTabs-indicator': {
-                                      backgroundColor: '#22c55e', // green-500
-                                    },
-                                    '& .MuiTab-root': {
-                                      color: 'rgb(var(--tw-text-gray-700))',
-                                      minWidth: 80,
-                                      fontSize: '0.875rem',
-                                      fontWeight: 500,
-                                      textTransform: 'none',
-                                      '&.Mui-selected': {
-                                        color: '#22c55e', // green-500
-                                      },
-                                      '&.Mui-disabled': {
-                                        color: 'rgb(var(--tw-text-gray-400))',
-                                        opacity: 0.5,
-                                      },
-                                      '@media (prefers-color-scheme: dark)': {
-                                        color: 'rgb(var(--tw-text-gray-300))',
-                                        '&.Mui-selected': {
-                                          color: '#4ade80', // green-400
-                                        },
-                                        '&.Mui-disabled': {
-                                          color: 'rgb(var(--tw-text-gray-600))',
-                                        },
-                                      },
-                                    },
-                                    '& .MuiTabScrollButton-root': {
-                                      color: 'rgb(var(--tw-text-gray-600))',
-                                      '@media (prefers-color-scheme: dark)': {
-                                        color: 'rgb(var(--tw-text-gray-400))',
-                                      },
-                                    },
-                                  }}
+                                <div
+                                  data-tabs-scroller
+                                  className={`flex overflow-x-auto scrollbar-hide ${
+                                    isDragging
+                                      ? 'cursor-grabbing select-none'
+                                      : 'cursor-grab'
+                                  }`}
+                                  style={{ scrollbarWidth: 'none' }}
                                 >
                                   {Object.keys(groupedChannels).map((group) => (
-                                    <Tab
+                                    <button
                                       key={group}
-                                      label={group}
-                                      value={group}
+                                      onClick={() => handleGroupChange(group)}
                                       disabled={isSwitchingSource}
                                       data-group={group}
-                                    />
+                                      className={`min-w-[80px] whitespace-nowrap px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                                        selectedGroup === group
+                                          ? 'border-green-500 text-green-600 dark:border-green-500 dark:text-green-400'
+                                          : 'border-transparent text-gray-700 hover:text-green-600 dark:text-gray-300 dark:hover:text-green-400'
+                                      }`}
+                                    >
+                                      {group}
+                                    </button>
                                   ))}
-                                </Tabs>
-                              </Box>
+                                </div>
+                              </div>
                             </div>
                           </div>
                         </div>

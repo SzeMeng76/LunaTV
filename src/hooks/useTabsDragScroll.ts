@@ -16,51 +16,55 @@ export function useTabsDragScroll() {
     preventClickUntil: 0,
   });
 
-  const handlePointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
-    // Only handle left mouse button
-    if (event.pointerType === 'mouse' && event.button !== 0) return;
+  const handlePointerDown = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      // Only handle left mouse button
+      if (event.pointerType === 'mouse' && event.button !== 0) return;
 
-    // Only exclude scroll buttons, allow drag on Tab buttons
-    const target = event.target as HTMLElement;
-    if (target.closest('.MuiTabScrollButton-root')) {
-      return;
-    }
+      const container = event.currentTarget;
+      const scrollContainer = container.querySelector(
+        '[data-tabs-scroller]',
+      ) as HTMLElement;
+      if (!scrollContainer) return;
 
-    const container = event.currentTarget;
-    const scrollContainer = container.querySelector('.MuiTabs-scroller') as HTMLElement;
-    if (!scrollContainer) return;
+      dragStateRef.current.isActive = true;
+      dragStateRef.current.startX = event.clientX;
+      dragStateRef.current.startScrollLeft = scrollContainer.scrollLeft;
+      dragStateRef.current.preventClickUntil = 0;
+      setIsDragging(false); // Don't set dragging yet
 
-    dragStateRef.current.isActive = true;
-    dragStateRef.current.startX = event.clientX;
-    dragStateRef.current.startScrollLeft = scrollContainer.scrollLeft;
-    dragStateRef.current.preventClickUntil = 0;
-    setIsDragging(false); // Don't set dragging yet
+      // Don't capture pointer - it blocks Tab clicks
+      // Don't prevent default - let Tab clicks work
+    },
+    [],
+  );
 
-    // Don't capture pointer - it blocks Tab clicks
-    // Don't prevent default - let Tab clicks work
-  }, []);
+  const handlePointerMove = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      const dragState = dragStateRef.current;
+      if (!dragState.isActive) return;
 
-  const handlePointerMove = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
-    const dragState = dragStateRef.current;
-    if (!dragState.isActive) return;
+      const target = event.currentTarget;
+      const scrollContainer = target.querySelector(
+        '[data-tabs-scroller]',
+      ) as HTMLElement;
+      if (!scrollContainer) return;
 
-    const target = event.currentTarget;
-    const scrollContainer = target.querySelector('.MuiTabs-scroller') as HTMLElement;
-    if (!scrollContainer) return;
+      const deltaX = event.clientX - dragState.startX;
 
-    const deltaX = event.clientX - dragState.startX;
+      // If moved more than 6px, mark as dragging and prevent clicks
+      if (Math.abs(deltaX) > 6) {
+        dragState.preventClickUntil = Date.now() + 160;
+        setIsDragging(true);
+      }
 
-    // If moved more than 6px, mark as dragging and prevent clicks
-    if (Math.abs(deltaX) > 6) {
-      dragState.preventClickUntil = Date.now() + 160;
-      setIsDragging(true);
-    }
+      // Update scroll position
+      scrollContainer.scrollLeft = dragState.startScrollLeft - deltaX;
+    },
+    [],
+  );
 
-    // Update scroll position
-    scrollContainer.scrollLeft = dragState.startScrollLeft - deltaX;
-  }, []);
-
-  const handlePointerUp = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+  const handlePointerUp = useCallback(() => {
     // No need to release pointer capture since we don't capture it
     dragStateRef.current.isActive = false;
     setIsDragging(false);

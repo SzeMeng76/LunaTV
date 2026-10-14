@@ -17,6 +17,7 @@
 
 import { useQueries } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
+
 import {
   BangumiCalendarData,
   GetBangumiCalendarData,
@@ -94,15 +95,20 @@ export interface HomePageQueriesResult {
  * }
  * ```
  */
-export function useHomePageQueries(config?: HomePageConfig): HomePageQueriesResult {
+export function useHomePageQueries(
+  config?: HomePageConfig,
+): HomePageQueriesResult {
   // 默认所有模块都启用
-  const enabledConfig = useMemo(() => ({
-    showHotMovies: config?.showHotMovies ?? true,
-    showHotTvShows: config?.showHotTvShows ?? true,
-    showHotVariety: config?.showHotVariety ?? true,
-    showNewAnime: config?.showNewAnime ?? true,
-    showHotShortDramas: config?.showHotShortDramas ?? true,
-  }), [config]);
+  const enabledConfig = useMemo(
+    () => ({
+      showHotMovies: config?.showHotMovies ?? true,
+      showHotTvShows: config?.showHotTvShows ?? true,
+      showHotVariety: config?.showHotVariety ?? true,
+      showNewAnime: config?.showNewAnime ?? true,
+      showHotShortDramas: config?.showHotShortDramas ?? true,
+    }),
+    [config],
+  );
 
   // 使用 useCallback 缓存 combine 函数，避免每次渲染都重新创建
   const combine = useCallback((results: any[]) => {
@@ -117,8 +123,7 @@ export function useHomePageQueries(config?: HomePageConfig): HomePageQueriesResu
 
     // 聚合数据
     const data: HomePageData = {
-      hotMovies:
-        moviesResult.data?.code === 200 ? moviesResult.data.list : [],
+      hotMovies: moviesResult.data?.code === 200 ? moviesResult.data.list : [],
       hotTvShows: tvResult.data?.code === 200 ? tvResult.data.list : [],
       hotVarietyShows:
         varietyResult.data?.code === 200 ? varietyResult.data.list : [],
@@ -132,9 +137,7 @@ export function useHomePageQueries(config?: HomePageConfig): HomePageQueriesResu
     const isFetching = results.some((r) => r.isFetching);
 
     // 聚合错误
-    const errors = results
-      .filter((r) => r.error)
-      .map((r) => r.error as Error);
+    const errors = results.filter((r) => r.error).map((r) => r.error as Error);
     const hasError = errors.length > 0;
 
     // 聚合 refetch 函数

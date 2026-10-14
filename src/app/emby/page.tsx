@@ -1,13 +1,11 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, no-console */
-
 'use client';
 
 import {
+  infiniteQueryOptions,
+  queryOptions,
   useInfiniteQuery,
   useQuery,
   useQueryClient,
-  queryOptions,
-  infiniteQueryOptions,
 } from '@tanstack/react-query';
 import {
   ArrowDownWideNarrow,
@@ -114,16 +112,14 @@ const embyListOptions = (
       const data = await res.json();
 
       return {
-        list: (data.list ?? []).map(
-          (item: any): Video => ({
-            id: item.id,
-            title: item.title,
-            poster: item.poster,
-            year: item.year,
-            rating: item.rating,
-            mediaType: item.mediaType,
-          }),
-        ),
+        list: (data.list ?? []).map((item: any): Video => ({
+          id: item.id,
+          title: item.title,
+          poster: item.poster,
+          year: item.year,
+          rating: item.rating,
+          mediaType: item.mediaType,
+        })),
         totalPages: data.totalPages ?? 0,
         currentPage: data.currentPage ?? pageParam,
         total: data.total ?? 0,
@@ -249,9 +245,7 @@ export default function PrivateLibraryPage() {
   }, [embyKey, embySourceOptions]);
 
   // ── 2. Emby 媒体库 Views ──────────────────────────────────────────────────
-  const { data: viewsData, isLoading: loadingViews } = useQuery(
-    embyViewsOptions(embyEnabled, embyKey),
-  );
+  const { data: viewsData } = useQuery(embyViewsOptions(embyEnabled, embyKey));
 
   const embyViews = viewsData ?? [];
 

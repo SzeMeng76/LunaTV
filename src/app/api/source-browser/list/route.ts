@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { getAuthInfoFromCookie } from '@/lib/auth';
 import { API_CONFIG, getAvailableApiSites } from '@/lib/config';
-import { recordRequest, getDbQueryCount, resetDbQueryCount } from '@/lib/performance-monitor';
+import {
+  getDbQueryCount,
+  recordRequest,
+  resetDbQueryCount,
+} from '@/lib/performance-monitor';
 
 export const runtime = 'nodejs';
 
@@ -60,7 +64,10 @@ export async function GET(request: NextRequest) {
     const source = availableSites.find((s) => s.key === sourceKey);
     if (!source) {
       const errorResponse = { error: '你没有权限访问该资源源' };
-      const errorSize = Buffer.byteLength(JSON.stringify(errorResponse), 'utf8');
+      const errorSize = Buffer.byteLength(
+        JSON.stringify(errorResponse),
+        'utf8',
+      );
 
       recordRequest({
         timestamp: startTime,
@@ -68,7 +75,8 @@ export async function GET(request: NextRequest) {
         path: '/api/source-browser/list',
         statusCode: 403,
         duration: Date.now() - startTime,
-        memoryUsed: (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
+        memoryUsed:
+          (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
         dbQueries: getDbQueryCount(),
         requestSize: 0,
         responseSize: errorSize,
@@ -82,7 +90,7 @@ export async function GET(request: NextRequest) {
     const timeoutId = setTimeout(() => controller.abort(), 15000);
     // 苹果CMS常见列表参数：ac=videolist&t=<typeId>&pg=<page>
     const url = `${source.api}?ac=videolist&t=${encodeURIComponent(
-      typeId
+      typeId,
     )}&pg=${page}`;
     const res = await fetch(url, {
       headers: API_CONFIG.search.headers,
@@ -91,7 +99,10 @@ export async function GET(request: NextRequest) {
     clearTimeout(timeoutId);
     if (!res.ok) {
       const errorResponse = { error: `上游返回错误: ${res.status}` };
-      const errorSize = Buffer.byteLength(JSON.stringify(errorResponse), 'utf8');
+      const errorSize = Buffer.byteLength(
+        JSON.stringify(errorResponse),
+        'utf8',
+      );
 
       recordRequest({
         timestamp: startTime,
@@ -99,7 +110,8 @@ export async function GET(request: NextRequest) {
         path: '/api/source-browser/list',
         statusCode: res.status,
         duration: Date.now() - startTime,
-        memoryUsed: (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
+        memoryUsed:
+          (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
         dbQueries: getDbQueryCount(),
         requestSize: 0,
         responseSize: errorSize,
@@ -135,8 +147,8 @@ export async function GET(request: NextRequest) {
     const list: AppleCMSItem[] = Array.isArray(data.list)
       ? data.list
       : Array.isArray(data.data)
-      ? data.data
-      : [];
+        ? data.data
+        : [];
     const items = list
       .map((r) => ({
         id: String(r.vod_id ?? r.id ?? ''),
@@ -160,7 +172,10 @@ export async function GET(request: NextRequest) {
       meta,
       source: { key: source.key, name: source.name },
     };
-    const responseSize = Buffer.byteLength(JSON.stringify(successResponse), 'utf8');
+    const responseSize = Buffer.byteLength(
+      JSON.stringify(successResponse),
+      'utf8',
+    );
 
     recordRequest({
       timestamp: startTime,
@@ -179,7 +194,10 @@ export async function GET(request: NextRequest) {
   } catch (error: unknown) {
     if (error instanceof Error && error.name === 'AbortError') {
       const errorResponse = { error: '请求超时' };
-      const errorSize = Buffer.byteLength(JSON.stringify(errorResponse), 'utf8');
+      const errorSize = Buffer.byteLength(
+        JSON.stringify(errorResponse),
+        'utf8',
+      );
 
       recordRequest({
         timestamp: startTime,
@@ -187,7 +205,8 @@ export async function GET(request: NextRequest) {
         path: '/api/source-browser/list',
         statusCode: 408,
         duration: Date.now() - startTime,
-        memoryUsed: (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
+        memoryUsed:
+          (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
         dbQueries: getDbQueryCount(),
         requestSize: 0,
         responseSize: errorSize,

@@ -1,8 +1,7 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import { memo } from 'react';
 import { ChevronUp } from 'lucide-react';
+import { memo } from 'react';
 
 interface BackToTopButtonProps {
   show: boolean;
@@ -28,8 +27,11 @@ const BackToTopButton = memo(function BackToTopButton({
       style={{
         position: 'fixed',
         right: '1.5rem',
-        bottom: typeof window !== 'undefined' && window.innerWidth < 768 ? '5rem' : '1.5rem',
-        left: 'auto'
+        bottom:
+          typeof window !== 'undefined' && window.innerWidth < 768
+            ? '5rem'
+            : '1.5rem',
+        left: 'auto',
       }}
       aria-label='返回顶部'
     >

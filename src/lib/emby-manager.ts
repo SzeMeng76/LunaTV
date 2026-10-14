@@ -1,9 +1,7 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import { AdminConfig } from './admin.types';
 import { getConfig } from './config';
-import { EmbyClient } from './emby.client';
 import { dbManager } from './db';
+import { EmbyClient } from './emby.client';
 
 interface EmbySourceConfig {
   key: string;
@@ -51,28 +49,33 @@ class EmbyManager {
     const config = await getConfig();
 
     // 如果是新格式（Sources数组）
-    if (config.EmbyConfig?.Sources && Array.isArray(config.EmbyConfig.Sources)) {
+    if (
+      config.EmbyConfig?.Sources &&
+      Array.isArray(config.EmbyConfig.Sources)
+    ) {
       return config.EmbyConfig.Sources;
     }
 
     // 如果是旧格式（单源配置），转换为数组格式
     const embyConfig = config.EmbyConfig as any;
     if (embyConfig?.ServerURL) {
-      return [{
-        key: 'default',
-        name: 'Emby',
-        enabled: embyConfig.Enabled ?? false,
-        ServerURL: embyConfig.ServerURL,
-        ApiKey: embyConfig.ApiKey,
-        Username: embyConfig.Username,
-        Password: embyConfig.Password,
-        UserId: embyConfig.UserId,
-        AuthToken: embyConfig.AuthToken,
-        Libraries: embyConfig.Libraries,
-        LastSyncTime: embyConfig.LastSyncTime,
-        ItemCount: embyConfig.ItemCount,
-        isDefault: true,
-      }];
+      return [
+        {
+          key: 'default',
+          name: 'Emby',
+          enabled: embyConfig.Enabled ?? false,
+          ServerURL: embyConfig.ServerURL,
+          ApiKey: embyConfig.ApiKey,
+          Username: embyConfig.Username,
+          Password: embyConfig.Password,
+          UserId: embyConfig.UserId,
+          AuthToken: embyConfig.AuthToken,
+          Libraries: embyConfig.Libraries,
+          LastSyncTime: embyConfig.LastSyncTime,
+          ItemCount: embyConfig.ItemCount,
+          isDefault: true,
+        },
+      ];
     }
 
     return [];
@@ -84,21 +87,26 @@ class EmbyManager {
    * 用户私人源优先（相同 key 时覆盖公共源）
    * @param username 用户名，如果不提供则使用全局配置（向后兼容）
    */
-  private async getSourcesForUser(username?: string): Promise<EmbySourceConfig[]> {
+  private async getSourcesForUser(
+    username?: string,
+  ): Promise<EmbySourceConfig[]> {
     // 获取管理员公共源
     const adminSources = await this.getSources();
-    const publicSources = adminSources.filter(s => (s as any).isPublic === true);
+    const publicSources = adminSources.filter(
+      (s) => (s as any).isPublic === true,
+    );
 
     // 如果提供了用户名，合并用户私人源
     if (username) {
       const userConfig = await dbManager.getUserEmbyConfig(username);
-      const userSources: EmbySourceConfig[] = (userConfig?.sources && Array.isArray(userConfig.sources))
-        ? userConfig.sources
-        : [];
+      const userSources: EmbySourceConfig[] =
+        userConfig?.sources && Array.isArray(userConfig.sources)
+          ? userConfig.sources
+          : [];
 
       // 合并：用户私人源优先，公共源补充（key 不重复）
-      const userKeys = new Set(userSources.map(s => s.key));
-      const mergedPublic = publicSources.filter(s => !userKeys.has(s.key));
+      const userKeys = new Set(userSources.map((s) => s.key));
+      const mergedPublic = publicSources.filter((s) => !userKeys.has(s.key));
       const merged = [...userSources, ...mergedPublic];
 
       if (merged.length > 0) {
@@ -127,7 +135,7 @@ class EmbyManager {
 
     // 如果没有指定key，使用默认源（第一个或标记为default的）
     if (!key) {
-      const defaultSource = sources.find(s => s.isDefault) || sources[0];
+      const defaultSource = sources.find((s) => s.isDefault) || sources[0];
       key = defaultSource.key;
     }
 
@@ -139,7 +147,7 @@ class EmbyManager {
 
     // 从缓存获取或创建新实例
     if (!userClientMap.has(key)) {
-      const sourceConfig = sources.find(s => s.key === key);
+      const sourceConfig = sources.find((s) => s.key === key);
       if (!sourceConfig) {
         throw new Error(`未找到 Emby 源: ${key}`);
       }
@@ -158,9 +166,11 @@ class EmbyManager {
    * 获取用户所有启用的Emby源配置
    * @param username 用户名
    */
-  async getEnabledSourcesForUser(username: string): Promise<EmbySourceConfig[]> {
+  async getEnabledSourcesForUser(
+    username: string,
+  ): Promise<EmbySourceConfig[]> {
     const sources = await this.getSourcesForUser(username);
-    return sources.filter(s => s.enabled);
+    return sources.filter((s) => s.enabled);
   }
 
   /**
@@ -169,7 +179,7 @@ class EmbyManager {
    */
   async hasEmbyForUser(username: string): Promise<boolean> {
     const sources = await this.getSourcesForUser(username);
-    return sources.some(s => s.enabled && s.ServerURL);
+    return sources.some((s) => s.enabled && s.ServerURL);
   }
 
   /**
@@ -198,13 +208,13 @@ class EmbyManager {
 
     // 如果没有指定key，使用默认源（第一个或标记为default的）
     if (!key) {
-      const defaultSource = sources.find(s => s.isDefault) || sources[0];
+      const defaultSource = sources.find((s) => s.isDefault) || sources[0];
       key = defaultSource.key;
     }
 
     // 从缓存获取或创建新实例
     if (!this.clients.has(key)) {
-      const sourceConfig = sources.find(s => s.key === key);
+      const sourceConfig = sources.find((s) => s.key === key);
       if (!sourceConfig) {
         throw new Error(`未找到 Emby 源: ${key}`);
       }
@@ -222,10 +232,15 @@ class EmbyManager {
   /**
    * 获取所有启用的EmbyClient
    */
-  async getAllClients(): Promise<Map<string, { client: EmbyClient; config: EmbySourceConfig }>> {
+  async getAllClients(): Promise<
+    Map<string, { client: EmbyClient; config: EmbySourceConfig }>
+  > {
     const sources = await this.getSources();
-    const enabledSources = sources.filter(s => s.enabled);
-    const result = new Map<string, { client: EmbyClient; config: EmbySourceConfig }>();
+    const enabledSources = sources.filter((s) => s.enabled);
+    const result = new Map<
+      string,
+      { client: EmbyClient; config: EmbySourceConfig }
+    >();
 
     for (const source of enabledSources) {
       if (!this.clients.has(source.key)) {
@@ -245,7 +260,7 @@ class EmbyManager {
    */
   async getEnabledSources(): Promise<EmbySourceConfig[]> {
     const sources = await this.getSources();
-    return sources.filter(s => s.enabled);
+    return sources.filter((s) => s.enabled);
   }
 
   /**
@@ -253,7 +268,7 @@ class EmbyManager {
    */
   async hasEmby(): Promise<boolean> {
     const sources = await this.getSources();
-    return sources.some(s => s.enabled && s.ServerURL);
+    return sources.some((s) => s.enabled && s.ServerURL);
   }
 
   /**
@@ -279,26 +294,28 @@ export function migrateEmbyConfig(config: AdminConfig): AdminConfig {
   const embyConfig = config.EmbyConfig as any;
   if (embyConfig && embyConfig.ServerURL) {
     config.EmbyConfig = {
-      Sources: [{
-        key: 'default',
-        name: 'Emby',
-        enabled: embyConfig.Enabled ?? false,
-        ServerURL: embyConfig.ServerURL || '',
-        ApiKey: embyConfig.ApiKey,
-        Username: embyConfig.Username,
-        Password: embyConfig.Password,
-        UserId: embyConfig.UserId,
-        AuthToken: embyConfig.AuthToken,
-        Libraries: embyConfig.Libraries,
-        LastSyncTime: embyConfig.LastSyncTime,
-        ItemCount: embyConfig.ItemCount,
-        isDefault: true,
-        // 高级选项默认值
-        removeEmbyPrefix: false,
-        appendMediaSourceId: false,
-        transcodeMp4: false,
-        proxyPlay: false,
-      }],
+      Sources: [
+        {
+          key: 'default',
+          name: 'Emby',
+          enabled: embyConfig.Enabled ?? false,
+          ServerURL: embyConfig.ServerURL || '',
+          ApiKey: embyConfig.ApiKey,
+          Username: embyConfig.Username,
+          Password: embyConfig.Password,
+          UserId: embyConfig.UserId,
+          AuthToken: embyConfig.AuthToken,
+          Libraries: embyConfig.Libraries,
+          LastSyncTime: embyConfig.LastSyncTime,
+          ItemCount: embyConfig.ItemCount,
+          isDefault: true,
+          // 高级选项默认值
+          removeEmbyPrefix: false,
+          appendMediaSourceId: false,
+          transcodeMp4: false,
+          proxyPlay: false,
+        },
+      ],
     };
   }
 

@@ -20,27 +20,27 @@ export async function GET(request: NextRequest) {
     }
 
     // 合并EPG logo到频道信息中
-    const channelsWithEpgLogos = channelData.channels.map(channel => {
+    const channelsWithEpgLogos = channelData.channels.map((channel) => {
       const channelKey = channel.tvgId || channel.name;
       const epgLogo = channelData.epgLogos?.[channelKey];
 
       return {
         ...channel,
         // 优先使用EPG logo，如果没有则使用M3U logo
-        logo: epgLogo || channel.logo
+        logo: epgLogo || channel.logo,
       };
     });
 
-    return NextResponse.json({
-      success: true,
-      data: channelsWithEpgLogos
-    }, {
-      headers: { 'Cache-Control': 'public, max-age=300, s-maxage=600' }
-    });
-  } catch (error) {
     return NextResponse.json(
-      { error: '获取频道信息失败' },
-      { status: 500 }
+      {
+        success: true,
+        data: channelsWithEpgLogos,
+      },
+      {
+        headers: { 'Cache-Control': 'public, max-age=300, s-maxage=600' },
+      },
     );
+  } catch {
+    return NextResponse.json({ error: '获取频道信息失败' }, { status: 500 });
   }
 }

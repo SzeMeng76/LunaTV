@@ -1,4 +1,4 @@
-/* eslint-disable no-console,no-case-declarations */
+/* eslint-disable no-console */
 
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -17,9 +17,7 @@ export async function POST(request: NextRequest) {
     const config = await getConfig();
     if (username !== process.env.USERNAME) {
       // 管理员
-      const user = config.UserConfig.Users.find(
-        (u) => u.username === username
-      );
+      const user = config.UserConfig.Users.find((u) => u.username === username);
       if (!user || user.role !== 'admin' || user.banned) {
         return NextResponse.json({ error: '权限不足' }, { status: 401 });
       }
@@ -27,7 +25,9 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const { action, key, name, url, ua, epg, isTvBox } = body;
-    console.log(`[Admin API] Action: ${action}, Key: ${key}, isTvBox: ${isTvBox}`);
+    console.log(
+      `[Admin API] Action: ${action}, Key: ${key}, isTvBox: ${isTvBox}`,
+    );
 
     if (!config) {
       return NextResponse.json({ error: '配置不存在' }, { status: 404 });
@@ -42,7 +42,10 @@ export async function POST(request: NextRequest) {
       case 'add':
         // 检查是否已存在相同的 key
         if (config.LiveConfig.some((l) => l.key === key)) {
-          return NextResponse.json({ error: '直播源 key 已存在' }, { status: 400 });
+          return NextResponse.json(
+            { error: '直播源 key 已存在' },
+            { status: 400 },
+          );
         }
 
         const liveInfo = {
@@ -55,7 +58,7 @@ export async function POST(request: NextRequest) {
           from: 'custom' as 'custom' | 'config',
           channelNumber: 0,
           disabled: false,
-        }
+        };
 
         try {
           const nums = await refreshLiveChannels(liveInfo);
@@ -78,7 +81,10 @@ export async function POST(request: NextRequest) {
 
         const liveSource = config.LiveConfig[deleteIndex];
         if (liveSource.from === 'config') {
-          return NextResponse.json({ error: '不能删除配置文件中的直播源' }, { status: 400 });
+          return NextResponse.json(
+            { error: '不能删除配置文件中的直播源' },
+            { status: 400 },
+          );
         }
 
         deleteCachedLiveChannels(key);
@@ -113,7 +119,10 @@ export async function POST(request: NextRequest) {
 
         // 配置文件中的直播源不允许编辑
         if (editSource.from === 'config') {
-          return NextResponse.json({ error: '不能编辑配置文件中的直播源' }, { status: 400 });
+          return NextResponse.json(
+            { error: '不能编辑配置文件中的直播源' },
+            { status: 400 },
+          );
         }
 
         // 更新字段（除了 key 和 from）
@@ -137,7 +146,10 @@ export async function POST(request: NextRequest) {
         // 排序直播源
         const { order } = body;
         if (!Array.isArray(order)) {
-          return NextResponse.json({ error: '排序数据格式错误' }, { status: 400 });
+          return NextResponse.json(
+            { error: '排序数据格式错误' },
+            { status: 400 },
+          );
         }
 
         // 创建新的排序后的数组
@@ -165,19 +177,22 @@ export async function POST(request: NextRequest) {
 
     // 保存配置
     await db.saveAdminConfig(config);
-    
+
     // 清除配置缓存，强制下次重新从数据库读取
     clearConfigCache();
 
-    return NextResponse.json({ success: true }, {
-      headers: {
-        'Cache-Control': 'no-store', // 不缓存结果
+    return NextResponse.json(
+      { success: true },
+      {
+        headers: {
+          'Cache-Control': 'no-store', // 不缓存结果
+        },
       },
-    });
+    );
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : '操作失败' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
+import { NextRequest, NextResponse } from 'next/server';
+
 import { getAllCandidates } from '@/lib/spiderJar';
 import { DEFAULT_USER_AGENT } from '@/lib/user-agent';
 
@@ -43,7 +44,10 @@ interface DiagnosticReport {
 }
 
 // 测试单个 JAR 源
-async function testJarSource(url: string, name: string): Promise<JarTestResult> {
+async function testJarSource(
+  url: string,
+  name: string,
+): Promise<JarTestResult> {
   const startTime = Date.now();
   const result: JarTestResult = {
     url,
@@ -67,8 +71,7 @@ async function testJarSource(url: string, name: string): Promise<JarTestResult> 
     if (url.includes('github') || url.includes('raw.githubusercontent')) {
       headers['User-Agent'] = 'curl/7.68.0';
     } else if (url.includes('gitee') || url.includes('gitcode')) {
-      headers['User-Agent'] =
-        DEFAULT_USER_AGENT;
+      headers['User-Agent'] = DEFAULT_USER_AGENT;
     } else {
       headers['User-Agent'] =
         'Mozilla/5.0 (Linux; Android 11) AppleWebKit/537.36 Mobile Safari/537.36';
@@ -202,7 +205,7 @@ export async function GET(request: NextRequest) {
       ];
 
   console.log(
-    `🔍 开始 JAR 源诊断测试，环境: ${env.isDomestic ? '国内' : '国际'}`
+    `🔍 开始 JAR 源诊断测试，环境: ${env.isDomestic ? '国内' : '国际'}`,
   );
 
   // 并发测试所有源（但限制并发数）
@@ -212,7 +215,7 @@ export async function GET(request: NextRequest) {
   for (let i = 0; i < testSources.length; i += concurrency) {
     const batch = testSources.slice(i, i + concurrency);
     const batchResults = await Promise.all(
-      batch.map((source) => testJarSource(source.url, source.name))
+      batch.map((source) => testJarSource(source.url, source.name)),
     );
     results.push(...batchResults);
 
@@ -230,7 +233,7 @@ export async function GET(request: NextRequest) {
     averageResponseTime:
       results.reduce((sum, r) => sum + r.responseTime, 0) / results.length,
     fastestSource: successResults.sort(
-      (a, b) => a.responseTime - b.responseTime
+      (a, b) => a.responseTime - b.responseTime,
     )[0]?.url,
     recommendedSource: successResults[0]?.url,
   };
@@ -258,10 +261,10 @@ export async function GET(request: NextRequest) {
   // 分析失败原因
   const timeouts = failedResults.filter((r) => r.status === 'timeout').length;
   const httpErrors = failedResults.filter(
-    (r) => r.httpStatus && (r.httpStatus === 403 || r.httpStatus === 404)
+    (r) => r.httpStatus && (r.httpStatus === 403 || r.httpStatus === 404),
   ).length;
   const invalidJars = failedResults.filter(
-    (r) => r.status === 'invalid'
+    (r) => r.status === 'invalid',
   ).length;
 
   if (timeouts > 0) {
@@ -269,7 +272,7 @@ export async function GET(request: NextRequest) {
   }
   if (httpErrors > 0) {
     recommendations.push(
-      `🚫 检测到 ${httpErrors} 个 HTTP 错误（403/404），源文件可能已失效`
+      `🚫 检测到 ${httpErrors} 个 HTTP 错误（403/404），源文件可能已失效`,
     );
   }
   if (invalidJars > 0) {
