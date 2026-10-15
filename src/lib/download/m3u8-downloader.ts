@@ -4,7 +4,7 @@
  */
 
 import { saveSegment } from './download-idb';
-import { StreamingTransmuxer, transmuxTSToMP4 } from './mp4-transmuxer';
+import { StreamingTransmuxer } from './mp4-transmuxer';
 import { getRandomUserAgent } from '../user-agent';
 
 export type StreamSaverMode = 'disabled' | 'service-worker' | 'file-system';
@@ -626,17 +626,6 @@ export async function downloadTsSegment(
 }
 
 /**
- * 合并所有片段为 Blob
- */
-export function mergeSegments(
-  segments: ArrayBuffer[],
-  type: 'TS' | 'MP4',
-): Blob {
-  const mimeType = type === 'MP4' ? 'video/mp4' : 'video/MP2T';
-  return new Blob(segments, { type: mimeType });
-}
-
-/**
  * 触发浏览器下载
  */
 export function triggerDownload(
@@ -734,11 +723,18 @@ export async function downloadM3U8Video(
   let downloadedBytes = 0;
   const startTime = Date.now();
 
-  if (streamMode !== 'disabled') {
+  // 统一走「下载完成 → 合并」路径（借鉴 lzwme/m3u8-dl：CLI 与浏览器端均为
+  // 下载完成后一次性合并，无流式转码）。分片本就全量缓存在内存，流式无内存优势；
+  // 且流式直写 TS 分片未经 EXTINF 时间轴归一化，mux.js fMP4 的时长字段为 unknown。
+  // 合并路径统一经 Mediabunny remux：MP4 输出标准 progressive MP4 并修补时长字段，
+  // TS 输出经时间戳归一化的标准 TS。
+  const streamingDisabled = true;
+  if (!streamingDisabled && streamMode !== 'disabled' && task.type !== 'MP4') {
     try {
       // 移除标题中已有的视频扩展名，避免重复
       const cleanTitle = task.title.replace(/\.(mp4|ts|m3u8)$/i, '');
-      const ext = task.type === 'MP4' ? '.mp4' : '.ts';
+      // 此分支内 task.type 已收窄为 'TS'
+      const ext = '.ts';
       // 强制加正确后缀
       let filename = cleanTitle + ext;
       if (!filename.toLowerCase().endsWith(ext)) filename += ext;
@@ -771,32 +767,16 @@ export async function downloadM3U8Video(
       if (stream) {
         writer = stream.getWriter();
 
-        // 如果有 MAP 段，先写入
+        // 如果有 MAP 段，先写入（TS 流式直写；MP4 已在上面被排除出流式分支）
         if (mapSegmentData) {
           try {
-            if (task.type === 'MP4') {
-              // MP4 模式下，MAP 段会在转码器初始化时处理
-              streamingTransmuxer = new StreamingTransmuxer(
-                writer,
-                rangeDuration,
-              );
-              // eslint-disable-next-line no-console
-              console.log('✅ 启用 MP4 流式转码（含 MAP 段）');
-            } else {
-              // TS 模式下，直接写入 MAP 段
-              await writer.write(new Uint8Array(mapSegmentData));
-              // eslint-disable-next-line no-console
-              console.log('✅ MAP 段已写入');
-            }
+            await writer.write(new Uint8Array(mapSegmentData));
+            // eslint-disable-next-line no-console
+            console.log('✅ MAP 段已写入');
           } catch (error) {
             console.error('MAP 段写入失败:', error);
             throw error;
           }
-        } else if (task.type === 'MP4') {
-          // 没有 MAP 段但是 MP4 格式
-          streamingTransmuxer = new StreamingTransmuxer(writer, rangeDuration);
-          // eslint-disable-next-line no-console
-          console.log('✅ 启用 MP4 流式转码');
         }
       }
     } catch (error) {
@@ -1311,12 +1291,21 @@ export async function downloadM3U8Video(
       task.type === 'MP4' ? '正在转码为 MP4 格式...' : '正在合并视频文件...',
   });
 
-  // 如果是 MP4 格式，进行转码
+  // MP4：Mediabunny 逐分片时间戳归一化 → 标准 MP4；TS：归一化 → 标准 TS
+  // 传入 EXTINF 时长锚定时间轴（借鉴 lzwme/m3u8-dl 的 ffmpeg concat 思路）。
+  // 注意对齐：segments 从 startSegment 开始，segmentDurations 是全量数组，
+  // 范围下载时必须切出对应区间，否则时长锚定与实际分片错位。
+  const alignedDurations = task.segmentDurations?.slice(
+    startSegment - 1,
+    endSegment,
+  );
   let blob: Blob;
   if (task.type === 'MP4') {
-    blob = transmuxTSToMP4(segments, rangeDuration);
+    const { remuxTSSegmentsToMP4 } = await import('./mp4-transmuxer');
+    blob = await remuxTSSegmentsToMP4(segments, alignedDurations);
   } else {
-    blob = mergeSegments(segments, task.type);
+    const { normalizeTSSegmentsToTS } = await import('./mp4-transmuxer');
+    blob = await normalizeTSSegmentsToTS(segments, alignedDurations);
   }
 
   triggerDownload(blob, task.title, task.type);

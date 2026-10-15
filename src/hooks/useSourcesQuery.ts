@@ -75,7 +75,7 @@ export const sourcesQueryOptions = queryOptions({
 export function useSourcesQuery(options?: { enabled?: boolean }) {
   return useQuery({
     ...sourcesQueryOptions,
-    enabled: options?.enabled,
+    enabled: options?.enabled ?? true,
   });
 }
 
@@ -130,7 +130,7 @@ export function useSourceMapQuery(options?: { enabled?: boolean }) {
     staleTime: 10 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
     retry: 1,
-    enabled: options?.enabled,
+    enabled: options?.enabled ?? true,
   });
 }
 
@@ -170,6 +170,6 @@ export function useSourceByKeyQuery(
     staleTime: 10 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
     retry: 1,
-    enabled: options?.enabled && !!sourceKey,
+    enabled: (options?.enabled ?? true) && !!sourceKey,
   });
 }

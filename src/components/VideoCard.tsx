@@ -199,34 +199,36 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
       [isAggregate, actualEpisodes, type],
     );
 
-    // 判断是否为即将上映（未发布的内容）- 只有真正未上映的才算
-    const isUpcoming = useMemo(
-      () => remarks && remarks.includes('天后上映'),
-      [remarks],
-    );
-
     // 判断是否有上映相关标记（包括已上映、今日上映、即将上映）
     const hasReleaseTag = useMemo(
       () =>
-        remarks &&
+        !!remarks &&
         (remarks.includes('天后上映') ||
           remarks.includes('已上映') ||
           remarks.includes('今日上映')),
       [remarks],
     );
 
+    // 判断是否为即将上映（未发布的内容）- 只有真正未上映的才算
+    const isUpcoming = useMemo(
+      () => !!remarks && remarks.includes('天后上映'),
+      [remarks],
+    );
+
     // 🎯 智能判断是否有底部标签（用于AI按钮位置调整）
     const hasBottomTags = useMemo(() => {
-      return (
+      return !!(
         (remarks && (isSeriesCompleted(remarks) || hasReleaseTag)) ||
         (isAggregate && dynamicSourceNames && dynamicSourceNames.length > 0)
       );
     }, [remarks, hasReleaseTag, isAggregate, dynamicSourceNames]);
 
     // 🔥 判断是否应该显示提醒按钮（即将上映或新上映）
+    // 注意：必须强制转 boolean，否则 remarks 为空字符串时
+    // enabled: !!a && !!b && shouldShowBell 会把 '' 透传给 useQuery 抛错
     const isNewRelease =
-      remarks && (remarks.includes('已上映') || remarks.includes('今日上映'));
-    const shouldShowBell = isUpcoming || isNewRelease;
+      !!remarks && (remarks.includes('已上映') || remarks.includes('今日上映'));
+    const shouldShowBell = !!(isUpcoming || isNewRelease);
 
     // 🚀 TanStack Query - 获取收藏/提醒状态
     const { data: favoritedStatus } = useIsFavoritedQuery(

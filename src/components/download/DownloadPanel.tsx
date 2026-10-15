@@ -30,7 +30,10 @@ export function DownloadPanel() {
     new Set(),
   );
 
-  const handleExport = async (task: M3U8DownloadTask) => {
+  const handleExport = async (
+    task: M3U8DownloadTask,
+    format: 'ts' | 'mp4' = 'ts',
+  ) => {
     if (exportingIds.has(task.id)) return;
     setExportingIds((prev) => new Set(prev).add(task.id));
     try {
@@ -39,16 +42,40 @@ export function DownloadPanel() {
         alert('未找到缓存分片，当前下载模式可能未保存到 IndexedDB，无法导出。');
         return;
       }
-      const sorted = Array.from(segmentsMap.entries())
-        .sort(([a], [b]) => a - b)
-        .map(([, buf]) => buf);
-      const blob = new Blob(sorted, { type: 'video/MP2T' });
+      // 按分片原索引排序；时长数组同样按原索引对齐
+      // （范围下载/部分缓存时 segmentsMap 可能不含前面分片，且中间可能有缺口，
+      // 缺失项传 undefined，remux 内部会回退片内实测时长）
+      const sortedEntries = Array.from(segmentsMap.entries()).sort(
+        ([a], [b]) => a - b,
+      );
+      const sorted = sortedEntries.map(([, buf]) => buf);
+      const alignedDurations = sortedEntries.map(
+        ([idx]) => task.segmentDurations?.[idx],
+      );
+
+      let blob: Blob;
+      let ext: string;
+      if (format === 'mp4') {
+        // TS 分片 → 标准 MP4（Mediabunny 逐分片时间戳归一化：moov 在前、全播放器兼容、可拖进度条）
+        // 传入 EXTINF 时长锚定时间轴（借鉴 lzwme/m3u8-dl 的 ffmpeg concat 思路）
+        const { remuxTSSegmentsToMP4 } =
+          await import('@/lib/download/mp4-transmuxer');
+        blob = await remuxTSSegmentsToMP4(sorted, alignedDurations);
+        ext = 'mp4';
+      } else {
+        // TS 导出同样做时间戳归一化（裸拼接 TS 播放器时长估算会出错）
+        const { normalizeTSSegmentsToTS } =
+          await import('@/lib/download/mp4-transmuxer');
+        blob = await normalizeTSSegmentsToTS(sorted, alignedDurations);
+        ext = 'ts';
+      }
+
       const filename = `${
         task.title
           .replace(/[\\/:*?"<>|]/g, '_')
           .trim()
           .slice(0, 120) || 'download'
-      }.ts`;
+      }.${ext}`;
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -365,26 +392,53 @@ export function DownloadPanel() {
                       )}
 
                       {task.status === 'done' && (
-                        <button
-                          onClick={() => handleExport(task)}
-                          disabled={exportingIds.has(task.id)}
-                          className='flex items-center gap-1 px-3 py-1.5 bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white text-xs font-medium rounded transition-colors'
-                        >
-                          <svg
-                            className='w-4 h-4'
-                            fill='none'
-                            stroke='currentColor'
-                            viewBox='0 0 24 24'
+                        <>
+                          <button
+                            onClick={() => handleExport(task, 'ts')}
+                            disabled={exportingIds.has(task.id)}
+                            className='flex items-center gap-1 px-3 py-1.5 bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white text-xs font-medium rounded transition-colors'
                           >
-                            <path
-                              strokeLinecap='round'
-                              strokeLinejoin='round'
-                              strokeWidth='2'
-                              d='M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4'
-                            />
-                          </svg>
-                          {exportingIds.has(task.id) ? '导出中...' : '导出'}
-                        </button>
+                            <svg
+                              className='w-4 h-4'
+                              fill='none'
+                              stroke='currentColor'
+                              viewBox='0 0 24 24'
+                            >
+                              <path
+                                strokeLinecap='round'
+                                strokeLinejoin='round'
+                                strokeWidth='2'
+                                d='M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4'
+                              />
+                            </svg>
+                            {exportingIds.has(task.id)
+                              ? '导出中...'
+                              : '导出 TS'}
+                          </button>
+                          <button
+                            onClick={() => handleExport(task, 'mp4')}
+                            disabled={exportingIds.has(task.id)}
+                            title='转为 MP4 格式（仅转封装不转码，秒级完成）'
+                            className='flex items-center gap-1 px-3 py-1.5 bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white text-xs font-medium rounded transition-colors'
+                          >
+                            <svg
+                              className='w-4 h-4'
+                              fill='none'
+                              stroke='currentColor'
+                              viewBox='0 0 24 24'
+                            >
+                              <path
+                                strokeLinecap='round'
+                                strokeLinejoin='round'
+                                strokeWidth='2'
+                                d='M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664zM21 12a9 9 0 11-18 0 9 9 0 0118 0z'
+                              />
+                            </svg>
+                            {exportingIds.has(task.id)
+                              ? '转换中...'
+                              : '导出 MP4'}
+                          </button>
+                        </>
                       )}
                       <button
                         onClick={() => cancelTask(task.id)}

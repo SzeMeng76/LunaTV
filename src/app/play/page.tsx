@@ -3161,8 +3161,37 @@ function PlayPageClient() {
     // 2e. 片头贴片：首段（第一个 DISCONTINUITY 组）被包夹且总时长 ≤65s、
     //     分片 ≤10 —— 15/30/60s 标准贴片全部覆盖；上限卡在 OP 片头曲
     //     （常见 85-90s）之下，避免误删正片片头
+    // ---------- 组预扫描：源转码分段保护（与服务端 /api/proxy/m3u8 同步） ----------
+    // 采集源普遍用 DISCONTINUITY 做转码分段（实测 dytt 源每 5 片一个断点，
+    // 54 组均匀短小，每组 ~20s），与「长正片组 + 夹短插播组」的真广告结构
+    // 完全不同。若不加保护，下方组级规则会把这类源 70%+ 的正片误判为广告
+    // （实测 1352s 正片被删到只剩 418s）。判定：仅当存在明显的主内容长组
+    // （最长组 >120s，真插播广告必有）或组数很少（≤6，典型片头/插播/片尾
+    // 三段式）时才启用组级删除；否则视为源分段模式，跳过组级规则，
+    // 仅保留关键字过滤。
+    const discGroups: { start: number; end: number; total: number }[] = [];
+    {
+      let gi = 0;
+      while (gi < frags.length) {
+        if (!frags[gi].disc) {
+          gi += 1;
+          continue;
+        }
+        let gj = gi;
+        let gtotal = 0;
+        while (gj < frags.length && (gj === gi || !frags[gj].disc)) {
+          gtotal += frags[gj].dur;
+          gj += 1;
+        }
+        discGroups.push({ start: gi, end: gj, total: gtotal });
+        gi = gj;
+      }
+    }
+    const maxGroupDur = discGroups.reduce((m, g) => Math.max(m, g.total), 0);
+    const groupMode = maxGroupDur > 120 || discGroups.length <= 6;
+
     let firstDiscGroupSeen = false;
-    for (let i = 0; i < frags.length; i += 1) {
+    for (let i = 0; groupMode && i < frags.length; i += 1) {
       if (!frags[i].disc) continue;
       const isFirstDiscGroup = !firstDiscGroupSeen;
       firstDiscGroupSeen = true;
@@ -8326,7 +8355,7 @@ function PlayPageClient() {
         episodesTitles={detail?.episodes_titles || []}
         videoTitle={videoTitle || '视频'}
         currentEpisodeIndex={currentEpisodeIndex}
-        onDownload={async (episodeIndexes) => {
+        onDownload={async (episodeIndexes, downloadFormat) => {
           if (!detail?.episodes || detail.episodes.length === 0) {
             // 单集视频，直接下载当前
             const currentUrl = videoUrl;
@@ -8343,10 +8372,15 @@ function PlayPageClient() {
               const { sourceUrl, referer, origin } =
                 normalizeDownloadSource(currentUrl);
 
-              await createTask(sourceUrl, videoTitle || '视频', 'TS', {
-                referer,
-                origin,
-              });
+              await createTask(
+                sourceUrl,
+                videoTitle || '视频',
+                downloadFormat,
+                {
+                  referer,
+                  origin,
+                },
+              );
 
               // 显示 Toast 通知
               toast.success('下载已开始', {
@@ -8433,7 +8467,7 @@ function PlayPageClient() {
               const { sourceUrl, referer, origin } =
                 normalizeDownloadSource(episodeUrl);
 
-              await createTask(sourceUrl, downloadTitle, 'TS', {
+              await createTask(sourceUrl, downloadTitle, downloadFormat, {
                 referer,
                 origin,
               });

@@ -80,7 +80,7 @@ export const playRecordsQueryOptions = queryOptions({
 export function usePlayRecordsQuery(options?: { enabled?: boolean }) {
   return useQuery({
     ...playRecordsQueryOptions,
-    enabled: options?.enabled,
+    enabled: options?.enabled ?? true,
   });
 }
 
@@ -132,7 +132,7 @@ export function usePlayRecordsArrayQuery(options?: { enabled?: boolean }) {
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     retry: 1,
-    enabled: options?.enabled,
+    enabled: options?.enabled ?? true,
   });
 }
 
@@ -174,6 +174,6 @@ export function usePlayRecordQuery(
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     retry: 1,
-    enabled: options?.enabled,
+    enabled: options?.enabled ?? true,
   });
 }

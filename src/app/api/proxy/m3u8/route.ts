@@ -454,33 +454,69 @@ function builtinAdFilter(m3u8Content: string): string {
     if (isAdUrl(f.url)) drop[i] = true;
   });
 
+  // ---------- 组预扫描：源转码分段保护 ----------
+  // 采集源普遍用 DISCONTINUITY 做转码分段（实测 dytt 源每 5 片一个断点，
+  // 54 组均匀短小，每组 ~20s），与「长正片组 + 夹短插播组」的真广告结构
+  // 完全不同。若不加保护，下方组级规则会把这类源 70%+ 的正片误判为广告
+  // （实测 1352s 正片被删到只剩 418s）。判定：仅当存在明显的主内容长组
+  // （最长组 >120s，真插播广告必有）或组数很少（≤6，典型片头/插播/片尾
+  // 三段式）时才启用组级删除；否则视为源分段模式，跳过组级规则，
+  // 仅保留上方关键字过滤。
+  interface DiscGroup {
+    start: number;
+    end: number; // 不含
+    total: number;
+  }
+  const discGroups: DiscGroup[] = [];
+  {
+    let i = 0;
+    while (i < frags.length) {
+      if (!frags[i].disc) {
+        i += 1;
+        continue;
+      }
+      let j = i;
+      let total = 0;
+      while (j < frags.length && (j === i || !frags[j].disc)) {
+        total += frags[j].dur;
+        j += 1;
+      }
+      discGroups.push({ start: i, end: j, total });
+      i = j;
+    }
+  }
+  const maxGroupDur = discGroups.reduce((m, g) => Math.max(m, g.total), 0);
+  const groupMode = maxGroupDur > 120 || discGroups.length <= 6;
+
   // 2e. 片头贴片：首段（第一个 DISCONTINUITY 组）被包夹且总时长 ≤65s、
   //     分片 ≤10 —— 15/30/60s 标准贴片全部覆盖；上限卡在 OP 片头曲
   //     （常见 85-90s）之下，避免误删正片片头
-  let firstDiscGroupSeen = false;
-  for (let i = 0; i < frags.length; i += 1) {
-    if (!frags[i].disc) continue;
-    const isFirstDiscGroup = !firstDiscGroupSeen;
-    firstDiscGroupSeen = true;
-    let total = 0;
-    let hasTiny = false;
-    let count = 0;
-    let j = i;
-    while (j < frags.length) {
-      if (j > i && frags[j].disc) break;
-      total += frags[j].dur;
-      count += 1;
-      if (frags[j].dur > 0 && frags[j].dur < 1) hasTiny = true;
-      j += 1;
-    }
-    const enclosed = j < frags.length && frags[j].disc;
-    const isAdSegment =
-      total > 0 &&
-      ((enclosed && total <= 90 && hasTiny) ||
-        (total <= 30 && count <= 8) ||
-        (enclosed && isFirstDiscGroup && total <= 65 && count <= 10));
-    if (isAdSegment) {
-      for (let k = i; k < j; k += 1) drop[k] = true;
+  if (groupMode) {
+    let firstDiscGroupSeen = false;
+    for (let i = 0; i < frags.length; i += 1) {
+      if (!frags[i].disc) continue;
+      const isFirstDiscGroup = !firstDiscGroupSeen;
+      firstDiscGroupSeen = true;
+      let total = 0;
+      let hasTiny = false;
+      let count = 0;
+      let j = i;
+      while (j < frags.length) {
+        if (j > i && frags[j].disc) break;
+        total += frags[j].dur;
+        count += 1;
+        if (frags[j].dur > 0 && frags[j].dur < 1) hasTiny = true;
+        j += 1;
+      }
+      const enclosed = j < frags.length && frags[j].disc;
+      const isAdSegment =
+        total > 0 &&
+        ((enclosed && total <= 90 && hasTiny) ||
+          (total <= 30 && count <= 8) ||
+          (enclosed && isFirstDiscGroup && total <= 65 && count <= 10));
+      if (isAdSegment) {
+        for (let k = i; k < j; k += 1) drop[k] = true;
+      }
     }
   }
 

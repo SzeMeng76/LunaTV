@@ -365,6 +365,14 @@ export class UpstashRedisStorage implements IStorage {
       this.client.hset(this.userInfoKey(userName), userInfo),
     );
 
+    // V1 密码同步写入（u:*:pwd）：登录校验只读 V1 凭据，缺写会导致
+    // 「注册成功但登录提示密码错误」，须由管理员后台重置密码才能登录。
+    // 注意 V1 校验（verifyUser/verifyPassword）要求加盐哈希格式，
+    // 必须用 hashPwd，不能用 hashPassword 的裸 sha256 输出
+    await withRetry(() =>
+      this.client.set(this.userPwdKey(userName), hashPwd(password)),
+    );
+
     // 添加到用户列表（Sorted Set，按注册时间排序）
     await withRetry(() =>
       this.client.zadd(this.userListKey(), {

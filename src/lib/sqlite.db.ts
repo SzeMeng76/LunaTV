@@ -459,6 +459,16 @@ export class SqliteStorage implements IStorage {
     const hashedPassword = this.hashPasswordV2(password);
     const createdAt = Date.now();
 
+    // V1 密码同步写入（users 表）：登录校验只读 V1 凭据，缺写会导致
+    // 「注册成功但登录提示密码错误」，须由管理员后台重置密码才能登录。
+    // 注意 V1 表用加盐哈希（hashPwd，verifyUser/verifyPassword 校验），
+    // 不能用 hashPasswordV2 的裸 sha256
+    this.db
+      .prepare(
+        'INSERT OR REPLACE INTO users (username, password_hash, created_at) VALUES (?, ?, ?)',
+      )
+      .run(userName, hashPwd(password), createdAt);
+
     this.db
       .prepare(
         `INSERT OR REPLACE INTO users_v2

@@ -16,7 +16,7 @@ interface DownloadEpisodeSelectorProps {
   /** 当前集数索引（0开始） */
   currentEpisodeIndex: number;
   /** 下载回调 - 支持批量下载 */
-  onDownload: (episodeIndexes: number[]) => void;
+  onDownload: (episodeIndexes: number[], format: 'TS' | 'MP4') => void;
 }
 
 /**
@@ -31,6 +31,8 @@ const DownloadEpisodeSelector: React.FC<DownloadEpisodeSelectorProps> = ({
   currentEpisodeIndex,
   onDownload,
 }) => {
+  // 下载格式（默认 MP4：标准格式全播放器兼容）
+  const [downloadFormat, setDownloadFormat] = useState<'TS' | 'MP4'>('MP4');
   // 多选状态 - 使用 Set 存储选中的集数索引
   const [selectedEpisodes, setSelectedEpisodes] = useState<Set<number>>(
     new Set([currentEpisodeIndex]),
@@ -105,7 +107,7 @@ const DownloadEpisodeSelector: React.FC<DownloadEpisodeSelectorProps> = ({
 
   const handleDownload = () => {
     const episodeIndexes = Array.from(selectedEpisodes).sort((a, b) => a - b);
-    onDownload(episodeIndexes);
+    onDownload(episodeIndexes, downloadFormat);
     onClose();
   };
 
@@ -266,42 +268,88 @@ const DownloadEpisodeSelector: React.FC<DownloadEpisodeSelectorProps> = ({
           </div>
 
           {/* 底部操作栏 */}
-          <div className='flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 shrink-0'>
-            <div className='text-xs sm:text-sm text-gray-600 dark:text-gray-400 text-center sm:text-left'>
-              已选择：
-              {selectedEpisodes.size === 0 ? (
-                <span className='text-red-500 dark:text-red-400'>
-                  未选择任何集数
-                </span>
-              ) : selectedEpisodes.size === 1 ? (
-                <>
-                  第 {Array.from(selectedEpisodes)[0] + 1} 集
-                  {Array.from(selectedEpisodes)[0] === currentEpisodeIndex && (
-                    <span className='ml-2 text-blue-500 dark:text-blue-400'>
-                      (当前播放)
-                    </span>
-                  )}
-                </>
-              ) : (
-                <span className='font-medium text-green-600 dark:text-green-400'>
-                  {selectedEpisodes.size} 集
-                </span>
-              )}
+          <div className='flex flex-col gap-3 px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 shrink-0'>
+            {/* 下载格式选择 */}
+            <div className='flex items-center gap-2 flex-wrap'>
+              <span className='text-xs sm:text-sm text-gray-600 dark:text-gray-400 shrink-0'>
+                下载格式:
+              </span>
+              <div className='flex gap-1.5'>
+                {[
+                  {
+                    value: 'MP4' as const,
+                    label: 'MP4',
+                    desc: '标准格式，全播放器兼容',
+                  },
+                  {
+                    value: 'TS' as const,
+                    label: 'TS',
+                    desc: '原始流，体积更小',
+                  },
+                ].map(({ value, label, desc }) => {
+                  const isActive = downloadFormat === value;
+                  return (
+                    <button
+                      key={value}
+                      onClick={() => setDownloadFormat(value)}
+                      title={desc}
+                      className={`px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-all active:scale-95 ${
+                        isActive
+                          ? 'bg-green-500 text-white shadow-md'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+              <span className='text-xs text-gray-500 dark:text-gray-400'>
+                {downloadFormat === 'MP4'
+                  ? '标准格式，全播放器兼容'
+                  : '原始流，体积更小'}
+              </span>
             </div>
-            <div className='flex gap-2 sm:gap-3'>
-              <button
-                onClick={onClose}
-                className='flex-1 sm:flex-none px-4 py-2 sm:py-2.5 text-sm font-medium text-gray-700 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 rounded-lg transition-colors active:scale-95'
-              >
-                取消
-              </button>
-              <button
-                onClick={handleDownload}
-                disabled={selectedEpisodes.size === 0}
-                className='flex-1 sm:flex-none px-4 py-2 sm:py-2.5 text-sm font-medium text-white bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 rounded-lg transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-green-500 active:scale-95'
-              >
-                下载 {selectedEpisodes.size > 0 && `(${selectedEpisodes.size})`}
-              </button>
+
+            <div className='flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3'>
+              <div className='text-xs sm:text-sm text-gray-600 dark:text-gray-400 text-center sm:text-left'>
+                已选择：
+                {selectedEpisodes.size === 0 ? (
+                  <span className='text-red-500 dark:text-red-400'>
+                    未选择任何集数
+                  </span>
+                ) : selectedEpisodes.size === 1 ? (
+                  <>
+                    第 {Array.from(selectedEpisodes)[0] + 1} 集
+                    {Array.from(selectedEpisodes)[0] ===
+                      currentEpisodeIndex && (
+                      <span className='ml-2 text-blue-500 dark:text-blue-400'>
+                        (当前播放)
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  <span className='font-medium text-green-600 dark:text-green-400'>
+                    {selectedEpisodes.size} 集
+                  </span>
+                )}
+              </div>
+              <div className='flex gap-2 sm:gap-3'>
+                <button
+                  onClick={onClose}
+                  className='flex-1 sm:flex-none px-4 py-2 sm:py-2.5 text-sm font-medium text-gray-700 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 rounded-lg transition-colors active:scale-95'
+                >
+                  取消
+                </button>
+                <button
+                  onClick={handleDownload}
+                  disabled={selectedEpisodes.size === 0}
+                  className='flex-1 sm:flex-none px-4 py-2 sm:py-2.5 text-sm font-medium text-white bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 rounded-lg transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-green-500 active:scale-95'
+                >
+                  下载{' '}
+                  {selectedEpisodes.size > 0 && `(${selectedEpisodes.size})`}
+                </button>
+              </div>
             </div>
           </div>
         </div>

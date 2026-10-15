@@ -58,7 +58,7 @@ export const remindersQueryOptions = queryOptions({
 export function useRemindersQuery(options?: { enabled?: boolean }) {
   return useQuery({
     ...remindersQueryOptions,
-    enabled: options?.enabled,
+    enabled: options?.enabled ?? true,
   });
 }
 
@@ -112,7 +112,7 @@ export function useRemindersArrayQuery(options?: { enabled?: boolean }) {
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     retry: 1,
-    enabled: options?.enabled,
+    enabled: options?.enabled ?? true,
   });
 }
 
@@ -147,7 +147,7 @@ export function useIsRemindedQuery(
 ) {
   return useQuery({
     ...remindersQueryOptions,
-    enabled: options?.enabled,
+    enabled: options?.enabled ?? true,
     select: (data: Record<string, Reminder>) => !!data[`${source}+${id}`],
   });
 }

@@ -514,7 +514,7 @@ function HomeClient({
   const storageType =
     typeof window !== 'undefined' ? localStorage.getItem('storageType') : null;
   const showWatchingUpdates =
-    authInfo?.username && storageType !== 'localstorage';
+    !!authInfo?.username && storageType !== 'localstorage';
   // 首屏数据优先：延迟 8 秒再启动追番更新检查，避免几十个 /api/detail
   // 请求在页面打开瞬间与首屏数据抢浏览器并发连接和服务器资源
   const [updatesReady, setUpdatesReady] = useState(false);
